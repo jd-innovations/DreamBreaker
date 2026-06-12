@@ -1,0 +1,138 @@
+{
+  "project_name": "Dream Breaker PB",
+  "theme_strategy": "dark-default-with-light-mode",
+  "archetype": "Archetype 2: The Performance Pro",
+  "vibe": "Elite athleticism, high-energy, tactical precision, competitive.",
+  "typography": {
+    "headings": {
+      "fontFamily": "Bebas Neue, sans-serif",
+      "weights": ["400"],
+      "usage": "Hero headers, tournament titles, aggressive uppercase labels.",
+      "letterSpacing": "tracking-wide",
+      "textTransform": "uppercase"
+    },
+    "body": {
+      "fontFamily": "Manrope, sans-serif",
+      "weights": ["400", "500", "600", "700"],
+      "usage": "Standard text, dashboard data, descriptions.",
+      "letterSpacing": "tracking-normal"
+    },
+    "mono": {
+      "fontFamily": "JetBrains Mono, monospace",
+      "weights": ["400", "700"],
+      "usage": "Scores, timers, DUPR ratings, brackets."
+    }
+  },
+  "colors": {
+    "dark": {
+      "background": "#09090B",
+      "foreground": "#FFFFFF",
+      "card": "#18181B",
+      "cardForeground": "#FFFFFF",
+      "border": "#27272A",
+      "primary": "#B6FF3C",
+      "primaryForeground": "#0A0A0A",
+      "secondary": "#27272A",
+      "secondaryForeground": "#FFFFFF",
+      "accent": "#B6FF3C",
+      "accentForeground": "#0A0A0A",
+      "muted": "#27272A",
+      "mutedForeground": "#A1A1AA"
+    },
+    "light": {
+      "background": "#F8F9FA",
+      "foreground": "#09090B",
+      "card": "#FFFFFF",
+      "cardForeground": "#09090B",
+      "border": "#E4E4E7",
+      "primary": "#A3E635",
+      "primaryForeground": "#0A0A0A",
+      "secondary": "#E4E4E7",
+      "secondaryForeground": "#09090B",
+      "accent": "#A3E635",
+      "accentForeground": "#0A0A0A",
+      "muted": "#F4F4F5",
+      "mutedForeground": "#71717A"
+    }
+  },
+  "spacing_and_layout": {
+    "philosophy": "Generous Spacing Philosophy. Use generous padding for breathing room but keep dashboard widgets tight.",
+    "landing_page": {
+      "grid": "MODE A: The 'Tetris' Grid (Bento style). Asymmetrical grid-cols-1 md:grid-cols-12 gap-8.",
+      "hero": "Dramatic dark hero image with overlay bg-black/50. Text and CTA aligned left or centered. col-span-full."
+    },
+    "dashboards": {
+      "grid": "MODE B: The 'Control Room' Grid. grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6.",
+      "cards": "Flat solid background, 1px subtle border, no heavy soft shadows. Tactical minimalism."
+    },
+    "matchmaking": {
+      "layout": "Centered Tinder-style card stack layout. Max width sm (approx 400px). Absolute positioning with framer-motion drag constraints.",
+      "card_aspect_ratio": "3:4 portrait or 9:16 for full immersive photos."
+    }
+  },
+  "surface_styles": {
+    "cards": "Tactical look: border border-border bg-card. Avoid soft shadows. Use sharp 1px borders.",
+    "buttons": "Pill-shaped (rounded-full) as per reference image. High saturation accent color (Neon Green).",
+    "glassmorphism": "Use for sticky navigation or 'Hold My Spot' modal overlay (backdrop-blur-xl bg-background/80 border-b border-border).",
+    "inputs": "Shadcn defaults with rounded-md, focus:ring-primary focus:border-primary."
+  },
+  "animations": {
+    "hover": "Scale up slightly (scale-105) for cards. Buttons translate-y-[-2px] with increased shadow.",
+    "page_transitions": "Framer motion opacity 0 to 1, y: 10 to 0.",
+    "swipe_cards": "Framer motion drag='x', with rotate and opacity mappings based on x-offset. Green overlay for 'LIKE', Red overlay for 'PASS'."
+  },
+  "components": {
+    "navigation": "Sticky nav with Logo, Links, Theme Toggle, Profile Avatar, and CTA.",
+    "hold_my_spot": "Shadcn Dialog/Modal with tournament details, price breakdown, and confirmation CTA.",
+    "matchmaking_card": "Photo background, bottom-aligned gradient overlay (bg-gradient-to-t from-black/90 via-black/40 to-transparent) with Name, DUPR rating, Location, and Bio.",
+    "brackets": "Horizontal scrolling flex container with nested match nodes. Connect nodes using borders.",
+    "tabs": "Use Shadcn Tabs for switching between Player, Director, and Admin views if mocking in one page."
+  },
+  "icons": {
+    "library": "@phosphor-icons/react",
+    "installation": "yarn add @phosphor-icons/react",
+    "style": "Bold or Duotone weights for athletic, dynamic feel."
+  },
+  "media": {
+    "images": [
+      {
+        "category": "hero_background",
+        "url": "https://images.unsplash.com/photo-1618551763300-dc7eb8ce3560?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODd8MHwxfHNlYXJjaHwxfHxwaWNrbGViYWxsJTIwYWN0aW9uJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzgxMjYzMzI0fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Pickleball action shot, dramatic athletic portrait"
+      },
+      {
+        "category": "matchmaking_profile_1",
+        "url": "https://images.pexels.com/photos/11000101/pexels-photo-11000101.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Athletic man portrait for matchmaking card"
+      },
+      {
+        "category": "matchmaking_profile_2",
+        "url": "https://images.unsplash.com/photo-1606335544053-c43609e6155d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHwxfHxhdGhsZXRpYyUyMHBvcnRyYWl0fGVufDB8fHx8MTc4MTI2MzMyNHww&ixlib=rb-4.1.0&q=85",
+        "description": "Man in black tank top portrait"
+      },
+      {
+        "category": "matchmaking_profile_3",
+        "url": "https://images.unsplash.com/photo-1723004714201-cf224222b897?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODd8MHwxfHNlYXJjaHwzfHxwaWNrbGViYWxsJTIwYWN0aW9uJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzgxMjYzMzI0fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Woman playing racquet sport"
+      },
+      {
+        "category": "tournament_card_bg",
+        "url": "https://images.unsplash.com/photo-1737477004595-e9b659bb44ca?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODd8MHwxfHNlYXJjaHw0fHxwaWNrbGViYWxsJTIwYWN0aW9uJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzgxMjYzMzI0fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Action shot on court for tournament listing"
+      }
+    ]
+  },
+  "testing": {
+    "data_testid_rules": "All interactive elements (buttons, links, form inputs, swipe cards) MUST have descriptive, role-based data-testid attributes (e.g., data-testid='matchmaking-swipe-right-button')."
+  },
+  "instructions_to_main_agent": [
+    "Build the UI focusing heavily on the Archetype 2 (Performance Pro) principles: Dark Mode default, Neon Green (#B6FF3C) accents, tactical 1px borders, high contrast.",
+    "Implement light and dark mode toggling (next-themes). Ensure light mode maintains high contrast (use #A3E635 for primary).",
+    "Use Framer Motion for the Tinder-style swipe cards on the matchmaking page. Ensure they have drag constraints and snap back.",
+    "Use Shadcn UI for structural components (Dialogs, Tabs, Inputs, Cards).",
+    "Ensure 'Hold my spot' opens a Shadcn Dialog with pricing info and a confirmation CTA.",
+    "Typography: Import Bebas Neue (Headings) and Manrope (Body) via Google Fonts. Use Bebas Neue in uppercase for hero headings and section titles.",
+    "Apply pill-shaped `rounded-full` to main CTAs to match reference.",
+    "Use strictly the media URLs provided for images. Do not use any placeholder images."
+  ]
+}
