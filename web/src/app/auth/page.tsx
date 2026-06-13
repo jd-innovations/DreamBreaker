@@ -26,15 +26,20 @@ export default function AuthPage() {
     setLoading(true);
     const fd = new FormData(e.currentTarget);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: fd.get("email") as string,
       password: fd.get("password") as string,
     });
-    setLoading(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      console.error("[auth] signInWithPassword error:", error);
+      setLoading(false);
+      toast.error(error.message);
+      return;
+    }
+    console.log("[auth] signed in:", data.user?.email);
     toast.success("Welcome back!");
-    router.push("/dashboard");
-    router.refresh();
+    // Hard redirect so the browser sends fresh cookies the middleware can read
+    window.location.href = "/dashboard";
   };
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
