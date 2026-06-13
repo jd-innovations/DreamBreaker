@@ -41,7 +41,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-background text-foreground antialiased">
         {/* Runs synchronously before paint — prevents theme flash */}
         <Script id="theme-init" strategy="beforeInteractive">{`(function(){try{var t=localStorage.getItem('dbpb-theme');document.documentElement.classList.add(t||'dark');}catch(e){}})();`}</Script>
-        <ThemeProvider defaultTheme="dark">
+        <ThemeProvider>
           {children}
           <Toaster position="top-right" richColors closeButton />
         </ThemeProvider>
