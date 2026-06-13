@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Lightning, MapPin, Calendar, Clock, ArrowRight, CheckCircle } from "@phosphor-icons/react";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
+import { getUserId } from "@/lib/dev-user";
 
 type HoldRow = {
   id: string;
@@ -40,8 +41,9 @@ export default function HoldsPage() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) { setLoading(false); return; }
+    getUserId().then(async (userId) => {
+      if (!userId) { setLoading(false); return; }
+      const user = { id: userId };
       const { data } = await supabase
         .from("registrations")
         .select(`

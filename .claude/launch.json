@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "DreamBreaker Frontend",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "C:\\Users\\dhjes\\DreamBreaker\\frontend", "start"],
+      "port": 3000
+    }
+  ]
+}

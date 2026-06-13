@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { BookmarkSimple } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { getUserId } from "@/lib/dev-user";
 
 interface BookmarkButtonProps {
   tournamentId: string;
@@ -18,13 +19,13 @@ export function BookmarkButton({ tournamentId, className = "", size = "md" }: Bo
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) { setLoading(false); return; }
-      setUserId(user.id);
+    getUserId().then(async (userId) => {
+      if (!userId) { setLoading(false); return; }
+      setUserId(userId);
       const { data } = await supabase
         .from("tournament_bookmarks")
         .select("id")
-        .eq("player_id", user.id)
+        .eq("player_id", userId)
         .eq("tournament_id", tournamentId)
         .maybeSingle();
       setBookmarked(!!data);

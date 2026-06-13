@@ -10,6 +10,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
+import { getUserId } from "@/lib/dev-user";
 import { matchPartners } from "@/data/mock-data";
 import { MatchSettingsPanel } from "@/components/shared/match-settings-panel";
 import { PlayerProfileSheet } from "@/components/shared/player-profile-sheet";
@@ -255,13 +256,14 @@ export default function MatchmakingPage() {
   useEffect(() => {
     const supabase = createClient();
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const userId = await getUserId();
+      if (!userId) {
         setDeck(matchPartners.map((p) => mockToPartner(p, null, null)));
         setLoading(false);
         return;
       }
-      setMyId(user.id);
+      setMyId(userId);
+      const user = { id: userId };
 
       // Get my profile for match scoring
       const { data: me } = await supabase.from("profiles").select("dupr,availability,location_city,location_state,play_style,bio").eq("id", user.id).single();

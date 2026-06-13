@@ -10,6 +10,7 @@ import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/client";
+import { getUserId } from "@/lib/dev-user";
 import { toast } from "sonner";
 import { playerStats, matchPartners, recentMatches as mockMatches, tournaments as mockTournaments } from "@/data/mock-data";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -213,9 +214,10 @@ export default function ProfilePage() {
     const supabase = createClient();
 
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
-      userIdRef.current = user.id;
+      const userId = await getUserId();
+      if (!userId) { setLoading(false); return; }
+      userIdRef.current = userId;
+      const user = { id: userId };
 
       // Fetch hidden match IDs
       const { data: hiddenRows } = await supabase

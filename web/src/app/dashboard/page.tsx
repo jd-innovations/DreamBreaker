@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
+import { getUserId } from "@/lib/dev-user";
 import { playerStats, tournaments as mockTournaments, recentMatches as mockMatches } from "@/data/mock-data";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -109,8 +110,9 @@ export default function DashboardPage() {
     const supabase = createClient();
 
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
+      const userId = await getUserId();
+      if (!userId) { setLoading(false); return; }
+      const user = { id: userId };
 
       // Profile
       const { data: prof } = await supabase

@@ -30,17 +30,9 @@ export async function middleware(request: NextRequest) {
     || DIRECTOR_ONLY.some((p) => pathname.startsWith(p))
     || ADMIN_ONLY.some((p) => pathname.startsWith(p));
 
-  if (isProtected && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/auth";
-    return NextResponse.redirect(url);
-  }
-
-  if (pathname === "/auth" && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
-  }
+  // Auth guard disabled during development — re-enable before production
+  // if (isProtected && !user) { ... redirect to /auth ... }
+  // if (pathname === "/auth" && user) { ... redirect to /dashboard ... }
 
   if (user && (DIRECTOR_ONLY.some((p) => pathname.startsWith(p)) || ADMIN_ONLY.some((p) => pathname.startsWith(p)))) {
     const { data: profile } = await supabase

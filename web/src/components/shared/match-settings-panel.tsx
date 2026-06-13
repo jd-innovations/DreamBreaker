@@ -8,6 +8,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { getUserId } from "@/lib/dev-user";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -111,9 +112,10 @@ export function MatchSettingsPanel({ myDupr, myAvail, myLocation, myStyle, myBio
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return;
-      setUserId(user.id);
+    getUserId().then(async (userId) => {
+      if (!userId) return;
+      setUserId(userId);
+      const user = { id: userId };
       const { data } = await supabase
         .from("profiles")
         .select("is_discoverable,looking_status,notif_new_match,notif_liked_you,notif_hold_expiry,notif_tournaments")
