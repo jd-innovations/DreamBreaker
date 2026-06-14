@@ -41,6 +41,8 @@ export default function RootLayout({
       <body className="min-h-screen bg-background text-foreground antialiased">
         {/* Runs synchronously before paint — prevents theme flash */}
         <Script id="theme-init" strategy="beforeInteractive">{`(function(){try{var t=localStorage.getItem('dbpb-theme');document.documentElement.classList.add(t||'dark');}catch(e){}})();`}</Script>
+        {/* Runtime config — read server env vars into the DOM so client bundles don't need build-time baking */}
+        <script id="app-config" type="application/json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "", supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "" }) }} />
         <ThemeProvider>
           {children}
           <Toaster position="top-right" richColors closeButton />
