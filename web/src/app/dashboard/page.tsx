@@ -105,22 +105,17 @@ export default function DashboardPage() {
   const [matches, setMatches] = useState<DisplayMatch[]>([]);
   const [stats, setStats] = useState({ wins: 0, losses: 0, tournaments: 0, duprDelta: 0 });
   const [loading, setLoading] = useState(true);
-  const [debugInfo, setDebugInfo] = useState("mounting…");
-
-  useEffect(() => {
-    setDebugInfo("effect fired");
-  }, []);
 
   useEffect(() => {
     const supabase = createClient();
 
     async function load() {
-      setDebugInfo("getUserId…");
+
       const userId = await getUserId();
-      setDebugInfo(`userId=${userId ?? "null"}`);
+
       if (!userId) { setLoading(false); return; }
       const user = { id: userId };
-      setDebugInfo(`fetching profile for ${userId}`);
+
 
       // Profile
       const { data: prof } = await supabase
@@ -208,12 +203,12 @@ export default function DashboardPage() {
         setStats((s) => ({ ...s, duprDelta: Math.round(delta * 100) / 100 }));
       }
 
-      setDebugInfo(`done — profile=${profile ? "ok" : "null"}`);
+
       setLoading(false);
     }
 
     load().catch((err) => {
-      setDebugInfo(`CATCH: ${err?.message ?? String(err)}`);
+
       // Network failure — show mock data
       setUpcoming(
         mockTournaments.slice(0, 2).map((t) => {
@@ -238,7 +233,6 @@ export default function DashboardPage() {
 
   return (
     <PageShell>
-      <pre className="fixed bottom-0 left-0 right-0 z-[9999] bg-black text-white text-xs p-3 break-all">{debugInfo}</pre>
       {/* Hero */}
       <section className="border-b border-border bg-card/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex items-center justify-between">
