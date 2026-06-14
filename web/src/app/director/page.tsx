@@ -284,7 +284,7 @@ export default function DirectorPage() {
         .eq("id", uid)
         .single();
 
-      if (profile && profile.role !== "director" && profile.role !== "admin") {
+      if (profile && profile.role !== "director" && profile.role !== "admin" && profile.role !== "player_director") {
         setAccessDenied(true);
         setLoading(false);
         return;

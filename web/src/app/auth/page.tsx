@@ -10,16 +10,35 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
-const roles = [
-  { id: "player", label: "PLAYER", desc: "Compete in tournaments & find partners", icon: Trophy },
-  { id: "director", label: "DIRECTOR", desc: "Create & manage tournaments", icon: Lightning },
+const ROLE_OPTIONS = [
+  { id: "player",   label: "PLAYER",   desc: "Compete in tournaments & find partners", icon: Trophy },
+  { id: "director", label: "DIRECTOR", desc: "Create & manage tournaments",            icon: Lightning },
 ];
+
+function resolveRole(selected: Set<string>): string {
+  if (selected.has("player") && selected.has("director")) return "player_director";
+  if (selected.has("director")) return "director";
+  return "player";
+}
 
 export default function AuthPage() {
   const router = useRouter();
   const [showPw, setShowPw] = useState(false);
-  const [role, setRole] = useState("player");
+  const [selectedRoles, setSelectedRoles] = useState<Set<string>>(new Set(["player"]));
   const [loading, setLoading] = useState(false);
+
+  const toggleRole = (id: string) => {
+    setSelectedRoles((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        if (next.size === 1) return prev; // always keep at least one
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -55,7 +74,7 @@ export default function AuthPage() {
       options: {
         data: {
           full_name: `${fd.get("firstName")} ${fd.get("lastName")}`.trim(),
-          role,
+          role: resolveRole(selectedRoles),
         },
       },
     });
@@ -118,16 +137,26 @@ export default function AuthPage() {
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
                 <div>
-                  <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">I AM A</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {roles.map((r) => (
-                      <button type="button" key={r.id} onClick={() => setRole(r.id)} data-testid={`auth-role-${r.id}`} className={`p-4 rounded-xl border text-left transition-all ${role === r.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}>
-                        <r.icon size={20} weight={role === r.id ? "fill" : "regular"} className={role === r.id ? "text-primary" : "text-muted-foreground"} />
-                        <div className="font-display tracking-[0.15em] text-sm mt-2">{r.label}</div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5">{r.desc}</div>
-                      </button>
-                    ))}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground">I AM A</label>
+                    {selectedRoles.size === 2 && (
+                      <span className="font-mono text-[10px] tracking-widest text-primary">BOTH SELECTED</span>
+                    )}
                   </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {ROLE_OPTIONS.map((r) => {
+                      const active = selectedRoles.has(r.id);
+                      return (
+                        <button type="button" key={r.id} onClick={() => toggleRole(r.id)} data-testid={`auth-role-${r.id}`} className={`p-4 rounded-xl border text-left transition-all relative ${active ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}>
+                          {active && <div className="absolute top-2 right-2 h-4 w-4 rounded-full bg-primary flex items-center justify-center"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary-foreground" /></svg></div>}
+                          <r.icon size={20} weight={active ? "fill" : "regular"} className={active ? "text-primary" : "text-muted-foreground"} />
+                          <div className="font-display tracking-[0.15em] text-sm mt-2">{r.label}</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">{r.desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1.5">Select one or both — you can always add the other role later.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">FIRST NAME</label><input name="firstName" type="text" required placeholder="Jordan" data-testid="auth-firstname" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
