@@ -53,6 +53,16 @@ type TournamentEntry = {
   cover_img_url: string | null;
 };
 
+type BookmarkedTournament = {
+  id: string;
+  tournamentId: string;
+  name: string;
+  city: string;
+  state: string;
+  event_date: string;
+  cover_img_url: string | null;
+};
+
 type Partner = {
   id: string;
   name: string;
@@ -106,7 +116,7 @@ function HoldCountdown({ expiresAt }: { expiresAt: string }) {
   return <span className="font-mono text-xs text-amber-500">{remaining}</span>;
 }
 
-function TournamentsTab({ entries, loading }: { entries: TournamentEntry[]; loading: boolean }) {
+function TournamentsTab({ entries, bookmarks, loading }: { entries: TournamentEntry[]; bookmarks: BookmarkedTournament[]; loading: boolean }) {
   if (loading) {
     return (
       <div className="space-y-3">
@@ -185,6 +195,35 @@ function TournamentsTab({ entries, loading }: { entries: TournamentEntry[]; load
       <Section title="HOLDS — SPOT RESERVED" items={held} />
       <Section title="REGISTERED" items={active} />
       <Section title="PAST EVENTS" items={past} />
+      {bookmarks.length > 0 && (
+        <div className="space-y-3">
+          <p className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground flex items-center gap-1.5">
+            <BookmarkSimple size={11} weight="fill" className="text-primary" /> SAVED
+          </p>
+          {bookmarks.map((b) => (
+            <Link key={b.id} href={`/tournaments/${b.tournamentId}`} className="block">
+              <div className="border border-border rounded-2xl bg-card flex items-center gap-4 p-4 hover:border-primary transition-colors group">
+                {b.cover_img_url ? (
+                  <img src={b.cover_img_url} alt="" className="h-16 w-16 rounded-xl object-cover flex-shrink-0 group-hover:opacity-90 transition-opacity" />
+                ) : (
+                  <div className="h-16 w-16 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
+                    <Trophy size={20} weight="fill" className="text-primary" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-display text-lg tracking-wide truncate">{b.name}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                    <MapPin size={11} weight="bold" />{b.city}, {b.state}
+                    <span className="mx-1">·</span>
+                    <Calendar size={11} weight="bold" />{b.event_date ? formatEventDate(b.event_date) : "—"}
+                  </div>
+                </div>
+                <span className="flex-shrink-0 px-2.5 py-0.5 rounded-full bg-secondary text-muted-foreground text-[10px] font-mono tracking-widest">SAVED</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -206,6 +245,7 @@ export default function ProfilePage() {
   const [hiddenMatchIds, setHiddenMatchIds] = useState<Set<string>>(new Set());
   const [partners, setPartners] = useState<Partner[]>([]);
   const [tournamentEntries, setTournamentEntries] = useState<TournamentEntry[]>([]);
+  const [bookmarkedTournaments, setBookmarkedTournaments] = useState<BookmarkedTournament[]>([]);
   const [stats, setStats] = useState({ wins: 0, losses: 0, tournaments: 0 });
   const [loading, setLoading] = useState(true);
   const userIdRef = useRef<string | null>(null);
@@ -315,6 +355,27 @@ export default function ProfilePage() {
       } else {
         const { count } = await supabase.from("registrations").select("tournament_id", { count: "exact", head: true }).eq("player_id", user.id).in("status", ["registered", "checked_in"]);
         if (count && count > 0) setStats((s) => ({ ...s, tournaments: count }));
+      }
+
+      // Bookmarked tournaments
+      const { data: bookmarkRows } = await supabase
+        .from("tournament_bookmarks")
+        .select("id, tournament:tournaments!tournament_id(id, name, city, state, event_date, cover_img_url)")
+        .eq("player_id", user.id)
+        .order("created_at", { ascending: false });
+      if (bookmarkRows && bookmarkRows.length > 0) {
+        setBookmarkedTournaments(bookmarkRows.map((b) => {
+          const t = b.tournament as { id: string; name: string; city: string; state: string; event_date: string; cover_img_url: string | null } | null;
+          return {
+            id: b.id,
+            tournamentId: t?.id ?? "",
+            name: t?.name ?? "—",
+            city: t?.city ?? "",
+            state: t?.state ?? "",
+            event_date: t?.event_date ?? "",
+            cover_img_url: t?.cover_img_url ?? null,
+          };
+        }));
       }
 
       // Partners from mutual matches
@@ -631,7 +692,7 @@ export default function ProfilePage() {
 
             {/* Tournaments */}
             <TabsContent value="tournaments">
-              <TournamentsTab entries={tournamentEntries} loading={loading} />
+              <TournamentsTab entries={tournamentEntries} bookmarks={bookmarkedTournaments} loading={loading} />
             </TabsContent>
 
             {/* Match History */}

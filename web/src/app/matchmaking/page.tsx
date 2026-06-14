@@ -310,6 +310,9 @@ export default function MatchmakingPage() {
   const swipe = useCallback(async (dir: "left" | "right" | "up") => {
     if (!top) return;
     setSwipeDir(dir);
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate(dir === "up" ? [40, 20, 40] : dir === "right" ? 40 : 20);
+    }
 
     if (myId) {
       const supabase = createClient();

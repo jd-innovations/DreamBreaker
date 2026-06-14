@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Trophy, Users, Lightning, TrendUp, Calendar, MapPin,
-  ArrowRight, Medal, Target, Star,
+  ArrowRight, Medal, Target, Star, BookmarkSimple,
 } from "@phosphor-icons/react";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
@@ -22,6 +22,15 @@ type Profile = {
   skill_level: string | null;
   location_city: string | null;
   location_state: string | null;
+};
+
+type SavedTournament = {
+  id: string;
+  tournamentId: string;
+  name: string;
+  city: string;
+  state: string;
+  event_date: string;
 };
 
 type UpcomingEvent = {
@@ -104,6 +113,7 @@ function processMatch(
 export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [upcoming, setUpcoming] = useState<UpcomingEvent[]>([]);
+  const [saved, setSaved] = useState<SavedTournament[]>([]);
   const [matches, setMatches] = useState<DisplayMatch[]>([]);
   const [stats, setStats] = useState({ wins: 0, losses: 0, tournaments: 0, duprDelta: 0 });
   const [loading, setLoading] = useState(true);
@@ -197,6 +207,20 @@ export default function DashboardPage() {
         .eq("player_id", user.id)
         .in("status", ["registered", "checked_in"]);
       if (count && count > 0) setStats((s) => ({ ...s, tournaments: count }));
+
+      // Bookmarked tournaments
+      const { data: bookmarkRows } = await supabase
+        .from("tournament_bookmarks")
+        .select("id, tournament:tournaments!tournament_id(id, name, city, state, event_date)")
+        .eq("player_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (bookmarkRows && bookmarkRows.length > 0) {
+        setSaved(bookmarkRows.map((b) => {
+          const t = b.tournament as { id: string; name: string; city: string; state: string; event_date: string } | null;
+          return { id: b.id, tournamentId: t?.id ?? "", name: t?.name ?? "—", city: t?.city ?? "", state: t?.state ?? "", event_date: t?.event_date ?? "" };
+        }));
+      }
 
       // DUPR delta from history
       const { data: duprRows } = await supabase
@@ -377,6 +401,35 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
+
+            {/* Saved tournaments */}
+            {saved.length > 0 && (
+              <div className="border border-border rounded-2xl bg-card overflow-hidden">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                  <div className="font-display tracking-[0.15em] flex items-center gap-2">
+                    <BookmarkSimple size={14} weight="fill" className="text-primary" /> SAVED
+                  </div>
+                  <Link href="/profile" className="text-xs text-primary hover:underline font-mono">VIEW ALL</Link>
+                </div>
+                <div className="divide-y divide-border">
+                  {saved.map((t) => (
+                    <Link key={t.id} href={`/tournaments/${t.tournamentId}`} className="px-5 py-4 flex items-start gap-3 hover:bg-secondary/40 transition-colors block">
+                      <BookmarkSimple size={16} weight="fill" className="text-primary mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold truncate">{t.name}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                          <MapPin size={11} /> {t.city}, {t.state}
+                        </div>
+                        {t.event_date && (
+                          <div className="text-[10px] font-mono mt-1 text-muted-foreground">{formatDate(t.event_date)}</div>
+                        )}
+                      </div>
+                      <ArrowRight size={14} className="text-muted-foreground flex-shrink-0 mt-0.5" />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Quick actions */}
             <div className="border border-border rounded-2xl bg-card p-5">
