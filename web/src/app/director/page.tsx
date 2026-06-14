@@ -225,6 +225,7 @@ export default function DirectorPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [navSection, setNavSection] = useState<NavSection>("dashboard");
   const [tournamentPickerOpen, setTournamentPickerOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [publishing, setPublishing] = useState<string | null>(null);
   const [regsLoaded, setRegsLoaded] = useState<string | null>(null);
   const [checkinSearch, setCheckinSearch] = useState("");
@@ -341,154 +342,183 @@ export default function DirectorPage() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background flex">
-      {/* ── Sidebar ── */}
-      <aside className="w-60 flex-shrink-0 border-r border-border bg-card flex flex-col h-screen sticky top-0">
-        {/* Logo */}
-        <div className="px-5 py-5 border-b border-border">
-          <Link href="/" className="flex items-center gap-2">
-            <Lightning size={18} weight="fill" className="text-primary" />
-            <span className="font-display tracking-wider text-sm">DreamBreakerPB</span>
-          </Link>
-          <div className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mt-1">TOURNAMENT DIRECTOR</div>
-        </div>
+  const SidebarContent = () => (
+    <>
+      {/* Logo */}
+      <div className="px-5 py-5 border-b border-border">
+        <Link href="/" className="flex items-center gap-2">
+          <Lightning size={18} weight="fill" className="text-primary" />
+          <span className="font-display tracking-wider text-sm">DreamBreakerPB</span>
+        </Link>
+        <div className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mt-1">TOURNAMENT DIRECTOR</div>
+      </div>
 
-        {/* Tournament selector */}
-        <div className="px-3 py-3 border-b border-border">
-          <button
-            onClick={() => setTournamentPickerOpen(!tournamentPickerOpen)}
-            className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-secondary transition-colors"
-          >
-            <div className="font-mono text-[9px] tracking-widest text-muted-foreground mb-0.5">MANAGING</div>
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <div className="font-semibold text-sm truncate">{selected?.name ?? "No tournaments"}</div>
-                {selected && (
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[selected.status]}`} />
-                    <span className="text-[10px] text-muted-foreground">{STATUS_LABELS[selected.status]} · {selected.city}</span>
-                  </div>
-                )}
-              </div>
-              {tournamentPickerOpen ? <CaretUp size={12} className="flex-shrink-0 text-muted-foreground" /> : <CaretDown size={12} className="flex-shrink-0 text-muted-foreground" />}
-            </div>
-          </button>
-
-          {tournamentPickerOpen && (
-            <div className="mt-1 space-y-0.5 max-h-48 overflow-y-auto">
-              {tournaments.map((t) => (
-                <button key={t.id} onClick={() => { setSelectedId(t.id); setTournamentPickerOpen(false); setRegsLoaded(null); }}
-                  className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${t.id === selectedId ? "bg-primary/10 text-foreground" : "hover:bg-secondary text-muted-foreground"}`}>
-                  <div className="flex items-center gap-2">
-                    <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[t.status]}`} />
-                    <span className="truncate">{t.name}</span>
-                  </div>
-                </button>
-              ))}
-              <button onClick={() => { setShowCreate(true); setTournamentPickerOpen(false); }}
-                className="w-full text-left px-3 py-2 rounded-xl text-sm text-primary hover:bg-primary/10 transition-colors flex items-center gap-2">
-                <Plus size={13} weight="bold" /> New Tournament
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
-          <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mb-2">OVERVIEW</div>
-          {([
-            { id: "dashboard", icon: Gauge, label: "Dashboard" },
-            { id: "analytics", icon: ChartBar, label: "Analytics" },
-          ] as const).map(({ id, icon: Icon, label }) => (
-            <button key={id} onClick={() => setNavSection(id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
-              <Icon size={16} weight={navSection === id ? "fill" : "regular"} />
-              {label}
-            </button>
-          ))}
-
-          <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">OPERATIONS</div>
-          {([
-            { id: "registrations", icon: Ticket, label: "Registration" },
-            { id: "checkin", icon: ClipboardText, label: "Check-In" },
-          ] as const).map(({ id, icon: Icon, label }) => (
-            <button key={id} onClick={() => { setNavSection(id); if (selectedId) loadRegistrations(selectedId); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
-              <Icon size={16} weight={navSection === id ? "fill" : "regular"} />
-              {label}
-              {id === "registrations" && selected && selected.registered + selected.held > 0 && (
-                <span className="ml-auto text-[10px] font-mono bg-primary/20 text-primary px-1.5 rounded-full">{selected.registered + selected.held}</span>
-              )}
-            </button>
-          ))}
-
-          <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">TOURNAMENT</div>
-          {selected && (
-            <Link href={`/director/tournaments/${selected.id}`}>
-              <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                <Star size={16} />
-                Manage &amp; Sponsors
-              </button>
-            </Link>
-          )}
-          {selected && (
-            <Link href={`/tournaments/${selected.id}`} target="_blank">
-              <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                <ArrowSquareOut size={16} />
-                View Public Page
-              </button>
-            </Link>
-          )}
-        </nav>
-
-        {/* Bottom */}
-        <div className="border-t border-border px-3 py-3 space-y-0.5">
-          <button onClick={() => setNavSection("settings")} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${navSection === "settings" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
-            <Gear size={16} /> Settings
-          </button>
-          <Link href="/dashboard">
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-              <Users size={16} /> Player View
-            </button>
-          </Link>
-          <Link href="/auth">
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-              <SignOut size={16} /> Log out
-            </button>
-          </Link>
-          {/* Profile */}
-          <div className="flex items-center gap-3 px-3 py-2.5 mt-1 border-t border-border">
-            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-              <span className="font-display text-sm text-primary">{firstName[0]}</span>
-            </div>
+      {/* Tournament selector */}
+      <div className="px-3 py-3 border-b border-border">
+        <button
+          onClick={() => setTournamentPickerOpen(!tournamentPickerOpen)}
+          className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-secondary transition-colors"
+        >
+          <div className="font-mono text-[9px] tracking-widest text-muted-foreground mb-0.5">MANAGING</div>
+          <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <div className="text-sm font-medium truncate">{profileName}</div>
-              <div className="text-[10px] text-muted-foreground">Tournament Director</div>
+              <div className="font-semibold text-sm truncate">{selected?.name ?? "No tournaments"}</div>
+              {selected && (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[selected.status]}`} />
+                  <span className="text-[10px] text-muted-foreground">{STATUS_LABELS[selected.status]} · {selected.city}</span>
+                </div>
+              )}
             </div>
+            {tournamentPickerOpen ? <CaretUp size={12} className="flex-shrink-0 text-muted-foreground" /> : <CaretDown size={12} className="flex-shrink-0 text-muted-foreground" />}
+          </div>
+        </button>
+
+        {tournamentPickerOpen && (
+          <div className="mt-1 space-y-0.5 max-h-48 overflow-y-auto">
+            {tournaments.map((t) => (
+              <button key={t.id} onClick={() => { setSelectedId(t.id); setTournamentPickerOpen(false); setRegsLoaded(null); setMobileSidebarOpen(false); }}
+                className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${t.id === selectedId ? "bg-primary/10 text-foreground" : "hover:bg-secondary text-muted-foreground"}`}>
+                <div className="flex items-center gap-2">
+                  <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[t.status]}`} />
+                  <span className="truncate">{t.name}</span>
+                </div>
+              </button>
+            ))}
+            <button onClick={() => { setShowCreate(true); setTournamentPickerOpen(false); setMobileSidebarOpen(false); }}
+              className="w-full text-left px-3 py-2 rounded-xl text-sm text-primary hover:bg-primary/10 transition-colors flex items-center gap-2">
+              <Plus size={13} weight="bold" /> New Tournament
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mb-2">OVERVIEW</div>
+        {([
+          { id: "dashboard", icon: Gauge, label: "Dashboard" },
+          { id: "analytics", icon: ChartBar, label: "Analytics" },
+        ] as const).map(({ id, icon: Icon, label }) => (
+          <button key={id} onClick={() => { setNavSection(id); setMobileSidebarOpen(false); }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+            <Icon size={16} weight={navSection === id ? "fill" : "regular"} />
+            {label}
+          </button>
+        ))}
+
+        <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">OPERATIONS</div>
+        {([
+          { id: "registrations", icon: Ticket, label: "Registration" },
+          { id: "checkin", icon: ClipboardText, label: "Check-In" },
+        ] as const).map(({ id, icon: Icon, label }) => (
+          <button key={id} onClick={() => { setNavSection(id); if (selectedId) loadRegistrations(selectedId); setMobileSidebarOpen(false); }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+            <Icon size={16} weight={navSection === id ? "fill" : "regular"} />
+            {label}
+            {id === "registrations" && selected && selected.registered + selected.held > 0 && (
+              <span className="ml-auto text-[10px] font-mono bg-primary/20 text-primary px-1.5 rounded-full">{selected.registered + selected.held}</span>
+            )}
+          </button>
+        ))}
+
+        <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">TOURNAMENT</div>
+        {selected && (
+          <Link href={`/director/tournaments/${selected.id}`} onClick={() => setMobileSidebarOpen(false)}>
+            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+              <Star size={16} />
+              Manage &amp; Sponsors
+            </button>
+          </Link>
+        )}
+        {selected && (
+          <Link href={`/tournaments/${selected.id}`} target="_blank" onClick={() => setMobileSidebarOpen(false)}>
+            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+              <ArrowSquareOut size={16} />
+              View Public Page
+            </button>
+          </Link>
+        )}
+      </nav>
+
+      {/* Bottom */}
+      <div className="border-t border-border px-3 py-3 space-y-0.5">
+        <button onClick={() => { setNavSection("settings"); setMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${navSection === "settings" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+          <Gear size={16} /> Settings
+        </button>
+        <Link href="/dashboard">
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Users size={16} /> Player View
+          </button>
+        </Link>
+        <Link href="/auth">
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <SignOut size={16} /> Log out
+          </button>
+        </Link>
+        <div className="flex items-center gap-3 px-3 py-2.5 mt-1 border-t border-border">
+          <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+            <span className="font-display text-sm text-primary">{firstName[0]}</span>
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm font-medium truncate">{profileName}</div>
+            <div className="text-[10px] text-muted-foreground">Tournament Director</div>
           </div>
         </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* ── Mobile sidebar overlay ── */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-card border-r border-border flex flex-col z-50">
+            <div className="flex items-center justify-between px-5 pt-4 pb-0">
+              <span className="font-mono text-[10px] tracking-widest text-muted-foreground">MENU</span>
+              <button onClick={() => setMobileSidebarOpen(false)} className="h-8 w-8 rounded-full border border-border flex items-center justify-center">
+                <X size={14} weight="bold" />
+              </button>
+            </div>
+            <SidebarContent />
+          </aside>
+        </div>
+      )}
+
+      {/* ── Desktop Sidebar ── */}
+      <aside className="w-60 flex-shrink-0 border-r border-border bg-card hidden lg:flex flex-col h-screen sticky top-0">
+        <SidebarContent />
       </aside>
 
       {/* ── Main ── */}
-      <main className="flex-1 min-h-screen overflow-y-auto">
+      <main className="flex-1 min-h-screen overflow-y-auto pb-20 lg:pb-0">
         {/* Top bar */}
-        <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border px-8 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-2xl tracking-wide">{selected?.name ?? "Director Dashboard"}</h1>
-            {selected && <p className="text-xs text-muted-foreground mt-0.5">{selected.venue_name} · {selected.city}, {selected.state} · {formatDate(selected.event_date)}</p>}
+        <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Hamburger — mobile only */}
+            <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden h-9 w-9 rounded-xl border border-border flex items-center justify-center flex-shrink-0 hover:bg-secondary transition-colors">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+            <div className="min-w-0">
+              <h1 className="font-display text-lg sm:text-2xl tracking-wide truncate">{selected?.name ?? "Director Dashboard"}</h1>
+              {selected && <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block truncate">{selected.venue_name} · {selected.city}, {selected.state} · {formatDate(selected.event_date)}</p>}
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="h-9 px-4 rounded-full border border-border hover:bg-secondary text-sm transition-colors flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button className="h-9 w-9 sm:w-auto sm:px-4 rounded-full border border-border hover:bg-secondary text-sm transition-colors flex items-center justify-center gap-2">
               <Bell size={14} /> <span className="hidden sm:inline">Notifications</span>
             </button>
-            <button onClick={() => setShowCreate(true)} className="h-9 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors flex items-center gap-1.5">
-              <Plus size={14} weight="bold" /> New Tournament
+            <button onClick={() => setShowCreate(true)} className="h-9 px-3 sm:px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors flex items-center gap-1.5">
+              <Plus size={14} weight="bold" /> <span className="hidden sm:inline">New Tournament</span>
             </button>
           </div>
         </header>
 
-        <div className="px-8 py-8">
+        <div className="px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
 
           {/* ── No tournaments ── */}
           {tournaments.length === 0 && (
@@ -640,21 +670,21 @@ export default function DirectorPage() {
                   </div>
                 ))}
               </div>
-              <div className="rounded-2xl border border-border bg-card p-6">
+              <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 overflow-x-auto">
                 <h3 className="font-semibold mb-1">Revenue &amp; Registrations by Tournament</h3>
                 <p className="text-xs text-muted-foreground mb-6">All events you manage</p>
-                <div className="space-y-4">
+                <div className="space-y-4 min-w-[360px]">
                   {tournaments.map((t) => {
                     const pct = Math.round((t.registered / t.draw_size) * 100);
                     return (
-                      <div key={t.id} className="flex items-center gap-4">
-                        <button onClick={() => { setSelectedId(t.id); setNavSection("dashboard"); }} className="text-sm font-medium text-left w-36 truncate hover:text-primary transition-colors">{t.name}</button>
+                      <div key={t.id} className="flex items-center gap-3 sm:gap-4">
+                        <button onClick={() => { setSelectedId(t.id); setNavSection("dashboard"); }} className="text-sm font-medium text-left w-24 sm:w-36 truncate hover:text-primary transition-colors flex-shrink-0">{t.name}</button>
                         <div className="flex-1 h-3 bg-secondary rounded-full overflow-hidden">
                           <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="font-mono text-xs text-muted-foreground w-12 text-right">{pct}%</span>
-                        <span className="font-mono text-xs text-primary w-20 text-right">{fmt(t.revenue_cents)}</span>
-                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border w-20 text-center ${STATUS_DOT[t.status] === "bg-primary" ? "text-primary border-primary/30" : "text-muted-foreground border-border"}`}>{STATUS_LABELS[t.status]}</span>
+                        <span className="font-mono text-xs text-muted-foreground w-10 sm:w-12 text-right flex-shrink-0">{pct}%</span>
+                        <span className="font-mono text-xs text-primary w-16 sm:w-20 text-right flex-shrink-0">{fmt(t.revenue_cents)}</span>
+                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border w-16 sm:w-20 text-center flex-shrink-0 ${STATUS_DOT[t.status] === "bg-primary" ? "text-primary border-primary/30" : "text-muted-foreground border-border"}`}>{STATUS_LABELS[t.status]}</span>
                       </div>
                     );
                   })}
@@ -843,6 +873,25 @@ export default function DirectorPage() {
           )}
         </div>
       </main>
+
+      {/* ── Mobile bottom nav ── */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-card border-t border-border flex items-center justify-around px-2 py-2 safe-area-pb">
+        {([
+          { id: "dashboard", icon: Gauge, label: "Home" },
+          { id: "analytics", icon: ChartBar, label: "Analytics" },
+          { id: "registrations", icon: Ticket, label: "Registrations" },
+          { id: "checkin", icon: ClipboardText, label: "Check-In" },
+          { id: "settings", icon: Gear, label: "Settings" },
+        ] as const).map(({ id, icon: Icon, label }) => (
+          <button key={id}
+            onClick={() => { setNavSection(id); if (id === "registrations" || id === "checkin") { if (selectedId) loadRegistrations(selectedId); } }}
+            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-0 flex-1 ${navSection === id ? "text-primary" : "text-muted-foreground"}`}
+          >
+            <Icon size={20} weight={navSection === id ? "fill" : "regular"} />
+            <span className="text-[9px] font-mono tracking-wide truncate">{label.toUpperCase()}</span>
+          </button>
+        ))}
+      </nav>
 
       {showCreate && (
         <CreateDialog onClose={() => setShowCreate(false)} onCreated={(t) => {
