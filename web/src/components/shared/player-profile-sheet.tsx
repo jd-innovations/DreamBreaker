@@ -75,7 +75,7 @@ export function PlayerProfileSheet({ partner, onClose, onPass, onLike, onSuperCo
       <div
         ref={sheetRef}
         className="relative z-10 w-full max-w-lg mx-auto bg-background border-t border-x border-border rounded-t-3xl flex flex-col animate-in slide-in-from-bottom duration-300"
-        style={{ maxHeight: "calc(88dvh - 108px)", marginBottom: "108px" }}
+        style={{ maxHeight: "calc(96dvh - 64px)", marginBottom: "64px" }}
         data-testid="profile-sheet"
       >
         {/* Drag handle + close row */}
@@ -94,7 +94,7 @@ export function PlayerProfileSheet({ partner, onClose, onPass, onLike, onSuperCo
         {/* Scrollable content */}
         <div className="overflow-y-auto flex-1 min-h-0">
           {/* Hero photo */}
-          <div className="relative h-72 overflow-hidden flex-shrink-0">
+          <div className="relative h-96 overflow-hidden flex-shrink-0">
             <img src={partner.img} alt="" className="h-full w-full object-cover object-top" />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
 
@@ -136,8 +136,16 @@ export function PlayerProfileSheet({ partner, onClose, onPass, onLike, onSuperCo
 
           {/* Body */}
           <div className="px-5 pb-4 space-y-5">
+            {/* Bio */}
+            {partner.bio && (
+              <div className="pt-2">
+                <p className="font-mono text-[9px] tracking-[0.25em] text-muted-foreground mb-1.5">ABOUT</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{partner.bio}</p>
+              </div>
+            )}
+
             {/* Quick stats row */}
-            <div className="grid grid-cols-3 gap-3 pt-2">
+            <div className="grid grid-cols-3 gap-3">
               {[
                 { icon: Trophy, label: "MATCH", value: `${partner.matchPct}%` },
                 { icon: Users, label: "MUTUALS", value: partner.mutuals > 0 ? `${partner.mutuals}` : "—" },
@@ -150,14 +158,6 @@ export function PlayerProfileSheet({ partner, onClose, onPass, onLike, onSuperCo
                 </div>
               ))}
             </div>
-
-            {/* Bio */}
-            {partner.bio && (
-              <div>
-                <p className="font-mono text-[9px] tracking-[0.25em] text-muted-foreground mb-1.5">ABOUT</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">{partner.bio}</p>
-              </div>
-            )}
 
             {/* Info chips */}
             {(partner.availability || partner.play_style) && (
