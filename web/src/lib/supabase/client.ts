@@ -1,27 +1,12 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { Database } from "./database.types";
 
-function getConfig() {
-  // Try build-time env var first (works locally and when cache is fresh)
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (url && key) return { url, key };
-
-  // Fall back to runtime config injected by the server layout
-  if (typeof document !== "undefined") {
-    const el = document.getElementById("app-config");
-    if (el) {
-      const cfg = JSON.parse(el.textContent ?? "{}");
-      if (cfg.supabaseUrl && cfg.supabaseAnonKey) return { url: cfg.supabaseUrl, key: cfg.supabaseAnonKey };
-    }
-  }
-
-  throw new Error("Supabase config not found — check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel.");
-}
+// Public anon credentials — safe to ship in client bundles
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://fbzetvkbhneptvfruilw.supabase.co";
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiemV0dmtiaG5lcHR2ZnJ1aWx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTU4MTIsImV4cCI6MjA5Njg3MTgxMn0.mk0KiENK6Qxp551-m7Mshb1ikN0Lr4y03SeZII5djpo";
 
 export function createClient() {
-  const { url, key } = getConfig();
-  return createBrowserClient<Database>(url, key, {
+  return createBrowserClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { flowType: "pkce" },
   });
 }
