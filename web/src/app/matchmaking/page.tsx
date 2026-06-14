@@ -410,7 +410,7 @@ export default function MatchmakingPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* Card deck */}
         <div className="lg:col-span-2 flex flex-col items-center">
-          <div className="relative w-full max-w-sm select-none" style={{ height: "min(520px, calc(100dvh - 340px))" }} data-testid="swipe-deck">
+          <div className="relative w-full max-w-sm lg:max-w-none select-none" style={{ height: "min(600px, calc(100dvh - 280px))" }} data-testid="swipe-deck">
             {loading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
@@ -440,21 +440,21 @@ export default function MatchmakingPage() {
                 {topCard && (
                   <div
                     key={topCard.id}
-                    className={`absolute inset-x-0 rounded-3xl border border-border bg-card overflow-hidden shadow-2xl transition-all duration-300 ${animClass}`}
+                    className={`absolute inset-x-0 inset-y-0 rounded-3xl border border-border bg-card overflow-hidden shadow-2xl transition-all duration-300 flex flex-col lg:flex-row ${animClass}`}
                     style={{ zIndex: 10 }}
                     data-testid="top-card"
                   >
-                    {/* Photo section */}
-                    <div className="relative h-72 overflow-hidden">
-                      <img src={topCard.img} alt="" className="h-full w-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+                    {/* Photo — full height on desktop */}
+                    <div className="relative h-72 lg:h-full lg:w-[55%] flex-shrink-0 overflow-hidden">
+                      <img src={topCard.img} alt="" className="h-full w-full object-cover object-top" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:via-transparent lg:to-background" />
 
-                      {/* Match ring — top left */}
+                      {/* Match ring */}
                       <div className="absolute top-4 left-4">
                         <MatchRing pct={topCard.matchPct} />
                       </div>
 
-                      {/* Badge — top right */}
+                      {/* Badge */}
                       {topCard.isTopRated && (
                         <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-primary text-primary-foreground font-mono text-[10px] tracking-[0.2em] font-bold">
                           TOP RATED
@@ -484,61 +484,72 @@ export default function MatchmakingPage() {
                         </div>
                       )}
 
-                      {/* Name / DUPR overlay */}
-                      <div className="absolute bottom-4 left-5 right-5">
+                      {/* Name overlay — mobile only (bottom of photo) */}
+                      <div className="absolute bottom-4 left-5 right-5 lg:hidden">
                         <div className="flex items-center gap-2">
                           <h2 className="font-display text-3xl tracking-wide text-white leading-tight">{topCard.name}</h2>
                           {topCard.isVerified && <CheckCircle size={18} weight="fill" className="text-primary flex-shrink-0" />}
                         </div>
                         <div className="flex items-center gap-3 mt-1 flex-wrap">
                           {topCard.dupr ? (
-                            <span className="flex items-center gap-1 bg-primary text-primary-foreground text-xs font-mono font-bold px-2.5 py-1 rounded-full">
-                              {topCard.dupr} DUPR
-                            </span>
+                            <span className="bg-primary text-primary-foreground text-xs font-mono font-bold px-2.5 py-1 rounded-full">{topCard.dupr} DUPR</span>
                           ) : topCard.skill_level ? (
-                            <span className="flex items-center gap-1 bg-secondary/80 text-foreground text-xs font-mono px-2.5 py-1 rounded-full">
-                              <Star size={11} weight="fill" className="text-primary" />
-                              {topCard.skill_level.replace("-", " – ")}
-                            </span>
+                            <span className="bg-secondary/80 text-foreground text-xs font-mono px-2.5 py-1 rounded-full flex items-center gap-1"><Star size={11} weight="fill" className="text-primary" />{topCard.skill_level.replace("-", " – ")}</span>
                           ) : null}
-                          {topCard.badges.slice(0, 1).map((b) => (
-                            <span key={b} className="bg-foreground/80 text-background text-xs font-mono px-2.5 py-1 rounded-full">{b.toUpperCase()}</span>
-                          ))}
-                          <span className="flex items-center gap-1 text-white/80 text-xs">
-                            <MapPin size={12} weight="bold" />{topCard.location}{topCard.distance ? ` · ${topCard.distance}` : ""}
-                          </span>
+                          <span className="flex items-center gap-1 text-white/80 text-xs"><MapPin size={12} weight="bold" />{topCard.location}{topCard.distance ? ` · ${topCard.distance}` : ""}</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Info section */}
-                    <div className="p-5 space-y-4">
-                      {/* Availability + preferred side chips */}
-                      <div className="flex gap-2">
-                        {topCard.availability && <InfoChip label="AVAILABILITY" value={topCard.availability} />}
-                        {topCard.play_style && <InfoChip label="PLAY STYLE" value={topCard.play_style} />}
-                      </div>
-
-                      {/* Why we matched */}
-                      {topCard.matchReasons.length > 0 && (
-                        <div>
-                          <p className="font-mono text-[9px] tracking-[0.25em] text-primary mb-2 flex items-center gap-1.5">
-                            <Lightning size={10} weight="fill" /> WHY WE MATCHED YOU
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {topCard.matchReasons.map((r) => <ReasonPill key={r} label={r} />)}
+                    {/* Info panel — desktop right side / mobile below */}
+                    <div className="flex flex-col justify-between flex-1 p-6 lg:p-8 overflow-y-auto">
+                      {/* Name — desktop only */}
+                      <div>
+                        <div className="hidden lg:block mb-5">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h2 className="font-display text-4xl tracking-wide leading-tight">{topCard.name}</h2>
+                            {topCard.isVerified && <CheckCircle size={20} weight="fill" className="text-primary flex-shrink-0" />}
+                          </div>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            {topCard.dupr ? (
+                              <span className="bg-primary text-primary-foreground text-xs font-mono font-bold px-3 py-1.5 rounded-full">{topCard.dupr} DUPR</span>
+                            ) : topCard.skill_level ? (
+                              <span className="bg-secondary text-foreground text-xs font-mono px-3 py-1.5 rounded-full flex items-center gap-1"><Star size={11} weight="fill" className="text-primary" />{topCard.skill_level.replace("-", " – ")}</span>
+                            ) : null}
+                            {topCard.badges.slice(0, 2).map((b) => (
+                              <span key={b} className="bg-secondary border border-border text-xs font-mono px-3 py-1.5 rounded-full">{b.toUpperCase()}</span>
+                            ))}
+                            <span className="flex items-center gap-1 text-muted-foreground text-xs"><MapPin size={12} weight="bold" className="text-primary" />{topCard.location}{topCard.distance ? ` · ${topCard.distance}` : ""}</span>
                           </div>
                         </div>
-                      )}
 
-                      {/* Bio */}
-                      {topCard.bio && (
-                        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">{topCard.bio}</p>
-                      )}
+                        {/* Chips */}
+                        <div className="flex gap-2 flex-wrap mb-4">
+                          {topCard.availability && <InfoChip label="AVAILABILITY" value={topCard.availability} />}
+                          {topCard.play_style && <InfoChip label="PLAY STYLE" value={topCard.play_style} />}
+                        </div>
 
-                      {/* Footer: tournament overlap + mutuals + PROFILE */}
-                      <div className="flex items-center justify-between pt-3 border-t border-border/60">
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        {/* Why matched */}
+                        {topCard.matchReasons.length > 0 && (
+                          <div className="mb-4">
+                            <p className="font-mono text-[9px] tracking-[0.25em] text-primary mb-2 flex items-center gap-1.5">
+                              <Lightning size={10} weight="fill" /> WHY WE MATCHED YOU
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {topCard.matchReasons.map((r) => <ReasonPill key={r} label={r} />)}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Bio */}
+                        {topCard.bio && (
+                          <p className="text-sm text-muted-foreground leading-relaxed lg:line-clamp-4 line-clamp-2">{topCard.bio}</p>
+                        )}
+                      </div>
+
+                      {/* Footer */}
+                      <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/60">
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           {topCard.tournamentOverlap && (
                             <span className="flex items-center gap-1">
                               <Trophy size={12} weight="fill" className="text-primary" />
@@ -558,6 +569,19 @@ export default function MatchmakingPage() {
                           data-testid="open-profile-sheet"
                         >
                           PROFILE <ArrowRight size={12} weight="bold" />
+                        </button>
+                      </div>
+
+                      {/* Desktop action buttons inline in card */}
+                      <div className="hidden lg:flex items-center gap-3 mt-5">
+                        <button onClick={() => swipe("left")} className="flex-1 h-12 rounded-full border-2 border-destructive text-destructive font-display tracking-[0.15em] text-sm flex items-center justify-center gap-2 hover:bg-destructive/10 transition-colors active:scale-95">
+                          <XCircle size={18} weight="fill" /> PASS
+                        </button>
+                        <button onClick={() => swipe("up")} className="h-12 w-12 rounded-full bg-foreground text-background flex items-center justify-center transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="Super Connect">
+                          <Lightning size={20} weight="fill" />
+                        </button>
+                        <button onClick={() => swipe("right")} className="flex-1 h-12 rounded-full bg-primary text-primary-foreground font-display tracking-[0.15em] text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors active:scale-95">
+                          <Heart size={18} weight="fill" /> LIKE
                         </button>
                       </div>
                     </div>
@@ -598,18 +622,6 @@ export default function MatchmakingPage() {
                 </div>
               </div>
 
-              {/* Desktop inline */}
-              <div className="hidden lg:flex items-center gap-3 mt-8 w-full max-w-sm">
-                <button onClick={() => swipe("left")} data-testid="swipe-left-btn" className="flex-1 h-12 rounded-full border-2 border-destructive text-destructive font-display tracking-[0.15em] text-sm flex items-center justify-center gap-2 hover:bg-destructive/10 transition-colors active:scale-95">
-                  <XCircle size={18} weight="fill" /> PASS
-                </button>
-                <button onClick={() => swipe("up")} data-testid="swipe-up-btn" className="h-12 w-12 rounded-full bg-foreground text-background flex items-center justify-center transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="Super Connect">
-                  <Lightning size={20} weight="fill" />
-                </button>
-                <button onClick={() => swipe("right")} data-testid="swipe-right-btn" className="flex-1 h-12 rounded-full bg-primary text-primary-foreground font-display tracking-[0.15em] text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors active:scale-95">
-                  <Heart size={18} weight="fill" /> LIKE
-                </button>
-              </div>
             </>
           )}
         </div>
