@@ -91,9 +91,11 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
       const supabase = createClient();
 
       const name = fd.get("name") as string;
+      const venue_name = fd.get("venue") as string;
+      const venue_address = fd.get("venue_address") as string;
       const city = fd.get("city") as string;
       const state = fd.get("state") as string;
-      const venue_name = (fd.get("venue") as string) || null;
+      const zip_code = fd.get("zip_code") as string;
       const event_date = fd.get("date") as string;
       const format = fd.get("format") as string;
       const draw_size = parseInt(fd.get("capacity") as string, 10);
@@ -103,18 +105,20 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
       const prize_pool_cents = prize_raw ? Math.round(parseFloat(prize_raw) * 100) : null;
       const description = (fd.get("description") as string) || null;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const insertPayload: any = {
+        director_id: userId,
+        name, venue_name, venue_address, city, state, zip_code, event_date,
+        format,
+        draw_size,
+        entry_fee_cents, hold_fee_cents,
+        prize_pool_cents, description,
+        status: "draft",
+        spots_filled: 0,
+      };
       const { data, error } = await supabase
         .from("tournaments")
-        .insert({
-          director_id: userId,
-          name, city, state, venue_name, event_date,
-          format: format as "singles" | "doubles" | "mixed_doubles" | "juniors",
-          draw_size,
-          entry_fee_cents, hold_fee_cents,
-          prize_pool_cents, description,
-          status: "draft",
-          spots_filled: 0,
-        })
+        .insert(insertPayload)
         .select("id,name,city,state,venue_name,event_date,format,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,prize_pool_cents,status,created_at")
         .single();
 
@@ -140,24 +144,33 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">TOURNAMENT NAME</label>
+            <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">EVENT NAME</label>
             <input name="name" required placeholder="e.g. Spring Slam Open" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-name" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">CITY</label>
-              <input name="city" required placeholder="Austin" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
-            </div>
-            <div>
-              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">STATE</label>
-              <input name="state" required placeholder="TX" maxLength={2} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
-            </div>
           </div>
 
           <div>
             <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">VENUE NAME</label>
-            <input name="venue" placeholder="Arena name (optional)" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+            <input name="venue" required placeholder="e.g. Lakewood Ranch Sports Complex" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-venue" />
+          </div>
+
+          <div>
+            <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">VENUE ADDRESS</label>
+            <input name="venue_address" required placeholder="123 Main St" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-venue-address" />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">CITY</label>
+              <input name="city" required placeholder="Bradenton" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+            <div>
+              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">STATE</label>
+              <input name="state" required placeholder="FL" maxLength={2} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+            <div>
+              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">ZIP CODE</label>
+              <input name="zip_code" required placeholder="34202" maxLength={10} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-zip" />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
