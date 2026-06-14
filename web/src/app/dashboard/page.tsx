@@ -109,15 +109,20 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const supabase = createClient();
-
     async function load() {
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        setUpcoming(mockTournaments.slice(0, 2).map((t) => { const [city, state] = t.location.split(", "); return { id: t.id, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" }; }));
+        setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
+        setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments, duprDelta: playerStats.duprDelta });
+        setLoading(false);
+        return;
+      }
+      const supabase = createClient();
 
       const userId = await getUserId();
 
       if (!userId) { setLoading(false); return; }
       const user = { id: userId };
-
 
       // Profile
       const { data: prof } = await supabase
