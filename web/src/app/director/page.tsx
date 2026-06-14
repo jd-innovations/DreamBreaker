@@ -211,7 +211,7 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto px-6 pb-6 flex-1">
+        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto px-6 pb-6 flex-1 min-h-0">
           <div>
             <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">EVENT NAME</label>
             <input name="name" required placeholder="e.g. Spring Slam Open" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-name" />
