@@ -10,11 +10,13 @@ import {
   ShieldCheck, MagnifyingGlass, Bell,
   ArrowSquareOut, Envelope, UserCircle, Megaphone,
   CheckFat, Ticket, PencilSimple, Trash, ArrowRight,
-  WarningCircle, Broadcast, Star,
+  WarningCircle, Broadcast, Star, ChatCircleDots,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
+import { MessagingPanel } from "@/components/messaging/panel";
+import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -143,7 +145,7 @@ function RejectModal({ tournamentName, onConfirm, onClose }: { tournamentName: s
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type NavSection = "dashboard" | "approvals" | "directors" | "users" | "tournaments" | "finance" | "comms" | "settings";
+type NavSection = "dashboard" | "approvals" | "directors" | "users" | "tournaments" | "finance" | "comms" | "messages" | "settings";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -164,6 +166,10 @@ export default function AdminPage() {
   const [rejectTarget, setRejectTarget] = useState<Tournament | null>(null);
   const [actioning, setActioning] = useState<string | null>(null);
 
+  const [messagingUnread, setMessagingUnread] = useState(0);
+  const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
   // Comms
   const [messages, setMessages] = useState<Message[]>([]);
   const [composeRecipientType, setComposeRecipientType] = useState<"all" | "directors" | "individual">("directors");
@@ -179,6 +185,7 @@ export default function AdminPage() {
     try {
       const userId = await getUserId();
       if (!userId) { router.push("/auth"); return; }
+      setCurrentUserId(userId);
       const supabase = createClient();
 
       const { data: profile } = await supabase.from("profiles").select("full_name,role").eq("id", userId).single();
@@ -190,6 +197,7 @@ export default function AdminPage() {
         .select("id,email,full_name,handle,role,director_status,director_events_hosted,director_rating,created_at,location_city,location_state,avatar_url")
         .order("created_at", { ascending: false });
       setProfiles((profs ?? []) as Profile[]);
+      setAllUsers((profs ?? []).map((p) => ({ id: p.id, full_name: p.full_name as string | null, role: p.role as string, avatar_url: (p as { avatar_url?: string | null }).avatar_url ?? null })) as MessagingUserProfile[]);
 
       // Load all tournaments with director name
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -376,10 +384,16 @@ export default function AdminPage() {
         ))}
 
         <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">COMMUNICATIONS</div>
+        <button onClick={() => { setNavSection("messages"); setMobileSidebarOpen(false); }}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "messages" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+          <ChatCircleDots size={16} weight={navSection === "messages" ? "fill" : "regular"} />
+          Messages
+          {messagingUnread > 0 && <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === "messages" ? "bg-white/20 text-white" : "bg-primary/10 text-primary"}`}>{messagingUnread}</span>}
+        </button>
         <button onClick={() => { setNavSection("comms"); setMobileSidebarOpen(false); }}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "comms" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
           <Envelope size={16} weight={navSection === "comms" ? "fill" : "regular"} />
-          Messaging
+          Email Comms
           {messages.length > 0 && <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === "comms" ? "bg-white/20 text-white" : "bg-primary/10 text-primary"}`}>{messages.length}</span>}
         </button>
       </nav>
@@ -1119,6 +1133,21 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* ── Messages ── */}
+          {navSection === "messages" && currentUserId && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="font-display text-xl tracking-wide">MESSAGES</h2>
+                <p className="text-sm text-muted-foreground">Direct messaging with directors and users</p>
+              </div>
+              <MessagingPanel
+                currentUserId={currentUserId}
+                allUsers={allUsers}
+                onUnreadChange={setMessagingUnread}
+              />
+            </div>
+          )}
+
         </div>
       </main>
 
@@ -1128,15 +1157,17 @@ export default function AdminPage() {
           { id: "dashboard" as NavSection, icon: Gauge, label: "Home", badge: 0 },
           { id: "approvals" as NavSection, icon: CheckFat, label: "Approvals", badge: pendingTournaments.length },
           { id: "users" as NavSection, icon: Users, label: "Users", badge: 0 },
-          { id: "tournaments" as NavSection, icon: Trophy, label: "Events", badge: 0 },
-          { id: "comms" as NavSection, icon: Envelope, label: "Comms", badge: 0 },
+          { id: "messages" as NavSection, icon: ChatCircleDots, label: "Msgs", badge: messagingUnread },
+          { id: "comms" as NavSection, icon: Envelope, label: "Email", badge: 0 },
         ]).map(({ id, icon: Icon, label, badge }) => (
           <button key={id} onClick={() => setNavSection(id)}
             className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-colors min-w-0 flex-1 relative ${navSection === id ? "text-primary" : "text-muted-foreground"}`}>
-            <Icon size={20} weight={navSection === id ? "fill" : "regular"} />
-            {badge > 0 && (
-              <span className="absolute top-0 right-2 h-4 w-4 rounded-full bg-amber-400 text-[9px] font-mono text-black flex items-center justify-center">{badge}</span>
-            )}
+            <div className="relative">
+              <Icon size={20} weight={navSection === id ? "fill" : "regular"} />
+              {badge > 0 && (
+                <span className={`absolute -top-1 -right-1.5 h-4 min-w-4 rounded-full text-[9px] font-mono flex items-center justify-center px-0.5 ${id === "approvals" ? "bg-amber-400 text-black" : "bg-primary text-primary-foreground"}`}>{badge > 9 ? "9+" : badge}</span>
+              )}
+            </div>
             <span className="text-[9px] font-mono tracking-wide truncate">{label.toUpperCase()}</span>
           </button>
         ))}

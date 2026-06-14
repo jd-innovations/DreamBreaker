@@ -9,7 +9,10 @@ import {
   ChartBar, ClipboardText, Gear, SignOut, CaretDown, CaretUp,
   TrendUp, TrendDown, Ticket, Star, Funnel, Bell, MagnifyingGlass,
   ArrowSquareOut, Broadcast, Trash, Globe, Image, UploadSimple, FloppyDisk,
+  ChatCircleDots,
 } from "@phosphor-icons/react";
+import { MessagingPanel } from "@/components/messaging/panel";
+import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
@@ -247,7 +250,7 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type NavSection = "dashboard" | "registrations" | "checkin" | "analytics" | "settings" | "manage" | "sponsors" | "publicpage";
+type NavSection = "dashboard" | "registrations" | "checkin" | "analytics" | "settings" | "manage" | "sponsors" | "publicpage" | "messages";
 
 export default function DirectorPage() {
   const router = useRouter();
@@ -278,6 +281,10 @@ export default function DirectorPage() {
   const [removingSponsor, setRemovingSponsor] = useState<string | null>(null);
   const detailsFormRef = useRef<HTMLFormElement>(null);
 
+  const [messagingUnread, setMessagingUnread] = useState(0);
+  const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
   const selected = tournaments.find((t) => t.id === selectedId) ?? null;
 
   useEffect(() => { load(); }, []);
@@ -287,6 +294,7 @@ export default function DirectorPage() {
     try {
       const userId = await getUserId();
       if (!userId) { router.push("/auth"); return; }
+      setCurrentUserId(userId);
       const supabase = createClient();
 
       const { data: profile } = await supabase.from("profiles").select("full_name,role").eq("id", userId).single();
@@ -296,6 +304,9 @@ export default function DirectorPage() {
           router.push("/dashboard"); return;
         }
       }
+
+      const { data: userProfiles } = await supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name");
+      setAllUsers((userProfiles ?? []) as MessagingUserProfile[]);
 
       const { data: ts } = await supabase.from("tournaments")
         .select("id,name,city,state,venue_name,event_date,format,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,prize_pool_cents,status,created_at")
@@ -592,6 +603,14 @@ export default function DirectorPage() {
             {id === "sponsors" && sponsors.length > 0 && <span className="ml-auto text-[10px] font-mono bg-primary/20 text-primary px-1.5 rounded-full">{sponsors.length}</span>}
           </button>
         ))}
+
+        <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">COMMUNICATIONS</div>
+        <button onClick={() => { setNavSection("messages"); setMobileSidebarOpen(false); }}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "messages" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+          <ChatCircleDots size={16} weight={navSection === "messages" ? "fill" : "regular"} />
+          Messages
+          {messagingUnread > 0 && <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === "messages" ? "bg-white/20 text-white" : "bg-primary/10 text-primary"}`}>{messagingUnread}</span>}
+        </button>
       </nav>
 
       {/* Bottom */}
@@ -1197,6 +1216,21 @@ export default function DirectorPage() {
             </div>
           )}
 
+          {/* ── Messages ── */}
+          {navSection === "messages" && currentUserId && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="font-display text-xl tracking-wide">MESSAGES</h2>
+                <p className="text-sm text-muted-foreground">Communicate with players and staff</p>
+              </div>
+              <MessagingPanel
+                currentUserId={currentUserId}
+                allUsers={allUsers}
+                onUnreadChange={setMessagingUnread}
+              />
+            </div>
+          )}
+
           {/* ── Public Page preview ── */}
           {navSection === "publicpage" && selected && (
             <div className="space-y-4">
@@ -1225,20 +1259,27 @@ export default function DirectorPage() {
       {/* ── Mobile bottom nav ── */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-card border-t border-border flex items-center justify-around px-1 py-2">
         {([
-          { id: "dashboard", icon: Gauge, label: "Home" },
-          { id: "registrations", icon: Ticket, label: "Regs" },
-          { id: "manage", icon: PencilSimple, label: "Manage" },
-          { id: "sponsors", icon: Star, label: "Sponsors" },
-          { id: "publicpage", icon: Eye, label: "Preview" },
-        ] as const).map(({ id, icon: Icon, label }) => (
+          { id: "dashboard" as NavSection, icon: Gauge, label: "Home" },
+          { id: "registrations" as NavSection, icon: Ticket, label: "Regs" },
+          { id: "manage" as NavSection, icon: PencilSimple, label: "Manage" },
+          { id: "messages" as NavSection, icon: ChatCircleDots, label: "Msgs" },
+          { id: "publicpage" as NavSection, icon: Eye, label: "Preview" },
+        ]).map(({ id, icon: Icon, label }) => (
           <button key={id}
             onClick={() => {
               setNavSection(id);
-              if (selectedId) loadManagement(selectedId);
+              if (selectedId && (id === "manage" || id === "sponsors")) loadManagement(selectedId);
             }}
-            className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-colors min-w-0 flex-1 ${navSection === id ? "text-primary" : "text-muted-foreground"}`}
+            className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-colors min-w-0 flex-1 relative ${navSection === id ? "text-primary" : "text-muted-foreground"}`}
           >
-            <Icon size={20} weight={navSection === id ? "fill" : "regular"} />
+            <div className="relative">
+              <Icon size={20} weight={navSection === id ? "fill" : "regular"} />
+              {id === "messages" && messagingUnread > 0 && (
+                <span className="absolute -top-1 -right-1.5 h-4 min-w-4 rounded-full bg-primary text-[9px] font-mono text-primary-foreground flex items-center justify-center px-0.5">
+                  {messagingUnread > 9 ? "9+" : messagingUnread}
+                </span>
+              )}
+            </div>
             <span className="text-[9px] font-mono tracking-wide truncate">{label.toUpperCase()}</span>
           </button>
         ))}

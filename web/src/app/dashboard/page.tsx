@@ -11,6 +11,8 @@ import {
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
+import { MessagingPanel } from "@/components/messaging/panel";
+import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
 import { playerStats, tournaments as mockTournaments, recentMatches as mockMatches } from "@/data/mock-data";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -118,6 +120,9 @@ export default function DashboardPage() {
   const [matches, setMatches] = useState<DisplayMatch[]>([]);
   const [stats, setStats] = useState({ wins: 0, losses: 0, tournaments: 0, duprDelta: 0 });
   const [loading, setLoading] = useState(true);
+  const [messagingUnread, setMessagingUnread] = useState(0);
+  const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -133,7 +138,12 @@ export default function DashboardPage() {
       const userId = await getUserId();
 
       if (!userId) { setLoading(false); return; }
+      setCurrentUserId(userId);
       const user = { id: userId };
+
+      // All users for messaging
+      const { data: userProfiles } = await supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name");
+      setAllUsers((userProfiles ?? []) as MessagingUserProfile[]);
 
       // Profile
       const { data: prof } = await supabase
@@ -472,6 +482,28 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Messages */}
+        {currentUserId && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-display tracking-[0.15em] flex items-center gap-2">
+                  MESSAGES
+                  {messagingUnread > 0 && (
+                    <span className="h-5 min-w-5 rounded-full bg-primary text-[10px] font-mono text-primary-foreground flex items-center justify-center px-1">{messagingUnread}</span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">Chat with other players, directors, and staff</p>
+              </div>
+            </div>
+            <MessagingPanel
+              currentUserId={currentUserId}
+              allUsers={allUsers}
+              onUnreadChange={setMessagingUnread}
+            />
+          </div>
+        )}
       </div>
     </PageShell>
   );
