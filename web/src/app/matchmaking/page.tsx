@@ -382,16 +382,6 @@ export default function MatchmakingPage() {
             <p className="text-muted-foreground text-sm mt-1.5">
               {loading ? "Finding players near you…" : `${visibleDeck.length} partners near you`}
             </p>
-            {!loading && (
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-muted-foreground text-xs font-mono">swipe or use</span>
-                <span className="inline-flex items-center gap-1.5">
-                  <kbd className="px-2.5 py-1 rounded-full bg-secondary border border-border text-[11px] font-mono">← pass</kbd>
-                  <kbd className="px-2.5 py-1 rounded-full bg-secondary border border-border text-[11px] font-mono">→ like</kbd>
-                  <kbd className="px-2.5 py-1 rounded-full bg-secondary border border-border text-[11px] font-mono">↑ connect</kbd>
-                </span>
-              </div>
-            )}
           </div>
           <button
             onClick={() => setShowFilters(true)}
