@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { House, Trophy, Heart, Lightning, User } from "@phosphor-icons/react";
 
 const tabs = [
-  { href: "/",            label: "Home",    Icon: House    },
-  { href: "/tournaments", label: "Play",    Icon: Trophy   },
-  { href: "/matchmaking", label: "Match",   Icon: Heart    },
-  { href: "/holds",       label: "Holds",   Icon: Lightning },
-  { href: "/profile",     label: "Profile", Icon: User     },
+  { href: "/dashboard",   label: "Dashboard", Icon: House    },
+  { href: "/tournaments", label: "Play",       Icon: Trophy   },
+  { href: "/matchmaking", label: "Match",      Icon: Heart    },
+  { href: "/holds",       label: "Holds",      Icon: Lightning },
+  { href: "/profile",     label: "Profile",    Icon: User     },
 ];
 
 export function MobileBottomNav() {
