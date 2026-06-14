@@ -5,18 +5,19 @@ import Link from "next/link";
 import {
   MapPin, Calendar, Trophy, Lightning, ShieldCheck, Clock,
   Medal, CurrencyDollar, HandGrabbing, CaretDown, ChatCircle,
-  NavigationArrow,
+  NavigationArrow, CheckCircle,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { HoldMySpotDialog } from "@/components/shared/hold-my-spot-dialog";
+import { HoldMySpotDialog, type HoldTournament } from "@/components/shared/hold-my-spot-dialog";
 import { DreamBreakerInsights } from "@/components/shared/dreambreaker-insights";
 import { BookmarkButton } from "@/components/shared/bookmark-button";
 import { ShareButton } from "@/components/shared/share-button";
 import { createClient } from "@/lib/supabase/client";
 import { computeInsight, buildMockInsightInput, type InsightResult } from "@/lib/insights";
 import { tournaments as mockTournaments, matchPartners } from "@/data/mock-data";
+import { getUserId } from "@/lib/dev-user";
 
 // ── FAQ data ──────────────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
@@ -144,6 +145,8 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [holdOpen, setHoldOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [myRegistration, setMyRegistration] = useState<{ status: string; hold_expires_at: string | null } | null>(null);
+  const [spotsFilled, setSpotsFilled] = useState(0);
 
   // Fetch tournament + compute insights
   useEffect(() => {
@@ -191,6 +194,19 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       }
 
       setTournament(t);
+      setSpotsFilled(t.spots_filled);
+
+      // Check current user's registration
+      const userId = await getUserId();
+      if (userId) {
+        const { data: myReg } = await supabase
+          .from("registrations")
+          .select("status, hold_expires_at")
+          .eq("tournament_id", id)
+          .eq("player_id", userId)
+          .maybeSingle();
+        if (myReg) setMyRegistration(myReg);
+      }
 
       // Fetch attendees: registered/held players + bookmarks
       const { data: regRows } = await supabase
@@ -331,7 +347,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   }
 
   const t = tournament;
-  const pct = Math.round((t.spots_filled / t.draw_size) * 100);
+  const pct = Math.round((spotsFilled / t.draw_size) * 100);
   const prizeDisplay = t.prize_pool_cents
     ? `$${(t.prize_pool_cents / 100).toLocaleString()}`
     : "—";
@@ -355,8 +371,17 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
   const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${mapsQuery}`;
 
-  // Build mock-compatible tournament shape for HoldMySpotDialog (still mock-typed)
-  const mockT = mockTournaments.find((x) => x.id === id) ?? mockTournaments[0];
+  const holdTournament: HoldTournament = {
+    id: t.id,
+    name: t.name,
+    city: t.city,
+    state: t.state,
+    event_date: t.event_date,
+    format: t.format,
+    entry_fee_cents: t.entry_fee_cents,
+    hold_fee_cents: t.hold_fee_cents,
+    hold_duration_hours: t.hold_duration_hours,
+  };
 
   return (
     <PageShell>
@@ -622,7 +647,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
             <div>
               <div className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground mb-1">SPOTS</div>
               <div className="flex items-end justify-between">
-                <div className="font-display text-5xl tracking-wide">{t.draw_size - t.spots_filled}</div>
+                <div className="font-display text-5xl tracking-wide">{t.draw_size - spotsFilled}</div>
                 <div className="text-sm text-muted-foreground">of {t.draw_size} left</div>
               </div>
               <div className="h-2 w-full bg-secondary rounded-full mt-3 overflow-hidden">
@@ -644,20 +669,29 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
             {/* CTAs */}
             <div className="space-y-2">
-              <button
-                onClick={() => setHoldOpen(true)}
-                className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors"
-                data-testid="hold-spot-trigger-btn"
-              >
-                <HandGrabbing size={17} weight="fill" /> HOLD MY SPOT
-              </button>
-              <button
-                onClick={handleRegister}
-                className="w-full h-12 rounded-full border border-border hover:bg-secondary/60 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors"
-                data-testid="register-now-btn"
-              >
-                <Lightning size={16} weight="fill" className="text-primary" /> REGISTER NOW · ${entryFee}
-              </button>
+              {myRegistration ? (
+                <div className="w-full h-12 rounded-full bg-primary/10 border border-primary/30 font-display tracking-[0.15em] flex items-center justify-center gap-2 text-primary text-sm" data-testid="already-registered-state">
+                  <CheckCircle size={17} weight="fill" />
+                  {myRegistration.status === "held" ? "SPOT HELD" : myRegistration.status === "registered" ? "REGISTERED" : myRegistration.status.replace(/_/g, " ").toUpperCase()}
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setHoldOpen(true)}
+                    className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors"
+                    data-testid="hold-spot-trigger-btn"
+                  >
+                    <HandGrabbing size={17} weight="fill" /> HOLD MY SPOT
+                  </button>
+                  <button
+                    onClick={handleRegister}
+                    className="w-full h-12 rounded-full border border-border hover:bg-secondary/60 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors"
+                    data-testid="register-now-btn"
+                  >
+                    <Lightning size={16} weight="fill" className="text-primary" /> REGISTER NOW · ${entryFee}
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Trust badges */}
@@ -753,7 +787,15 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
         </aside>
       </section>
 
-      <HoldMySpotDialog open={holdOpen} onOpenChange={setHoldOpen} tournament={mockT} />
+      <HoldMySpotDialog
+        open={holdOpen}
+        onOpenChange={setHoldOpen}
+        tournament={holdTournament}
+        onSuccess={(expiresAt) => {
+          setMyRegistration({ status: "held", hold_expires_at: expiresAt });
+          setSpotsFilled((n) => n + 1);
+        }}
+      />
     </PageShell>
   );
 }
