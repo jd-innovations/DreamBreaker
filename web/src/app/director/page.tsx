@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   Plus, Trophy, Users, CurrencyDollar, Lightning, X,
   ArrowRight, CheckCircle, Clock, PencilSimple, Eye,
-  Warning, MapPin, Calendar,
+  Warning, MapPin, Calendar, Star, Trash,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
@@ -45,6 +45,29 @@ type Registration = {
   hold_expires_at: string | null;
   created_at: string;
   player: { id: string; full_name: string; dupr: number | null; skill_level: string | null; avatar_url: string | null } | null;
+};
+
+type Sponsor = {
+  id: string;
+  tournament_id: string;
+  name: string;
+  logo_url: string | null;
+  website_url: string | null;
+  tier: "title" | "gold" | "silver" | "standard";
+  display_order: number;
+};
+
+const TIER_LABELS: Record<string, string> = {
+  title: "TITLE",
+  gold: "GOLD",
+  silver: "SILVER",
+  standard: "STANDARD",
+};
+const TIER_COLORS: Record<string, string> = {
+  title: "bg-primary/20 text-primary",
+  gold: "bg-yellow-500/15 text-yellow-500",
+  silver: "bg-slate-400/15 text-slate-400",
+  standard: "bg-secondary text-muted-foreground",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -235,6 +258,11 @@ export default function DirectorPage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [sponsorTournamentId, setSponsorTournamentId] = useState<string | null>(null);
+  const [showSponsorForm, setShowSponsorForm] = useState(false);
+  const [addingSponsor, setAddingSponsor] = useState(false);
+  const [removingSponsor, setRemovingSponsor] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState<string | null>(null);
@@ -310,6 +338,53 @@ export default function DirectorPage() {
       .in("status", ["held", "registered", "checked_in", "withdrawn"])
       .order("created_at", { ascending: true });
     setRegistrations((data ?? []) as unknown as Registration[]);
+  };
+
+  const loadSponsors = async (tournamentId: string) => {
+    setSponsorTournamentId(tournamentId);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("tournament_sponsors")
+      .select("id, tournament_id, name, logo_url, website_url, tier, display_order")
+      .eq("tournament_id", tournamentId)
+      .order("display_order", { ascending: true });
+    setSponsors((data ?? []) as Sponsor[]);
+  };
+
+  const addSponsor = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!sponsorTournamentId) return;
+    setAddingSponsor(true);
+    const fd = new FormData(e.currentTarget);
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("tournament_sponsors")
+      .insert({
+        tournament_id: sponsorTournamentId,
+        name: fd.get("sp_name") as string,
+        logo_url: (fd.get("sp_logo") as string) || null,
+        website_url: (fd.get("sp_website") as string) || null,
+        tier: fd.get("sp_tier") as string,
+        display_order: sponsors.length,
+      })
+      .select("id, tournament_id, name, logo_url, website_url, tier, display_order")
+      .single();
+    setAddingSponsor(false);
+    if (error) { toast.error("Failed to add sponsor: " + error.message); return; }
+    setSponsors((prev) => [...prev, data as Sponsor]);
+    setShowSponsorForm(false);
+    (e.target as HTMLFormElement).reset();
+    toast.success("Sponsor added!");
+  };
+
+  const removeSponsor = async (sponsorId: string) => {
+    setRemovingSponsor(sponsorId);
+    const supabase = createClient();
+    const { error } = await supabase.from("tournament_sponsors").delete().eq("id", sponsorId);
+    setRemovingSponsor(null);
+    if (error) { toast.error("Failed to remove sponsor."); return; }
+    setSponsors((prev) => prev.filter((s) => s.id !== sponsorId));
+    toast.success("Sponsor removed.");
   };
 
   const submitForApproval = async (tournamentId: string) => {
@@ -401,6 +476,7 @@ export default function DirectorPage() {
           <TabsList className="rounded-full p-1 h-11 mb-6 bg-secondary inline-flex">
             <TabsTrigger value="tournaments" className="rounded-full px-5" data-testid="director-tab-tournaments">Tournaments</TabsTrigger>
             <TabsTrigger value="players" className="rounded-full px-5" data-testid="director-tab-players">Players</TabsTrigger>
+            <TabsTrigger value="sponsors" className="rounded-full px-5" data-testid="director-tab-sponsors">Sponsors</TabsTrigger>
             <TabsTrigger value="revenue" className="rounded-full px-5" data-testid="director-tab-revenue">Revenue</TabsTrigger>
           </TabsList>
 
@@ -482,6 +558,14 @@ export default function DirectorPage() {
                             <Users size={13} /> ROSTER
                           </button>
 
+                          <button
+                            onClick={() => { loadSponsors(t.id); document.querySelector<HTMLButtonElement>('[data-testid="director-tab-sponsors"]')?.click(); }}
+                            className="h-9 px-4 rounded-full border border-border hover:bg-secondary/60 text-xs font-semibold transition-colors flex items-center gap-1.5"
+                            data-testid={`director-sponsors-${t.id}`}
+                          >
+                            <Star size={13} weight="fill" className="text-yellow-500" /> SPONSORS
+                          </button>
+
                           <Link href={`/tournaments/${t.id}`}>
                             <button className="h-9 w-9 rounded-full border border-border hover:bg-secondary/60 transition-colors flex items-center justify-center" data-testid={`director-view-${t.id}`}>
                               <Eye size={14} weight="bold" />
@@ -550,6 +634,121 @@ export default function DirectorPage() {
                         <div className="text-xs text-muted-foreground hidden sm:block flex-shrink-0">
                           {formatDate(r.created_at)}
                         </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Sponsors tab */}
+          <TabsContent value="sponsors">
+            {!sponsorTournamentId ? (
+              <div className="border border-dashed border-border rounded-2xl p-12 text-center text-muted-foreground">
+                <Star size={32} weight="duotone" className="mx-auto mb-3 text-yellow-500" />
+                <div className="font-display text-2xl tracking-wide mb-1">SELECT A TOURNAMENT</div>
+                <p className="text-sm">Click SPONSORS on any tournament in the Tournaments tab to manage its sponsors here.</p>
+              </div>
+            ) : (
+              <div className="border border-border rounded-2xl bg-card overflow-hidden">
+                <div className="flex items-center justify-between p-5 border-b border-border">
+                  <div>
+                    <h3 className="font-display text-xl tracking-wide">
+                      {tournaments.find((t) => t.id === sponsorTournamentId)?.name ?? "SPONSORS"}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">{sponsors.length} sponsor{sponsors.length !== 1 ? "s" : ""}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowSponsorForm((v) => !v)}
+                      className="h-9 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-xs flex items-center gap-1.5 transition-colors"
+                      data-testid="director-add-sponsor-btn"
+                    >
+                      <Plus size={13} weight="bold" /> ADD SPONSOR
+                    </button>
+                    <button onClick={() => { setSponsorTournamentId(null); setShowSponsorForm(false); }} className="h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
+                      <X size={14} weight="bold" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Add sponsor form */}
+                {showSponsorForm && (
+                  <form onSubmit={addSponsor} className="p-5 border-b border-border bg-secondary/30 space-y-3" data-testid="sponsor-form">
+                    <div className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground mb-1">NEW SPONSOR</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground block mb-1">NAME *</label>
+                        <input name="sp_name" required placeholder="e.g. Selkirk Sport" className="w-full h-10 rounded-xl bg-card border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="sponsor-name-input" />
+                      </div>
+                      <div>
+                        <label className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground block mb-1">TIER</label>
+                        <select name="sp_tier" className="w-full h-10 rounded-xl bg-card border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring cursor-pointer" data-testid="sponsor-tier-select">
+                          <option value="title">Title Sponsor</option>
+                          <option value="gold">Gold Sponsor</option>
+                          <option value="silver">Silver Sponsor</option>
+                          <option value="standard" selected>Standard Sponsor</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground block mb-1">LOGO URL <span className="text-muted-foreground/60">— optional</span></label>
+                        <input name="sp_logo" type="url" placeholder="https://..." className="w-full h-10 rounded-xl bg-card border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="sponsor-logo-input" />
+                      </div>
+                      <div>
+                        <label className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground block mb-1">WEBSITE URL <span className="text-muted-foreground/60">— optional</span></label>
+                        <input name="sp_website" type="url" placeholder="https://..." className="w-full h-10 rounded-xl bg-card border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="sponsor-website-input" />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button type="button" onClick={() => setShowSponsorForm(false)} className="h-9 px-4 rounded-full border border-border hover:bg-secondary/60 text-xs font-semibold transition-colors">
+                        CANCEL
+                      </button>
+                      <button type="submit" disabled={addingSponsor} className="h-9 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-display tracking-[0.15em] transition-colors disabled:opacity-50">
+                        {addingSponsor ? "ADDING…" : "ADD"}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {sponsors.length === 0 ? (
+                  <div className="p-10 text-center text-muted-foreground text-sm">No sponsors yet. Add your first sponsor above.</div>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {sponsors.map((s) => (
+                      <div key={s.id} className="flex items-center gap-4 px-5 py-4">
+                        {s.logo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={s.logo_url} alt={s.name} className="h-10 w-10 rounded-lg object-contain bg-secondary flex-shrink-0" />
+                        ) : (
+                          <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center font-display text-sm flex-shrink-0">
+                            {s.name.charAt(0)}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm">{s.name}</span>
+                            <span className={`text-[10px] font-mono tracking-widest px-2 py-0.5 rounded-full ${TIER_COLORS[s.tier] ?? "bg-secondary text-muted-foreground"}`}>
+                              {TIER_LABELS[s.tier] ?? s.tier.toUpperCase()}
+                            </span>
+                          </div>
+                          {s.website_url && (
+                            <a href={s.website_url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary transition-colors truncate block">
+                              {s.website_url.replace(/^https?:\/\//, "")}
+                            </a>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => removeSponsor(s.id)}
+                          disabled={removingSponsor === s.id}
+                          className="h-8 w-8 rounded-full border border-border hover:bg-destructive/10 hover:border-destructive hover:text-destructive flex items-center justify-center transition-colors flex-shrink-0 disabled:opacity-50"
+                          data-testid={`remove-sponsor-${s.id}`}
+                          aria-label="Remove sponsor"
+                        >
+                          <Trash size={13} weight="bold" />
+                        </button>
                       </div>
                     ))}
                   </div>
