@@ -5,8 +5,10 @@ import Link from "next/link";
 import {
   MapPin, Calendar, Trophy, Lightning, ShieldCheck, Clock,
   Medal, CurrencyDollar, HandGrabbing, CaretDown, ChatCircle,
-  NavigationArrow, CheckCircle,
+  NavigationArrow, CheckCircle, ChatCircleDots, X, ArrowSquareOut,
 } from "@phosphor-icons/react";
+import { MessagingPanel } from "@/components/messaging/panel";
+import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -233,6 +235,9 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const [spotsFilled, setSpotsFilled] = useState(0);
   const [completing, setCompleting] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
+  const [messagingTarget, setMessagingTarget] = useState<{ id: string; name: string } | null>(null);
 
   // Legacy single-format helpers
   const legacyReg = myRegs.get("legacy") ?? null;
@@ -297,6 +302,10 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       // Check current user's registrations (all divisions)
       const userId = await getUserId();
       if (userId) {
+        setCurrentUserId(userId);
+        const { data: userProfiles } = await supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name");
+        setAllUsers((userProfiles ?? []) as MessagingUserProfile[]);
+
         const { data: userRegs } = await supabase
           .from("registrations")
           .select("status, hold_expires_at, division_id")
@@ -951,11 +960,11 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                 </div>
               </div>
 
-              <div className="space-y-2.5" data-testid="whos-going-list">
+              <div className="space-y-2" data-testid="whos-going-list">
                 {attendees.slice(0, 6).map((a) => (
-                  <div key={a.id} className="flex items-center gap-3">
+                  <div key={a.id} className="flex items-center gap-3 group rounded-xl px-2 py-1.5 hover:bg-secondary/40 transition-colors -mx-2">
                     {/* Avatar */}
-                    <div className="relative flex-shrink-0">
+                    <Link href={`/profile/${a.id}`} className="relative flex-shrink-0">
                       {a.avatar ? (
                         <img src={a.avatar} alt="" className="h-9 w-9 rounded-full object-cover" />
                       ) : (
@@ -966,13 +975,15 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                       {a.isFriend && (
                         <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-primary border-2 border-card" />
                       )}
-                    </div>
+                    </Link>
 
                     {/* Name + rating */}
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold leading-tight truncate">
-                        {a.name.split(" ")[0]} {a.name.split(" ").slice(1).map((n) => n.charAt(0) + ".").join(" ")}
-                      </div>
+                      <Link href={`/profile/${a.id}`} className="block">
+                        <div className="text-sm font-semibold leading-tight truncate hover:text-primary transition-colors">
+                          {a.name.split(" ")[0]} {a.name.split(" ").slice(1).map((n) => n.charAt(0) + ".").join(" ")}
+                        </div>
+                      </Link>
                       <div className="text-[11px] text-muted-foreground">{a.ratingLabel}</div>
                     </div>
 
@@ -988,6 +999,24 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                     >
                       {a.kind === "going" ? "GOING" : a.kind === "holding" ? "HELD" : "INTERESTED"}
                     </span>
+
+                    {/* Action buttons — show on hover or always for mobile */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Link href={`/profile/${a.id}`}>
+                        <button className="h-7 w-7 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100" title="View profile">
+                          <ArrowSquareOut size={12} />
+                        </button>
+                      </Link>
+                      {currentUserId && currentUserId !== a.id && (
+                        <button
+                          onClick={() => setMessagingTarget({ id: a.id, name: a.name })}
+                          className="h-7 w-7 rounded-full border border-border hover:bg-primary/10 hover:border-primary/40 hover:text-primary flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                          title="Send message"
+                        >
+                          <ChatCircleDots size={12} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1001,6 +1030,33 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
           )}
         </aside>
       </section>
+
+      {/* ── Messaging overlay ── */}
+      {messagingTarget && currentUserId && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-3xl bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{ height: "min(620px, 90vh)" }}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+              <span className="font-display tracking-wider text-sm">
+                MESSAGE {messagingTarget.name.split(" ")[0].toUpperCase()}
+              </span>
+              <button
+                onClick={() => setMessagingTarget(null)}
+                className="h-7 w-7 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors"
+              >
+                <X size={13} weight="bold" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <MessagingPanel
+                currentUserId={currentUserId}
+                allUsers={allUsers}
+                initialRecipientId={messagingTarget.id}
+                compact
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <HoldMySpotDialog
         open={holdOpen}
