@@ -572,7 +572,7 @@ export default function MatchmakingPage() {
             <>
               {/* Mobile — fixed above bottom nav */}
               <div className="fixed bottom-[100px] left-0 right-0 px-6 lg:hidden z-40">
-                <div className="flex items-center gap-3 max-w-sm mx-auto">
+                <div className="flex items-center gap-3 max-w-sm mx-auto bg-background/80 backdrop-blur-md border border-border rounded-full px-4 py-3 shadow-lg">
                   <button
                     onClick={() => swipe("left")}
                     data-testid="swipe-left-btn"
