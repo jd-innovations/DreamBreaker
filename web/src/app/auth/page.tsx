@@ -20,12 +20,10 @@ export default function AuthPage() {
   const [showPw, setShowPw] = useState(false);
   const [role, setRole] = useState("player");
   const [loading, setLoading] = useState(false);
-  const [debugMsg, setDebugMsg] = useState("");
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    setDebugMsg("Calling Supabase…");
     const fd = new FormData(e.currentTarget);
     const supabase = createClient();
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -35,11 +33,9 @@ export default function AuthPage() {
     if (error) {
       console.error("[auth] signInWithPassword error:", error);
       setLoading(false);
-      setDebugMsg(`ERROR: ${error.message}`);
       toast.error(error.message);
       return;
     }
-    setDebugMsg(`OK: signed in as ${data.user?.email} — redirecting…`);
     toast.success("Welcome back!");
     // Hard redirect so the browser sends fresh cookies the middleware can read
     window.location.href = "/dashboard";
@@ -108,7 +104,6 @@ export default function AuthPage() {
                   </div>
                 </div>
                 <Button type="submit" disabled={loading} className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em]" data-testid="auth-login-btn">{loading ? "SIGNING IN…" : "SIGN IN"}</Button>
-                {debugMsg && <p className="text-xs font-mono break-all text-center py-2 px-3 rounded-lg bg-secondary border border-border">{debugMsg}</p>}
               </form>
               <div className="flex items-center gap-3 my-5"><div className="flex-1 h-px bg-border" /><span className="text-xs text-muted-foreground font-mono">OR</span><div className="flex-1 h-px bg-border" /></div>
               <div className="grid grid-cols-2 gap-3">
