@@ -185,7 +185,7 @@ function FilterDrawer({ filters, onChange, onClose }: { filters: Filters; onChan
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full sm:max-w-sm bg-card border border-border rounded-t-3xl sm:rounded-3xl p-6 space-y-5">
+      <div className="relative z-10 w-full sm:max-w-sm bg-card border border-border rounded-t-3xl sm:rounded-3xl p-6 pb-[120px] sm:pb-6 space-y-5 max-h-[85dvh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-2xl tracking-wide">FILTERS</h3>
           <button onClick={onClose} className="h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors"><X size={16} weight="bold" /></button>
