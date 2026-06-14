@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Lightning, MapPin, Calendar, Clock, ArrowRight, CheckCircle } from "@phosphor-icons/react";
+import { Lightning, MapPin, Calendar, Clock, ArrowRight, CheckCircle, XCircle } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
@@ -38,6 +39,8 @@ const DEFAULT_IMG = "https://images.unsplash.com/photo-1737477004595-e9b659bb44c
 export default function HoldsPage() {
   const [holds, setHolds] = useState<HoldRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -58,6 +61,46 @@ export default function HoldsPage() {
       setLoading(false);
     });
   }, []);
+
+  const confirmHold = async (holdId: string, tournamentId: string) => {
+    setConfirming(holdId);
+    try {
+      const userId = await getUserId();
+      if (!userId) return;
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("registrations")
+        .update({ status: "registered", entry_fee_paid_cents: 0, updated_at: new Date().toISOString() })
+        .eq("id", holdId)
+        .eq("player_id", userId)
+        .eq("status", "held");
+      if (error) { toast.error("Could not confirm registration. Please try again."); return; }
+      setHolds((prev) => prev.map((h) => h.id === holdId ? { ...h, status: "registered" } : h));
+      toast.success("You're registered!", { description: "Bracket releases 48h before play. See you on the court." });
+    } finally {
+      setConfirming(null);
+    }
+  };
+
+  const cancelHold = async (holdId: string) => {
+    setCancelling(holdId);
+    try {
+      const userId = await getUserId();
+      if (!userId) return;
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("registrations")
+        .update({ status: "withdrawn", updated_at: new Date().toISOString() })
+        .eq("id", holdId)
+        .eq("player_id", userId)
+        .eq("status", "held");
+      if (error) { toast.error("Could not cancel hold."); return; }
+      setHolds((prev) => prev.filter((h) => h.id !== holdId));
+      toast.info("Hold cancelled. Your spot has been released.");
+    } finally {
+      setCancelling(null);
+    }
+  };
 
   return (
     <PageShell>
@@ -138,9 +181,25 @@ export default function HoldsPage() {
 
                   <div className="flex items-center gap-3 pt-1">
                     {isHeld && (
-                      <button className="flex-1 h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] text-sm transition-colors" data-testid={`hold-confirm-${h.id}`}>
-                        CONFIRM · ${balanceDue}
-                      </button>
+                      <>
+                        <button
+                          onClick={() => confirmHold(h.id, t.id)}
+                          disabled={confirming === h.id}
+                          className="flex-1 h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] text-sm transition-colors disabled:opacity-50"
+                          data-testid={`hold-confirm-${h.id}`}
+                        >
+                          {confirming === h.id ? "CONFIRMING…" : `CONFIRM · $${balanceDue}`}
+                        </button>
+                        <button
+                          onClick={() => cancelHold(h.id)}
+                          disabled={cancelling === h.id}
+                          className="h-11 w-11 rounded-full border border-border hover:bg-destructive/10 hover:border-destructive/40 flex items-center justify-center transition-colors disabled:opacity-50"
+                          title="Cancel hold"
+                          data-testid={`hold-cancel-${h.id}`}
+                        >
+                          <XCircle size={18} weight="fill" className="text-muted-foreground hover:text-destructive" />
+                        </button>
+                      </>
                     )}
                     <Link href={`/tournaments/${t.id}`} className={isHeld ? "" : "flex-1"}>
                       <button className={`h-11 rounded-full border border-border hover:bg-secondary/60 font-display tracking-[0.2em] text-sm transition-colors flex items-center justify-center gap-2 ${isHeld ? "px-5" : "w-full"}`} data-testid={`hold-view-${h.id}`}>
