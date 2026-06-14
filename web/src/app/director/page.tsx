@@ -190,7 +190,8 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
         };
       });
 
-      await supabase.from("divisions").insert(divisionRows);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await supabase.from("divisions").insert(divisionRows as any);
 
       toast.success("Tournament created!", { description: `${divisionRows.length} event${divisionRows.length > 1 ? "s" : ""} added. Submit for approval when ready.` });
       onCreated({ ...data as Tournament, registered: 0, held: 0, revenue_cents: 0 });
@@ -409,7 +410,8 @@ export default function DirectorPage() {
   const loadSponsors = async (tournamentId: string) => {
     setSponsorTournamentId(tournamentId);
     const supabase = createClient();
-    const { data } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any)
       .from("tournament_sponsors")
       .select("id, tournament_id, name, logo_url, website_url, tier, display_order")
       .eq("tournament_id", tournamentId)
@@ -423,7 +425,8 @@ export default function DirectorPage() {
     setAddingSponsor(true);
     const fd = new FormData(e.currentTarget);
     const supabase = createClient();
-    const { data, error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
       .from("tournament_sponsors")
       .insert({
         tournament_id: sponsorTournamentId,
@@ -446,7 +449,8 @@ export default function DirectorPage() {
   const removeSponsor = async (sponsorId: string) => {
     setRemovingSponsor(sponsorId);
     const supabase = createClient();
-    const { error } = await supabase.from("tournament_sponsors").delete().eq("id", sponsorId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("tournament_sponsors").delete().eq("id", sponsorId);
     setRemovingSponsor(null);
     if (error) { toast.error("Failed to remove sponsor."); return; }
     setSponsors((prev) => prev.filter((s) => s.id !== sponsorId));

@@ -286,7 +286,8 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       setSpotsFilled(t.spots_filled);
 
       // Load divisions
-      const { data: divRows } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: divRows } = await (supabase as any)
         .from("divisions")
         .select("id, name, format, gender_category, draw_size, spots_filled, entry_fee_cents")
         .eq("tournament_id", id)
