@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Heart, X, XCircle, Lightning, MapPin, Star, ArrowRight, Trophy,
   SlidersHorizontal, ArrowLeft, ArrowUp, Users, Heartbeat,
@@ -238,6 +239,7 @@ function FilterDrawer({ filters, onChange, onClose }: { filters: Filters; onChan
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function MatchmakingPage() {
+  const router = useRouter();
   const [deck, setDeck] = useState<Partner[]>([]);
   const [matches, setMatches] = useState<Partner[]>([]);
   const [swipeDir, setSwipeDir] = useState<"left" | "right" | "up" | null>(null);
@@ -257,8 +259,7 @@ export default function MatchmakingPage() {
     async function load() {
       const userId = await getUserId();
       if (!userId) {
-        setDeck(matchPartners.map((p) => mockToPartner(p, null, null)));
-        setLoading(false);
+        router.replace("/auth?redirect=/matchmaking");
         return;
       }
       setMyId(userId);
@@ -318,7 +319,7 @@ export default function MatchmakingPage() {
       await supabase.from("matchmaking_swipes").insert({
         requester_id: myId,
         target_id: top.id,
-        direction: dir === "left" ? "pass" : "like",
+        direction: (dir === "left" ? "pass" : dir === "up" ? "super" : "like") as "like" | "pass",
       });
     }
 
