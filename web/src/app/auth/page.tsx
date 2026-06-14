@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { GoogleLogo, AppleLogo, Eye, EyeSlash, Lightning, Trophy, Heart } from "@phosphor-icons/react";
+import { GoogleLogo, AppleLogo, Eye, EyeSlash, Lightning, Trophy, Heart, X } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { Logo } from "@/components/layout/logo";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -103,7 +103,14 @@ export default function AuthPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-screen flex items-center justify-center p-6 bg-background">
+      <div className="flex-1 min-h-screen flex items-center justify-center p-6 bg-background relative">
+        <button
+          onClick={() => router.push("/")}
+          className="absolute top-4 right-4 h-9 w-9 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          aria-label="Back to home"
+        >
+          <X size={16} weight="bold" />
+        </button>
         <div className="w-full max-w-sm">
           <div className="lg:hidden mb-8"><Logo /></div>
           <Tabs defaultValue="login" className="w-full">
