@@ -24,21 +24,24 @@ export default function AuthPage() {
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    const fd = new FormData(e.currentTarget);
-    const supabase = createClient();
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: fd.get("email") as string,
-      password: fd.get("password") as string,
-    });
-    if (error) {
-      console.error("[auth] signInWithPassword error:", error);
+    try {
+      const fd = new FormData(e.currentTarget);
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: fd.get("email") as string,
+        password: fd.get("password") as string,
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Welcome back!");
+      window.location.href = "/dashboard";
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Sign-in failed");
+    } finally {
       setLoading(false);
-      toast.error(error.message);
-      return;
     }
-    toast.success("Welcome back!");
-    // Hard redirect so the browser sends fresh cookies the middleware can read
-    window.location.href = "/dashboard";
   };
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
