@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useEffect, useState, useRef } from "react";
 import {
   Trophy, Users, Lightning, MapPin, Calendar, Star,
