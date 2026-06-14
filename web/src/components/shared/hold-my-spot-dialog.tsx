@@ -18,13 +18,15 @@ export interface HoldTournament {
   entry_fee_cents: number;
   hold_fee_cents: number;
   hold_duration_hours: number;
+  division_id?: string | null;
+  division_name?: string | null;
 }
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   tournament: HoldTournament;
-  onSuccess?: (expiresAt: string) => void;
+  onSuccess?: (expiresAt: string, divisionId?: string | null) => void;
 }
 
 function formatDate(iso: string) {
@@ -51,19 +53,26 @@ export function HoldMySpotDialog({ open, onOpenChange, tournament, onSuccess }: 
 
       const supabase = createClient();
 
-      // Check for existing registration
-      const { data: existing } = await supabase
+      // Check for existing registration for this specific division (or tournament if no division)
+      let existingQuery = supabase
         .from("registrations")
         .select("id, status")
         .eq("tournament_id", tournament.id)
-        .eq("player_id", userId)
-        .maybeSingle();
+        .eq("player_id", userId);
+
+      if (tournament.division_id) {
+        existingQuery = existingQuery.eq("division_id", tournament.division_id);
+      } else {
+        existingQuery = existingQuery.is("division_id", null);
+      }
+
+      const { data: existing } = await existingQuery.maybeSingle();
 
       if (existing) {
         toast.error(
           existing.status === "held"
-            ? "You already have a hold on this tournament."
-            : "You're already registered for this tournament.",
+            ? "You already have a hold on this event."
+            : "You're already registered for this event.",
         );
         return;
       }
@@ -72,14 +81,18 @@ export function HoldMySpotDialog({ open, onOpenChange, tournament, onSuccess }: 
         Date.now() + tournament.hold_duration_hours * 3600 * 1000,
       ).toISOString();
 
-      const { error } = await supabase.from("registrations").insert({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const insertPayload: any = {
         tournament_id: tournament.id,
         player_id: userId,
         status: "held",
         hold_expires_at: holdExpiry,
         hold_fee_paid_cents: 0,
         entry_fee_paid_cents: 0,
-      });
+      };
+      if (tournament.division_id) insertPayload.division_id = tournament.division_id;
+
+      const { error } = await supabase.from("registrations").insert(insertPayload);
 
       if (error) {
         toast.error("Could not hold your spot. Please try again.");
@@ -89,7 +102,7 @@ export function HoldMySpotDialog({ open, onOpenChange, tournament, onSuccess }: 
 
       setExpiresAt(holdExpiry);
       setStep("success");
-      onSuccess?.(holdExpiry);
+      onSuccess?.(holdExpiry, tournament.division_id);
     } finally {
       setLoading(false);
     }
@@ -117,7 +130,10 @@ export function HoldMySpotDialog({ open, onOpenChange, tournament, onSuccess }: 
               </div>
               <DialogTitle className="font-display tracking-wide text-3xl">{tournament.name}</DialogTitle>
               <DialogDescription>
-                {tournament.city}, {tournament.state} · {formatDate(tournament.event_date)} · {tournament.format.replace("_", " ")}
+                {tournament.city}, {tournament.state} · {formatDate(tournament.event_date)}
+                {tournament.division_name
+                  ? ` · ${tournament.division_name}`
+                  : ` · ${tournament.format.replace(/_/g, " ")}`}
               </DialogDescription>
             </DialogHeader>
 

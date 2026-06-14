@@ -70,6 +70,23 @@ type Attendee = {
   isFriend?: boolean;
 };
 
+// ── Division type ──────────────────────────────────────────────────────────────
+type Division = {
+  id: string;
+  name: string;
+  format: string;
+  gender_category: string | null;
+  draw_size: number;
+  spots_filled: number;
+  entry_fee_cents: number | null;
+};
+
+type DivisionReg = { status: string; hold_expires_at: string | null; division_id: string | null };
+
+function divisionLabel(d: Division) {
+  return d.name || d.format.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 type LiveTournament = {
   id: string;
@@ -137,17 +154,88 @@ function mockToLive(t: typeof mockTournaments[0]) {
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
+// ── DivisionCard ──────────────────────────────────────────────────────────────
+function DivisionHoldExpiry({ expiry }: { expiry: Date | null }) {
+  const calc = () => {
+    if (!expiry) return null;
+    const diff = expiry.getTime() - Date.now();
+    if (diff <= 0) return null;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    return { h, m };
+  };
+  const [t, setT] = useState(calc);
+  useEffect(() => { const id = setInterval(() => setT(calc()), 30000); return () => clearInterval(id); });
+  if (!expiry) return null;
+  if (!t) return <span className="text-destructive text-[10px] font-mono">EXPIRED</span>;
+  return <span className="text-amber-500 text-[10px] font-mono">{t.h}h {t.m}m left</span>;
+}
+
+function DivisionCard({
+  div, divFee, holdFee, isHeld, isRegistered, holdExpire, completing, cancelling, onHold, onComplete, onCancel,
+}: {
+  div: Division; divFee: number; holdFee: number;
+  isHeld: boolean; isRegistered: boolean; holdExpire: Date | null;
+  completing: boolean; cancelling: boolean;
+  onHold: () => void; onComplete: () => void; onCancel: () => void;
+}) {
+  const pct = Math.round((div.spots_filled / div.draw_size) * 100);
+  const fee = divFee / 100;
+  const hold = holdFee / 100;
+
+  return (
+    <div className={`rounded-xl border p-4 space-y-3 transition-colors ${isRegistered ? "border-primary/40 bg-primary/5" : isHeld ? "border-amber-500/40 bg-amber-500/5" : "border-border bg-secondary/20"}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="font-display tracking-wide text-base">{divisionLabel(div)}</div>
+          <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{div.draw_size - div.spots_filled} spots left · ${fee} entry</div>
+        </div>
+        {isRegistered && <CheckCircle size={18} weight="fill" className="text-primary flex-shrink-0 mt-0.5" />}
+        {isHeld && <DivisionHoldExpiry expiry={holdExpire} />}
+      </div>
+
+      <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
+        <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
+      </div>
+
+      {isRegistered ? (
+        <div className="text-[10px] font-mono text-primary tracking-widest">✓ REGISTERED</div>
+      ) : isHeld ? (
+        <div className="flex gap-2">
+          <button onClick={onComplete} disabled={completing} className="flex-1 h-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50">
+            <Lightning size={12} weight="fill" /> {completing ? "CONFIRMING…" : `CONFIRM · $${fee - hold}`}
+          </button>
+          <button onClick={onCancel} disabled={cancelling} className="h-9 px-3 rounded-full border border-border hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive font-mono text-[10px] transition-colors disabled:opacity-50">
+            {cancelling ? "…" : "CANCEL"}
+          </button>
+        </div>
+      ) : (
+        <button onClick={onHold} className="w-full h-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-xs flex items-center justify-center gap-1.5 transition-colors">
+          <HandGrabbing size={13} weight="fill" /> HOLD MY SPOT · ${hold}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
 
   const [tournament, setTournament] = useState<LiveTournament | null>(null);
   const [insight, setInsight] = useState<InsightResult | null>(null);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
+  const [divisions, setDivisions] = useState<Division[]>([]);
   const [holdOpen, setHoldOpen] = useState(false);
+  const [activeDivision, setActiveDivision] = useState<Division | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [myRegistration, setMyRegistration] = useState<{ status: string; hold_expires_at: string | null } | null>(null);
+  // keyed by division_id (or "legacy" for null division_id)
+  const [myRegs, setMyRegs] = useState<Map<string, DivisionReg>>(new Map());
   const [spotsFilled, setSpotsFilled] = useState(0);
-  const [completing, setCompleting] = useState(false);
+  const [completing, setCompleting] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
+
+  // Legacy single-format helpers
+  const legacyReg = myRegs.get("legacy") ?? null;
 
   // Fetch tournament + compute insights
   useEffect(() => {
@@ -197,16 +285,30 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       setTournament(t);
       setSpotsFilled(t.spots_filled);
 
-      // Check current user's registration
+      // Load divisions
+      const { data: divRows } = await supabase
+        .from("divisions")
+        .select("id, name, format, gender_category, draw_size, spots_filled, entry_fee_cents")
+        .eq("tournament_id", id)
+        .order("created_at", { ascending: true });
+      if (divRows && divRows.length > 0) setDivisions(divRows as Division[]);
+
+      // Check current user's registrations (all divisions)
       const userId = await getUserId();
       if (userId) {
-        const { data: myReg } = await supabase
+        const { data: userRegs } = await supabase
           .from("registrations")
-          .select("status, hold_expires_at")
+          .select("status, hold_expires_at, division_id")
           .eq("tournament_id", id)
           .eq("player_id", userId)
-          .maybeSingle();
-        if (myReg) setMyRegistration(myReg);
+          .in("status", ["held", "registered", "checked_in"]);
+        if (userRegs && userRegs.length > 0) {
+          const map = new Map<string, DivisionReg>();
+          for (const r of userRegs) {
+            map.set(r.division_id ?? "legacy", r as DivisionReg);
+          }
+          setMyRegs(map);
+        }
       }
 
       // Fetch attendees: registered/held players + bookmarks
@@ -324,43 +426,58 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     : null;
   const countdown = useCountdown(regCloseDate);
 
-  const holdExpireDate = myRegistration?.hold_expires_at
-    ? new Date(myRegistration.hold_expires_at)
+  const holdExpireDate = legacyReg?.hold_expires_at
+    ? new Date(legacyReg.hold_expires_at)
     : null;
   const holdCountdown = useCountdown(holdExpireDate);
 
-  const completeRegistration = async () => {
-    setCompleting(true);
+  const completeRegistration = async (divisionId: string | null) => {
+    const key = divisionId ?? "legacy";
+    setCompleting(key);
     try {
       const userId = await getUserId();
       if (!userId) { toast.error("Not signed in."); return; }
       const supabase = createClient();
-      const { error } = await supabase
+      let q = supabase
         .from("registrations")
         .update({ status: "registered", entry_fee_paid_cents: 0, updated_at: new Date().toISOString() })
         .eq("tournament_id", id)
         .eq("player_id", userId)
         .eq("status", "held");
+      if (divisionId) q = q.eq("division_id", divisionId);
+      else q = (q as typeof q).is("division_id", null);
+      const { error } = await q;
       if (error) { toast.error("Could not complete registration. Please try again."); return; }
-      setMyRegistration((r) => r ? { ...r, status: "registered" } : r);
+      setMyRegs((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(key);
+        if (existing) next.set(key, { ...existing, status: "registered" });
+        return next;
+      });
       toast.success("You're registered!", { description: "Bracket releases 48h before play. See you on the court." });
     } finally {
-      setCompleting(false);
+      setCompleting(null);
     }
   };
 
-  const cancelHold = async () => {
+  const cancelHold = async (divisionId: string | null) => {
+    const key = divisionId ?? "legacy";
+    setCancelling(key);
     const userId = await getUserId();
-    if (!userId) return;
+    if (!userId) { setCancelling(null); return; }
     const supabase = createClient();
-    const { error } = await supabase
+    let q = supabase
       .from("registrations")
       .update({ status: "withdrawn", updated_at: new Date().toISOString() })
       .eq("tournament_id", id)
       .eq("player_id", userId)
       .eq("status", "held");
+    if (divisionId) q = q.eq("division_id", divisionId);
+    else q = (q as typeof q).is("division_id", null);
+    const { error } = await q;
+    setCancelling(null);
     if (error) { toast.error("Could not cancel hold."); return; }
-    setMyRegistration(null);
+    setMyRegs((prev) => { const next = new Map(prev); next.delete(key); return next; });
     setSpotsFilled((n) => Math.max(0, n - 1));
     toast.info("Hold cancelled. Your spot has been released.");
   };
@@ -709,76 +826,85 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               </div>
             </div>
 
-            {/* CTAs */}
-            <div className="space-y-2">
-              {myRegistration?.status === "held" ? (
+            {/* CTAs — per-division if divisions exist, legacy single-format otherwise */}
+            <div className="space-y-3">
+              {divisions.length > 0 ? (
                 <>
-                  {/* Hold expiry countdown */}
-                  <div className="border border-amber-500/40 rounded-xl px-4 py-3 bg-amber-500/5">
-                    <div className="font-mono text-[9px] tracking-[0.3em] text-amber-500 mb-2 text-center">
-                      {holdCountdown ? "HOLD EXPIRES IN" : "HOLD EXPIRED"}
-                    </div>
-                    {holdCountdown ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <CountdownUnit value={holdCountdown.d} label="DAYS" />
-                        <span className="font-mono text-amber-500 text-lg font-bold leading-none mb-2">:</span>
-                        <CountdownUnit value={holdCountdown.h} label="HRS" />
-                        <span className="font-mono text-amber-500 text-lg font-bold leading-none mb-2">:</span>
-                        <CountdownUnit value={holdCountdown.m} label="MIN" />
-                        <span className="font-mono text-amber-500 text-lg font-bold leading-none mb-2">:</span>
-                        <CountdownUnit value={holdCountdown.s} label="SEC" />
-                      </div>
-                    ) : (
-                      <p className="text-center text-xs text-destructive">Your hold has expired. The spot has been released.</p>
-                    )}
-                  </div>
+                  <div className="font-mono text-[9px] tracking-[0.3em] text-muted-foreground">EVENTS</div>
+                  {divisions.map((div) => {
+                    const key = div.id;
+                    const reg = myRegs.get(key);
+                    const divFee = div.entry_fee_cents ?? t.entry_fee_cents;
+                    const isHeld = reg?.status === "held";
+                    const isRegistered = reg?.status === "registered" || reg?.status === "checked_in";
+                    const divHoldExpire = reg?.hold_expires_at ? new Date(reg.hold_expires_at) : null;
 
-                  {holdCountdown && (
-                    <button
-                      onClick={completeRegistration}
-                      disabled={completing}
-                      className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-                      data-testid="complete-registration-btn"
-                    >
-                      <Lightning size={16} weight="fill" />
-                      {completing ? "CONFIRMING…" : `COMPLETE REGISTRATION · $${entryFee - holdFee}`}
-                    </button>
-                  )}
-
-                  <button
-                    onClick={cancelHold}
-                    className="w-full h-10 rounded-full border border-border hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive font-mono text-xs tracking-widest transition-colors"
-                    data-testid="cancel-hold-btn"
-                  >
-                    CANCEL HOLD
-                  </button>
+                    return (
+                      <DivisionCard
+                        key={div.id}
+                        div={div}
+                        divFee={divFee}
+                        holdFee={t.hold_fee_cents}
+                        isHeld={isHeld}
+                        isRegistered={isRegistered}
+                        holdExpire={divHoldExpire}
+                        completing={completing === key}
+                        cancelling={cancelling === key}
+                        onHold={() => { setActiveDivision(div); setHoldOpen(true); }}
+                        onComplete={() => completeRegistration(div.id)}
+                        onCancel={() => cancelHold(div.id)}
+                      />
+                    );
+                  })}
                 </>
-              ) : myRegistration?.status === "registered" || myRegistration?.status === "checked_in" ? (
-                <div className="space-y-2">
-                  <div className="w-full h-12 rounded-full bg-primary/10 border border-primary/30 font-display tracking-[0.15em] flex items-center justify-center gap-2 text-primary text-sm" data-testid="registered-state">
-                    <CheckCircle size={17} weight="fill" /> YOU'RE REGISTERED
-                  </div>
-                  <p className="text-center text-xs text-muted-foreground">
-                    Bracket drops 48h before play · {new Date(t.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </p>
-                </div>
               ) : (
-                <>
-                  <button
-                    onClick={() => setHoldOpen(true)}
-                    className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors"
-                    data-testid="hold-spot-trigger-btn"
-                  >
-                    <HandGrabbing size={17} weight="fill" /> HOLD MY SPOT
-                  </button>
-                  <button
-                    onClick={handleRegister}
-                    className="w-full h-12 rounded-full border border-border hover:bg-secondary/60 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors"
-                    data-testid="register-now-btn"
-                  >
-                    <Lightning size={16} weight="fill" className="text-primary" /> REGISTER NOW · ${entryFee}
-                  </button>
-                </>
+                /* Legacy single-format CTA */
+                legacyReg?.status === "held" ? (
+                  <>
+                    <div className="border border-amber-500/40 rounded-xl px-4 py-3 bg-amber-500/5">
+                      <div className="font-mono text-[9px] tracking-[0.3em] text-amber-500 mb-2 text-center">
+                        {holdCountdown ? "HOLD EXPIRES IN" : "HOLD EXPIRED"}
+                      </div>
+                      {holdCountdown ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <CountdownUnit value={holdCountdown.d} label="DAYS" />
+                          <span className="font-mono text-amber-500 text-lg font-bold leading-none mb-2">:</span>
+                          <CountdownUnit value={holdCountdown.h} label="HRS" />
+                          <span className="font-mono text-amber-500 text-lg font-bold leading-none mb-2">:</span>
+                          <CountdownUnit value={holdCountdown.m} label="MIN" />
+                          <span className="font-mono text-amber-500 text-lg font-bold leading-none mb-2">:</span>
+                          <CountdownUnit value={holdCountdown.s} label="SEC" />
+                        </div>
+                      ) : (
+                        <p className="text-center text-xs text-destructive">Your hold has expired.</p>
+                      )}
+                    </div>
+                    {holdCountdown && (
+                      <button onClick={() => completeRegistration(null)} disabled={completing !== null} className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors disabled:opacity-50" data-testid="complete-registration-btn">
+                        <Lightning size={16} weight="fill" /> {completing ? "CONFIRMING…" : `COMPLETE · $${entryFee - holdFee}`}
+                      </button>
+                    )}
+                    <button onClick={() => cancelHold(null)} className="w-full h-10 rounded-full border border-border hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive font-mono text-xs tracking-widest transition-colors" data-testid="cancel-hold-btn">
+                      CANCEL HOLD
+                    </button>
+                  </>
+                ) : legacyReg?.status === "registered" || legacyReg?.status === "checked_in" ? (
+                  <div className="space-y-2">
+                    <div className="w-full h-12 rounded-full bg-primary/10 border border-primary/30 font-display tracking-[0.15em] flex items-center justify-center gap-2 text-primary text-sm" data-testid="registered-state">
+                      <CheckCircle size={17} weight="fill" /> YOU'RE REGISTERED
+                    </div>
+                    <p className="text-center text-xs text-muted-foreground">Bracket drops 48h before play · {new Date(t.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+                  </div>
+                ) : (
+                  <>
+                    <button onClick={() => { setActiveDivision(null); setHoldOpen(true); }} className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors" data-testid="hold-spot-trigger-btn">
+                      <HandGrabbing size={17} weight="fill" /> HOLD MY SPOT
+                    </button>
+                    <button onClick={handleRegister} className="w-full h-12 rounded-full border border-border hover:bg-secondary/60 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors" data-testid="register-now-btn">
+                      <Lightning size={16} weight="fill" className="text-primary" /> REGISTER NOW · ${entryFee}
+                    </button>
+                  </>
+                )
               )}
             </div>
 
@@ -878,9 +1004,15 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       <HoldMySpotDialog
         open={holdOpen}
         onOpenChange={setHoldOpen}
-        tournament={holdTournament}
-        onSuccess={(expiresAt) => {
-          setMyRegistration({ status: "held", hold_expires_at: expiresAt });
+        tournament={{
+          ...holdTournament,
+          division_id: activeDivision?.id ?? null,
+          division_name: activeDivision ? divisionLabel(activeDivision) : null,
+          entry_fee_cents: activeDivision?.entry_fee_cents ?? holdTournament.entry_fee_cents,
+        }}
+        onSuccess={(expiresAt, divisionId) => {
+          const key = divisionId ?? "legacy";
+          setMyRegs((prev) => new Map(prev).set(key, { status: "held", hold_expires_at: expiresAt, division_id: divisionId ?? null }));
           setSpotsFilled((n) => n + 1);
         }}
       />

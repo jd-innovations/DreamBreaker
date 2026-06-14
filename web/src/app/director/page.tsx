@@ -100,8 +100,32 @@ function formatDate(iso: string) {
 
 // ── Create Dialog ─────────────────────────────────────────────────────────────
 
+// ── Format options ────────────────────────────────────────────────────────────
+
+const FORMAT_OPTIONS = [
+  { label: "Men's Doubles",   format: "doubles",       gender: "mens",    short: "MD" },
+  { label: "Women's Doubles", format: "doubles",       gender: "womens",  short: "WD" },
+  { label: "Mixed Doubles",   format: "mixed_doubles", gender: "mixed",   short: "MXD" },
+  { label: "Singles",         format: "singles",       gender: "open",    short: "SGL" },
+  { label: "Juniors",         format: "juniors",       gender: "open",    short: "JR" },
+];
+
 function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (t: Tournament) => void }) {
   const [loading, setLoading] = useState(false);
+  const [selectedFormats, setSelectedFormats] = useState<Set<string>>(new Set(["doubles/mens"]));
+
+  const toggleFormat = (key: string) => {
+    setSelectedFormats((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        if (next.size === 1) return prev; // keep at least one
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -120,7 +144,6 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
       const state = fd.get("state") as string;
       const zip_code = fd.get("zip_code") as string;
       const event_date = fd.get("date") as string;
-      const format = fd.get("format") as string;
       const draw_size = parseInt(fd.get("capacity") as string, 10);
       const entry_fee_cents = Math.round(parseFloat(fd.get("entry_fee") as string) * 100);
       const hold_fee_cents = Math.round(parseFloat(fd.get("hold_fee") as string) * 100);
@@ -128,17 +151,23 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
       const prize_pool_cents = prize_raw ? Math.round(parseFloat(prize_raw) * 100) : null;
       const description = (fd.get("description") as string) || null;
 
+      // Derive primary format from first selected
+      const primaryKey = [...selectedFormats][0];
+      const primaryFmt = FORMAT_OPTIONS.find((f) => `${f.format}/${f.gender}` === primaryKey);
+      const primaryFormat = primaryFmt?.format ?? "doubles";
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const insertPayload: any = {
         director_id: userId,
         name, venue_name, venue_address, city, state, zip_code, event_date,
-        format,
-        draw_size,
-        entry_fee_cents, hold_fee_cents,
+        format: primaryFormat,
+        formats: [...selectedFormats].map((k) => k.split("/")[0]),
+        draw_size, entry_fee_cents, hold_fee_cents,
         prize_pool_cents, description,
         status: "draft",
         spots_filled: 0,
       };
+
       const { data, error } = await supabase
         .from("tournaments")
         .insert(insertPayload)
@@ -147,7 +176,23 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
 
       if (error) { toast.error("Failed to create tournament: " + error.message); return; }
 
-      toast.success("Tournament created!", { description: "It's saved as a draft. Submit for approval when ready." });
+      // Auto-create one division per selected format
+      const divisionRows = [...selectedFormats].map((key) => {
+        const opt = FORMAT_OPTIONS.find((f) => `${f.format}/${f.gender}` === key)!;
+        return {
+          tournament_id: (data as { id: string }).id,
+          name: opt.label,
+          format: opt.format as "singles" | "doubles" | "mixed_doubles" | "juniors",
+          gender_category: opt.gender,
+          draw_size,
+          entry_fee_cents,
+          spots_filled: 0,
+        };
+      });
+
+      await supabase.from("divisions").insert(divisionRows);
+
+      toast.success("Tournament created!", { description: `${divisionRows.length} event${divisionRows.length > 1 ? "s" : ""} added. Submit for approval when ready.` });
       onCreated({ ...data as Tournament, registered: 0, held: 0, revenue_cents: 0 });
       onClose();
     } finally {
@@ -196,25 +241,46 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">EVENT DATE</label>
-              <input name="date" type="date" required className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-date" />
+          {/* Multi-format event selection */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground">EVENTS / FORMATS</label>
+              <span className="font-mono text-[10px] text-primary">{selectedFormats.size} SELECTED</span>
             </div>
-            <div>
-              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">FORMAT</label>
-              <select name="format" required className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring cursor-pointer">
-                <option value="doubles">Doubles</option>
-                <option value="mixed_doubles">Mixed Doubles</option>
-                <option value="singles">Singles</option>
-                <option value="juniors">Juniors</option>
-              </select>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {FORMAT_OPTIONS.map((opt) => {
+                const key = `${opt.format}/${opt.gender}`;
+                const active = selectedFormats.has(key);
+                return (
+                  <button
+                    type="button"
+                    key={key}
+                    onClick={() => toggleFormat(key)}
+                    className={`relative h-11 px-3 rounded-xl border text-left text-xs font-semibold transition-all flex items-center gap-2 ${active ? "border-primary bg-primary/10 text-foreground" : "border-border hover:border-primary/50 text-muted-foreground"}`}
+                    data-testid={`create-format-${key}`}
+                  >
+                    {active && (
+                      <div className="absolute top-1.5 right-1.5 h-3.5 w-3.5 rounded-full bg-primary flex items-center justify-center">
+                        <svg width="7" height="7" viewBox="0 0 7 7" fill="none"><path d="M1 3.5l1.5 1.5 3-3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      </div>
+                    )}
+                    <span className="font-mono text-[10px] text-primary font-bold">{opt.short}</span>
+                    <span className="truncate">{opt.label}</span>
+                  </button>
+                );
+              })}
             </div>
+            <p className="text-[10px] text-muted-foreground mt-1.5">Each selected format becomes a separate event. Players can register for multiple.</p>
+          </div>
+
+          <div>
+            <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">EVENT DATE</label>
+            <input name="date" type="date" required className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-date" />
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">DRAW SIZE</label>
+              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">DRAW SIZE <span className="text-muted-foreground/60">/ EVENT</span></label>
               <input name="capacity" type="number" required placeholder="32" min={4} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-capacity" />
             </div>
             <div>
