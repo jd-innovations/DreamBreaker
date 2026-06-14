@@ -661,7 +661,7 @@ export default function ProfilePage() {
             className="h-10 px-5 rounded-full border border-border flex items-center gap-2 text-sm hover:bg-secondary/60 transition-colors"
             data-testid="profile-edit-btn"
           >
-            <PencilSimple size={16} weight="bold" /> {editing ? "Cancel" : "Edit Profile"}
+            <PencilSimple size={16} weight="bold" /> {editing ? "Cancel" : "Edit"}
           </button>
         </div>
 
