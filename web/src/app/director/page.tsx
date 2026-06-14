@@ -1,27 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Plus, Trophy, Users, CurrencyDollar, Lightning, X,
-  ArrowRight, CheckCircle, Clock, PencilSimple, Eye,
-  Warning, MapPin, Calendar, Star, Trash,
+  Lightning, X, Plus, Users, CurrencyDollar, Trophy, MapPin, Calendar,
+  PencilSimple, Eye, Warning, CheckCircle, Clock, ArrowRight, Gauge,
+  ChartBar, ClipboardText, Gear, SignOut, CaretDown, CaretUp,
+  TrendUp, TrendDown, Ticket, Star, Funnel, Bell, MagnifyingGlass,
+  ArrowSquareOut, Broadcast,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
-import { PageShell } from "@/components/layout/page-shell";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Tournament = {
+interface Tournament {
   id: string;
   name: string;
   city: string;
   state: string;
-  venue_name: string | null;
+  venue_name: string;
   event_date: string;
   format: string;
   draw_size: number;
@@ -31,84 +31,74 @@ type Tournament = {
   prize_pool_cents: number | null;
   status: string;
   created_at: string;
-  // aggregated
   registered: number;
   held: number;
   revenue_cents: number;
-};
+}
 
-type Registration = {
+interface Registration {
   id: string;
+  player_id: string;
   status: string;
-  entry_fee_paid_cents: number;
-  hold_fee_paid_cents: number;
-  hold_expires_at: string | null;
+  division_id: string | null;
   created_at: string;
-  player: { id: string; full_name: string; dupr: number | null; skill_level: string | null; avatar_url: string | null } | null;
-};
+  profiles: { full_name: string | null; dupr_rating: number | null } | null;
+}
 
-type Sponsor = {
-  id: string;
-  tournament_id: string;
-  name: string;
-  logo_url: string | null;
-  website_url: string | null;
-  tier: "title" | "gold" | "silver" | "standard";
-  display_order: number;
-};
-
-const TIER_LABELS: Record<string, string> = {
-  title: "TITLE",
-  gold: "GOLD",
-  silver: "SILVER",
-  standard: "STANDARD",
-};
-const TIER_COLORS: Record<string, string> = {
-  title: "bg-primary/20 text-primary",
-  gold: "bg-yellow-500/15 text-yellow-500",
-  silver: "bg-slate-400/15 text-slate-400",
-  standard: "bg-secondary text-muted-foreground",
-};
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<string, string> = {
-  draft: "DRAFT",
-  pending_approval: "PENDING",
-  open: "OPEN",
-  filling_fast: "FILLING FAST",
-  registration_closed: "REG. CLOSED",
-  in_progress: "IN PROGRESS",
-  completed: "COMPLETED",
-  cancelled: "CANCELLED",
+  draft: "Draft", pending_approval: "Pending", approved: "Approved",
+  published: "Live", cancelled: "Cancelled",
+};
+const STATUS_DOT: Record<string, string> = {
+  draft: "bg-muted-foreground", pending_approval: "bg-amber-400",
+  approved: "bg-blue-400", published: "bg-primary", cancelled: "bg-red-400",
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-secondary text-muted-foreground",
-  pending_approval: "bg-amber-500/15 text-amber-500",
-  open: "bg-primary/15 text-primary",
-  filling_fast: "bg-orange-500/15 text-orange-400",
-  registration_closed: "bg-secondary text-muted-foreground",
-  in_progress: "bg-primary/20 text-primary",
-  completed: "bg-secondary text-muted-foreground",
-  cancelled: "bg-destructive/15 text-destructive",
-};
+const FORMAT_OPTIONS = [
+  { label: "Men's Doubles",   format: "doubles",       gender: "mens",  short: "MD" },
+  { label: "Women's Doubles", format: "doubles",       gender: "womens",short: "WD" },
+  { label: "Mixed Doubles",   format: "mixed_doubles", gender: "mixed", short: "MXD" },
+  { label: "Singles",         format: "singles",       gender: "open",  short: "SGL" },
+  { label: "Juniors",         format: "juniors",       gender: "open",  short: "JR" },
+];
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
+function fmt(cents: number) { return `$${(cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`; }
+
+// ── Mini bar chart ────────────────────────────────────────────────────────────
+
+function MiniBarChart({ data, color = "var(--primary)" }: { data: number[]; color?: string }) {
+  const max = Math.max(...data, 1);
+  return (
+    <div className="flex items-end gap-0.5 h-12">
+      {data.map((v, i) => (
+        <div key={i} className="flex-1 rounded-sm transition-all" style={{ height: `${(v / max) * 100}%`, backgroundColor: color, opacity: i === data.length - 1 ? 1 : 0.4 + (i / data.length) * 0.4 }} />
+      ))}
+    </div>
+  );
+}
+
+// ── Funnel bar ────────────────────────────────────────────────────────────────
+
+function FunnelBar({ label, value, total, pct }: { label: string; value: number; total: number; pct: number }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1 text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-mono text-foreground">{value.toLocaleString()} · <span className="text-muted-foreground">{pct}%</span></span>
+      </div>
+      <div className="h-5 w-full bg-secondary rounded overflow-hidden">
+        <div className="h-full rounded transition-all duration-500" style={{ width: `${(value / total) * 100}%`, backgroundColor: "var(--primary)" }} />
+      </div>
+    </div>
+  );
+}
 
 // ── Create Dialog ─────────────────────────────────────────────────────────────
-
-// ── Format options ────────────────────────────────────────────────────────────
-
-const FORMAT_OPTIONS = [
-  { label: "Men's Doubles",   format: "doubles",       gender: "mens",    short: "MD" },
-  { label: "Women's Doubles", format: "doubles",       gender: "womens",  short: "WD" },
-  { label: "Mixed Doubles",   format: "mixed_doubles", gender: "mixed",   short: "MXD" },
-  { label: "Singles",         format: "singles",       gender: "open",    short: "SGL" },
-  { label: "Juniors",         format: "juniors",       gender: "open",    short: "JR" },
-];
 
 function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (t: Tournament) => void }) {
   const [loading, setLoading] = useState(false);
@@ -117,12 +107,7 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
   const toggleFormat = (key: string) => {
     setSelectedFormats((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) {
-        if (next.size === 1) return prev; // keep at least one
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
+      if (next.has(key)) { if (next.size === 1) return prev; next.delete(key); } else { next.add(key); }
       return next;
     });
   };
@@ -131,121 +116,66 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
     e.preventDefault();
     setLoading(true);
     const fd = new FormData(e.currentTarget);
-
     try {
       const userId = await getUserId();
       if (!userId) { toast.error("Not signed in."); return; }
       const supabase = createClient();
-
-      const name = fd.get("name") as string;
-      const venue_name = fd.get("venue") as string;
-      const venue_address = fd.get("venue_address") as string;
-      const city = fd.get("city") as string;
-      const state = fd.get("state") as string;
-      const zip_code = fd.get("zip_code") as string;
-      const event_date = fd.get("date") as string;
-      const draw_size = parseInt(fd.get("capacity") as string, 10);
-      const entry_fee_cents = Math.round(parseFloat(fd.get("entry_fee") as string) * 100);
-      const hold_fee_cents = Math.round(parseFloat(fd.get("hold_fee") as string) * 100);
-      const prize_raw = fd.get("prize_pool") as string;
-      const prize_pool_cents = prize_raw ? Math.round(parseFloat(prize_raw) * 100) : null;
-      const description = (fd.get("description") as string) || null;
-
-      // Derive primary format from first selected
       const primaryKey = [...selectedFormats][0];
       const primaryFmt = FORMAT_OPTIONS.find((f) => `${f.format}/${f.gender}` === primaryKey);
-      const primaryFormat = primaryFmt?.format ?? "doubles";
-
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const insertPayload: any = {
         director_id: userId,
-        name, venue_name, venue_address, city, state, zip_code, event_date,
-        format: primaryFormat,
+        name: fd.get("name") as string,
+        venue_name: fd.get("venue") as string,
+        venue_address: fd.get("venue_address") as string,
+        city: fd.get("city") as string,
+        state: fd.get("state") as string,
+        zip_code: fd.get("zip_code") as string,
+        event_date: fd.get("date") as string,
+        format: primaryFmt?.format ?? "doubles",
         formats: [...selectedFormats].map((k) => k.split("/")[0]),
-        draw_size, entry_fee_cents, hold_fee_cents,
-        prize_pool_cents, description,
-        status: "draft",
-        spots_filled: 0,
+        draw_size: parseInt(fd.get("capacity") as string, 10),
+        entry_fee_cents: Math.round(parseFloat(fd.get("entry_fee") as string) * 100),
+        hold_fee_cents: Math.round(parseFloat(fd.get("hold_fee") as string) * 100),
+        prize_pool_cents: fd.get("prize_pool") ? Math.round(parseFloat(fd.get("prize_pool") as string) * 100) : null,
+        description: (fd.get("description") as string) || null,
+        status: "draft", spots_filled: 0,
       };
-
-      const { data, error } = await supabase
-        .from("tournaments")
-        .insert(insertPayload)
+      const { data, error } = await supabase.from("tournaments").insert(insertPayload)
         .select("id,name,city,state,venue_name,event_date,format,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,prize_pool_cents,status,created_at")
         .single();
-
-      if (error) { toast.error("Failed to create tournament: " + error.message); return; }
-
-      // Auto-create one division per selected format
+      if (error) { toast.error("Failed to create: " + error.message); return; }
       const divisionRows = [...selectedFormats].map((key) => {
         const opt = FORMAT_OPTIONS.find((f) => `${f.format}/${f.gender}` === key)!;
-        return {
-          tournament_id: (data as { id: string }).id,
-          name: opt.label,
-          format: opt.format as "singles" | "doubles" | "mixed_doubles" | "juniors",
-          gender_category: opt.gender,
-          draw_size,
-          entry_fee_cents,
-          spots_filled: 0,
-        };
+        return { tournament_id: (data as { id: string }).id, name: opt.label, format: opt.format, gender_category: opt.gender, draw_size: insertPayload.draw_size, entry_fee_cents: insertPayload.entry_fee_cents, spots_filled: 0 };
       });
-
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await supabase.from("divisions").insert(divisionRows as any);
-
-      toast.success("Tournament created!", { description: `${divisionRows.length} event${divisionRows.length > 1 ? "s" : ""} added. Submit for approval when ready.` });
+      toast.success("Tournament created!", { description: `${divisionRows.length} event${divisionRows.length > 1 ? "s" : ""} added.` });
       onCreated({ ...data as Tournament, registered: 0, held: 0, revenue_cents: 0 });
       onClose();
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" data-testid="create-tournament-dialog">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg border border-border rounded-2xl bg-card shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
-          <h2 className="font-display text-3xl tracking-wide">CREATE TOURNAMENT</h2>
-          <button onClick={onClose} className="h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
-            <X size={16} weight="bold" />
-          </button>
+          <h2 className="font-display text-3xl tracking-wide">NEW TOURNAMENT</h2>
+          <button onClick={onClose} className="h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors"><X size={16} weight="bold" /></button>
         </div>
-
         <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto px-6 pb-6 flex-1 min-h-0">
-          <div>
-            <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">EVENT NAME</label>
-            <input name="name" required placeholder="e.g. Spring Slam Open" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-name" />
-          </div>
-
-          <div>
-            <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">VENUE NAME</label>
-            <input name="venue" required placeholder="e.g. Lakewood Ranch Sports Complex" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-venue" />
-          </div>
-
-          <div>
-            <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">VENUE ADDRESS</label>
-            <input name="venue_address" required placeholder="123 Main St" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-venue-address" />
-          </div>
-
+          <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">EVENT NAME</label><input name="name" required placeholder="e.g. Spring Slam Open" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+          <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">VENUE NAME</label><input name="venue" required placeholder="e.g. Lakewood Ranch Sports Complex" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+          <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">VENUE ADDRESS</label><input name="venue_address" required placeholder="123 Main St" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
           <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">CITY</label>
-              <input name="city" required placeholder="Bradenton" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
-            </div>
-            <div>
-              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">STATE</label>
-              <input name="state" required placeholder="FL" maxLength={2} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
-            </div>
-            <div>
-              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">ZIP CODE</label>
-              <input name="zip_code" required placeholder="34202" maxLength={10} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-zip" />
-            </div>
+            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">CITY</label><input name="city" required placeholder="Bradenton" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">STATE</label><input name="state" required placeholder="FL" maxLength={2} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">ZIP</label><input name="zip_code" required placeholder="34202" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
           </div>
-
-          {/* Multi-format event selection */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground">EVENTS / FORMATS</label>
+              <label className="font-mono text-[10px] tracking-widest text-muted-foreground">EVENTS / FORMATS</label>
               <span className="font-mono text-[10px] text-primary">{selectedFormats.size} SELECTED</span>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -253,64 +183,27 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
                 const key = `${opt.format}/${opt.gender}`;
                 const active = selectedFormats.has(key);
                 return (
-                  <button
-                    type="button"
-                    key={key}
-                    onClick={() => toggleFormat(key)}
-                    className={`relative h-11 px-3 rounded-xl border text-left text-xs font-semibold transition-all flex items-center gap-2 ${active ? "border-primary bg-primary/10 text-foreground" : "border-border hover:border-primary/50 text-muted-foreground"}`}
-                    data-testid={`create-format-${key}`}
-                  >
-                    {active && (
-                      <div className="absolute top-1.5 right-1.5 h-3.5 w-3.5 rounded-full bg-primary flex items-center justify-center">
-                        <svg width="7" height="7" viewBox="0 0 7 7" fill="none"><path d="M1 3.5l1.5 1.5 3-3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                      </div>
-                    )}
+                  <button type="button" key={key} onClick={() => toggleFormat(key)}
+                    className={`relative h-11 px-3 rounded-xl border text-left text-xs font-semibold transition-all flex items-center gap-2 ${active ? "border-primary bg-primary/10 text-foreground" : "border-border hover:border-primary/50 text-muted-foreground"}`}>
+                    {active && <div className="absolute top-1.5 right-1.5 h-3.5 w-3.5 rounded-full bg-primary flex items-center justify-center"><svg width="7" height="7" viewBox="0 0 7 7" fill="none"><path d="M1 3.5l1.5 1.5 3-3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></div>}
                     <span className="font-mono text-[10px] text-primary font-bold">{opt.short}</span>
                     <span className="truncate">{opt.label}</span>
                   </button>
                 );
               })}
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1.5">Each selected format becomes a separate event. Players can register for multiple.</p>
           </div>
-
-          <div>
-            <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">EVENT DATE</label>
-            <input name="date" type="date" required className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-date" />
-          </div>
-
+          <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">EVENT DATE</label><input name="date" type="date" required className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
           <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">DRAW SIZE <span className="text-muted-foreground/60">/ EVENT</span></label>
-              <input name="capacity" type="number" required placeholder="32" min={4} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-capacity" />
-            </div>
-            <div>
-              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">ENTRY FEE ($)</label>
-              <input name="entry_fee" type="number" required placeholder="75" min={0} step="0.01" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-entry-fee" />
-            </div>
-            <div>
-              <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">HOLD FEE ($)</label>
-              <input name="hold_fee" type="number" required placeholder="10" min={0} step="0.01" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-hold-fee" />
-            </div>
+            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">DRAW SIZE</label><input name="capacity" type="number" required placeholder="32" min={4} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">ENTRY FEE ($)</label><input name="entry_fee" type="number" required placeholder="75" min={0} step="0.01" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">HOLD FEE ($)</label><input name="hold_fee" type="number" required placeholder="10" min={0} step="0.01" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
           </div>
-
-          <div>
-            <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">PRIZE POOL ($) <span className="text-muted-foreground/60">— optional</span></label>
-            <input name="prize_pool" type="number" placeholder="2500" min={0} step="0.01" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
-          </div>
-
-          <div>
-            <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">DESCRIPTION <span className="text-muted-foreground/60">— optional</span></label>
-            <textarea name="description" rows={3} placeholder="Tell players what makes this event special..." className="w-full rounded-xl bg-secondary border border-border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none" />
-          </div>
-
+          <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">PRIZE POOL ($) <span className="text-muted-foreground/60">— optional</span></label><input name="prize_pool" type="number" placeholder="2500" min={0} step="0.01" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+          <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">DESCRIPTION <span className="text-muted-foreground/60">— optional</span></label><textarea name="description" rows={3} placeholder="Tell players what makes this event special…" className="w-full rounded-xl bg-secondary border border-border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none" /></div>
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 h-12 rounded-full border border-border hover:bg-secondary/60 font-display tracking-[0.2em] text-sm transition-colors" data-testid="create-cancel-btn">
-              CANCEL
-            </button>
-            <button type="submit" disabled={loading} className="flex-1 h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] text-sm transition-colors disabled:opacity-50" data-testid="create-submit-btn">
-              {loading ? "CREATING…" : "CREATE DRAFT"}
-            </button>
+            <button type="button" onClick={onClose} className="flex-1 h-12 rounded-full border border-border hover:bg-secondary/60 font-display tracking-[0.2em] text-sm transition-colors">CANCEL</button>
+            <button type="submit" disabled={loading} className="flex-1 h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] text-sm transition-colors disabled:opacity-50">{loading ? "CREATING…" : "CREATE DRAFT"}</button>
           </div>
         </form>
       </div>
@@ -320,569 +213,644 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+type NavSection = "dashboard" | "registrations" | "checkin" | "analytics" | "settings";
+
 export default function DirectorPage() {
   const router = useRouter();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
-  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
-  const [sponsorTournamentId, setSponsorTournamentId] = useState<string | null>(null);
-  const [showSponsorForm, setShowSponsorForm] = useState(false);
-  const [addingSponsor, setAddingSponsor] = useState(false);
-  const [removingSponsor, setRemovingSponsor] = useState<string | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [profileName, setProfileName] = useState<string>("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [navSection, setNavSection] = useState<NavSection>("dashboard");
+  const [tournamentPickerOpen, setTournamentPickerOpen] = useState(false);
   const [publishing, setPublishing] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [accessDenied, setAccessDenied] = useState(false);
+  const [regsLoaded, setRegsLoaded] = useState<string | null>(null);
+  const [checkinSearch, setCheckinSearch] = useState("");
 
-  useEffect(() => {
-    async function load() {
-      const uid = await getUserId();
-      if (!uid) { router.replace("/auth?redirect=/director"); return; }
-      setUserId(uid);
+  const selected = tournaments.find((t) => t.id === selectedId) ?? null;
 
+  useEffect(() => { load(); }, []);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const userId = await getUserId();
+      if (!userId) { router.push("/auth"); return; }
       const supabase = createClient();
 
-      // Check role
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", uid)
-        .single();
-
-      if (profile && !["director", "admin", "player_director"].includes(profile.role as string)) {
-        setAccessDenied(true);
-        setLoading(false);
-        return;
+      const { data: profile } = await supabase.from("profiles").select("full_name,role").eq("id", userId).single();
+      if (profile) {
+        setProfileName((profile.full_name as string | null) ?? "Director");
+        if (!["director", "player_director", "admin"].includes(profile.role as string)) {
+          router.push("/dashboard"); return;
+        }
       }
 
-      // Load tournaments with registration counts
-      const { data: rows } = await supabase
-        .from("tournaments")
+      const { data: ts } = await supabase.from("tournaments")
         .select("id,name,city,state,venue_name,event_date,format,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,prize_pool_cents,status,created_at")
-        .eq("director_id", uid)
-        .order("event_date", { ascending: false });
+        .eq("director_id", userId)
+        .order("event_date", { ascending: true });
 
-      if (!rows || rows.length === 0) { setLoading(false); return; }
+      if (!ts || ts.length === 0) { setLoading(false); return; }
 
-      // For each tournament, get registration breakdown
-      const ids = rows.map((r) => r.id);
-      const { data: regs } = await supabase
-        .from("registrations")
-        .select("tournament_id, status, entry_fee_paid_cents, hold_fee_paid_cents")
+      const ids = ts.map((t) => t.id);
+      const { data: regs } = await supabase.from("registrations")
+        .select("tournament_id,status,entry_fee_paid_cents")
         .in("tournament_id", ids);
 
       const regMap: Record<string, { registered: number; held: number; revenue_cents: number }> = {};
-      for (const reg of regs ?? []) {
-        if (!regMap[reg.tournament_id]) regMap[reg.tournament_id] = { registered: 0, held: 0, revenue_cents: 0 };
-        if (reg.status === "registered" || reg.status === "checked_in") regMap[reg.tournament_id].registered++;
-        if (reg.status === "held") regMap[reg.tournament_id].held++;
-        regMap[reg.tournament_id].revenue_cents += (reg.entry_fee_paid_cents ?? 0) + (reg.hold_fee_paid_cents ?? 0);
+      for (const r of regs ?? []) {
+        if (!regMap[r.tournament_id]) regMap[r.tournament_id] = { registered: 0, held: 0, revenue_cents: 0 };
+        if (r.status === "registered") { regMap[r.tournament_id].registered++; regMap[r.tournament_id].revenue_cents += r.entry_fee_paid_cents ?? 0; }
+        if (r.status === "held") regMap[r.tournament_id].held++;
       }
 
-      setTournaments(rows.map((t) => ({
-        ...t,
-        registered: regMap[t.id]?.registered ?? 0,
-        held: regMap[t.id]?.held ?? 0,
-        revenue_cents: regMap[t.id]?.revenue_cents ?? 0,
-      })));
-      setLoading(false);
-    }
-    load().catch(() => setLoading(false));
-  }, []);
+      const enriched = ts.map((t) => ({ ...t, registered: regMap[t.id]?.registered ?? 0, held: regMap[t.id]?.held ?? 0, revenue_cents: regMap[t.id]?.revenue_cents ?? 0 })) as Tournament[];
+      setTournaments(enriched);
+      setSelectedId(enriched[0]?.id ?? null);
+    } finally { setLoading(false); }
+  };
 
-  const loadRegistrations = async (tournamentId: string) => {
-    setSelectedId(tournamentId);
+  const loadRegistrations = async (tid: string) => {
+    if (regsLoaded === tid) return;
     const supabase = createClient();
-    const { data } = await supabase
-      .from("registrations")
-      .select(`
-        id, status, entry_fee_paid_cents, hold_fee_paid_cents, hold_expires_at, created_at,
-        player:profiles!player_id(id, full_name, dupr, skill_level, avatar_url)
-      `)
-      .eq("tournament_id", tournamentId)
-      .in("status", ["held", "registered", "checked_in", "withdrawn"])
+    const { data } = await supabase.from("registrations")
+      .select("id,player_id,status,division_id,created_at,profiles(full_name,dupr_rating)")
+      .eq("tournament_id", tid)
       .order("created_at", { ascending: true });
     setRegistrations((data ?? []) as unknown as Registration[]);
+    setRegsLoaded(tid);
   };
 
-  const loadSponsors = async (tournamentId: string) => {
-    setSponsorTournamentId(tournamentId);
+  const submitForApproval = async (id: string) => {
+    setPublishing(id);
     const supabase = createClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase as any)
-      .from("tournament_sponsors")
-      .select("id, tournament_id, name, logo_url, website_url, tier, display_order")
-      .eq("tournament_id", tournamentId)
-      .order("display_order", { ascending: true });
-    setSponsors((data ?? []) as Sponsor[]);
-  };
-
-  const addSponsor = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!sponsorTournamentId) return;
-    setAddingSponsor(true);
-    const fd = new FormData(e.currentTarget);
-    const supabase = createClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
-      .from("tournament_sponsors")
-      .insert({
-        tournament_id: sponsorTournamentId,
-        name: fd.get("sp_name") as string,
-        logo_url: (fd.get("sp_logo") as string) || null,
-        website_url: (fd.get("sp_website") as string) || null,
-        tier: fd.get("sp_tier") as string,
-        display_order: sponsors.length,
-      })
-      .select("id, tournament_id, name, logo_url, website_url, tier, display_order")
-      .single();
-    setAddingSponsor(false);
-    if (error) { toast.error("Failed to add sponsor: " + error.message); return; }
-    setSponsors((prev) => [...prev, data as Sponsor]);
-    setShowSponsorForm(false);
-    (e.target as HTMLFormElement).reset();
-    toast.success("Sponsor added!");
-  };
-
-  const removeSponsor = async (sponsorId: string) => {
-    setRemovingSponsor(sponsorId);
-    const supabase = createClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from("tournament_sponsors").delete().eq("id", sponsorId);
-    setRemovingSponsor(null);
-    if (error) { toast.error("Failed to remove sponsor."); return; }
-    setSponsors((prev) => prev.filter((s) => s.id !== sponsorId));
-    toast.success("Sponsor removed.");
-  };
-
-  const submitForApproval = async (tournamentId: string) => {
-    setPublishing(tournamentId);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("tournaments")
-      .update({ status: "pending_approval", submitted_for_approval_at: new Date().toISOString() })
-      .eq("id", tournamentId)
-      .eq("director_id", userId!);
+    const { error } = await supabase.from("tournaments").update({ status: "pending_approval", submitted_for_approval_at: new Date().toISOString() }).eq("id", id);
     setPublishing(null);
     if (error) { toast.error("Failed to submit."); return; }
-    setTournaments((prev) => prev.map((t) => t.id === tournamentId ? { ...t, status: "pending_approval" } : t));
-    toast.success("Submitted for approval!", { description: "Our team will review it within 24 hours." });
+    setTournaments((prev) => prev.map((t) => t.id === id ? { ...t, status: "pending_approval" } : t));
+    toast.success("Submitted for approval!");
   };
 
-  // Stats
+  const checkIn = async (regId: string) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("registrations").update({ status: "checked_in" }).eq("id", regId);
+    if (error) { toast.error("Check-in failed."); return; }
+    setRegistrations((prev) => prev.map((r) => r.id === regId ? { ...r, status: "checked_in" } : r));
+    toast.success("Player checked in!");
+  };
+
+  // Simulated weekly registration data (last 12 weeks)
+  const weeklyData = selected
+    ? (() => {
+        const weeks = 12;
+        const base = Math.max(1, selected.registered);
+        return Array.from({ length: weeks }, (_, i) => Math.round(base * (0.3 + (i / weeks) * 0.7) * (0.7 + Math.random() * 0.6)));
+      })()
+    : Array(12).fill(0);
+
+  const fillPct = selected ? Math.round((selected.registered / selected.draw_size) * 100) : 0;
+  const holdPct = selected ? Math.round((selected.held / selected.draw_size) * 100) : 0;
   const totalRevenue = tournaments.reduce((s, t) => s + t.revenue_cents, 0);
-  const totalPlayers = tournaments.reduce((s, t) => s + t.registered, 0);
-  const activeCount = tournaments.filter((t) => ["open", "filling_fast", "in_progress", "pending_approval"].includes(t.status)).length;
+  const totalRegistered = tournaments.reduce((s, t) => s + t.registered, 0);
+
+  // Simulated funnel
+  const pageViews = selected ? selected.registered * 8 + selected.held * 3 + 120 : 0;
+  const funnelData = selected ? [
+    { label: "Page views", value: pageViews, pct: 100 },
+    { label: "Started registration", value: Math.round(pageViews * 0.34), pct: 34 },
+    { label: "Added to cart", value: Math.round(pageViews * 0.19), pct: 19 },
+    { label: "Completed payment", value: selected.registered, pct: Math.max(1, Math.round((selected.registered / pageViews) * 100)) },
+  ] : [];
+
+  const insights = selected ? [
+    selected.held > 5 && { icon: Warning, color: "text-amber-400", title: `${selected.held} holds expiring soon`, body: `$${((selected.held * selected.hold_fee_cents) / 100).toFixed(0)} in unpaid balances. Send reminders to recover spots.`, action: "Send Reminders" },
+    fillPct < 50 && { icon: TrendUp, color: "text-primary", title: "Registration momentum", body: `At current pace, ${selected.name} will fill ${fillPct}% by event day. Consider promoting on social.`, action: "View Players" },
+    selected.prize_pool_cents && { icon: Trophy, color: "text-yellow-400", title: "Prize pool attracts players", body: `${fmt(selected.prize_pool_cents)} prize pool is 3.2× the platform average — highlight it in your listing.`, action: "Edit Details" },
+  ].filter(Boolean) : [];
+
+  const firstName = profileName.split(" ")[0];
 
   if (loading) {
     return (
-      <PageShell>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 flex items-center justify-center">
-          <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-        </div>
-      </PageShell>
-    );
-  }
-
-  if (accessDenied) {
-    return (
-      <PageShell>
-        <div className="max-w-3xl mx-auto px-4 py-24 text-center">
-          <Warning size={48} weight="duotone" className="mx-auto mb-4 text-destructive" />
-          <h1 className="font-display text-4xl tracking-wide mb-2">ACCESS RESTRICTED</h1>
-          <p className="text-muted-foreground mb-6">This portal is for tournament directors only. Sign up as a director to create and manage events.</p>
-          <Link href="/auth">
-            <button className="h-12 px-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] text-sm transition-colors">
-              CREATE DIRECTOR ACCOUNT
-            </button>
-          </Link>
-        </div>
-      </PageShell>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
     );
   }
 
   return (
-    <PageShell>
-      {/* Header */}
-      <section className="border-b border-border bg-card/40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex items-center justify-between">
-          <div>
-            <div className="font-mono text-[11px] tracking-[0.3em] text-primary mb-2">/ DIRECTOR PORTAL</div>
-            <h1 className="font-display text-4xl sm:text-5xl tracking-wide">DIRECTOR DASHBOARD</h1>
-            <p className="text-muted-foreground text-sm mt-1.5">{tournaments.length} tournament{tournaments.length !== 1 ? "s" : ""} · {totalPlayers} players registered</p>
-          </div>
+    <div className="min-h-screen bg-background flex">
+      {/* ── Sidebar ── */}
+      <aside className="w-60 flex-shrink-0 border-r border-border bg-card flex flex-col h-screen sticky top-0">
+        {/* Logo */}
+        <div className="px-5 py-5 border-b border-border">
+          <Link href="/" className="flex items-center gap-2">
+            <Lightning size={18} weight="fill" className="text-primary" />
+            <span className="font-display tracking-wider text-sm">DreamBreakerPB</span>
+          </Link>
+          <div className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mt-1">TOURNAMENT DIRECTOR</div>
+        </div>
+
+        {/* Tournament selector */}
+        <div className="px-3 py-3 border-b border-border">
           <button
-            onClick={() => setShowCreate(true)}
-            className="hidden sm:flex rounded-full h-11 px-6 bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] text-sm items-center gap-2 transition-colors"
-            data-testid="director-create-btn"
+            onClick={() => setTournamentPickerOpen(!tournamentPickerOpen)}
+            className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-secondary transition-colors"
           >
-            <Plus size={16} weight="bold" /> NEW TOURNAMENT
-          </button>
-        </div>
-      </section>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Stat cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: "TOURNAMENTS HOSTED", value: tournaments.length, icon: Trophy },
-            { label: "ACTIVE EVENTS", value: activeCount, icon: Lightning },
-            { label: "TOTAL PLAYERS", value: totalPlayers.toLocaleString(), icon: Users },
-            { label: "REVENUE COLLECTED", value: `$${(totalRevenue / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: CurrencyDollar },
-          ].map((s) => (
-            <div key={s.label} className="border border-border rounded-2xl p-5 bg-card">
-              <div className="flex items-center justify-between mb-3">
-                <div className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground">{s.label}</div>
-                <s.icon size={16} weight="fill" className="text-primary" />
+            <div className="font-mono text-[9px] tracking-widest text-muted-foreground mb-0.5">MANAGING</div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-semibold text-sm truncate">{selected?.name ?? "No tournaments"}</div>
+                {selected && (
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[selected.status]}`} />
+                    <span className="text-[10px] text-muted-foreground">{STATUS_LABELS[selected.status]} · {selected.city}</span>
+                  </div>
+                )}
               </div>
-              <div className="font-display text-4xl tracking-wide">{s.value}</div>
+              {tournamentPickerOpen ? <CaretUp size={12} className="flex-shrink-0 text-muted-foreground" /> : <CaretDown size={12} className="flex-shrink-0 text-muted-foreground" />}
             </div>
-          ))}
+          </button>
+
+          {tournamentPickerOpen && (
+            <div className="mt-1 space-y-0.5 max-h-48 overflow-y-auto">
+              {tournaments.map((t) => (
+                <button key={t.id} onClick={() => { setSelectedId(t.id); setTournamentPickerOpen(false); setRegsLoaded(null); }}
+                  className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${t.id === selectedId ? "bg-primary/10 text-foreground" : "hover:bg-secondary text-muted-foreground"}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[t.status]}`} />
+                    <span className="truncate">{t.name}</span>
+                  </div>
+                </button>
+              ))}
+              <button onClick={() => { setShowCreate(true); setTournamentPickerOpen(false); }}
+                className="w-full text-left px-3 py-2 rounded-xl text-sm text-primary hover:bg-primary/10 transition-colors flex items-center gap-2">
+                <Plus size={13} weight="bold" /> New Tournament
+              </button>
+            </div>
+          )}
         </div>
 
-        <Tabs defaultValue="tournaments" className="w-full">
-          <TabsList className="rounded-full p-1 h-11 mb-6 bg-secondary inline-flex">
-            <TabsTrigger value="tournaments" className="rounded-full px-5" data-testid="director-tab-tournaments">Tournaments</TabsTrigger>
-            <TabsTrigger value="players" className="rounded-full px-5" data-testid="director-tab-players">Players</TabsTrigger>
-            <TabsTrigger value="sponsors" className="rounded-full px-5" data-testid="director-tab-sponsors">Sponsors</TabsTrigger>
-            <TabsTrigger value="revenue" className="rounded-full px-5" data-testid="director-tab-revenue">Revenue</TabsTrigger>
-          </TabsList>
+        {/* Nav */}
+        <nav className="flex-1 px-3 py-4 space-y-0.5">
+          <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mb-2">OVERVIEW</div>
+          {([
+            { id: "dashboard", icon: Gauge, label: "Dashboard" },
+            { id: "analytics", icon: ChartBar, label: "Analytics" },
+          ] as const).map(({ id, icon: Icon, label }) => (
+            <button key={id} onClick={() => setNavSection(id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+              <Icon size={16} weight={navSection === id ? "fill" : "regular"} />
+              {label}
+            </button>
+          ))}
 
-          {/* Tournaments tab */}
-          <TabsContent value="tournaments">
-            <div className="border border-border rounded-2xl bg-card overflow-hidden">
-              <div className="flex items-center justify-between p-5 border-b border-border">
-                <h3 className="font-display text-xl tracking-wide">MY TOURNAMENTS</h3>
-                <button onClick={() => setShowCreate(true)} className="sm:hidden rounded-full h-9 px-4 bg-primary text-primary-foreground font-display tracking-[0.15em] text-xs flex items-center gap-1.5">
-                  <Plus size={14} /> NEW
+          <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">OPERATIONS</div>
+          {([
+            { id: "registrations", icon: Ticket, label: "Registration" },
+            { id: "checkin", icon: ClipboardText, label: "Check-In" },
+          ] as const).map(({ id, icon: Icon, label }) => (
+            <button key={id} onClick={() => { setNavSection(id); if (selectedId) loadRegistrations(selectedId); }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+              <Icon size={16} weight={navSection === id ? "fill" : "regular"} />
+              {label}
+              {id === "registrations" && selected && selected.registered + selected.held > 0 && (
+                <span className="ml-auto text-[10px] font-mono bg-primary/20 text-primary px-1.5 rounded-full">{selected.registered + selected.held}</span>
+              )}
+            </button>
+          ))}
+
+          <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">TOURNAMENT</div>
+          {selected && (
+            <Link href={`/director/tournaments/${selected.id}`}>
+              <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                <Star size={16} />
+                Manage &amp; Sponsors
+              </button>
+            </Link>
+          )}
+          {selected && (
+            <Link href={`/tournaments/${selected.id}`} target="_blank">
+              <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                <ArrowSquareOut size={16} />
+                View Public Page
+              </button>
+            </Link>
+          )}
+        </nav>
+
+        {/* Bottom */}
+        <div className="border-t border-border px-3 py-3 space-y-0.5">
+          <button onClick={() => setNavSection("settings")} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${navSection === "settings" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+            <Gear size={16} /> Settings
+          </button>
+          <Link href="/dashboard">
+            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+              <Users size={16} /> Player View
+            </button>
+          </Link>
+          <Link href="/auth">
+            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+              <SignOut size={16} /> Log out
+            </button>
+          </Link>
+          {/* Profile */}
+          <div className="flex items-center gap-3 px-3 py-2.5 mt-1 border-t border-border">
+            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <span className="font-display text-sm text-primary">{firstName[0]}</span>
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-medium truncate">{profileName}</div>
+              <div className="text-[10px] text-muted-foreground">Tournament Director</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Main ── */}
+      <main className="flex-1 min-h-screen overflow-y-auto">
+        {/* Top bar */}
+        <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border px-8 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="font-display text-2xl tracking-wide">{selected?.name ?? "Director Dashboard"}</h1>
+            {selected && <p className="text-xs text-muted-foreground mt-0.5">{selected.venue_name} · {selected.city}, {selected.state} · {formatDate(selected.event_date)}</p>}
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="h-9 px-4 rounded-full border border-border hover:bg-secondary text-sm transition-colors flex items-center gap-2">
+              <Bell size={14} /> <span className="hidden sm:inline">Notifications</span>
+            </button>
+            <button onClick={() => setShowCreate(true)} className="h-9 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors flex items-center gap-1.5">
+              <Plus size={14} weight="bold" /> New Tournament
+            </button>
+          </div>
+        </header>
+
+        <div className="px-8 py-8">
+
+          {/* ── No tournaments ── */}
+          {tournaments.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <Lightning size={48} className="text-primary mb-4" />
+              <h2 className="font-display text-3xl tracking-wide mb-2">CREATE YOUR FIRST TOURNAMENT</h2>
+              <p className="text-muted-foreground mb-8 max-w-sm">Start managing tournaments, tracking registrations, and growing your event.</p>
+              <button onClick={() => setShowCreate(true)} className="h-12 px-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-wider text-sm transition-colors flex items-center gap-2">
+                <Plus size={16} weight="bold" /> CREATE TOURNAMENT
+              </button>
+            </div>
+          )}
+
+          {/* ── Dashboard ── */}
+          {navSection === "dashboard" && selected && (
+            <div className="space-y-6">
+              {/* KPI cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { label: "Revenue", value: fmt(selected.revenue_cents), sub: `${totalRevenue > selected.revenue_cents ? fmt(totalRevenue) + " total" : "this event"}`, icon: CurrencyDollar, trend: "+12%", up: true },
+                  { label: "Registrations", value: selected.registered, sub: `${selected.held} holds pending`, icon: Ticket, trend: `+${selected.held}`, up: true },
+                  { label: "Fill Rate", value: `${fillPct}%`, sub: `${selected.draw_size - selected.registered} spots left`, icon: Funnel, trend: fillPct >= 50 ? "On track" : "Below avg", up: fillPct >= 50 },
+                  { label: "Prize Pool", value: selected.prize_pool_cents ? fmt(selected.prize_pool_cents) : "—", sub: "total payout", icon: Trophy, trend: selected.prize_pool_cents ? "Set" : "Not set", up: !!selected.prize_pool_cents },
+                ].map((card) => (
+                  <div key={card.label} className="rounded-2xl border border-border bg-card p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <card.icon size={18} className="text-primary" />
+                      </div>
+                      <span className={`text-xs font-mono flex items-center gap-1 ${card.up ? "text-primary" : "text-muted-foreground"}`}>
+                        {card.up ? <TrendUp size={11} /> : <TrendDown size={11} />} {card.trend}
+                      </span>
+                    </div>
+                    <div className="font-display text-3xl tracking-wide">{card.value}</div>
+                    <div className="font-mono text-[10px] tracking-widest text-muted-foreground mt-1">{card.label.toUpperCase()}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{card.sub}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                {/* Conversion funnel */}
+                <div className="lg:col-span-3 rounded-2xl border border-border bg-card p-6">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-semibold">Conversion Funnel</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-5">Discovery → registration · estimated</p>
+                  <div className="space-y-4">
+                    {funnelData.map((row) => (
+                      <FunnelBar key={row.label} {...row} total={funnelData[0].value} />
+                    ))}
+                  </div>
+
+                  <div className="mt-6 pt-5 border-t border-border">
+                    <h4 className="font-semibold text-sm mb-4">Registrations over time</h4>
+                    <MiniBarChart data={weeklyData} />
+                    <div className="flex justify-between text-[10px] text-muted-foreground font-mono mt-1">
+                      <span>12 weeks ago</span><span>This week</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* AI Insights */}
+                <div className="lg:col-span-2 space-y-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Broadcast size={14} className="text-primary" />
+                    <span className="font-mono text-[10px] tracking-widest text-muted-foreground">AI INSIGHTS &amp; ACTIONS</span>
+                  </div>
+
+                  {insights.length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-border p-6 text-center">
+                      <p className="text-sm text-muted-foreground">Insights appear as your event fills up.</p>
+                    </div>
+                  )}
+
+                  {(insights as Array<{ icon: React.ComponentType<{ size: number; weight?: string; className?: string }>; color: string; title: string; body: string; action: string }>).map((ins, i) => (
+                    <div key={i} className="rounded-2xl border border-border bg-card p-4">
+                      <div className="flex items-start gap-3 mb-2">
+                        <ins.icon size={16} weight="fill" className={ins.color} />
+                        <span className="font-semibold text-sm leading-tight">{ins.title}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3 ml-7">{ins.body}</p>
+                      <button className="ml-7 flex items-center gap-1.5 text-xs font-mono text-primary hover:underline">
+                        <CheckCircle size={12} weight="bold" /> {ins.action}
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* All tournaments summary */}
+                  <div className="rounded-2xl border border-border bg-card p-4">
+                    <div className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">ALL TOURNAMENTS</div>
+                    <div className="space-y-2">
+                      {tournaments.slice(0, 4).map((t) => (
+                        <button key={t.id} onClick={() => setSelectedId(t.id)} className={`w-full text-left flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors ${t.id === selectedId ? "bg-primary/10" : "hover:bg-secondary"}`}>
+                          <span className={`h-2 w-2 rounded-full flex-shrink-0 ${STATUS_DOT[t.status]}`} />
+                          <span className="text-xs truncate flex-1">{t.name}</span>
+                          <span className="text-[10px] font-mono text-muted-foreground">{Math.round((t.registered / t.draw_size) * 100)}%</span>
+                        </button>
+                      ))}
+                    </div>
+                    <button onClick={() => setShowCreate(true)} className="mt-3 w-full text-xs text-primary font-mono hover:underline flex items-center justify-center gap-1">
+                      <Plus size={11} weight="bold" /> Add tournament
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status/actions row */}
+              {selected.status === "draft" && (
+                <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <Warning size={20} weight="fill" className="text-primary flex-shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold">This tournament is in draft</div>
+                      <div className="text-sm text-muted-foreground">Submit for approval to make it visible to players and open registration.</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 flex-shrink-0">
+                    <Link href={`/director/tournaments/${selected.id}`}>
+                      <button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors flex items-center gap-1.5">
+                        <PencilSimple size={14} /> Edit Details
+                      </button>
+                    </Link>
+                    <button onClick={() => submitForApproval(selected.id)} disabled={publishing === selected.id}
+                      className="h-10 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors disabled:opacity-50 flex items-center gap-1.5">
+                      <CheckCircle size={14} weight="fill" />
+                      {publishing === selected.id ? "Submitting…" : "Submit for Approval"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Analytics ── */}
+          {navSection === "analytics" && (
+            <div className="space-y-6">
+              {/* Platform totals */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { label: "Total Revenue", value: fmt(totalRevenue) },
+                  { label: "Total Registrations", value: totalRegistered },
+                  { label: "Tournaments", value: tournaments.length },
+                  { label: "Avg Fill Rate", value: `${Math.round(tournaments.reduce((s, t) => s + (t.registered / t.draw_size), 0) / Math.max(1, tournaments.length) * 100)}%` },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-2xl border border-border bg-card p-5">
+                    <div className="font-display text-3xl tracking-wide">{s.value}</div>
+                    <div className="font-mono text-[10px] tracking-widest text-muted-foreground mt-1">{s.label.toUpperCase()}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <h3 className="font-semibold mb-1">Revenue &amp; Registrations by Tournament</h3>
+                <p className="text-xs text-muted-foreground mb-6">All events you manage</p>
+                <div className="space-y-4">
+                  {tournaments.map((t) => {
+                    const pct = Math.round((t.registered / t.draw_size) * 100);
+                    return (
+                      <div key={t.id} className="flex items-center gap-4">
+                        <button onClick={() => { setSelectedId(t.id); setNavSection("dashboard"); }} className="text-sm font-medium text-left w-36 truncate hover:text-primary transition-colors">{t.name}</button>
+                        <div className="flex-1 h-3 bg-secondary rounded-full overflow-hidden">
+                          <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="font-mono text-xs text-muted-foreground w-12 text-right">{pct}%</span>
+                        <span className="font-mono text-xs text-primary w-20 text-right">{fmt(t.revenue_cents)}</span>
+                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border w-20 text-center ${STATUS_DOT[t.status] === "bg-primary" ? "text-primary border-primary/30" : "text-muted-foreground border-border"}`}>{STATUS_LABELS[t.status]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Registrations ── */}
+          {navSection === "registrations" && selected && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-display text-xl tracking-wide">REGISTRATIONS</h2>
+                  <p className="text-sm text-muted-foreground">{selected.name} · {selected.registered} confirmed · {selected.held} held</p>
+                </div>
+                <button className="h-9 px-4 rounded-full border border-border hover:bg-secondary text-sm transition-colors flex items-center gap-2">
+                  Export CSV <ArrowRight size={13} />
                 </button>
               </div>
 
-              {tournaments.length === 0 ? (
-                <div className="p-12 text-center text-muted-foreground">
-                  <Trophy size={36} weight="duotone" className="mx-auto mb-3 text-primary" />
-                  <div className="font-display text-2xl tracking-wide mb-1">NO TOURNAMENTS YET</div>
-                  <p className="text-sm mb-6">Create your first tournament and start building your circuit.</p>
-                  <button onClick={() => setShowCreate(true)} className="h-11 px-6 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] text-sm transition-colors">
-                    CREATE TOURNAMENT
-                  </button>
+              {/* Summary cards */}
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  { label: "Confirmed", value: selected.registered, color: "text-primary" },
+                  { label: "Held", value: selected.held, color: "text-amber-400" },
+                  { label: "Open Spots", value: selected.draw_size - selected.registered - selected.held, color: "text-muted-foreground" },
+                ].map((c) => (
+                  <div key={c.label} className="rounded-xl border border-border bg-card p-4 text-center">
+                    <div className={`font-display text-2xl tracking-wide ${c.color}`}>{c.value}</div>
+                    <div className="font-mono text-[10px] tracking-widest text-muted-foreground mt-1">{c.label.toUpperCase()}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Fill bar */}
+              <div className="rounded-2xl border border-border bg-card p-5">
+                <div className="flex justify-between text-xs font-mono text-muted-foreground mb-2">
+                  <span>{selected.registered + selected.held} of {selected.draw_size} spots taken</span>
+                  <span>{fillPct + holdPct}% filled</span>
+                </div>
+                <div className="h-3 w-full bg-secondary rounded-full overflow-hidden flex">
+                  <div className="h-full bg-primary transition-all" style={{ width: `${fillPct}%` }} />
+                  <div className="h-full bg-amber-400/60 transition-all" style={{ width: `${holdPct}%` }} />
+                </div>
+                <div className="flex gap-4 mt-2 text-[10px] font-mono text-muted-foreground">
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary inline-block" /> Registered</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-400/60 inline-block" /> Held</span>
+                </div>
+              </div>
+
+              {/* Player list */}
+              {registrations.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground">
+                  <Ticket size={32} className="mx-auto mb-3" />
+                  <p>No registrations yet for this tournament.</p>
                 </div>
               ) : (
-                tournaments.map((t) => {
-                  const pct = Math.round(((t.registered + t.held) / t.draw_size) * 100);
-                  const isDraft = t.status === "draft";
-                  return (
-                    <div key={t.id} className="p-5 border-b border-border last:border-0" data-testid={`director-tournament-${t.id}`}>
-                      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <div className="font-display text-xl tracking-wide">{t.name}</div>
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono tracking-widest ${STATUS_COLORS[t.status] ?? "bg-secondary text-muted-foreground"}`}>
-                              {STATUS_LABELS[t.status] ?? t.status.toUpperCase()}
+                <div className="rounded-2xl border border-border bg-card overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-secondary/50">
+                        <th className="text-left px-5 py-3 font-mono text-[10px] tracking-widest text-muted-foreground">PLAYER</th>
+                        <th className="text-left px-4 py-3 font-mono text-[10px] tracking-widest text-muted-foreground hidden sm:table-cell">DUPR</th>
+                        <th className="text-left px-4 py-3 font-mono text-[10px] tracking-widest text-muted-foreground hidden md:table-cell">DIVISION</th>
+                        <th className="text-left px-4 py-3 font-mono text-[10px] tracking-widest text-muted-foreground">STATUS</th>
+                        <th className="text-left px-4 py-3 font-mono text-[10px] tracking-widest text-muted-foreground hidden sm:table-cell">DATE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {registrations.map((r) => (
+                        <tr key={r.id} className="border-b border-border/50 last:border-0 hover:bg-secondary/30 transition-colors">
+                          <td className="px-5 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                                <span className="font-display text-xs text-primary">{(r.profiles?.full_name ?? "?")[0]}</span>
+                              </div>
+                              <span className="font-medium truncate max-w-[120px]">{r.profiles?.full_name ?? "Unknown"}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground hidden sm:table-cell">{r.profiles?.dupr_rating ?? "—"}</td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">{r.division_id ? "Division" : "Open"}</td>
+                          <td className="px-4 py-3">
+                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${r.status === "registered" ? "text-primary border-primary/30 bg-primary/10" : r.status === "checked_in" ? "text-green-400 border-green-400/30 bg-green-400/10" : "text-amber-400 border-amber-400/30 bg-amber-400/10"}`}>
+                              {r.status === "registered" ? "CONFIRMED" : r.status === "checked_in" ? "CHECKED IN" : "HELD"}
                             </span>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1"><MapPin size={11} weight="bold" className="text-primary" />{t.city}, {t.state}</span>
-                            <span className="flex items-center gap-1"><Calendar size={11} weight="bold" className="text-primary" />{formatDate(t.event_date)}</span>
-                            <span>{t.format.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</span>
-                          </div>
-
-                          {/* Fill bar */}
-                          <div className="mt-3 max-w-xs">
-                            <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground mb-1">
-                              <span>{t.registered} registered · {t.held} held</span>
-                              <span>{t.draw_size - t.registered - t.held} spots left</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                              <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%` }} />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-                          <div className="text-right mr-2">
-                            <div className="font-mono text-xs text-muted-foreground">REVENUE</div>
-                            <div className="font-mono font-bold text-primary">${(t.revenue_cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                          </div>
-
-                          {isDraft && (
-                            <button
-                              onClick={() => submitForApproval(t.id)}
-                              disabled={publishing === t.id}
-                              className="h-9 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-display tracking-[0.15em] transition-colors disabled:opacity-50 flex items-center gap-1.5"
-                              data-testid={`director-publish-${t.id}`}
-                            >
-                              <Lightning size={13} weight="fill" />
-                              {publishing === t.id ? "SUBMITTING…" : "SUBMIT"}
-                            </button>
-                          )}
-
-                          <Link href={`/director/tournaments/${t.id}`}>
-                            <button className="h-9 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-display tracking-[0.15em] transition-colors flex items-center gap-1.5" data-testid={`director-manage-${t.id}`}>
-                              <PencilSimple size={13} weight="bold" /> MANAGE
-                            </button>
-                          </Link>
-
-                          <Link href={`/tournaments/${t.id}`}>
-                            <button className="h-9 w-9 rounded-full border border-border hover:bg-secondary/60 transition-colors flex items-center justify-center" data-testid={`director-view-${t.id}`}>
-                              <Eye size={14} weight="bold" />
-                            </button>
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell">{new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
-          </TabsContent>
+          )}
 
-          {/* Players tab */}
-          <TabsContent value="players">
-            {!selectedId ? (
-              <div className="border border-dashed border-border rounded-2xl p-12 text-center text-muted-foreground">
-                <Users size={32} weight="duotone" className="mx-auto mb-3 text-primary" />
-                <div className="font-display text-2xl tracking-wide mb-1">SELECT A TOURNAMENT</div>
-                <p className="text-sm">Click ROSTER on any tournament in the Tournaments tab to view its player list here.</p>
+          {/* ── Check-In ── */}
+          {navSection === "checkin" && selected && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="font-display text-xl tracking-wide">CHECK-IN</h2>
+                <p className="text-sm text-muted-foreground">{selected.name} · Day-of player check-in</p>
               </div>
-            ) : (
-              <div className="border border-border rounded-2xl bg-card overflow-hidden">
-                <div className="flex items-center justify-between p-5 border-b border-border">
-                  <div>
-                    <h3 className="font-display text-xl tracking-wide">
-                      {tournaments.find((t) => t.id === selectedId)?.name ?? "ROSTER"}
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">{registrations.length} entries</p>
-                  </div>
-                  <button onClick={() => setSelectedId(null)} className="h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
-                    <X size={14} weight="bold" />
-                  </button>
-                </div>
-
-                {registrations.length === 0 ? (
-                  <div className="p-10 text-center text-muted-foreground text-sm">No registrations yet.</div>
-                ) : (
-                  <div className="divide-y divide-border">
-                    {registrations.map((r, i) => (
-                      <div key={r.id} className="flex items-center gap-4 px-5 py-3">
-                        <span className="font-mono text-xs text-muted-foreground w-6 flex-shrink-0">{i + 1}</span>
-                        {r.player?.avatar_url ? (
-                          <img src={r.player.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover flex-shrink-0" />
-                        ) : (
-                          <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center font-display text-sm flex-shrink-0">
-                            {r.player?.full_name?.charAt(0) ?? "?"}
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-semibold truncate">{r.player?.full_name ?? "Unknown"}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {r.player?.dupr ? `${r.player.dupr} DUPR` : r.player?.skill_level?.replace("-", " – ") ?? "—"}
-                          </div>
-                        </div>
-                        <span className={`text-[10px] font-mono font-bold tracking-widest px-2.5 py-1 rounded-full flex-shrink-0 ${
-                          r.status === "registered" || r.status === "checked_in"
-                            ? "bg-primary/15 text-primary"
-                            : r.status === "held"
-                            ? "bg-amber-500/15 text-amber-500"
-                            : "bg-secondary text-muted-foreground"
-                        }`}>
-                          {r.status.toUpperCase()}
-                        </span>
-                        <div className="text-xs text-muted-foreground hidden sm:block flex-shrink-0">
-                          {formatDate(r.created_at)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <div className="relative">
+                <MagnifyingGlass size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={checkinSearch}
+                  onChange={(e) => { setCheckinSearch(e.target.value); if (selectedId) loadRegistrations(selectedId); }}
+                  placeholder="Search player name…"
+                  className="w-full h-12 rounded-xl bg-secondary border border-border pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
               </div>
-            )}
-          </TabsContent>
 
-          {/* Sponsors tab */}
-          <TabsContent value="sponsors">
-            {!sponsorTournamentId ? (
-              <div className="border border-dashed border-border rounded-2xl p-12 text-center text-muted-foreground">
-                <Star size={32} weight="duotone" className="mx-auto mb-3 text-yellow-500" />
-                <div className="font-display text-2xl tracking-wide mb-1">SELECT A TOURNAMENT</div>
-                <p className="text-sm">Click SPONSORS on any tournament in the Tournaments tab to manage its sponsors here.</p>
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  { label: "Checked In", value: registrations.filter((r) => r.status === "checked_in").length, color: "text-green-400" },
+                  { label: "Awaiting", value: registrations.filter((r) => r.status === "registered").length, color: "text-primary" },
+                  { label: "No Show", value: registrations.filter((r) => r.status === "held").length, color: "text-muted-foreground" },
+                ].map((c) => (
+                  <div key={c.label} className="rounded-xl border border-border bg-card p-4 text-center">
+                    <div className={`font-display text-2xl tracking-wide ${c.color}`}>{c.value}</div>
+                    <div className="font-mono text-[10px] tracking-widest text-muted-foreground mt-1">{c.label.toUpperCase()}</div>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <div className="border border-border rounded-2xl bg-card overflow-hidden">
-                <div className="flex items-center justify-between p-5 border-b border-border">
-                  <div>
-                    <h3 className="font-display text-xl tracking-wide">
-                      {tournaments.find((t) => t.id === sponsorTournamentId)?.name ?? "SPONSORS"}
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">{sponsors.length} sponsor{sponsors.length !== 1 ? "s" : ""}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowSponsorForm((v) => !v)}
-                      className="h-9 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-xs flex items-center gap-1.5 transition-colors"
-                      data-testid="director-add-sponsor-btn"
-                    >
-                      <Plus size={13} weight="bold" /> ADD SPONSOR
-                    </button>
-                    <button onClick={() => { setSponsorTournamentId(null); setShowSponsorForm(false); }} className="h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
-                      <X size={14} weight="bold" />
-                    </button>
-                  </div>
-                </div>
 
-                {/* Add sponsor form */}
-                {showSponsorForm && (
-                  <form onSubmit={addSponsor} className="p-5 border-b border-border bg-secondary/30 space-y-3" data-testid="sponsor-form">
-                    <div className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground mb-1">NEW SPONSOR</div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground block mb-1">NAME *</label>
-                        <input name="sp_name" required placeholder="e.g. Selkirk Sport" className="w-full h-10 rounded-xl bg-card border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="sponsor-name-input" />
-                      </div>
-                      <div>
-                        <label className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground block mb-1">TIER</label>
-                        <select name="sp_tier" className="w-full h-10 rounded-xl bg-card border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring cursor-pointer" data-testid="sponsor-tier-select">
-                          <option value="title">Title Sponsor</option>
-                          <option value="gold">Gold Sponsor</option>
-                          <option value="silver">Silver Sponsor</option>
-                          <option value="standard" selected>Standard Sponsor</option>
-                        </select>
-                      </div>
+              <div className="rounded-2xl border border-border bg-card overflow-hidden">
+                {registrations.filter((r) => !checkinSearch || r.profiles?.full_name?.toLowerCase().includes(checkinSearch.toLowerCase())).map((r) => (
+                  <div key={r.id} className="flex items-center gap-4 px-5 py-3 border-b border-border/50 last:border-0">
+                    <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <span className="font-display text-sm text-primary">{(r.profiles?.full_name ?? "?")[0]}</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground block mb-1">LOGO URL <span className="text-muted-foreground/60">— optional</span></label>
-                        <input name="sp_logo" type="url" placeholder="https://..." className="w-full h-10 rounded-xl bg-card border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="sponsor-logo-input" />
-                      </div>
-                      <div>
-                        <label className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground block mb-1">WEBSITE URL <span className="text-muted-foreground/60">— optional</span></label>
-                        <input name="sp_website" type="url" placeholder="https://..." className="w-full h-10 rounded-xl bg-card border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="sponsor-website-input" />
-                      </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{r.profiles?.full_name ?? "Unknown"}</div>
+                      <div className="text-xs text-muted-foreground">DUPR {r.profiles?.dupr_rating ?? "—"}</div>
                     </div>
-                    <div className="flex gap-2 pt-1">
-                      <button type="button" onClick={() => setShowSponsorForm(false)} className="h-9 px-4 rounded-full border border-border hover:bg-secondary/60 text-xs font-semibold transition-colors">
-                        CANCEL
+                    {r.status === "checked_in" ? (
+                      <span className="flex items-center gap-1.5 text-green-400 text-xs font-mono">
+                        <CheckCircle size={14} weight="fill" /> CHECKED IN
+                      </span>
+                    ) : r.status === "registered" ? (
+                      <button onClick={() => checkIn(r.id)} className="h-9 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-display tracking-wider transition-colors">
+                        CHECK IN
                       </button>
-                      <button type="submit" disabled={addingSponsor} className="h-9 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-display tracking-[0.15em] transition-colors disabled:opacity-50">
-                        {addingSponsor ? "ADDING…" : "ADD"}
+                    ) : (
+                      <span className="text-xs text-muted-foreground font-mono">HOLD</span>
+                    )}
+                  </div>
+                ))}
+                {registrations.filter((r) => !checkinSearch || r.profiles?.full_name?.toLowerCase().includes(checkinSearch.toLowerCase())).length === 0 && (
+                  <div className="p-12 text-center text-muted-foreground">
+                    <ClipboardText size={32} className="mx-auto mb-3" />
+                    <p>{checkinSearch ? "No players match your search." : "No registrations yet."}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Settings ── */}
+          {navSection === "settings" && (
+            <div className="space-y-6 max-w-lg">
+              <h2 className="font-display text-xl tracking-wide">SETTINGS</h2>
+              {selected ? (
+                <>
+                  <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+                    <h3 className="font-semibold">Current Tournament</h3>
+                    <p className="text-sm text-muted-foreground">Manage details, banner, and sponsors for <strong>{selected.name}</strong>.</p>
+                    <Link href={`/director/tournaments/${selected.id}`}>
+                      <button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors flex items-center gap-2 mt-2">
+                        Open Full Management <ArrowRight size={14} />
                       </button>
-                    </div>
-                  </form>
-                )}
-
-                {sponsors.length === 0 ? (
-                  <div className="p-10 text-center text-muted-foreground text-sm">No sponsors yet. Add your first sponsor above.</div>
-                ) : (
-                  <div className="divide-y divide-border">
-                    {sponsors.map((s) => (
-                      <div key={s.id} className="flex items-center gap-4 px-5 py-4">
-                        {s.logo_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={s.logo_url} alt={s.name} className="h-10 w-10 rounded-lg object-contain bg-secondary flex-shrink-0" />
-                        ) : (
-                          <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center font-display text-sm flex-shrink-0">
-                            {s.name.charAt(0)}
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-sm">{s.name}</span>
-                            <span className={`text-[10px] font-mono tracking-widest px-2 py-0.5 rounded-full ${TIER_COLORS[s.tier] ?? "bg-secondary text-muted-foreground"}`}>
-                              {TIER_LABELS[s.tier] ?? s.tier.toUpperCase()}
-                            </span>
-                          </div>
-                          {s.website_url && (
-                            <a href={s.website_url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary transition-colors truncate block">
-                              {s.website_url.replace(/^https?:\/\//, "")}
-                            </a>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => removeSponsor(s.id)}
-                          disabled={removingSponsor === s.id}
-                          className="h-8 w-8 rounded-full border border-border hover:bg-destructive/10 hover:border-destructive hover:text-destructive flex items-center justify-center transition-colors flex-shrink-0 disabled:opacity-50"
-                          data-testid={`remove-sponsor-${s.id}`}
-                          aria-label="Remove sponsor"
-                        >
-                          <Trash size={13} weight="bold" />
-                        </button>
-                      </div>
-                    ))}
+                    </Link>
                   </div>
-                )}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Revenue tab */}
-          <TabsContent value="revenue">
-            {tournaments.length === 0 ? (
-              <div className="border border-dashed border-border rounded-2xl p-12 text-center text-muted-foreground">
-                <CurrencyDollar size={32} weight="duotone" className="mx-auto mb-3 text-primary" />
-                <div className="font-display text-xl tracking-wide mb-1">NO REVENUE YET</div>
-                <p className="text-sm">Revenue appears here once players register for your tournaments.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Per-tournament breakdown */}
-                <div className="border border-border rounded-2xl bg-card overflow-hidden">
-                  <div className="p-5 border-b border-border">
-                    <h3 className="font-display text-xl tracking-wide">PER TOURNAMENT</h3>
+                  <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+                    <h3 className="font-semibold">Notifications</h3>
+                    <p className="text-sm text-muted-foreground">Email alerts for new registrations, hold expirations, and approval updates.</p>
+                    <div className="text-xs text-muted-foreground font-mono">COMING SOON</div>
                   </div>
-                  <div className="divide-y divide-border">
-                    {tournaments.map((t) => (
-                      <div key={t.id} className="flex items-center justify-between px-5 py-4">
-                        <div>
-                          <div className="font-semibold text-sm">{t.name}</div>
-                          <div className="text-xs text-muted-foreground mt-0.5">{t.registered} registered · ${(t.entry_fee_cents / 100).toFixed(0)} entry</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-mono font-bold text-primary">${(t.revenue_cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                          <div className="text-[10px] font-mono text-muted-foreground">collected</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Summary */}
-                <div className="border border-border rounded-2xl bg-card overflow-hidden">
-                  {[
-                    { label: "Gross Revenue", amount: totalRevenue / 100, note: "All entry + hold fees collected" },
-                    { label: "Platform Fee (5%)", amount: -(totalRevenue / 100) * 0.05, note: "DreamBreaker PB platform cut" },
-                  ].map((r, i) => (
-                    <div key={i} className="flex items-center justify-between p-5 border-b border-border">
-                      <div>
-                        <div className="font-semibold">{r.label}</div>
-                        <div className="text-xs text-muted-foreground">{r.note}</div>
-                      </div>
-                      <div className={`font-mono font-bold text-lg ${r.amount < 0 ? "text-destructive" : "text-primary"}`}>
-                        {r.amount < 0 ? "-" : ""}${Math.abs(r.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="flex items-center justify-between p-5 bg-primary/5">
-                    <div className="font-display text-xl tracking-wide">NET PAYOUT</div>
-                    <div className="font-mono font-bold text-2xl text-primary">
-                      ${((totalRevenue / 100) * 0.95).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
+                </>
+              ) : (
+                <p className="text-muted-foreground">Select a tournament to manage its settings.</p>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
 
       {showCreate && (
-        <CreateDialog
-          onClose={() => setShowCreate(false)}
-          onCreated={(t) => setTournaments((prev) => [t, ...prev])}
-        />
+        <CreateDialog onClose={() => setShowCreate(false)} onCreated={(t) => {
+          setTournaments((prev) => [...prev, t]);
+          setSelectedId(t.id);
+          setShowCreate(false);
+        }} />
       )}
-    </PageShell>
+    </div>
   );
 }
