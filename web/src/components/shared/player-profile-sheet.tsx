@@ -95,7 +95,7 @@ export function PlayerProfileSheet({ partner, onClose, onPass, onLike, onSuperCo
         <div className="overflow-y-auto flex-1 min-h-0">
           {/* Hero photo */}
           <div className="relative h-72 overflow-hidden flex-shrink-0">
-            <img src={partner.img} alt="" className="h-full w-full object-cover" />
+            <img src={partner.img} alt="" className="h-full w-full object-cover object-top" />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
 
             {/* Match ring */}

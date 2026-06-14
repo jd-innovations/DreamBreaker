@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Sun, Moon, List, X } from "@phosphor-icons/react";
 import { Logo } from "./logo";
 import { useTheme } from "./theme-provider";
+import { createClient } from "@/lib/supabase/client";
 
 const navLinks = [
   { to: "/tournaments",  label: "Tournaments", testid: "nav-tournaments" },
@@ -18,7 +19,17 @@ const navLinks = [
 export function Header() {
   const { theme, toggle } = useTheme();
   const [open, setOpen] = useState(false);
+  const [firstName, setFirstName] = useState<string | null>(null);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return;
+      const name = session.user.user_metadata?.full_name as string | undefined;
+      setFirstName(name ? name.split(" ")[0] : session.user.email?.split("@")[0] ?? null);
+    });
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border" data-testid="site-header">
@@ -61,13 +72,23 @@ export function Header() {
           >
             Login
           </Link>
-          <Link
-            href="/auth?mode=signup"
-            className="h-10 px-5 rounded-full font-semibold text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors inline-flex items-center"
-            data-testid="header-getstarted-btn"
-          >
-            Get Started
-          </Link>
+          {firstName ? (
+            <Link
+              href="/dashboard"
+              className="h-10 px-5 rounded-full font-semibold text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors inline-flex items-center"
+              data-testid="header-getstarted-btn"
+            >
+              {firstName.toUpperCase()}
+            </Link>
+          ) : (
+            <Link
+              href="/auth?mode=signup"
+              className="h-10 px-5 rounded-full font-semibold text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors inline-flex items-center"
+              data-testid="header-getstarted-btn"
+            >
+              Get Started
+            </Link>
+          )}
 
           <button
             className="lg:hidden h-10 w-10 rounded-full border border-border flex items-center justify-center"
