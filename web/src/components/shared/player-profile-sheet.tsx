@@ -75,7 +75,7 @@ export function PlayerProfileSheet({ partner, onClose, onPass, onLike, onSuperCo
       <div
         ref={sheetRef}
         className="relative z-10 w-full max-w-lg mx-auto bg-background border-t border-x border-border rounded-t-3xl flex flex-col animate-in slide-in-from-bottom duration-300"
-        style={{ maxHeight: "calc(96dvh - 64px)", marginBottom: "64px" }}
+        style={{ maxHeight: "calc(96dvh - 100px)", marginBottom: "100px" }}
         data-testid="profile-sheet"
       >
         {/* Drag handle + close row */}

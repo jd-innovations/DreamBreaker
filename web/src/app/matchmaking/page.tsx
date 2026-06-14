@@ -570,7 +570,7 @@ export default function MatchmakingPage() {
           {/* Action buttons — fixed above bottom nav on mobile, inline on desktop */}
           {!loading && visibleDeck.length > 0 && (
             <>
-              <div className="fixed bottom-16 left-0 right-0 flex items-center justify-center gap-5 py-3 lg:hidden z-40">
+              <div className="fixed bottom-[100px] left-0 right-0 flex items-center justify-center gap-5 py-3 lg:hidden z-40">
                 <button
                   onClick={() => swipe("left")}
                   title="Pass (←)"
