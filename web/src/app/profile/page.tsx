@@ -611,7 +611,7 @@ export default function ProfilePage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex items-end justify-between -mt-12 lg:-mt-20 pb-6 border-b border-border">
-          <div className="flex items-end gap-5">
+          <div className="flex items-end gap-5 min-w-0">
             <div className="relative flex-shrink-0">
               <img
                 src={avatarUrl}
