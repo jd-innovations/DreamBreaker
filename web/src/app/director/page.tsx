@@ -8,7 +8,7 @@ import {
   PencilSimple, Eye, Warning, CheckCircle, Clock, ArrowRight, Gauge,
   ChartBar, ClipboardText, Gear, SignOut, CaretDown, CaretUp,
   TrendUp, TrendDown, Ticket, Star, Funnel, Bell, MagnifyingGlass,
-  ArrowSquareOut, Broadcast,
+  ArrowSquareOut, Broadcast, Trash, Globe, Image, UploadSimple, FloppyDisk,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -22,18 +22,44 @@ interface Tournament {
   city: string;
   state: string;
   venue_name: string;
+  venue_address?: string;
+  zip_code?: string;
   event_date: string;
   format: string;
+  formats?: string[] | null;
   draw_size: number;
   spots_filled: number;
   entry_fee_cents: number;
   hold_fee_cents: number;
+  hold_duration_hours?: number;
   prize_pool_cents: number | null;
+  description?: string | null;
+  rules?: string | null;
+  cover_img_url?: string | null;
   status: string;
   created_at: string;
   registered: number;
   held: number;
   revenue_cents: number;
+}
+
+interface Division {
+  id: string;
+  name: string;
+  format: string;
+  gender_category: string;
+  draw_size: number;
+  spots_filled: number;
+  entry_fee_cents: number;
+}
+
+interface Sponsor {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  website_url: string | null;
+  tier: string;
+  display_order: number;
 }
 
 interface Registration {
@@ -54,6 +80,14 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_DOT: Record<string, string> = {
   draft: "bg-muted-foreground", pending_approval: "bg-amber-400",
   approved: "bg-blue-400", published: "bg-primary", cancelled: "bg-red-400",
+};
+
+const TIER_LABELS: Record<string, string> = { title: "Title", gold: "Gold", silver: "Silver", standard: "Standard" };
+const TIER_COLORS: Record<string, string> = {
+  title: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
+  gold: "text-amber-400 border-amber-400/40 bg-amber-400/10",
+  silver: "text-slate-300 border-slate-300/40 bg-slate-300/10",
+  standard: "text-muted-foreground border-border",
 };
 
 const FORMAT_OPTIONS = [
@@ -213,7 +247,7 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type NavSection = "dashboard" | "registrations" | "checkin" | "analytics" | "settings";
+type NavSection = "dashboard" | "registrations" | "checkin" | "analytics" | "settings" | "manage" | "sponsors" | "publicpage";
 
 export default function DirectorPage() {
   const router = useRouter();
@@ -229,6 +263,20 @@ export default function DirectorPage() {
   const [publishing, setPublishing] = useState<string | null>(null);
   const [regsLoaded, setRegsLoaded] = useState<string | null>(null);
   const [checkinSearch, setCheckinSearch] = useState("");
+
+  // Management state
+  const [divisions, setDivisions] = useState<Division[]>([]);
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [managementLoaded, setManagementLoaded] = useState<string | null>(null);
+  const [editingBanner, setEditingBanner] = useState(false);
+  const [bannerUrl, setBannerUrl] = useState("");
+  const [savingBanner, setSavingBanner] = useState(false);
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [showSponsorForm, setShowSponsorForm] = useState(false);
+  const [addingSponsor, setAddingSponsor] = useState(false);
+  const [removingSponsor, setRemovingSponsor] = useState<string | null>(null);
+  const detailsFormRef = useRef<HTMLFormElement>(null);
 
   const selected = tournaments.find((t) => t.id === selectedId) ?? null;
 
@@ -293,6 +341,110 @@ export default function DirectorPage() {
     if (error) { toast.error("Failed to submit."); return; }
     setTournaments((prev) => prev.map((t) => t.id === id ? { ...t, status: "pending_approval" } : t));
     toast.success("Submitted for approval!");
+  };
+
+  const loadManagement = async (tid: string) => {
+    if (managementLoaded === tid) return;
+    const supabase = createClient();
+    // Load full tournament details (including extra fields)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: t } = await (supabase as any)
+      .from("tournaments")
+      .select("id,name,city,state,venue_name,venue_address,zip_code,event_date,format,formats,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,hold_duration_hours,prize_pool_cents,description,rules,cover_img_url,status,created_at")
+      .eq("id", tid)
+      .single();
+    if (t) {
+      setTournaments((prev) => prev.map((x) => x.id === tid ? { ...x, ...t, registered: x.registered, held: x.held, revenue_cents: x.revenue_cents } : x));
+      setBannerUrl((t as Tournament).cover_img_url ?? "");
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: divs } = await (supabase as any)
+      .from("divisions")
+      .select("id,name,format,gender_category,draw_size,spots_filled,entry_fee_cents")
+      .eq("tournament_id", tid)
+      .order("created_at", { ascending: true });
+    setDivisions((divs ?? []) as Division[]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: spons } = await (supabase as any)
+      .from("tournament_sponsors")
+      .select("id,name,logo_url,website_url,tier,display_order")
+      .eq("tournament_id", tid)
+      .order("display_order", { ascending: true });
+    setSponsors((spons ?? []) as Sponsor[]);
+    setManagementLoaded(tid);
+  };
+
+  const saveBanner = async () => {
+    if (!selected) return;
+    setSavingBanner(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("tournaments").update({ cover_img_url: bannerUrl || null }).eq("id", selected.id);
+    setSavingBanner(false);
+    if (error) { toast.error("Failed to save banner."); return; }
+    setTournaments((prev) => prev.map((t) => t.id === selected.id ? { ...t, cover_img_url: bannerUrl || null } : t));
+    setEditingBanner(false);
+    toast.success("Banner updated!");
+  };
+
+  const saveDetails = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSavingDetails(true);
+    const fd = new FormData(e.currentTarget);
+    const supabase = createClient();
+    const updates = {
+      name: fd.get("name") as string,
+      venue_name: fd.get("venue_name") as string,
+      venue_address: fd.get("venue_address") as string,
+      city: fd.get("city") as string,
+      state: fd.get("state") as string,
+      zip_code: fd.get("zip_code") as string,
+      event_date: fd.get("event_date") as string,
+      description: (fd.get("description") as string) || null,
+      rules: (fd.get("rules") as string) || null,
+      prize_pool_cents: fd.get("prize_pool") ? Math.round(parseFloat(fd.get("prize_pool") as string) * 100) : null,
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("tournaments").update(updates).eq("id", selected!.id);
+    setSavingDetails(false);
+    if (error) { toast.error("Failed to save."); return; }
+    setTournaments((prev) => prev.map((t) => t.id === selected!.id ? { ...t, ...updates } : t));
+    setEditingDetails(false);
+    toast.success("Details saved!");
+  };
+
+  const addSponsor = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setAddingSponsor(true);
+    const fd = new FormData(e.currentTarget);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (createClient() as any)
+      .from("tournament_sponsors")
+      .insert({
+        tournament_id: selected!.id,
+        name: fd.get("sp_name") as string,
+        logo_url: (fd.get("sp_logo") as string) || null,
+        website_url: (fd.get("sp_website") as string) || null,
+        tier: fd.get("sp_tier") as string,
+        display_order: sponsors.length,
+      })
+      .select("id,name,logo_url,website_url,tier,display_order")
+      .single();
+    setAddingSponsor(false);
+    if (error) { toast.error("Failed to add sponsor."); return; }
+    setSponsors((prev) => [...prev, data as Sponsor]);
+    setShowSponsorForm(false);
+    (e.target as HTMLFormElement).reset();
+    toast.success("Sponsor added!");
+  };
+
+  const removeSponsor = async (sponsorId: string) => {
+    setRemovingSponsor(sponsorId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (createClient() as any).from("tournament_sponsors").delete().eq("id", sponsorId);
+    setRemovingSponsor(null);
+    if (error) { toast.error("Failed to remove sponsor."); return; }
+    setSponsors((prev) => prev.filter((s) => s.id !== sponsorId));
+    toast.success("Sponsor removed.");
   };
 
   const checkIn = async (regId: string) => {
@@ -377,7 +529,7 @@ export default function DirectorPage() {
         {tournamentPickerOpen && (
           <div className="mt-1 space-y-0.5 max-h-48 overflow-y-auto">
             {tournaments.map((t) => (
-              <button key={t.id} onClick={() => { setSelectedId(t.id); setTournamentPickerOpen(false); setRegsLoaded(null); setMobileSidebarOpen(false); }}
+              <button key={t.id} onClick={() => { setSelectedId(t.id); setTournamentPickerOpen(false); setRegsLoaded(null); setManagementLoaded(null); setMobileSidebarOpen(false); }}
                 className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${t.id === selectedId ? "bg-primary/10 text-foreground" : "hover:bg-secondary text-muted-foreground"}`}>
                 <div className="flex items-center gap-2">
                   <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[t.status]}`} />
@@ -423,22 +575,23 @@ export default function DirectorPage() {
         ))}
 
         <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">TOURNAMENT</div>
-        {selected && (
-          <Link href={`/director/tournaments/${selected.id}`} onClick={() => setMobileSidebarOpen(false)}>
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-              <Star size={16} />
-              Manage &amp; Sponsors
-            </button>
-          </Link>
-        )}
-        {selected && (
-          <Link href={`/tournaments/${selected.id}`} target="_blank" onClick={() => setMobileSidebarOpen(false)}>
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-              <ArrowSquareOut size={16} />
-              View Public Page
-            </button>
-          </Link>
-        )}
+        {([
+          { id: "manage", icon: PencilSimple, label: "Manage" },
+          { id: "sponsors", icon: Star, label: "Sponsors" },
+          { id: "publicpage", icon: Eye, label: "Public Page" },
+        ] as const).map(({ id, icon: Icon, label }) => (
+          <button key={id}
+            onClick={() => {
+              setNavSection(id);
+              setMobileSidebarOpen(false);
+              if (selectedId && (id === "manage" || id === "sponsors")) loadManagement(selectedId);
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+            <Icon size={16} weight={navSection === id ? "fill" : "regular"} />
+            {label}
+            {id === "sponsors" && sponsors.length > 0 && <span className="ml-auto text-[10px] font-mono bg-primary/20 text-primary px-1.5 rounded-full">{sponsors.length}</span>}
+          </button>
+        ))}
       </nav>
 
       {/* Bottom */}
@@ -854,11 +1007,9 @@ export default function DirectorPage() {
                   <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
                     <h3 className="font-semibold">Current Tournament</h3>
                     <p className="text-sm text-muted-foreground">Manage details, banner, and sponsors for <strong>{selected.name}</strong>.</p>
-                    <Link href={`/director/tournaments/${selected.id}`}>
-                      <button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors flex items-center gap-2 mt-2">
-                        Open Full Management <ArrowRight size={14} />
-                      </button>
-                    </Link>
+                    <button onClick={() => { setNavSection("manage"); if (selectedId) loadManagement(selectedId); }} className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors flex items-center gap-2 mt-2">
+                      Open Management <ArrowRight size={14} />
+                    </button>
                   </div>
                   <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
                     <h3 className="font-semibold">Notifications</h3>
@@ -871,27 +1022,246 @@ export default function DirectorPage() {
               )}
             </div>
           )}
+
+          {/* ── Manage ── */}
+          {navSection === "manage" && selected && (
+            <div className="space-y-6">
+              {/* Banner */}
+              <div className="relative w-full h-40 sm:h-56 rounded-2xl overflow-hidden group">
+                {selected.cover_img_url ? (
+                  <img src={selected.cover_img_url} alt="Banner" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-card via-secondary to-primary/20 flex items-center justify-center">
+                    <div className="text-center opacity-40">
+                      <Image size={36} className="mx-auto mb-2" />
+                      <p className="font-mono text-[10px] tracking-widest">NO BANNER IMAGE</p>
+                    </div>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+                <button onClick={() => setEditingBanner(true)}
+                  className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur border border-border text-xs font-mono tracking-wider hover:bg-background transition-colors">
+                  <UploadSimple size={12} weight="bold" /> CHANGE BANNER
+                </button>
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <h2 className="font-display text-2xl sm:text-3xl tracking-wide">{selected.name}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">{selected.venue_name} · {selected.city}, {selected.state}</p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-wrap gap-3">
+                {selected.status === "draft" && (
+                  <button onClick={() => submitForApproval(selected.id)} disabled={publishing === selected.id}
+                    className="flex items-center gap-2 px-5 h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-wider text-sm transition-colors disabled:opacity-50">
+                    <CheckCircle size={14} weight="fill" /> {publishing === selected.id ? "SUBMITTING…" : "SUBMIT FOR APPROVAL"}
+                  </button>
+                )}
+                {selected.status === "pending_approval" && (
+                  <div className="flex items-center gap-2 px-5 h-10 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-400 font-mono text-xs tracking-wider">
+                    <Clock size={13} weight="bold" /> AWAITING REVIEW
+                  </div>
+                )}
+                <button onClick={() => setEditingDetails(!editingDetails)}
+                  className={`flex items-center gap-2 px-5 h-10 rounded-full border font-display tracking-wider text-sm transition-colors ${editingDetails ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"}`}>
+                  <PencilSimple size={14} weight="bold" /> {editingDetails ? "EDITING…" : "EDIT DETAILS"}
+                </button>
+              </div>
+
+              {/* Edit form or info cards */}
+              {editingDetails ? (
+                <form ref={detailsFormRef} onSubmit={saveDetails} className="space-y-4 rounded-2xl border border-primary/30 bg-card p-5 sm:p-6">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-display text-xl tracking-wide">EDIT DETAILS</h3>
+                    <button type="button" onClick={() => setEditingDetails(false)} className="text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+                  </div>
+                  <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">EVENT NAME</label><input name="name" defaultValue={selected.name} required className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">VENUE NAME</label><input name="venue_name" defaultValue={selected.venue_name} required className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+                    <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">EVENT DATE</label><input name="event_date" type="date" defaultValue={selected.event_date} required className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+                  </div>
+                  <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">VENUE ADDRESS</label><input name="venue_address" defaultValue={selected.venue_address ?? ""} className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">CITY</label><input name="city" defaultValue={selected.city} required className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+                    <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">STATE</label><input name="state" defaultValue={selected.state} required maxLength={2} className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+                    <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">ZIP</label><input name="zip_code" defaultValue={selected.zip_code ?? ""} className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+                  </div>
+                  <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">PRIZE POOL ($)</label><input name="prize_pool" type="number" min={0} step="0.01" defaultValue={selected.prize_pool_cents ? selected.prize_pool_cents / 100 : ""} placeholder="Optional" className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+                  <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">DESCRIPTION</label><textarea name="description" rows={4} defaultValue={selected.description ?? ""} placeholder="Tell players what makes this event special…" className="w-full rounded-xl bg-secondary border border-border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none" /></div>
+                  <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">RULES &amp; NOTES</label><textarea name="rules" rows={3} defaultValue={selected.rules ?? ""} placeholder="Format, skill levels, scheduling notes…" className="w-full rounded-xl bg-secondary border border-border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none" /></div>
+                  <button type="submit" disabled={savingDetails} className="w-full h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                    <FloppyDisk size={15} weight="bold" /> {savingDetails ? "SAVING…" : "SAVE CHANGES"}
+                  </button>
+                </form>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+                    <h3 className="font-mono text-[10px] tracking-widest text-muted-foreground">EVENT INFO</h3>
+                    <div className="flex items-start gap-3"><Calendar size={16} className="text-primary mt-0.5 flex-shrink-0" /><div><div className="text-sm font-semibold">{formatDate(selected.event_date)}</div></div></div>
+                    <div className="flex items-start gap-3"><MapPin size={16} className="text-primary mt-0.5 flex-shrink-0" /><div><div className="text-sm font-semibold">{selected.venue_name}</div><div className="text-xs text-muted-foreground">{selected.venue_address}{selected.city ? `, ${selected.city}, ${selected.state}` : ""} {selected.zip_code}</div></div></div>
+                    <div className="flex items-start gap-3"><CurrencyDollar size={16} className="text-primary mt-0.5 flex-shrink-0" /><div><div className="text-sm font-semibold">{fmt(selected.entry_fee_cents)} entry · {fmt(selected.hold_fee_cents)} hold</div></div></div>
+                    <div className="flex items-start gap-3"><Users size={16} className="text-primary mt-0.5 flex-shrink-0" /><div className="w-full"><div className="text-sm font-semibold">{selected.registered} / {selected.draw_size} spots</div><div className="w-full h-1.5 bg-secondary rounded-full mt-1.5"><div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (selected.registered / selected.draw_size) * 100)}%` }} /></div></div></div>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-card p-5">
+                    <h3 className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">DIVISIONS</h3>
+                    {divisions.length === 0 ? <p className="text-sm text-muted-foreground">No divisions.</p> : (
+                      <div className="space-y-2">{divisions.map((d) => (
+                        <div key={d.id} className="flex items-center justify-between rounded-xl bg-secondary/60 px-3 py-2">
+                          <span className="text-sm font-medium">{d.name}</span>
+                          <span className="font-mono text-xs text-muted-foreground">{d.spots_filled}/{d.draw_size}</span>
+                        </div>
+                      ))}</div>
+                    )}
+                  </div>
+                  {selected.description && (
+                    <div className="sm:col-span-2 rounded-2xl border border-border bg-card p-5">
+                      <h3 className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">DESCRIPTION</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{selected.description}</p>
+                    </div>
+                  )}
+                  {selected.rules && (
+                    <div className="sm:col-span-2 rounded-2xl border border-border bg-card p-5">
+                      <h3 className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">RULES &amp; NOTES</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{selected.rules}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Sponsors ── */}
+          {navSection === "sponsors" && selected && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-display text-xl tracking-wide">SPONSORS</h2>
+                  <p className="text-sm text-muted-foreground">{sponsors.length} sponsor{sponsors.length !== 1 ? "s" : ""} · shown on public page</p>
+                </div>
+                <button onClick={() => setShowSponsorForm(true)} className="flex items-center gap-1.5 px-4 h-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-display tracking-wider transition-colors">
+                  <Plus size={13} weight="bold" /> ADD
+                </button>
+              </div>
+
+              {sponsors.length === 0 && !showSponsorForm && (
+                <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+                  <Star size={32} className="text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No sponsors yet. Add your first one.</p>
+                </div>
+              )}
+
+              {sponsors.map((s) => (
+                <div key={s.id} className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
+                  {s.logo_url ? (
+                    <img src={s.logo_url} alt={s.name} className="h-10 w-10 object-contain rounded-lg bg-secondary flex-shrink-0" />
+                  ) : (
+                    <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                      <Star size={18} className="text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm">{s.name}</span>
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${TIER_COLORS[s.tier] ?? ""}`}>{TIER_LABELS[s.tier] ?? s.tier}</span>
+                    </div>
+                    {s.website_url && (
+                      <a href={s.website_url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 mt-0.5">
+                        <Globe size={11} /> {s.website_url.replace(/^https?:\/\//, "")}
+                      </a>
+                    )}
+                  </div>
+                  <button onClick={() => removeSponsor(s.id)} disabled={removingSponsor === s.id}
+                    className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:border-red-400 hover:text-red-400 transition-colors disabled:opacity-40 flex-shrink-0">
+                    <Trash size={14} weight="bold" />
+                  </button>
+                </div>
+              ))}
+
+              {showSponsorForm && (
+                <form onSubmit={addSponsor} className="rounded-2xl border border-primary/30 bg-card p-5 space-y-3">
+                  <h4 className="font-display tracking-wider text-lg">ADD SPONSOR</h4>
+                  <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1">NAME *</label><input name="sp_name" required placeholder="Acme Paddles" className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+                  <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1">TIER</label>
+                    <select name="sp_tier" className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring">
+                      <option value="title">Title</option><option value="gold">Gold</option><option value="silver">Silver</option><option value="standard">Standard</option>
+                    </select>
+                  </div>
+                  <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1">LOGO URL</label><input name="sp_logo" type="url" placeholder="https://example.com/logo.png" className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+                  <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1">WEBSITE</label><input name="sp_website" type="url" placeholder="https://example.com" className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+                  <div className="flex gap-3 pt-1">
+                    <button type="button" onClick={() => setShowSponsorForm(false)} className="flex-1 h-11 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">CANCEL</button>
+                    <button type="submit" disabled={addingSponsor} className="flex-1 h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors disabled:opacity-50">{addingSponsor ? "ADDING…" : "ADD"}</button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* ── Public Page preview ── */}
+          {navSection === "publicpage" && selected && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-display text-xl tracking-wide">PUBLIC PAGE</h2>
+                  <p className="text-sm text-muted-foreground">How players see {selected.name}</p>
+                </div>
+                <a href={`/tournaments/${selected.id}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-4 h-9 rounded-full border border-border hover:bg-secondary text-xs font-display tracking-wider transition-colors">
+                  <ArrowSquareOut size={13} /> OPEN
+                </a>
+              </div>
+              <div className="rounded-2xl border border-border overflow-hidden" style={{ height: "calc(100vh - 200px)", minHeight: 480 }}>
+                <iframe
+                  src={`/tournaments/${selected.id}`}
+                  className="w-full h-full"
+                  title="Public tournament page"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
       {/* ── Mobile bottom nav ── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-card border-t border-border flex items-center justify-around px-2 py-2 safe-area-pb">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-card border-t border-border flex items-center justify-around px-1 py-2">
         {([
           { id: "dashboard", icon: Gauge, label: "Home" },
-          { id: "analytics", icon: ChartBar, label: "Analytics" },
-          { id: "registrations", icon: Ticket, label: "Registrations" },
-          { id: "checkin", icon: ClipboardText, label: "Check-In" },
-          { id: "settings", icon: Gear, label: "Settings" },
+          { id: "registrations", icon: Ticket, label: "Regs" },
+          { id: "manage", icon: PencilSimple, label: "Manage" },
+          { id: "sponsors", icon: Star, label: "Sponsors" },
+          { id: "publicpage", icon: Eye, label: "Preview" },
         ] as const).map(({ id, icon: Icon, label }) => (
           <button key={id}
-            onClick={() => { setNavSection(id); if (id === "registrations" || id === "checkin") { if (selectedId) loadRegistrations(selectedId); } }}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-0 flex-1 ${navSection === id ? "text-primary" : "text-muted-foreground"}`}
+            onClick={() => {
+              setNavSection(id);
+              if (selectedId) loadManagement(selectedId);
+            }}
+            className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-colors min-w-0 flex-1 ${navSection === id ? "text-primary" : "text-muted-foreground"}`}
           >
             <Icon size={20} weight={navSection === id ? "fill" : "regular"} />
             <span className="text-[9px] font-mono tracking-wide truncate">{label.toUpperCase()}</span>
           </button>
         ))}
       </nav>
+
+      {/* ── Banner edit modal ── */}
+      {editingBanner && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-card border border-border rounded-2xl p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display text-2xl tracking-wide">BANNER IMAGE</h3>
+              <button onClick={() => setEditingBanner(false)} className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary"><X size={14} weight="bold" /></button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">Paste a direct image URL. Recommended: 1600×600px.</p>
+            <input type="url" value={bannerUrl} onChange={(e) => setBannerUrl(e.target.value)} placeholder="https://example.com/banner.jpg" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring mb-4" />
+            {bannerUrl && <img src={bannerUrl} alt="Preview" className="w-full h-32 object-cover rounded-xl mb-4" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />}
+            <div className="flex gap-3">
+              <button onClick={() => setEditingBanner(false)} className="flex-1 h-11 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">CANCEL</button>
+              <button onClick={saveBanner} disabled={savingBanner} className="flex-1 h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors disabled:opacity-50">{savingBanner ? "SAVING…" : "SAVE BANNER"}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showCreate && (
         <CreateDialog onClose={() => setShowCreate(false)} onCreated={(t) => {
