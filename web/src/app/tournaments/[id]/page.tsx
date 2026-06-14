@@ -147,6 +147,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [myRegistration, setMyRegistration] = useState<{ status: string; hold_expires_at: string | null } | null>(null);
   const [spotsFilled, setSpotsFilled] = useState(0);
+  const [completing, setCompleting] = useState(false);
 
   // Fetch tournament + compute insights
   useEffect(() => {
@@ -322,6 +323,47 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     ? new Date(tournament.registration_closes_at)
     : null;
   const countdown = useCountdown(regCloseDate);
+
+  const holdExpireDate = myRegistration?.hold_expires_at
+    ? new Date(myRegistration.hold_expires_at)
+    : null;
+  const holdCountdown = useCountdown(holdExpireDate);
+
+  const completeRegistration = async () => {
+    setCompleting(true);
+    try {
+      const userId = await getUserId();
+      if (!userId) { toast.error("Not signed in."); return; }
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("registrations")
+        .update({ status: "registered", entry_fee_paid_cents: 0, updated_at: new Date().toISOString() })
+        .eq("tournament_id", id)
+        .eq("player_id", userId)
+        .eq("status", "held");
+      if (error) { toast.error("Could not complete registration. Please try again."); return; }
+      setMyRegistration((r) => r ? { ...r, status: "registered" } : r);
+      toast.success("You're registered!", { description: "Bracket releases 48h before play. See you on the court." });
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  const cancelHold = async () => {
+    const userId = await getUserId();
+    if (!userId) return;
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("registrations")
+      .update({ status: "withdrawn", updated_at: new Date().toISOString() })
+      .eq("tournament_id", id)
+      .eq("player_id", userId)
+      .eq("status", "held");
+    if (error) { toast.error("Could not cancel hold."); return; }
+    setMyRegistration(null);
+    setSpotsFilled((n) => Math.max(0, n - 1));
+    toast.info("Hold cancelled. Your spot has been released.");
+  };
 
   const handleRegister = () =>
     toast.success("Registration complete!", {
@@ -669,10 +711,56 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
             {/* CTAs */}
             <div className="space-y-2">
-              {myRegistration ? (
-                <div className="w-full h-12 rounded-full bg-primary/10 border border-primary/30 font-display tracking-[0.15em] flex items-center justify-center gap-2 text-primary text-sm" data-testid="already-registered-state">
-                  <CheckCircle size={17} weight="fill" />
-                  {myRegistration.status === "held" ? "SPOT HELD" : myRegistration.status === "registered" ? "REGISTERED" : myRegistration.status.replace(/_/g, " ").toUpperCase()}
+              {myRegistration?.status === "held" ? (
+                <>
+                  {/* Hold expiry countdown */}
+                  <div className="border border-amber-500/40 rounded-xl px-4 py-3 bg-amber-500/5">
+                    <div className="font-mono text-[9px] tracking-[0.3em] text-amber-500 mb-2 text-center">
+                      {holdCountdown ? "HOLD EXPIRES IN" : "HOLD EXPIRED"}
+                    </div>
+                    {holdCountdown ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <CountdownUnit value={holdCountdown.d} label="DAYS" />
+                        <span className="font-mono text-amber-500 text-lg font-bold leading-none mb-2">:</span>
+                        <CountdownUnit value={holdCountdown.h} label="HRS" />
+                        <span className="font-mono text-amber-500 text-lg font-bold leading-none mb-2">:</span>
+                        <CountdownUnit value={holdCountdown.m} label="MIN" />
+                        <span className="font-mono text-amber-500 text-lg font-bold leading-none mb-2">:</span>
+                        <CountdownUnit value={holdCountdown.s} label="SEC" />
+                      </div>
+                    ) : (
+                      <p className="text-center text-xs text-destructive">Your hold has expired. The spot has been released.</p>
+                    )}
+                  </div>
+
+                  {holdCountdown && (
+                    <button
+                      onClick={completeRegistration}
+                      disabled={completing}
+                      className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                      data-testid="complete-registration-btn"
+                    >
+                      <Lightning size={16} weight="fill" />
+                      {completing ? "CONFIRMING…" : `COMPLETE REGISTRATION · $${entryFee - holdFee}`}
+                    </button>
+                  )}
+
+                  <button
+                    onClick={cancelHold}
+                    className="w-full h-10 rounded-full border border-border hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive font-mono text-xs tracking-widest transition-colors"
+                    data-testid="cancel-hold-btn"
+                  >
+                    CANCEL HOLD
+                  </button>
+                </>
+              ) : myRegistration?.status === "registered" || myRegistration?.status === "checked_in" ? (
+                <div className="space-y-2">
+                  <div className="w-full h-12 rounded-full bg-primary/10 border border-primary/30 font-display tracking-[0.15em] flex items-center justify-center gap-2 text-primary text-sm" data-testid="registered-state">
+                    <CheckCircle size={17} weight="fill" /> YOU'RE REGISTERED
+                  </div>
+                  <p className="text-center text-xs text-muted-foreground">
+                    Bracket drops 48h before play · {new Date(t.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </p>
                 </div>
               ) : (
                 <>

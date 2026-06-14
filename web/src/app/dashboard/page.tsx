@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Trophy, Users, Lightning, TrendUp, Calendar, MapPin,
-  ArrowRight, Medal, Target, Star, BookmarkSimple,
+  ArrowRight, Medal, Target, Star, BookmarkSimple, Clock,
 } from "@phosphor-icons/react";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
@@ -40,6 +40,7 @@ type UpcomingEvent = {
   state: string;
   event_date: string;
   status: string; // registration status
+  hold_expires_at?: string | null;
 };
 
 type DisplayMatch = {
@@ -146,7 +147,7 @@ export default function DashboardPage() {
       const { data: regs } = await supabase
         .from("registrations")
         .select(`
-          status,
+          status, hold_expires_at,
           tournament:tournaments!tournament_id(id, name, city, state, event_date, status)
         `)
         .eq("player_id", user.id)
@@ -158,7 +159,7 @@ export default function DashboardPage() {
         .map((r) => {
           const t = r.tournament as { id: string; name: string; city: string; state: string; event_date: string; status: string } | null;
           if (!t) return null;
-          return { id: t.id, name: t.name, city: t.city, state: t.state, event_date: t.event_date, status: r.status };
+          return { id: t.id, name: t.name, city: t.city, state: t.state, event_date: t.event_date, status: r.status, hold_expires_at: (r as { hold_expires_at?: string | null }).hold_expires_at };
         })
         .filter(Boolean) as UpcomingEvent[];
 
@@ -383,21 +384,41 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-border">
-                  {upcoming.map((e) => (
-                    <Link key={e.id} href={`/tournaments/${e.id}`} className="px-5 py-4 flex items-start gap-3 hover:bg-secondary/40 transition-colors block">
-                      <Calendar size={16} weight="bold" className="text-primary mt-0.5 flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold truncate">{e.name}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                          <MapPin size={11} /> {e.city}, {e.state}
-                        </div>
-                        <div className="text-[10px] font-mono mt-1 text-primary">
-                          {formatDate(e.event_date)} · {e.status.replace(/_/g, " ").toUpperCase()}
-                        </div>
+                  {upcoming.map((e) => {
+                    const isHeld = e.status === "held";
+                    const holdExpiry = e.hold_expires_at ? new Date(e.hold_expires_at) : null;
+                    const holdActive = holdExpiry && holdExpiry.getTime() > Date.now();
+                    return (
+                      <div key={e.id} className="px-5 py-4 space-y-2">
+                        <Link href={`/tournaments/${e.id}`} className="flex items-start gap-3 hover:opacity-80 transition-opacity block">
+                          <Calendar size={16} weight="bold" className="text-primary mt-0.5 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold truncate">{e.name}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                              <MapPin size={11} /> {e.city}, {e.state}
+                            </div>
+                            <div className={`text-[10px] font-mono mt-1 ${isHeld ? "text-amber-500" : "text-primary"}`}>
+                              {formatDate(e.event_date)} · {e.status.replace(/_/g, " ").toUpperCase()}
+                            </div>
+                          </div>
+                          <ArrowRight size={14} className="text-muted-foreground flex-shrink-0 mt-0.5" />
+                        </Link>
+                        {isHeld && holdActive && (
+                          <div className="flex items-center gap-2 pl-7">
+                            <Clock size={12} className="text-amber-500 flex-shrink-0" />
+                            <span className="text-[10px] font-mono text-amber-500">
+                              Expires {holdExpiry!.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                            </span>
+                            <Link href={`/tournaments/${e.id}`} className="ml-auto">
+                              <button className="h-7 px-3 rounded-full bg-primary text-primary-foreground font-display tracking-[0.15em] text-[10px] flex items-center gap-1 hover:bg-primary/90 transition-colors">
+                                <Lightning size={11} weight="fill" /> COMPLETE
+                              </button>
+                            </Link>
+                          </div>
+                        )}
                       </div>
-                      <ArrowRight size={14} className="text-muted-foreground flex-shrink-0 mt-0.5" />
-                    </Link>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
