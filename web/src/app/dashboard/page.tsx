@@ -457,14 +457,14 @@ export default function DashboardPage() {
               <div className="font-display tracking-[0.15em] mb-4">QUICK ACTIONS</div>
               <div className="space-y-2">
                 {[
-                  { href: "/tournaments", label: "FIND TOURNAMENT", icon: Trophy },
-                  { href: "/matchmaking", label: "FIND PARTNER", icon: Users },
-                  { href: "/holds", label: "MY HOLDS", icon: Lightning },
-                  { href: "/profile", label: "EDIT PROFILE", icon: Target },
+                  { href: "/tournaments", label: "FIND TOURNAMENT" },
+                  { href: "/matchmaking", label: "FIND PARTNER" },
+                  { href: "/holds", label: "MY HOLDS" },
+                  { href: "/profile", label: "EDIT PROFILE" },
                 ].map((a) => (
                   <Link key={a.href} href={a.href}>
-                    <button className="w-full h-10 rounded-full border border-border hover:bg-secondary/60 font-display tracking-[0.15em] text-xs flex items-center justify-center gap-2 transition-colors">
-                      <a.icon size={14} weight="bold" className="text-primary" /> {a.label}
+                    <button className="w-full h-11 rounded-full border border-border hover:bg-secondary/60 font-display tracking-[0.15em] text-sm flex items-center justify-center transition-colors">
+                      {a.label}
                     </button>
                   </Link>
                 ))}
