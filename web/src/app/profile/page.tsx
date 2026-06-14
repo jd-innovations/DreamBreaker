@@ -683,12 +683,14 @@ export default function ProfilePage() {
         {/* Tabs */}
         <div className="py-6">
           <Tabs defaultValue="tournaments" className="w-full">
-            <TabsList className="rounded-full p-1 h-11 mb-6 bg-secondary inline-flex">
-              <TabsTrigger value="tournaments" className="rounded-full px-5" data-testid="profile-tab-tournaments">Tournaments</TabsTrigger>
-              <TabsTrigger value="history" className="rounded-full px-5" data-testid="profile-tab-history">Match History</TabsTrigger>
-              <TabsTrigger value="partners" className="rounded-full px-5" data-testid="profile-tab-partners">Partners</TabsTrigger>
-              <TabsTrigger value="about" className="rounded-full px-5" data-testid="profile-tab-about">About</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto scrollbar-hide mb-6">
+              <TabsList className="rounded-full p-1 h-11 bg-secondary inline-flex w-max">
+                <TabsTrigger value="tournaments" className="rounded-full px-5 whitespace-nowrap" data-testid="profile-tab-tournaments">Tournaments</TabsTrigger>
+                <TabsTrigger value="history" className="rounded-full px-5 whitespace-nowrap" data-testid="profile-tab-history">Match History</TabsTrigger>
+                <TabsTrigger value="partners" className="rounded-full px-5 whitespace-nowrap" data-testid="profile-tab-partners">Partners</TabsTrigger>
+                <TabsTrigger value="about" className="rounded-full px-5 whitespace-nowrap" data-testid="profile-tab-about">About</TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* Tournaments */}
             <TabsContent value="tournaments">
