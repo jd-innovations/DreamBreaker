@@ -547,7 +547,7 @@ export default function ProfilePage() {
   return (
     <PageShell>
       {/* Cover photo */}
-      <div className="relative h-48 sm:h-64 overflow-hidden">
+      <div className="relative h-48 sm:h-64 lg:h-80 overflow-hidden">
         <img
           src={coverUrl}
           alt=""
@@ -610,13 +610,13 @@ export default function ProfilePage() {
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="flex items-end justify-between -mt-12 pb-6 border-b border-border">
+        <div className="flex items-end justify-between -mt-12 lg:-mt-20 pb-6 border-b border-border">
           <div className="flex items-end gap-5">
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <img
                 src={avatarUrl}
                 alt="Avatar"
-                className={`h-24 w-24 rounded-2xl border-4 border-background object-cover transition-opacity ${avatarUploading ? "opacity-50" : ""}`}
+                className={`h-24 w-24 lg:h-36 lg:w-36 rounded-2xl lg:rounded-3xl border-4 lg:border-[5px] border-background object-cover transition-opacity ${avatarUploading ? "opacity-50" : ""}`}
               />
               {/* Online indicator (view mode) or camera button (edit mode) */}
               {editing ? (
@@ -648,7 +648,7 @@ export default function ProfilePage() {
               )}
             </div>
             <div className="pb-1">
-              <h1 className="font-display text-3xl sm:text-4xl tracking-wide">{name}</h1>
+              <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl tracking-wide">{name}</h1>
               <div className="flex flex-wrap items-center gap-3 mt-1">
                 {profile?.handle && <span className="font-mono text-xs text-primary">{profile.handle}</span>}
                 <span className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin size={12} weight="bold" />{location}</span>
