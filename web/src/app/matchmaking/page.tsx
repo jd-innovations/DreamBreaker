@@ -407,10 +407,10 @@ export default function MatchmakingPage() {
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* Card deck */}
         <div className="lg:col-span-2 flex flex-col items-center">
-          <div className="relative w-full max-w-sm select-none" style={{ height: 580 }} data-testid="swipe-deck">
+          <div className="relative w-full max-w-sm select-none" style={{ height: "min(520px, calc(100dvh - 340px))" }} data-testid="swipe-deck">
             {loading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
@@ -567,48 +567,54 @@ export default function MatchmakingPage() {
             )}
           </div>
 
-          {/* Action buttons */}
+          {/* Action buttons — fixed above bottom nav on mobile, inline on desktop */}
           {!loading && visibleDeck.length > 0 && (
-            <div className="flex items-center gap-5 mt-8">
-              {/* Pass */}
-              <button
-                onClick={() => swipe("left")}
-                title="Pass (←)"
-                data-testid="swipe-left-btn"
-                className="h-16 w-16 rounded-full border-2 border-destructive bg-card flex items-center justify-center transition-all shadow-lg hover:bg-destructive/10 active:scale-95"
-              >
-                <X size={28} weight="bold" className="text-destructive" />
-              </button>
+            <>
+              <div className="fixed bottom-16 left-0 right-0 flex items-center justify-center gap-5 py-3 lg:hidden z-40">
+                <button
+                  onClick={() => swipe("left")}
+                  title="Pass (←)"
+                  data-testid="swipe-left-btn"
+                  className="h-16 w-16 rounded-full border-2 border-destructive bg-background flex items-center justify-center transition-all shadow-lg hover:bg-destructive/10 active:scale-95"
+                >
+                  <X size={28} weight="bold" className="text-destructive" />
+                </button>
+                <button
+                  onClick={() => swipe("up")}
+                  title="Super Connect (↑)"
+                  data-testid="swipe-up-btn"
+                  className="h-20 w-20 rounded-full bg-foreground text-background flex items-center justify-center transition-all shadow-xl hover:scale-105 active:scale-95"
+                >
+                  <Lightning size={32} weight="fill" />
+                </button>
+                <button
+                  onClick={() => swipe("right")}
+                  title="Like (→)"
+                  data-testid="swipe-right-btn"
+                  className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-all shadow-lg hover:bg-primary/90 hover:scale-105 active:scale-95"
+                >
+                  <Heart size={28} weight="fill" />
+                </button>
+              </div>
 
-              {/* Super connect (↑) */}
-              <button
-                onClick={() => swipe("up")}
-                title="Super Connect (↑)"
-                data-testid="swipe-up-btn"
-                className="h-20 w-20 rounded-full bg-foreground text-background flex items-center justify-center transition-all shadow-xl hover:scale-105 active:scale-95"
-              >
-                <Lightning size={32} weight="fill" />
-              </button>
-
-              {/* Like */}
-              <button
-                onClick={() => swipe("right")}
-                title="Like (→)"
-                data-testid="swipe-right-btn"
-                className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-all shadow-lg hover:bg-primary/90 hover:scale-105 active:scale-95"
-              >
-                <Heart size={28} weight="fill" />
-              </button>
-            </div>
-          )}
-
-          {/* Swipe hint */}
-          {!loading && visibleDeck.length > 0 && (
-            <div className="flex items-center gap-4 mt-4 text-[10px] font-mono tracking-wider text-muted-foreground">
-              <span className="flex items-center gap-1"><ArrowLeft size={10} /> PASS</span>
-              <span className="flex items-center gap-1"><ArrowUp size={10} /> SUPER CONNECT</span>
-              <span className="flex items-center gap-1">LIKE <ArrowRight size={10} /></span>
-            </div>
+              {/* Desktop inline buttons */}
+              <div className="hidden lg:flex items-center gap-5 mt-8">
+                <button onClick={() => swipe("left")} title="Pass (←)" data-testid="swipe-left-btn" className="h-16 w-16 rounded-full border-2 border-destructive bg-card flex items-center justify-center transition-all shadow-lg hover:bg-destructive/10 active:scale-95">
+                  <X size={28} weight="bold" className="text-destructive" />
+                </button>
+                <button onClick={() => swipe("up")} title="Super Connect (↑)" data-testid="swipe-up-btn" className="h-20 w-20 rounded-full bg-foreground text-background flex items-center justify-center transition-all shadow-xl hover:scale-105 active:scale-95">
+                  <Lightning size={32} weight="fill" />
+                </button>
+                <button onClick={() => swipe("right")} title="Like (→)" data-testid="swipe-right-btn" className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-all shadow-lg hover:bg-primary/90 hover:scale-105 active:scale-95">
+                  <Heart size={28} weight="fill" />
+                </button>
+              </div>
+              <div className="hidden lg:flex items-center gap-4 mt-4 text-[10px] font-mono tracking-wider text-muted-foreground">
+                <span className="flex items-center gap-1"><ArrowLeft size={10} /> PASS</span>
+                <span className="flex items-center gap-1"><ArrowUp size={10} /> SUPER CONNECT</span>
+                <span className="flex items-center gap-1">LIKE <ArrowRight size={10} /></span>
+              </div>
+            </>
           )}
         </div>
 
