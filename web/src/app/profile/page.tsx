@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { MatchSettingsPanel } from "@/components/shared/match-settings-panel";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { toast } from "sonner";
@@ -929,6 +930,18 @@ export default function ProfilePage() {
               </div>
             </TabsContent>
           </Tabs>
+
+          {/* Match settings — discoverable, looking status, notifications */}
+          <div className="mt-2 pb-8">
+            <div className="font-mono text-[11px] tracking-[0.3em] text-muted-foreground mb-3">/ MATCHMAKING SETTINGS</div>
+            <MatchSettingsPanel
+              myDupr={profile?.dupr ?? null}
+              myAvail={profile?.availability ?? null}
+              myLocation={profile?.location_city ? `${profile.location_city}, ${profile.location_state ?? ""}`.trim().replace(/,$/, "") : null}
+              myStyle={Array.isArray(profile?.play_style) ? (profile.play_style as string[])[0] ?? null : profile?.play_style ?? null}
+              myBio={profile?.bio ?? null}
+            />
+          </div>
         </div>
       </div>
     </PageShell>

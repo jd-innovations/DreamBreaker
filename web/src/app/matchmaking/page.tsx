@@ -12,7 +12,6 @@ import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { matchPartners } from "@/data/mock-data";
-import { MatchSettingsPanel } from "@/components/shared/match-settings-panel";
 import { PlayerProfileSheet } from "@/components/shared/player-profile-sheet";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -651,14 +650,6 @@ export default function MatchmakingPage() {
             </div>
           )}
 
-          {/* Match settings panel */}
-          <MatchSettingsPanel
-            myDupr={myDupr}
-            myAvail={myAvail}
-            myLocation={myLocation}
-            myStyle={myStyle}
-            myBio={myBio}
-          />
         </aside>
       </div>
 
