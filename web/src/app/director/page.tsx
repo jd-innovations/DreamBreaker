@@ -620,21 +620,11 @@ export default function DirectorPage() {
                             </button>
                           )}
 
-                          <button
-                            onClick={() => loadRegistrations(t.id)}
-                            className="h-9 px-4 rounded-full border border-border hover:bg-secondary/60 text-xs font-semibold transition-colors flex items-center gap-1.5"
-                            data-testid={`director-roster-${t.id}`}
-                          >
-                            <Users size={13} /> ROSTER
-                          </button>
-
-                          <button
-                            onClick={() => { loadSponsors(t.id); document.querySelector<HTMLButtonElement>('[data-testid="director-tab-sponsors"]')?.click(); }}
-                            className="h-9 px-4 rounded-full border border-border hover:bg-secondary/60 text-xs font-semibold transition-colors flex items-center gap-1.5"
-                            data-testid={`director-sponsors-${t.id}`}
-                          >
-                            <Star size={13} weight="fill" className="text-yellow-500" /> SPONSORS
-                          </button>
+                          <Link href={`/director/tournaments/${t.id}`}>
+                            <button className="h-9 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-display tracking-[0.15em] transition-colors flex items-center gap-1.5" data-testid={`director-manage-${t.id}`}>
+                              <PencilSimple size={13} weight="bold" /> MANAGE
+                            </button>
+                          </Link>
 
                           <Link href={`/tournaments/${t.id}`}>
                             <button className="h-9 w-9 rounded-full border border-border hover:bg-secondary/60 transition-colors flex items-center justify-center" data-testid={`director-view-${t.id}`}>
