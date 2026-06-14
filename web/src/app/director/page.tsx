@@ -202,16 +202,16 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
   };
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto" data-testid="create-tournament-dialog">
-      <div className="w-full max-w-lg border border-border rounded-2xl bg-card p-6 shadow-2xl my-8">
-        <div className="flex items-center justify-between mb-6">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" data-testid="create-tournament-dialog">
+      <div className="w-full max-w-lg border border-border rounded-2xl bg-card shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
           <h2 className="font-display text-3xl tracking-wide">CREATE TOURNAMENT</h2>
           <button onClick={onClose} className="h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
             <X size={16} weight="bold" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto px-6 pb-6 flex-1">
           <div>
             <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">EVENT NAME</label>
             <input name="name" required placeholder="e.g. Spring Slam Open" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" data-testid="create-name" />
