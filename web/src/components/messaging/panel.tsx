@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
-  PaperPlaneRight, MagnifyingGlass, Plus, ArrowLeft,
-  ChatCircle, Check, Checks,
+  PaperPlaneRight, MagnifyingGlass, PencilSimpleLine, ArrowLeft,
+  ChatCircle, Checks,
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -32,6 +32,7 @@ interface Conversation {
   otherId: string;
   otherName: string;
   otherRole: string;
+  otherAvatar: string | null;
   lastBody: string;
   lastAt: string | null;
   unread: number;
@@ -67,6 +68,47 @@ function timeAgo(iso: string) {
 function initials(name: string | null) {
   if (!name) return "?";
   return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+// Stable gradient per name so avatars feel colorful like Instagram.
+const GRADIENTS = [
+  "from-fuchsia-500 to-orange-400",
+  "from-sky-500 to-indigo-500",
+  "from-emerald-500 to-teal-400",
+  "from-rose-500 to-pink-500",
+  "from-violet-500 to-purple-500",
+  "from-amber-500 to-red-500",
+];
+function gradientFor(seed: string) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return GRADIENTS[h % GRADIENTS.length];
+}
+
+function Avatar({ name, url, seed, size = 48, ring = false }: { name: string | null; url?: string | null; seed: string; size?: number; ring?: boolean }) {
+  const ringCls = ring ? "p-[2px] bg-gradient-to-tr from-primary to-fuchsia-500" : "";
+  return (
+    <div className={`rounded-full flex-shrink-0 ${ringCls}`} style={ring ? { width: size + 4, height: size + 4 } : undefined}>
+      {url ? (
+        <img src={url} alt="" className="rounded-full object-cover h-full w-full" style={{ width: size, height: size }} />
+      ) : (
+        <div className={`rounded-full flex items-center justify-center text-white font-display bg-gradient-to-tr ${gradientFor(seed)}`}
+          style={{ width: size, height: size, fontSize: size * 0.36 }}>
+          {initials(name)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function dayLabel(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  const yest = new Date(); yest.setDate(today.getDate() - 1);
+  const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  if (sameDay(d, today)) return "Today";
+  if (sameDay(d, yest)) return "Yesterday";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: d.getFullYear() === today.getFullYear() ? undefined : "numeric" });
 }
 
 const ROLE_BADGE: Record<string, string> = {
@@ -163,6 +205,7 @@ export function MessagingPanel({
           otherId,
           otherName: pMap[otherId]?.full_name ?? "Unknown",
           otherRole: pMap[otherId]?.role ?? "player",
+          otherAvatar: pMap[otherId]?.avatar_url ?? null,
           lastBody: last?.body ?? "",
           lastAt: last?.created_at ?? c.last_message_at,
           unread,
@@ -266,6 +309,7 @@ export function MessagingPanel({
       otherId,
       otherName: otherProfile?.full_name ?? "Unknown",
       otherRole: otherProfile?.role ?? "player",
+      otherAvatar: otherProfile?.avatar_url ?? null,
       lastBody: "",
       lastAt: null,
       unread: 0,
@@ -356,21 +400,21 @@ export function MessagingPanel({
       <div className={`flex flex-col border-r border-border bg-card flex-shrink-0 w-full md:w-72 lg:w-80 ${mobileShowThread ? "hidden md:flex" : "flex"}`}>
 
         {/* Header */}
-        <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2 flex-shrink-0">
-          <span className="font-display text-base tracking-wider">MESSAGES</span>
-          <button onClick={() => { setShowNewConvo(true); setNewSearch(""); }}
-            className="h-7 w-7 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors">
-            <Plus size={13} weight="bold" />
+        <div className="px-4 py-3.5 flex items-center justify-between gap-2 flex-shrink-0">
+          <span className="font-display text-xl tracking-wide">Messages</span>
+          <button onClick={() => { setShowNewConvo(true); setNewSearch(""); }} title="New message"
+            className="h-9 w-9 rounded-full hover:bg-secondary flex items-center justify-center transition-colors">
+            <PencilSimpleLine size={18} weight="bold" />
           </button>
         </div>
 
         {/* Search */}
         {!showNewConvo && (
-          <div className="px-3 py-2 border-b border-border flex-shrink-0">
+          <div className="px-3 pb-2.5 flex-shrink-0">
             <div className="relative">
-              <MagnifyingGlass size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
-                className="w-full h-8 rounded-lg bg-secondary border-0 pl-8 pr-3 text-xs outline-none focus:ring-1 focus:ring-ring" />
+              <MagnifyingGlass size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search"
+                className="w-full h-9 rounded-full bg-secondary border-0 pl-9 pr-3 text-sm outline-none focus:ring-1 focus:ring-ring" />
             </div>
           </div>
         )}
@@ -396,10 +440,8 @@ export function MessagingPanel({
               )}
               {newConvoUsers.map((u) => (
                 <button key={u.id} onClick={() => startOrOpenConversation(u.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/60 transition-colors text-left">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-display text-primary">
-                    {initials(u.full_name)}
-                  </div>
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/60 transition-colors text-left">
+                  <Avatar name={u.full_name} url={u.avatar_url} seed={u.id} size={44} />
                   <div className="min-w-0">
                     <div className="text-sm font-medium truncate">{u.full_name ?? "Unknown"}</div>
                     <div className={`text-[10px] font-mono ${ROLE_BADGE[u.role] ?? "text-muted-foreground"}`}>{u.role.toUpperCase()}</div>
@@ -429,24 +471,18 @@ export function MessagingPanel({
             )}
             {filteredConvos.map((c) => (
               <button key={c.id} onClick={() => openConversation(c.id)}
-                className={`w-full flex items-start gap-3 px-4 py-3 transition-colors text-left border-b border-border/30 last:border-0 ${selectedConvId === c.id ? "bg-primary/10" : "hover:bg-secondary/50"}`}>
-                <div className="relative flex-shrink-0">
-                  <div className={`h-9 w-9 rounded-full flex items-center justify-center text-xs font-display ${selectedConvId === c.id ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>
-                    {initials(c.otherName)}
-                  </div>
-                  {c.unread > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 rounded-full bg-primary text-[9px] font-mono text-primary-foreground flex items-center justify-center px-0.5">
-                      {c.unread > 9 ? "9+" : c.unread}
-                    </span>
-                  )}
-                </div>
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mx-1 my-0.5 transition-colors text-left ${selectedConvId === c.id ? "bg-secondary" : "hover:bg-secondary/50"}`}>
+                <Avatar name={c.otherName} url={c.otherAvatar} seed={c.otherId} size={52} ring={c.unread > 0} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline justify-between gap-1">
-                    <span className={`text-sm truncate ${c.unread > 0 ? "font-semibold text-foreground" : "font-medium"}`}>{c.otherName}</span>
-                    {c.lastAt && <span className="text-[10px] text-muted-foreground flex-shrink-0">{timeAgo(c.lastAt)}</span>}
+                    <span className={`text-sm truncate ${c.unread > 0 ? "font-bold text-foreground" : "font-medium"}`}>{c.otherName}</span>
+                    {c.lastAt && <span className="text-[11px] text-muted-foreground flex-shrink-0">{timeAgo(c.lastAt)}</span>}
                   </div>
-                  <div className={`text-xs truncate mt-0.5 ${c.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
-                    {c.lastBody || <span className="italic opacity-50">No messages yet</span>}
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={`text-[13px] truncate flex-1 ${c.unread > 0 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                      {c.lastBody || <span className="italic opacity-50">No messages yet</span>}
+                    </span>
+                    {c.unread > 0 && <span className="h-2.5 w-2.5 rounded-full bg-primary flex-shrink-0" />}
                   </div>
                 </div>
               </button>
@@ -466,16 +502,14 @@ export function MessagingPanel({
         ) : (
           <>
             {/* Thread header */}
-            <div className="px-4 py-3 border-b border-border flex items-center gap-3 flex-shrink-0">
+            <div className="px-3 py-2.5 border-b border-border flex items-center gap-3 flex-shrink-0 bg-card/60 backdrop-blur">
               <button onClick={() => { setMobileShowThread(false); }}
-                className="md:hidden h-7 w-7 rounded-full hover:bg-secondary flex items-center justify-center flex-shrink-0">
-                <ArrowLeft size={14} weight="bold" />
+                className="md:hidden h-8 w-8 rounded-full hover:bg-secondary flex items-center justify-center flex-shrink-0">
+                <ArrowLeft size={18} weight="bold" />
               </button>
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-display text-primary">
-                {initials(selectedConv.otherName)}
-              </div>
+              <Avatar name={selectedConv.otherName} url={selectedConv.otherAvatar} seed={selectedConv.otherId} size={38} />
               <div className="min-w-0">
-                <div className="font-semibold text-sm truncate">{selectedConv.otherName}</div>
+                <div className="font-semibold text-sm truncate leading-tight">{selectedConv.otherName}</div>
                 <div className={`text-[10px] font-mono ${ROLE_BADGE[selectedConv.otherRole] ?? "text-muted-foreground"}`}>
                   {selectedConv.otherRole.replace("_", " ").toUpperCase()}
                 </div>
@@ -497,31 +531,41 @@ export function MessagingPanel({
               {messages.map((m, i) => {
                 const isMine = m.sender_id === currentUserId;
                 const prev = messages[i - 1];
-                const showTime = !prev || (new Date(m.created_at).getTime() - new Date(prev.created_at).getTime()) > 5 * 60 * 1000;
+                const next = messages[i + 1];
+                const newDay = !prev || new Date(m.created_at).toDateString() !== new Date(prev.created_at).toDateString();
+                const sameAsPrev = prev && prev.sender_id === m.sender_id && !newDay;
+                const isGroupEnd = !next || next.sender_id !== m.sender_id || new Date(next.created_at).toDateString() !== new Date(m.created_at).toDateString();
                 const isLastMine = isMine && (i === messages.length - 1 || messages[i + 1]?.sender_id !== currentUserId);
-                const sameAsPrev = prev && prev.sender_id === m.sender_id;
 
                 return (
                   <div key={m.id}>
-                    {showTime && (
-                      <div className="text-center text-[10px] text-muted-foreground font-mono py-2">
-                        {new Date(m.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                    {newDay && (
+                      <div className="flex justify-center py-3">
+                        <span className="text-[10px] font-mono tracking-widest text-muted-foreground bg-secondary/70 rounded-full px-3 py-1">
+                          {dayLabel(m.created_at)}
+                        </span>
                       </div>
                     )}
-                    <div className={`flex ${isMine ? "justify-end" : "justify-start"} ${sameAsPrev && !showTime ? "mt-0.5" : "mt-2"}`}>
-                      <div className={`max-w-[75%] px-3.5 py-2 text-sm leading-relaxed ${
+                    <div className={`flex items-end gap-2 ${isMine ? "justify-end" : "justify-start"} ${sameAsPrev ? "mt-0.5" : "mt-2.5"}`}>
+                      {/* incoming avatar on last bubble of a group */}
+                      {!isMine && (
+                        isGroupEnd
+                          ? <Avatar name={selectedConv.otherName} url={selectedConv.otherAvatar} seed={selectedConv.otherId} size={26} />
+                          : <div className="w-[26px] flex-shrink-0" />
+                      )}
+                      <div className={`max-w-[72%] px-3.5 py-2 text-sm leading-relaxed break-words ${
                         isMine
-                          ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm"
-                          : "bg-secondary text-foreground rounded-2xl rounded-tl-sm"
+                          ? `bg-gradient-to-br from-primary to-fuchsia-600 text-primary-foreground rounded-3xl ${isGroupEnd ? "rounded-br-md" : ""}`
+                          : `bg-secondary text-foreground rounded-3xl ${isGroupEnd ? "rounded-bl-md" : ""}`
                       }`}>
                         {m.body}
-                        {isLastMine && (
-                          <div className="mt-1 flex justify-end text-primary-foreground/50">
-                            {m.read_at ? <Checks size={11} /> : <Check size={11} />}
-                          </div>
-                        )}
                       </div>
                     </div>
+                    {isLastMine && (
+                      <div className="flex justify-end items-center gap-1 mt-1 pr-1 text-[10px] text-muted-foreground">
+                        {m.read_at ? <><Checks size={12} weight="bold" className="text-primary" /> Seen</> : <span>Sent</span>}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -529,17 +573,17 @@ export function MessagingPanel({
             </div>
 
             {/* Compose */}
-            <div className="px-4 py-3 border-t border-border flex-shrink-0">
-              <div className="flex items-end gap-2">
+            <div className="px-3 py-3 border-t border-border flex-shrink-0">
+              <div className="flex items-end gap-2 bg-secondary rounded-3xl pl-4 pr-1.5 py-1.5 focus-within:ring-2 focus-within:ring-ring transition-shadow">
                 <textarea
                   ref={inputRef}
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Type a message… (Enter to send)"
+                  placeholder="Message…"
                   rows={1}
-                  className="flex-1 rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
-                  style={{ minHeight: "42px", maxHeight: "120px" }}
+                  className="flex-1 bg-transparent border-0 text-sm outline-none resize-none py-1.5"
+                  style={{ minHeight: "28px", maxHeight: "120px" }}
                   onInput={(e) => {
                     const el = e.target as HTMLTextAreaElement;
                     el.style.height = "auto";
@@ -547,11 +591,10 @@ export function MessagingPanel({
                   }}
                 />
                 <button onClick={sendMessage} disabled={!body.trim() || sending}
-                  className="h-10 w-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center transition-colors disabled:opacity-40 flex-shrink-0">
+                  className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-fuchsia-600 text-primary-foreground hover:opacity-90 flex items-center justify-center transition-opacity disabled:opacity-30 flex-shrink-0">
                   <PaperPlaneRight size={16} weight="fill" />
                 </button>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1.5 px-1">Shift+Enter for new line</p>
             </div>
           </>
         )}
