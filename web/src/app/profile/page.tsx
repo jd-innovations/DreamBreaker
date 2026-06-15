@@ -544,6 +544,18 @@ export default function ProfilePage() {
   const coverUrl = localCover ?? profile?.cover_url ?? DEFAULT_COVER;
   const winRate = stats.wins + stats.losses > 0 ? Math.round((stats.wins / (stats.wins + stats.losses)) * 100) : 0;
 
+  // Hold the full render until profile data is loaded — avoids briefly
+  // flashing the default placeholder avatar/cover before the real images.
+  if (loading) {
+    return (
+      <PageShell>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        </div>
+      </PageShell>
+    );
+  }
+
   return (
     <PageShell>
       {/* Cover photo */}
