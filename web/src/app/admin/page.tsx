@@ -9,7 +9,7 @@ import {
   Gear, SignOut, ShieldCheck, MagnifyingGlass, Bell,
   ArrowSquareOut, Envelope, Megaphone,
   CheckFat, WarningCircle, Broadcast, ChatCircleDots,
-  Star, PencilSimple, Trash, Prohibit,
+  Star, PencilSimple, Trash, Prohibit, DotsThree,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -170,6 +170,7 @@ export default function AdminPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [featuringId, setFeaturingId] = useState<string | null>(null);
   const [dmRecipientId, setDmRecipientId] = useState<string | null>(null);
+  const [rowMenuId, setRowMenuId] = useState<string | null>(null);
 
   const [messagingUnread, setMessagingUnread] = useState(0);
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
@@ -966,7 +967,7 @@ export default function AdminPage() {
                           <div className="text-xs text-red-400 mt-1">Rejected: {t.rejected_reason}</div>
                         )}
                       </div>
-                      <div className="flex gap-2 flex-shrink-0">
+                      <div className="flex gap-2 flex-shrink-0 items-center">
                         {t.status === "pending_approval" && (
                           <button onClick={() => approveTournament(t.id)} disabled={actioning === t.id}
                             className="h-8 px-3 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-mono hover:bg-primary hover:text-primary-foreground transition-colors disabled:opacity-50">
@@ -982,33 +983,44 @@ export default function AdminPage() {
                           className="h-8 w-8 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors">
                           <PencilSimple size={13} />
                         </button>
-                        {t.status !== "cancelled" && t.status !== "completed" && (
-                          <button onClick={() => setConfirmAction({ type: "cancel", t })} disabled={actioning === t.id}
-                            title="Cancel tournament"
-                            className="h-8 w-8 rounded-full border border-border hover:bg-amber-400/10 hover:text-amber-400 flex items-center justify-center transition-colors disabled:opacity-50">
-                            <Prohibit size={13} />
-                          </button>
-                        )}
-                        <button onClick={() => { setDmRecipientId(t.director_id); setNavSection("messages"); }}
-                          title="Message director"
-                          className="h-8 w-8 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors">
-                          <ChatCircleDots size={13} />
-                        </button>
-                        <button onClick={() => { setComposeRecipientType("individual"); setComposeRecipientId(t.director_id); setNavSection("comms"); }}
-                          title="Email director"
-                          className="h-8 w-8 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors">
-                          <Envelope size={13} />
-                        </button>
-                        <button onClick={() => setConfirmAction({ type: "delete", t })} disabled={actioning === t.id}
-                          title="Delete tournament"
-                          className="h-8 w-8 rounded-full border border-border hover:bg-red-500/10 hover:text-red-400 hover:border-red-400/40 flex items-center justify-center transition-colors disabled:opacity-50">
-                          <Trash size={13} />
-                        </button>
                         <Link href={`/tournaments/${t.id}`} target="_blank">
-                          <button className="h-8 w-8 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors">
+                          <button className="h-8 w-8 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors" title="Preview">
                             <ArrowSquareOut size={13} />
                           </button>
                         </Link>
+
+                        {/* Overflow menu */}
+                        <div className="relative">
+                          <button onClick={() => setRowMenuId(rowMenuId === t.id ? null : t.id)} title="More actions"
+                            className="h-8 w-8 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors">
+                            <DotsThree size={18} weight="bold" />
+                          </button>
+                          {rowMenuId === t.id && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setRowMenuId(null)} />
+                              <div className="absolute right-0 top-10 z-50 w-52 bg-card border border-border rounded-xl shadow-xl py-1.5">
+                                <button onClick={() => { setDmRecipientId(t.director_id); setNavSection("messages"); setRowMenuId(null); }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-secondary transition-colors text-left">
+                                  <ChatCircleDots size={14} /> Message director
+                                </button>
+                                <button onClick={() => { setComposeRecipientType("individual"); setComposeRecipientId(t.director_id); setNavSection("comms"); setRowMenuId(null); }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-secondary transition-colors text-left">
+                                  <Envelope size={14} /> Email director
+                                </button>
+                                {t.status !== "cancelled" && t.status !== "completed" && (
+                                  <button onClick={() => { setConfirmAction({ type: "cancel", t }); setRowMenuId(null); }}
+                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-amber-400 hover:bg-amber-400/10 transition-colors text-left">
+                                    <Prohibit size={14} /> Cancel tournament
+                                  </button>
+                                )}
+                                <button onClick={() => { setConfirmAction({ type: "delete", t }); setRowMenuId(null); }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors text-left">
+                                  <Trash size={14} /> Delete tournament
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
