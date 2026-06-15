@@ -21,10 +21,9 @@ interface FeaturedCard {
 
 async function getFeaturedTournaments(): Promise<FeaturedCard[]> {
   try {
-    console.log("[featured] rawurl=", JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL), "rawkeylen=", (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").length);
     const supabase = await createClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
+    const { data } = await (supabase as any)
       .from("tournaments")
       .select("id,name,city,state,cover_img_url,event_date,draw_size,spots_filled,prize_pool_cents,status,featured")
       .in("status", ["open", "filling_fast", "registration_closed"])
@@ -32,7 +31,6 @@ async function getFeaturedTournaments(): Promise<FeaturedCard[]> {
       .order("featured", { ascending: false })
       .order("event_date", { ascending: true })
       .limit(3);
-    console.log("[featured] error=", JSON.stringify(error), "count=", data?.length ?? 0);
     const rows = (data ?? []) as Array<{
       id: string; name: string; city: string | null; state: string | null;
       cover_img_url: string | null; event_date: string | null; draw_size: number | null;
@@ -51,8 +49,7 @@ async function getFeaturedTournaments(): Promise<FeaturedCard[]> {
       status: t.status,
       featured: !!t.featured,
     }));
-  } catch (e) {
-    console.log("[featured] threw=", e instanceof Error ? e.message : String(e));
+  } catch {
     return [];
   }
 }
