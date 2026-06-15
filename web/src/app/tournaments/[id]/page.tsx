@@ -901,7 +901,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                 ) : legacyReg?.status === "registered" || legacyReg?.status === "checked_in" ? (
                   <div className="space-y-2">
                     <div className="w-full h-12 rounded-full bg-primary/10 border border-primary/30 font-display tracking-[0.15em] flex items-center justify-center gap-2 text-primary text-sm" data-testid="registered-state">
-                      <CheckCircle size={17} weight="fill" /> YOU'RE REGISTERED
+                      <CheckCircle size={17} weight="fill" /> YOU&apos;RE REGISTERED
                     </div>
                     <p className="text-center text-xs text-muted-foreground">Bracket drops 48h before play · {new Date(t.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
                   </div>
@@ -947,7 +947,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
           {attendees.length > 0 && (
             <div className="border border-border rounded-2xl bg-card p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-display text-xl tracking-wide">WHO'S GOING</h3>
+                <h3 className="font-display text-xl tracking-wide">WHO&apos;S GOING</h3>
                 <div className="text-[10px] font-mono text-muted-foreground">
                   {attendees.filter((a) => a.isFriend).length > 0 && (
                     <span className="text-primary mr-2">

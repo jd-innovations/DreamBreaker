@@ -148,7 +148,7 @@ function TournamentsTab({ entries, bookmarks, loading }: { entries: TournamentEn
   const active = entries.filter((e) => e.status === "registered" || e.status === "checked_in");
   const past = entries.filter((e) => e.status === "completed" || e.status === "withdrawn");
 
-  const Section = ({ title, items }: { title: string; items: TournamentEntry[] }) => items.length === 0 ? null : (
+  const renderSection = (title: string, items: TournamentEntry[]) => items.length === 0 ? null : (
     <div className="space-y-3">
       <p className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground">{title}</p>
       {items.map((e) => (
@@ -193,9 +193,9 @@ function TournamentsTab({ entries, bookmarks, loading }: { entries: TournamentEn
 
   return (
     <div className="space-y-6">
-      <Section title="HOLDS — SPOT RESERVED" items={held} />
-      <Section title="REGISTERED" items={active} />
-      <Section title="PAST EVENTS" items={past} />
+      {renderSection("HOLDS — SPOT RESERVED", held)}
+      {renderSection("REGISTERED", active)}
+      {renderSection("PAST EVENTS", past)}
       {bookmarks.length > 0 && (
         <div className="space-y-3">
           <p className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground flex items-center gap-1.5">

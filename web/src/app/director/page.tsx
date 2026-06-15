@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -287,10 +287,8 @@ export default function DirectorPage() {
 
   const selected = tournaments.find((t) => t.id === selectedId) ?? null;
 
-  useEffect(() => { load(); }, []);
-
-  const load = async () => {
-    setLoading(true);
+  const load = useCallback(async () => {
+    // `loading` initializes to true; the spinner shows until this resolves.
     try {
       const userId = await getUserId();
       if (!userId) { router.push("/auth"); return; }
@@ -331,7 +329,9 @@ export default function DirectorPage() {
       setTournaments(enriched);
       setSelectedId(enriched[0]?.id ?? null);
     } finally { setLoading(false); }
-  };
+  }, [router]);
+
+  useEffect(() => { load(); }, [load]);
 
   const loadRegistrations = async (tid: string) => {
     if (regsLoaded === tid) return;
@@ -505,7 +505,7 @@ export default function DirectorPage() {
     );
   }
 
-  const SidebarContent = () => (
+  const renderSidebar = () => (
     <>
       {/* Logo */}
       <div className="px-5 py-5 border-b border-border">
@@ -654,14 +654,14 @@ export default function DirectorPage() {
                 <X size={14} weight="bold" />
               </button>
             </div>
-            <SidebarContent />
+            {renderSidebar()}
           </aside>
         </div>
       )}
 
       {/* ── Desktop Sidebar ── */}
       <aside className="w-60 flex-shrink-0 border-r border-border bg-card hidden lg:flex flex-col h-screen sticky top-0">
-        <SidebarContent />
+        {renderSidebar()}
       </aside>
 
       {/* ── Main ── */}

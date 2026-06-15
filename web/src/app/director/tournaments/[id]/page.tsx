@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, Lightning, MapPin, Calendar, Users, CurrencyDollar,
@@ -122,12 +122,8 @@ export default function DirectorTournamentPage() {
 
   const detailsFormRef = useRef<HTMLFormElement>(null);
 
-  useEffect(() => {
-    load();
-  }, [id]);
-
-  const load = async () => {
-    setLoading(true);
+  const load = useCallback(async () => {
+    // `loading` initializes to true; the spinner shows until this resolves.
     try {
       const userId = await getUserId();
       if (!userId) { router.push("/auth"); return; }
@@ -173,7 +169,9 @@ export default function DirectorTournamentPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, router]);
+
+  useEffect(() => { load(); }, [load]);
 
   const saveBanner = async () => {
     if (!tournament) return;

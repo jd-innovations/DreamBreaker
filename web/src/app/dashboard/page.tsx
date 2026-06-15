@@ -126,6 +126,8 @@ export default function DashboardPage() {
   const [messagingUnread, setMessagingUnread] = useState(0);
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // Captured once at mount; used to decide whether holds are still active.
+  const [now] = useState(() => Date.now());
 
   useEffect(() => {
     async function load() {
@@ -224,7 +226,7 @@ export default function DashboardPage() {
   const winRate = stats.wins + stats.losses > 0 ? Math.round((stats.wins / (stats.wins + stats.losses)) * 100) : 0;
 
   // ── Sidebar content ──────────────────────────────────────────────────────────
-  const SidebarContent = () => (
+  const renderSidebar = () => (
     <>
       <div className="px-5 py-5 border-b border-border flex-shrink-0">
         <Link href="/" className="flex items-center gap-2">
@@ -308,7 +310,7 @@ export default function DashboardPage() {
 
       {/* ── Desktop sidebar ── */}
       <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-card flex-shrink-0">
-        <SidebarContent />
+        {renderSidebar()}
       </aside>
 
       {/* ── Mobile sidebar overlay ── */}
@@ -316,7 +318,7 @@ export default function DashboardPage() {
         <div className="lg:hidden fixed inset-0 z-40 flex">
           <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />
           <aside className="relative z-10 flex flex-col w-72 bg-card border-r border-border">
-            <SidebarContent />
+            {renderSidebar()}
           </aside>
         </div>
       )}
@@ -484,7 +486,7 @@ export default function DashboardPage() {
                     {upcoming.map((e) => {
                       const isHeld = e.status === "held";
                       const holdExpiry = e.hold_expires_at ? new Date(e.hold_expires_at) : null;
-                      const holdActive = holdExpiry && holdExpiry.getTime() > Date.now();
+                      const holdActive = holdExpiry && holdExpiry.getTime() > now;
                       return (
                         <div key={e.id} className="px-6 py-5 space-y-3">
                           <Link href={`/tournaments/${e.id}`} className="flex items-start gap-4 hover:opacity-80 transition-opacity block">

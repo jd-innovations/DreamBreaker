@@ -100,7 +100,6 @@ export function MessagingPanel({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const supabase = createClient();
 
   const selectedConv = conversations.find((c) => c.id === selectedConvId) ?? null;
@@ -109,7 +108,7 @@ export function MessagingPanel({
 
   const loadConversations = useCallback(async () => {
     if (!currentUserId) return;
-    setLoadingConvos(true);
+    // loadingConvos initializes to true; refetches run in the background.
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: convRows } = await (supabase as any)
@@ -134,7 +133,7 @@ export function MessagingPanel({
 
       // Load profiles we don't have cached yet
       const missingIds = otherIds.filter((id) => !profileCache[id]);
-      let pMap: Record<string, UserProfile> = { ...profileCache };
+      const pMap: Record<string, UserProfile> = { ...profileCache };
       if (missingIds.length > 0) {
         const { data: profs } = await supabase.from("profiles")
           .select("id,full_name,role,avatar_url")
@@ -179,14 +178,6 @@ export function MessagingPanel({
   }, [currentUserId]);
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
-
-  // Open initial recipient
-  useEffect(() => {
-    if (initialRecipientId && currentUserId && conversations.length >= 0 && !loadingConvos) {
-      startOrOpenConversation(initialRecipientId);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialRecipientId, loadingConvos]);
 
   // ── Real-time ──────────────────────────────────────────────────────────────
 
@@ -284,6 +275,18 @@ export function MessagingPanel({
     setShowNewConvo(false);
     openConversation((data as DBConversation).id);
   };
+
+  // Open initial recipient (declared after startOrOpenConversation so it is
+  // not referenced before its declaration)
+  useEffect(() => {
+    if (initialRecipientId && currentUserId && conversations.length >= 0 && !loadingConvos) {
+      // Intentional one-time open of the pre-selected conversation once
+      // conversations have loaded; not a cascading-render concern.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      startOrOpenConversation(initialRecipientId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialRecipientId, loadingConvos]);
 
   // ── Send ───────────────────────────────────────────────────────────────────
 

@@ -13,8 +13,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("dark");
 
   // Sync React state with whatever class the blocking script already applied.
+  // This reads the DOM (unavailable during SSR), so the effect is the only
+  // valid place to reconcile — intentional one-time external-system sync.
   useEffect(() => {
     const applied = document.documentElement.classList.contains("light") ? "light" : "dark";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(applied);
   }, []);
 

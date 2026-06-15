@@ -860,7 +860,7 @@ export default function MatchmakingPage() {
                 </div>
               </div>
 
-              <div className="font-mono text-[10px] tracking-[0.35em] text-primary mb-1">IT'S A MATCH</div>
+              <div className="font-mono text-[10px] tracking-[0.35em] text-primary mb-1">IT&apos;S A MATCH</div>
               <h2 className="font-display text-3xl tracking-wide mb-2">YOU & {matchedPartner.name.split(" ")[0].toUpperCase()}</h2>
               <p className="text-sm text-muted-foreground mb-8">
                 You both liked each other. Start a conversation and set up a game!
