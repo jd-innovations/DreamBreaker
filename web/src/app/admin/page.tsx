@@ -67,6 +67,17 @@ interface Message {
   type: "individual" | "broadcast";
 }
 
+interface PlatformSetting {
+  key: string;
+  value: string;
+  value_type: string; // 'number' | 'percent' | 'text' | 'boolean' | 'select'
+  label: string;
+  description: string | null;
+  options: string[] | null;
+  unit: string | null;
+  sort_order: number;
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_DOT: Record<string, string> = {
@@ -171,6 +182,9 @@ export default function AdminPage() {
   const [featuringId, setFeaturingId] = useState<string | null>(null);
   const [dmRecipientId, setDmRecipientId] = useState<string | null>(null);
   const [rowMenuId, setRowMenuId] = useState<string | null>(null);
+  const [settings, setSettings] = useState<PlatformSetting[]>([]);
+  const [settingsDraft, setSettingsDraft] = useState<Record<string, string>>({});
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const [messagingUnread, setMessagingUnread] = useState(0);
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
@@ -216,6 +230,15 @@ export default function AdminPage() {
         for (const d of dirs ?? []) dirMap[d.id] = d.full_name ?? "Unknown";
         setTournaments((ts as Tournament[]).map((t) => ({ ...t, director_name: dirMap[t.director_id] ?? "Unknown" })));
       }
+
+      // Platform settings (key-value, extensible)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: setts } = await (supabase as any).from("platform_settings")
+        .select("key,value,value_type,label,description,options,unit,sort_order")
+        .order("sort_order", { ascending: true });
+      const settingsRows = (setts ?? []) as PlatformSetting[];
+      setSettings(settingsRows);
+      setSettingsDraft(Object.fromEntries(settingsRows.map((s) => [s.key, s.value])));
     } finally {
       setLoading(false);
     }
@@ -312,6 +335,21 @@ export default function AdminPage() {
     setTournaments((prev) => prev.map((t) => t.id === editTarget.id ? { ...t, ...updates } : t));
     setEditTarget(null);
     toast.success("Tournament updated.");
+  };
+
+  const saveSettings = async () => {
+    const changed = settings.filter((s) => (settingsDraft[s.key] ?? s.value) !== s.value);
+    if (changed.length === 0) { toast("No changes to save."); return; }
+    setSavingSettings(true);
+    const supabase = createClient();
+    for (const s of changed) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any).from("platform_settings").update({ value: settingsDraft[s.key] }).eq("key", s.key);
+      if (error) { setSavingSettings(false); toast.error(`Failed to save "${s.label}".`); return; }
+    }
+    setSavingSettings(false);
+    setSettings((prev) => prev.map((s) => ({ ...s, value: settingsDraft[s.key] ?? s.value })));
+    toast.success(`Saved ${changed.length} setting${changed.length > 1 ? "s" : ""}.`);
   };
 
   // ── Director approval ────────────────────────────────────────────────────────
@@ -1212,24 +1250,60 @@ export default function AdminPage() {
           {navSection === "settings" && (
             <div className="space-y-6 max-w-2xl">
               <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
-                <h3 className="font-semibold">Platform Configuration</h3>
-                <div className="space-y-3">
-                  {[
-                    { label: "Platform Fee", value: "5%", note: "Applied to all entry fees" },
-                    { label: "Hold Duration", value: "72 hours", note: "Default hold expiry window" },
-                    { label: "Director Approval", value: "Manual", note: "Admins review all applications" },
-                    { label: "Tournament Approval", value: "Manual", note: "All tournaments require approval before going live" },
-                  ].map((s) => (
-                    <div key={s.label} className="flex items-center justify-between py-3 border-b border-border last:border-0">
-                      <div>
-                        <div className="font-medium text-sm">{s.label}</div>
-                        <div className="text-xs text-muted-foreground">{s.note}</div>
-                      </div>
-                      <div className="font-mono text-sm text-primary">{s.value}</div>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">Platform Configuration</h3>
+                  {(() => {
+                    const dirty = settings.some((s) => (settingsDraft[s.key] ?? s.value) !== s.value);
+                    return (
+                      <button onClick={saveSettings} disabled={savingSettings || !dirty}
+                        className="h-9 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-display tracking-wider transition-colors disabled:opacity-40">
+                        {savingSettings ? "SAVING…" : "SAVE CHANGES"}
+                      </button>
+                    );
+                  })()}
                 </div>
-                <p className="text-xs text-muted-foreground">Configuration changes coming soon via admin API.</p>
+                {settings.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No settings configured yet.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {settings.map((s) => (
+                      <div key={s.key} className="flex items-center justify-between gap-4 py-3 border-b border-border last:border-0">
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm">{s.label}</div>
+                          {s.description && <div className="text-xs text-muted-foreground">{s.description}</div>}
+                        </div>
+                        <div className="flex-shrink-0">
+                          {s.value_type === "select" && s.options ? (
+                            <select
+                              value={settingsDraft[s.key] ?? s.value}
+                              onChange={(e) => setSettingsDraft((d) => ({ ...d, [s.key]: e.target.value }))}
+                              className="h-10 rounded-xl bg-secondary border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring capitalize">
+                              {s.options.map((o) => <option key={o} value={o}>{o}</option>)}
+                            </select>
+                          ) : s.value_type === "boolean" ? (
+                            <select
+                              value={settingsDraft[s.key] ?? s.value}
+                              onChange={(e) => setSettingsDraft((d) => ({ ...d, [s.key]: e.target.value }))}
+                              className="h-10 rounded-xl bg-secondary border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring">
+                              <option value="true">Enabled</option>
+                              <option value="false">Disabled</option>
+                            </select>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type={s.value_type === "number" || s.value_type === "percent" ? "number" : "text"}
+                                value={settingsDraft[s.key] ?? s.value}
+                                onChange={(e) => setSettingsDraft((d) => ({ ...d, [s.key]: e.target.value }))}
+                                className="h-10 w-28 rounded-xl bg-secondary border border-border px-3 text-sm text-right outline-none focus:ring-2 focus:ring-ring" />
+                              {s.unit && <span className="font-mono text-xs text-muted-foreground w-10">{s.unit}</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">Changes are saved to the database and take effect immediately. New settings added to the platform_settings table appear here automatically.</p>
               </div>
 
               <div className="rounded-2xl border border-border bg-card p-6 space-y-3">
