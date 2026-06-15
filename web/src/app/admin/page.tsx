@@ -79,6 +79,40 @@ interface PlatformSetting {
   sort_order: number;
 }
 
+interface EmailTemplate {
+  key: string;
+  name: string;
+  subject: string;
+  html_body: string;
+  variables: string[];
+  enabled: boolean;
+}
+
+interface EmailSponsor {
+  id: string;
+  name: string;
+  logo_url: string;
+  link: string | null;
+  active: boolean;
+  sort_order: number;
+}
+
+// Render a template body to preview HTML: fill {{vars}} with sample text and
+// expand {{sponsor_logos}} into a logo row from the active sponsors.
+function renderEmailPreview(html: string, vars: string[], sponsors: EmailSponsor[]) {
+  let out = html;
+  for (const v of vars) {
+    const sample = v === "link" ? "#" : v.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    out = out.replaceAll(`{{${v}}}`, v === "link" ? "#" : `<em>${sample}</em>`);
+  }
+  const logos = sponsors.filter((s) => s.active).sort((a, b) => a.sort_order - b.sort_order);
+  const logoHtml = logos.length === 0
+    ? ""
+    : `<div style="margin-top:16px;padding-top:12px;border-top:1px solid #e5e5e5;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">${logos.map((s) => `<img src="${s.logo_url}" alt="${s.name}" style="height:28px;object-fit:contain;" />`).join("")}</div>`;
+  out = out.replaceAll("{{sponsor_logos}}", logoHtml);
+  return out;
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_DOT: Record<string, string> = {
@@ -157,7 +191,7 @@ function RejectModal({ tournamentName, onConfirm, onClose }: { tournamentName: s
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type NavSection = "dashboard" | "approvals" | "directors" | "users" | "tournaments" | "finance" | "comms" | "messages" | "settings";
+type NavSection = "dashboard" | "approvals" | "directors" | "users" | "tournaments" | "finance" | "comms" | "messages" | "email_templates" | "settings";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -186,6 +220,16 @@ export default function AdminPage() {
   const [settings, setSettings] = useState<PlatformSetting[]>([]);
   const [settingsDraft, setSettingsDraft] = useState<Record<string, string>>({});
   const [savingSettings, setSavingSettings] = useState(false);
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
+  const [selectedTplKey, setSelectedTplKey] = useState<string | null>(null);
+  const [tplSubject, setTplSubject] = useState("");
+  const [tplBody, setTplBody] = useState("");
+  const [tplEnabled, setTplEnabled] = useState(true);
+  const [savingTpl, setSavingTpl] = useState(false);
+  const [emailSponsors, setEmailSponsors] = useState<EmailSponsor[]>([]);
+  const [newSponsorName, setNewSponsorName] = useState("");
+  const [newSponsorLogo, setNewSponsorLogo] = useState("");
+  const [newSponsorLink, setNewSponsorLink] = useState("");
 
   const [messagingUnread, setMessagingUnread] = useState(0);
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
@@ -240,6 +284,23 @@ export default function AdminPage() {
       const settingsRows = (setts ?? []) as PlatformSetting[];
       setSettings(settingsRows);
       setSettingsDraft(Object.fromEntries(settingsRows.map((s) => [s.key, s.value])));
+
+      // Email templates + sponsor logos
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: tpls } = await (supabase as any).from("email_templates")
+        .select("key,name,subject,html_body,variables,enabled").order("name");
+      const tplRows = (tpls ?? []) as EmailTemplate[];
+      setEmailTemplates(tplRows);
+      if (tplRows.length > 0) {
+        setSelectedTplKey(tplRows[0].key);
+        setTplSubject(tplRows[0].subject);
+        setTplBody(tplRows[0].html_body);
+        setTplEnabled(tplRows[0].enabled);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: spons } = await (supabase as any).from("email_sponsors")
+        .select("id,name,logo_url,link,active,sort_order").order("sort_order");
+      setEmailSponsors((spons ?? []) as EmailSponsor[]);
     } finally {
       setLoading(false);
     }
@@ -351,6 +412,59 @@ export default function AdminPage() {
     setSavingSettings(false);
     setSettings((prev) => prev.map((s) => ({ ...s, value: settingsDraft[s.key] ?? s.value })));
     toast.success(`Saved ${changed.length} setting${changed.length > 1 ? "s" : ""}.`);
+  };
+
+  // ── Email templates & sponsors ───────────────────────────────────────────────
+
+  const selectTemplate = (key: string) => {
+    const t = emailTemplates.find((x) => x.key === key);
+    if (!t) return;
+    setSelectedTplKey(key);
+    setTplSubject(t.subject);
+    setTplBody(t.html_body);
+    setTplEnabled(t.enabled);
+  };
+
+  const saveTemplate = async () => {
+    if (!selectedTplKey) return;
+    setSavingTpl(true);
+    const supabase = createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("email_templates")
+      .update({ subject: tplSubject, html_body: tplBody, enabled: tplEnabled, updated_by: currentUserId })
+      .eq("key", selectedTplKey);
+    setSavingTpl(false);
+    if (error) { toast.error("Failed to save template."); return; }
+    setEmailTemplates((prev) => prev.map((t) => t.key === selectedTplKey ? { ...t, subject: tplSubject, html_body: tplBody, enabled: tplEnabled } : t));
+    toast.success("Template saved.");
+  };
+
+  const addSponsor = async () => {
+    if (!newSponsorName.trim() || !newSponsorLogo.trim()) { toast.error("Name and logo URL are required."); return; }
+    const supabase = createClient();
+    const row = { name: newSponsorName.trim(), logo_url: newSponsorLogo.trim(), link: newSponsorLink.trim() || null, active: true, sort_order: emailSponsors.length };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any).from("email_sponsors").insert(row).select("id,name,logo_url,link,active,sort_order").single();
+    if (error || !data) { toast.error("Failed to add sponsor."); return; }
+    setEmailSponsors((prev) => [...prev, data as EmailSponsor]);
+    setNewSponsorName(""); setNewSponsorLogo(""); setNewSponsorLink("");
+    toast.success("Sponsor added.");
+  };
+
+  const toggleSponsor = async (s: EmailSponsor) => {
+    const supabase = createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("email_sponsors").update({ active: !s.active }).eq("id", s.id);
+    if (error) { toast.error("Failed to update sponsor."); return; }
+    setEmailSponsors((prev) => prev.map((x) => x.id === s.id ? { ...x, active: !x.active } : x));
+  };
+
+  const removeSponsor = async (id: string) => {
+    const supabase = createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("email_sponsors").delete().eq("id", id);
+    if (error) { toast.error("Failed to remove sponsor."); return; }
+    setEmailSponsors((prev) => prev.filter((x) => x.id !== id));
   };
 
   // ── Director approval ────────────────────────────────────────────────────────
@@ -508,6 +622,11 @@ export default function AdminPage() {
           Email Comms
           {messages.length > 0 && <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === "comms" ? "bg-white/20 text-white" : "bg-primary/10 text-primary"}`}>{messages.length}</span>}
         </button>
+        <button onClick={() => { setNavSection("email_templates"); setMobileSidebarOpen(false); }}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "email_templates" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+          <PencilSimple size={16} weight={navSection === "email_templates" ? "fill" : "regular"} />
+          Email Templates
+        </button>
       </nav>
 
       <div className="border-t border-border px-3 py-3 space-y-0.5 flex-shrink-0">
@@ -591,6 +710,7 @@ export default function AdminPage() {
                 {navSection === "tournaments" && "All Tournaments"}
                 {navSection === "finance" && "Finance & Revenue"}
                 {navSection === "comms" && "Communications"}
+                {navSection === "email_templates" && "Email Templates"}
                 {navSection === "settings" && "Platform Settings"}
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
@@ -1244,6 +1364,120 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+
+          {/* ── Email Templates ── */}
+          {navSection === "email_templates" && (() => {
+            const selectedTpl = emailTemplates.find((t) => t.key === selectedTplKey) ?? null;
+            return (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Template list */}
+                  <div className="space-y-2">
+                    <div className="font-mono text-[10px] tracking-widest text-muted-foreground mb-1">TEMPLATES</div>
+                    {emailTemplates.map((t) => (
+                      <button key={t.key} onClick={() => selectTemplate(t.key)}
+                        className={`w-full text-left px-4 py-3 rounded-xl border transition-colors ${selectedTplKey === t.key ? "border-primary bg-primary/5" : "border-border hover:bg-secondary/60"}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-sm truncate">{t.name}</span>
+                          <span className={`h-2 w-2 rounded-full flex-shrink-0 ${t.enabled ? "bg-primary" : "bg-muted-foreground"}`} title={t.enabled ? "Enabled" : "Disabled"} />
+                        </div>
+                        <div className="text-[10px] font-mono text-muted-foreground mt-0.5 truncate">{t.key}</div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Editor + preview */}
+                  <div className="lg:col-span-2 space-y-4">
+                    {!selectedTpl ? (
+                      <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground">Select a template to edit.</div>
+                    ) : (
+                      <>
+                        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 space-y-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <h3 className="font-semibold">{selectedTpl.name}</h3>
+                            <label className="flex items-center gap-2 text-xs font-mono text-muted-foreground cursor-pointer">
+                              <input type="checkbox" checked={tplEnabled} onChange={(e) => setTplEnabled(e.target.checked)} className="accent-[hsl(var(--primary))]" />
+                              ENABLED
+                            </label>
+                          </div>
+                          <div>
+                            <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">SUBJECT</label>
+                            <input value={tplSubject} onChange={(e) => setTplSubject(e.target.value)}
+                              className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                          </div>
+                          <div>
+                            <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">BODY (HTML)</label>
+                            <textarea value={tplBody} onChange={(e) => setTplBody(e.target.value)} rows={10}
+                              className="w-full rounded-xl bg-secondary border border-border px-4 py-3 text-sm font-mono outline-none focus:ring-2 focus:ring-ring resize-y" />
+                          </div>
+                          <div>
+                            <div className="font-mono text-[10px] tracking-widest text-muted-foreground mb-2">INSERT VARIABLE</div>
+                            <div className="flex flex-wrap gap-2">
+                              {[...selectedTpl.variables, "sponsor_logos"].map((v) => (
+                                <button key={v} onClick={() => setTplBody((b) => `${b}{{${v}}}`)}
+                                  className="px-2.5 h-7 rounded-full border border-border text-xs font-mono hover:bg-secondary transition-colors">
+                                  {`{{${v}}}`}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex justify-end">
+                            <button onClick={saveTemplate} disabled={savingTpl}
+                              className="h-10 px-6 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors disabled:opacity-50">
+                              {savingTpl ? "SAVING…" : "SAVE TEMPLATE"}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+                          <div className="font-mono text-[10px] tracking-widest text-muted-foreground mb-1">PREVIEW</div>
+                          <div className="text-sm font-semibold mb-3">{renderEmailPreview(tplSubject, selectedTpl.variables, emailSponsors).replace(/<[^>]+>/g, "")}</div>
+                          <div className="rounded-xl bg-white text-black p-5 text-sm leading-relaxed [&_a]:text-primary [&_a]:underline"
+                            dangerouslySetInnerHTML={{ __html: renderEmailPreview(tplBody, selectedTpl.variables, emailSponsors) }} />
+                          <p className="text-[11px] text-muted-foreground mt-3">Sending is wired up in a later phase; edits here are saved and will be used when emails go out.</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sponsor logos */}
+                <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 space-y-4">
+                  <div>
+                    <h3 className="font-semibold">Email Sponsor Logos</h3>
+                    <p className="text-xs text-muted-foreground">Logos shown wherever a template includes the <span className="font-mono">{"{{sponsor_logos}}"}</span> block.</p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input value={newSponsorName} onChange={(e) => setNewSponsorName(e.target.value)} placeholder="Sponsor name" className="flex-1 h-10 rounded-xl bg-secondary border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                    <input value={newSponsorLogo} onChange={(e) => setNewSponsorLogo(e.target.value)} placeholder="Logo image URL" className="flex-1 h-10 rounded-xl bg-secondary border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                    <input value={newSponsorLink} onChange={(e) => setNewSponsorLink(e.target.value)} placeholder="Link (optional)" className="flex-1 h-10 rounded-xl bg-secondary border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                    <button onClick={addSponsor} className="h-10 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-display tracking-wider transition-colors flex-shrink-0">ADD</button>
+                  </div>
+                  {emailSponsors.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No sponsor logos yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {emailSponsors.map((s) => (
+                        <div key={s.id} className="flex items-center gap-3 p-2 rounded-xl border border-border">
+                          <img src={s.logo_url} alt={s.name} className="h-8 w-16 object-contain bg-white rounded" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">{s.name}</div>
+                            {s.link && <div className="text-[10px] text-muted-foreground truncate">{s.link}</div>}
+                          </div>
+                          <button onClick={() => toggleSponsor(s)} className={`text-[10px] font-mono px-2 py-1 rounded-full border ${s.active ? "border-primary/40 text-primary bg-primary/10" : "border-border text-muted-foreground"}`}>
+                            {s.active ? "ACTIVE" : "HIDDEN"}
+                          </button>
+                          <button onClick={() => removeSponsor(s.id)} className="h-8 w-8 rounded-full border border-border hover:bg-red-500/10 hover:text-red-400 flex items-center justify-center transition-colors">
+                            <Trash size={13} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── Settings ── */}
           {navSection === "settings" && (
