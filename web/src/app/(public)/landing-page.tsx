@@ -21,6 +21,7 @@ interface FeaturedCard {
 
 async function getFeaturedTournaments(): Promise<FeaturedCard[]> {
   try {
+    console.log("[featured] rawurl=", JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL), "rawkeylen=", (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").length);
     const supabase = await createClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
