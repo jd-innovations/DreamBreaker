@@ -9,6 +9,7 @@ import {
   Gear, SignOut, ShieldCheck, MagnifyingGlass, Bell,
   ArrowSquareOut, Envelope, Megaphone,
   CheckFat, WarningCircle, Broadcast, ChatCircleDots,
+  Star, PencilSimple, Trash, Prohibit,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -50,6 +51,7 @@ interface Tournament {
   submitted_for_approval_at: string | null;
   approved_at: string | null;
   rejected_reason: string | null;
+  featured: boolean | null;
   created_at: string;
   director_name?: string;
   registration_count?: number;
@@ -163,6 +165,10 @@ export default function AdminPage() {
   const [tournamentStatusFilter, setTournamentStatusFilter] = useState<string>("all");
   const [rejectTarget, setRejectTarget] = useState<Tournament | null>(null);
   const [actioning, setActioning] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: "cancel" | "delete"; t: Tournament } | null>(null);
+  const [editTarget, setEditTarget] = useState<Tournament | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [featuringId, setFeaturingId] = useState<string | null>(null);
 
   const [messagingUnread, setMessagingUnread] = useState(0);
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
@@ -198,7 +204,7 @@ export default function AdminPage() {
       // Load all tournaments with director name
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: ts } = await (supabase as any).from("tournaments")
-        .select("id,name,city,state,venue_name,event_date,format,draw_size,spots_filled,entry_fee_cents,prize_pool_cents,status,director_id,submitted_for_approval_at,approved_at,rejected_reason,created_at")
+        .select("id,name,city,state,venue_name,event_date,format,draw_size,spots_filled,entry_fee_cents,prize_pool_cents,status,director_id,submitted_for_approval_at,approved_at,rejected_reason,featured,created_at")
         .order("created_at", { ascending: false });
 
       if (ts && ts.length > 0) {
@@ -243,6 +249,67 @@ export default function AdminPage() {
     if (error) { toast.error("Failed to reject."); return; }
     setTournaments((prev) => prev.map((t) => t.id === id ? { ...t, status: "draft", rejected_reason: reason } : t));
     toast("Tournament returned to director.", { description: "Rejection reason saved." });
+  };
+
+  const toggleFeatured = async (t: Tournament) => {
+    setFeaturingId(t.id);
+    const next = !t.featured;
+    const supabase = createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("tournaments").update({ featured: next }).eq("id", t.id);
+    setFeaturingId(null);
+    if (error) { toast.error("Failed to update."); return; }
+    setTournaments((prev) => prev.map((x) => x.id === t.id ? { ...x, featured: next } : x));
+    toast.success(next ? "Tournament featured." : "Removed from featured.");
+  };
+
+  const cancelTournament = async (id: string) => {
+    setActioning(id);
+    const supabase = createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("tournaments").update({ status: "cancelled" }).eq("id", id);
+    setActioning(null);
+    setConfirmAction(null);
+    if (error) { toast.error("Failed to cancel."); return; }
+    setTournaments((prev) => prev.map((t) => t.id === id ? { ...t, status: "cancelled" } : t));
+    toast("Tournament cancelled.");
+  };
+
+  const deleteTournament = async (id: string) => {
+    setActioning(id);
+    const supabase = createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).rpc("admin_delete_tournament", { p_tournament_id: id });
+    setActioning(null);
+    setConfirmAction(null);
+    if (error) { toast.error("Failed to delete tournament."); return; }
+    setTournaments((prev) => prev.filter((t) => t.id !== id));
+    toast.success("Tournament deleted.");
+  };
+
+  const saveAdminEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editTarget) return;
+    setSavingEdit(true);
+    const fd = new FormData(e.currentTarget);
+    const updates = {
+      name: fd.get("name") as string,
+      venue_name: fd.get("venue_name") as string,
+      city: fd.get("city") as string,
+      state: fd.get("state") as string,
+      event_date: fd.get("event_date") as string,
+      draw_size: parseInt(fd.get("draw_size") as string) || editTarget.draw_size,
+      entry_fee_cents: fd.get("entry_fee") ? Math.round(parseFloat(fd.get("entry_fee") as string) * 100) : editTarget.entry_fee_cents,
+      prize_pool_cents: fd.get("prize_pool") ? Math.round(parseFloat(fd.get("prize_pool") as string) * 100) : null,
+    };
+    const supabase = createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("tournaments").update(updates).eq("id", editTarget.id);
+    setSavingEdit(false);
+    if (error) { toast.error("Failed to save changes."); return; }
+    setTournaments((prev) => prev.map((t) => t.id === editTarget.id ? { ...t, ...updates } : t));
+    setEditTarget(null);
+    toast.success("Tournament updated.");
   };
 
   // ── Director approval ────────────────────────────────────────────────────────
@@ -882,6 +949,9 @@ export default function AdminPage() {
                           <span className={`h-2 w-2 rounded-full flex-shrink-0 ${STATUS_DOT[t.status] ?? "bg-muted-foreground"}`} />
                           <span className="font-medium text-sm">{t.name}</span>
                           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border text-muted-foreground border-border">{STATUS_LABEL[t.status] ?? t.status}</span>
+                          {t.featured && (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border text-amber-400 border-amber-400/40 bg-amber-400/10 flex items-center gap-1"><Star size={9} weight="fill" /> FEATURED</span>
+                          )}
                         </div>
                         <div className="text-xs text-muted-foreground">{t.city}, {t.state} · {fmtDate(t.event_date)} · Dir: {t.director_name}</div>
                         <div className="flex items-center gap-2 mt-1.5">
@@ -902,6 +972,27 @@ export default function AdminPage() {
                             {actioning === t.id ? "…" : "Approve"}
                           </button>
                         )}
+                        <button onClick={() => toggleFeatured(t)} disabled={featuringId === t.id}
+                          title={t.featured ? "Unfeature" : "Feature"}
+                          className={`h-8 w-8 rounded-full border flex items-center justify-center transition-colors disabled:opacity-50 ${t.featured ? "border-amber-400/40 text-amber-400 bg-amber-400/10 hover:bg-amber-400/20" : "border-border hover:bg-secondary text-muted-foreground"}`}>
+                          <Star size={13} weight={t.featured ? "fill" : "regular"} />
+                        </button>
+                        <button onClick={() => setEditTarget(t)} title="Edit"
+                          className="h-8 w-8 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors">
+                          <PencilSimple size={13} />
+                        </button>
+                        {t.status !== "cancelled" && t.status !== "completed" && (
+                          <button onClick={() => setConfirmAction({ type: "cancel", t })} disabled={actioning === t.id}
+                            title="Cancel tournament"
+                            className="h-8 w-8 rounded-full border border-border hover:bg-amber-400/10 hover:text-amber-400 flex items-center justify-center transition-colors disabled:opacity-50">
+                            <Prohibit size={13} />
+                          </button>
+                        )}
+                        <button onClick={() => setConfirmAction({ type: "delete", t })} disabled={actioning === t.id}
+                          title="Delete tournament"
+                          className="h-8 w-8 rounded-full border border-border hover:bg-red-500/10 hover:text-red-400 hover:border-red-400/40 flex items-center justify-center transition-colors disabled:opacity-50">
+                          <Trash size={13} />
+                        </button>
                         <Link href={`/tournaments/${t.id}`} target="_blank">
                           <button className="h-8 w-8 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors">
                             <ArrowSquareOut size={13} />
@@ -1184,6 +1275,90 @@ export default function AdminPage() {
           onConfirm={(reason) => rejectTournament(rejectTarget.id, reason)}
           onClose={() => setRejectTarget(null)}
         />
+      )}
+
+      {/* Edit tournament modal (admin) */}
+      {editTarget && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <form onSubmit={saveAdminEdit} className="w-full max-w-lg bg-card border border-border rounded-2xl p-6 shadow-2xl max-h-[90dvh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-display text-xl tracking-wide">EDIT TOURNAMENT</h3>
+              <button type="button" onClick={() => setEditTarget(null)} className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary"><X size={14} weight="bold" /></button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">Admin edits go live immediately (no re-approval).</p>
+            <div className="space-y-3">
+              <div>
+                <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">NAME</label>
+                <input name="name" defaultValue={editTarget.name} required className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+              </div>
+              <div>
+                <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">VENUE</label>
+                <input name="venue_name" defaultValue={editTarget.venue_name} className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">CITY</label>
+                  <input name="city" defaultValue={editTarget.city} className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+                <div>
+                  <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">STATE</label>
+                  <input name="state" defaultValue={editTarget.state} className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">EVENT DATE</label>
+                  <input name="event_date" type="date" defaultValue={editTarget.event_date?.slice(0, 10)} className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+                <div>
+                  <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">DRAW SIZE</label>
+                  <input name="draw_size" type="number" min={2} defaultValue={editTarget.draw_size} className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">ENTRY FEE ($)</label>
+                  <input name="entry_fee" type="number" step="0.01" min={0} defaultValue={(editTarget.entry_fee_cents / 100).toFixed(2)} className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+                <div>
+                  <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">PRIZE POOL ($)</label>
+                  <input name="prize_pool" type="number" step="0.01" min={0} defaultValue={editTarget.prize_pool_cents != null ? (editTarget.prize_pool_cents / 100).toFixed(2) : ""} className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button type="button" onClick={() => setEditTarget(null)} className="flex-1 h-11 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">CANCEL</button>
+              <button type="submit" disabled={savingEdit} className="flex-1 h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors disabled:opacity-50">{savingEdit ? "SAVING…" : "SAVE CHANGES"}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Cancel / Delete confirm modal */}
+      {confirmAction && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-card border border-border rounded-2xl p-6 shadow-2xl">
+            <h3 className="font-display text-xl tracking-wide mb-1">
+              {confirmAction.type === "delete" ? "DELETE TOURNAMENT" : "CANCEL TOURNAMENT"}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              {confirmAction.type === "delete" ? (
+                <>Permanently delete <strong>{confirmAction.t.name}</strong> and all its registrations, divisions, and brackets. This cannot be undone.</>
+              ) : (
+                <>Mark <strong>{confirmAction.t.name}</strong> as cancelled. It will be removed from the public listing. You can&apos;t un-cancel it from here.</>
+              )}
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmAction(null)} className="flex-1 h-11 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">BACK</button>
+              <button
+                onClick={() => confirmAction.type === "delete" ? deleteTournament(confirmAction.t.id) : cancelTournament(confirmAction.t.id)}
+                disabled={actioning === confirmAction.t.id}
+                className={`flex-1 h-11 rounded-full text-white text-sm font-display tracking-wider transition-colors disabled:opacity-50 ${confirmAction.type === "delete" ? "bg-red-500 hover:bg-red-600" : "bg-amber-500 hover:bg-amber-600"}`}>
+                {actioning === confirmAction.t.id ? "…" : confirmAction.type === "delete" ? "DELETE" : "CANCEL TOURNAMENT"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
