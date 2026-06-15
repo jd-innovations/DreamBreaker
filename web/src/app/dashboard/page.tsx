@@ -123,6 +123,15 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({ wins: 0, losses: 0, tournaments: 0, duprDelta: 0 });
   const [loading, setLoading] = useState(true);
   const [navSection, setNavSection] = useState<NavSection>("dashboard");
+
+  // Open a specific section when linked with ?section= (e.g. from the mobile nav).
+  useEffect(() => {
+    const sec = new URLSearchParams(window.location.search).get("section");
+    const allowed: NavSection[] = ["dashboard", "events", "matches", "saved", "messages", "matchmaking", "settings"];
+    // One-time init from the URL query; intentional setState on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (sec && (allowed as string[]).includes(sec)) setNavSection(sec as NavSection);
+  }, []);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [messagingUnread, setMessagingUnread] = useState(0);
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);

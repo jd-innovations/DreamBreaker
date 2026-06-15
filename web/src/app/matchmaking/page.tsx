@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Heart, X, XCircle, Lightning, MapPin, Star, ArrowRight, Trophy,
@@ -260,6 +260,11 @@ export default function MatchmakingPage() {
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
   const [activeTab, setActiveTab] = useState<"discover" | "requests">("discover");
   const [incoming, setIncoming] = useState<Partner[]>([]);
+  // Swipe drag
+  const [drag, setDrag] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const dragRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     const supabase = createClient();
@@ -410,35 +415,45 @@ export default function MatchmakingPage() {
         ? "-translate-y-[120%] scale-95 opacity-0"
         : "";
 
+  // ── Drag-to-swipe ──────────────────────────────────────────────────────────
+  const SWIPE_TH = 110;
+  const onCardPointerDown = (e: React.PointerEvent) => {
+    if (swipeDir) return;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    dragRef.current = { x: 0, y: 0 };
+    setDragging(true);
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+  const onCardPointerMove = (e: React.PointerEvent) => {
+    if (!dragStartRef.current) return;
+    const x = e.clientX - dragStartRef.current.x;
+    const y = e.clientY - dragStartRef.current.y;
+    dragRef.current = { x, y };
+    setDrag({ x, y });
+  };
+  const onCardPointerUp = () => {
+    if (!dragStartRef.current) return;
+    dragStartRef.current = null;
+    setDragging(false);
+    const { x, y } = dragRef.current;
+    setDrag({ x: 0, y: 0 });
+    if (y < -SWIPE_TH && Math.abs(y) > Math.abs(x)) swipe("up");
+    else if (x > SWIPE_TH) swipe("right");
+    else if (x < -SWIPE_TH) swipe("left");
+  };
+
+  // Direction shown in overlays — live while dragging, locked once flying off
+  const liveDir: "left" | "right" | "up" | null = swipeDir ?? (dragging
+    ? (drag.y < -60 && Math.abs(drag.y) > Math.abs(drag.x) ? "up"
+      : drag.x > 60 ? "right"
+      : drag.x < -60 ? "left" : null)
+    : null);
+
   return (
     <PageShell>
-      {/* Header */}
-      <section className="border-b border-border bg-card/40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex items-end justify-between">
-          <div>
-            <div className="font-mono text-[11px] tracking-[0.3em] text-primary mb-2">/ PARTNER FINDER</div>
-            <h1 className="font-display text-4xl sm:text-5xl tracking-wide">FIND YOUR <span className="text-primary">PARTNER</span></h1>
-            <p className="text-muted-foreground text-sm mt-1.5">
-              {loading ? "Finding players near you…" : `${visibleDeck.length} partners near you`}
-            </p>
-          </div>
-          <button
-            onClick={() => setShowFilters(true)}
-            className="h-11 px-4 rounded-full border border-border flex items-center gap-2 text-sm hover:bg-secondary/60 transition-colors"
-            data-testid="filter-btn"
-          >
-            <SlidersHorizontal size={16} weight="bold" />
-            <span className="font-mono text-xs tracking-[0.15em]">FILTERS</span>
-            {(filters.format !== "All" || filters.minDupr || filters.maxDupr || filters.availability !== "All" || filters.maxDistance !== "Any") && (
-              <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
-            )}
-          </button>
-        </div>
-      </section>
-
-      {/* Tab switcher */}
+      {/* Tab switcher + filter */}
       <div className="border-b border-border bg-card/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3">
           <div className="flex gap-1">
             {(["discover", "requests"] as const).map((tab) => (
               <button
@@ -455,6 +470,17 @@ export default function MatchmakingPage() {
               </button>
             ))}
           </div>
+          <button
+            onClick={() => setShowFilters(true)}
+            className="relative h-9 w-9 rounded-full border border-border flex items-center justify-center hover:bg-secondary/60 transition-colors flex-shrink-0"
+            data-testid="filter-btn"
+            title="Filters"
+          >
+            <SlidersHorizontal size={16} weight="bold" />
+            {(filters.format !== "All" || filters.minDupr || filters.maxDupr || filters.availability !== "All" || filters.maxDistance !== "Any") && (
+              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary" />
+            )}
+          </button>
         </div>
       </div>
 
@@ -598,13 +624,26 @@ export default function MatchmakingPage() {
                 {topCard && (
                   <div
                     key={topCard.id}
-                    className={`absolute inset-x-0 inset-y-0 rounded-3xl border border-border bg-card overflow-hidden shadow-2xl transition-all duration-300 flex flex-col lg:flex-row ${animClass}`}
-                    style={{ zIndex: 10 }}
+                    className={`absolute inset-x-0 inset-y-0 rounded-3xl border border-border bg-card overflow-hidden shadow-2xl transition-transform duration-300 flex flex-col lg:flex-row ${animClass}`}
+                    style={{
+                      zIndex: 10,
+                      ...(swipeDir ? {} : {
+                        transform: `translate(${drag.x}px, ${drag.y}px) rotate(${drag.x / 18}deg)`,
+                        transition: dragging ? "none" : undefined,
+                      }),
+                    }}
                     data-testid="top-card"
                   >
-                    {/* Photo — full height on desktop */}
-                    <div className="relative h-72 lg:h-full lg:w-[55%] flex-shrink-0 overflow-hidden">
-                      <img src={topCard.img} alt="" className="h-full w-full object-cover object-top" />
+                    {/* Photo — full height on desktop; drag surface for swiping */}
+                    <div
+                      className="relative h-72 lg:h-full lg:w-[55%] flex-shrink-0 overflow-hidden cursor-grab active:cursor-grabbing"
+                      style={{ touchAction: "none" }}
+                      onPointerDown={onCardPointerDown}
+                      onPointerMove={onCardPointerMove}
+                      onPointerUp={onCardPointerUp}
+                      onPointerCancel={onCardPointerUp}
+                    >
+                      <img src={topCard.img} alt="" draggable={false} className="h-full w-full object-cover object-top pointer-events-none" />
                       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:via-transparent lg:to-background" />
 
                       {/* Match ring */}
@@ -619,23 +658,23 @@ export default function MatchmakingPage() {
                         </div>
                       )}
 
-                      {/* Swipe overlays */}
-                      {swipeDir === "right" && (
-                        <div className="absolute inset-0 flex items-center justify-center">
+                      {/* Swipe overlays — react live to the drag */}
+                      {liveDir === "right" && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                           <div className="rotate-[-20deg] border-4 border-primary rounded-2xl px-6 py-3">
                             <span className="font-display text-4xl text-primary tracking-widest">LIKE</span>
                           </div>
                         </div>
                       )}
-                      {swipeDir === "left" && (
-                        <div className="absolute inset-0 flex items-center justify-center">
+                      {liveDir === "left" && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                           <div className="rotate-[20deg] border-4 border-destructive rounded-2xl px-6 py-3">
                             <span className="font-display text-4xl text-destructive tracking-widest">PASS</span>
                           </div>
                         </div>
                       )}
-                      {swipeDir === "up" && (
-                        <div className="absolute inset-0 flex items-center justify-center">
+                      {liveDir === "up" && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                           <div className="border-4 border-sky-400 rounded-2xl px-6 py-3">
                             <span className="font-display text-4xl text-sky-400 tracking-widest">CONNECT</span>
                           </div>

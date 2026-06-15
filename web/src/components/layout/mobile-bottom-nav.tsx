@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, Trophy, Heart, Lightning, User } from "@phosphor-icons/react";
+import { House, Trophy, Heart, ChatCircleDots, User } from "@phosphor-icons/react";
 
 const tabs = [
-  { href: "/dashboard",   label: "Dashboard", Icon: House    },
-  { href: "/tournaments", label: "Play",       Icon: Trophy   },
-  { href: "/matchmaking", label: "Match",      Icon: Heart    },
-  { href: "/holds",       label: "Holds",      Icon: Lightning },
-  { href: "/profile",     label: "Profile",    Icon: User     },
+  { href: "/dashboard",                    label: "Dashboard", Icon: House          },
+  { href: "/tournaments",                  label: "Play",      Icon: Trophy         },
+  { href: "/matchmaking",                  label: "Match",     Icon: Heart          },
+  { href: "/dashboard?section=messages",   label: "Messages",  Icon: ChatCircleDots },
+  { href: "/profile",                      label: "Profile",   Icon: User           },
 ];
 
 export function MobileBottomNav() {
