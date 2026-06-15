@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   Lightning, X, Users, CurrencyDollar, Trophy,
   Gauge, CheckCircle, Clock, Warning,
-  Gear, SignOut, ShieldCheck, MagnifyingGlass, Bell,
+  Gear, SignOut, ShieldCheck, MagnifyingGlass,
   ArrowSquareOut, Envelope, Megaphone,
   CheckFat, WarningCircle, Broadcast, ChatCircleDots,
   Star, PencilSimple, Trash, Prohibit, DotsThree,
@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
+import { NotificationBell } from "@/components/notifications/bell";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -604,9 +605,7 @@ export default function AdminPage() {
                 <Warning size={13} weight="fill" /> {pendingTournaments.length + pendingDirectors.length} PENDING
               </button>
             )}
-            <button className="h-9 w-9 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors">
-              <Bell size={14} />
-            </button>
+            {currentUserId && <NotificationBell userId={currentUserId} />}
           </div>
         </header>
 

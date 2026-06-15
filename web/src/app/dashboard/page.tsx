@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
+import { NotificationBell } from "@/components/notifications/bell";
 import { MatchSettingsPanel } from "@/components/shared/match-settings-panel";
 import { playerStats, tournaments as mockTournaments, recentMatches as mockMatches } from "@/data/mock-data";
 
@@ -345,6 +346,7 @@ export default function DashboardPage() {
                 <Users size={13} weight="bold" /> FIND PARTNER
               </button>
             </Link>
+            {currentUserId && <NotificationBell userId={currentUserId} />}
             <Link href="/profile">
               <button className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
                 <UserCircle size={18} />

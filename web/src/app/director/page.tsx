@@ -7,12 +7,13 @@ import {
   Lightning, X, Plus, Users, CurrencyDollar, Trophy, MapPin, Calendar,
   PencilSimple, Eye, Warning, CheckCircle, Clock, ArrowRight, Gauge,
   ChartBar, ClipboardText, Gear, SignOut, CaretDown, CaretUp,
-  TrendUp, TrendDown, Ticket, Star, Funnel, Bell, MagnifyingGlass,
+  TrendUp, TrendDown, Ticket, Star, Funnel, MagnifyingGlass,
   ArrowSquareOut, Broadcast, Trash, Globe, Image, UploadSimple, FloppyDisk,
   ChatCircleDots,
 } from "@phosphor-icons/react";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
+import { NotificationBell } from "@/components/notifications/bell";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
@@ -720,9 +721,7 @@ export default function DirectorPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button className="h-9 w-9 sm:w-auto sm:px-4 rounded-full border border-border hover:bg-secondary text-sm transition-colors flex items-center justify-center gap-2">
-              <Bell size={14} /> <span className="hidden sm:inline">Notifications</span>
-            </button>
+            {currentUserId && <NotificationBell userId={currentUserId} />}
             <button onClick={() => setShowCreate(true)} className="h-9 px-3 sm:px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors flex items-center gap-1.5">
               <Plus size={14} weight="bold" /> <span className="hidden sm:inline">New Tournament</span>
             </button>
