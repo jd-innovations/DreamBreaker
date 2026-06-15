@@ -9,12 +9,13 @@ import {
   Trophy, Users, Lightning, TrendUp, Calendar, MapPin,
   ArrowRight, Medal, Star, BookmarkSimple, Clock,
   Gauge, ChatCircleDots, Ticket, UserCircle,
-  Gear, SignOut, List, X,
+  Gear, SignOut, List, X, SlidersHorizontal,
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
+import { MatchSettingsPanel } from "@/components/shared/match-settings-panel";
 import { playerStats, tournaments as mockTournaments, recentMatches as mockMatches } from "@/data/mock-data";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -56,7 +57,7 @@ type DisplayMatch = {
   date: string;
 };
 
-type NavSection = "dashboard" | "events" | "matches" | "saved" | "messages" | "settings";
+type NavSection = "dashboard" | "events" | "matches" | "saved" | "messages" | "matchmaking" | "settings";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatDate(iso: string) {
@@ -260,6 +261,11 @@ export default function DashboardPage() {
           <ChatCircleDots size={16} weight={navSection === "messages" ? "fill" : "regular"} />
           Messages
           {messagingUnread > 0 && <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === "messages" ? "bg-white/20 text-white" : "bg-primary/10 text-primary"}`}>{messagingUnread}</span>}
+        </button>
+        <button onClick={() => { setNavSection("matchmaking"); setMobileSidebarOpen(false); }}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "matchmaking" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+          <SlidersHorizontal size={16} weight={navSection === "matchmaking" ? "fill" : "regular"} />
+          Match Settings
         </button>
       </nav>
 
@@ -615,6 +621,23 @@ export default function DashboardPage() {
                 currentUserId={currentUserId}
                 allUsers={allUsers}
                 onUnreadChange={setMessagingUnread}
+              />
+            </div>
+          )}
+
+          {/* ── Matchmaking Settings ── */}
+          {navSection === "matchmaking" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="font-display text-xl tracking-wide">MATCH SETTINGS</h2>
+                <p className="text-sm text-muted-foreground">Control your discoverability and partner preferences</p>
+              </div>
+              <MatchSettingsPanel
+                myDupr={profile?.dupr ?? null}
+                myAvail={null}
+                myLocation={profile?.location_city ? `${profile.location_city}, ${profile.location_state ?? ""}`.trim().replace(/,$/, "") : null}
+                myStyle={null}
+                myBio={null}
               />
             </div>
           )}
