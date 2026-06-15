@@ -2,6 +2,57 @@ import Link from "next/link";
 import { ArrowRight, Plus, Heart, Lightning, Trophy, Users, MapPin, Calendar } from "@phosphor-icons/react/dist/ssr";
 import { PageShell } from "@/components/layout/page-shell";
 import { tournaments, HERO_IMG } from "@/data/mock-data";
+import { createClient } from "@/lib/supabase/server";
+
+const FALLBACK_IMG = "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&q=80";
+
+interface FeaturedCard {
+  id: string;
+  name: string;
+  img: string;
+  location: string;
+  date: string;
+  filled: number;
+  spots: number;
+  prize: string;
+  status: string;
+  featured: boolean;
+}
+
+async function getFeaturedTournaments(): Promise<FeaturedCard[]> {
+  try {
+    const supabase = await createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any)
+      .from("tournaments")
+      .select("id,name,city,state,cover_img_url,event_date,draw_size,spots_filled,prize_pool_cents,status,featured")
+      .in("status", ["open", "filling_fast", "registration_closed"])
+      // Featured first, then soonest events fill the remaining slots.
+      .order("featured", { ascending: false })
+      .order("event_date", { ascending: true })
+      .limit(3);
+    const rows = (data ?? []) as Array<{
+      id: string; name: string; city: string | null; state: string | null;
+      cover_img_url: string | null; event_date: string | null; draw_size: number | null;
+      spots_filled: number | null; prize_pool_cents: number | null; status: string; featured: boolean | null;
+    }>;
+    if (rows.length === 0) return [];
+    return rows.map((t) => ({
+      id: t.id,
+      name: t.name,
+      img: t.cover_img_url ?? FALLBACK_IMG,
+      location: [t.city, t.state].filter(Boolean).join(", "),
+      date: t.event_date ? new Date(t.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "TBD",
+      filled: t.spots_filled ?? 0,
+      spots: t.draw_size ?? 0,
+      prize: t.prize_pool_cents ? `$${(t.prize_pool_cents / 100).toLocaleString()}` : "—",
+      status: t.status,
+      featured: !!t.featured,
+    }));
+  } catch {
+    return [];
+  }
+}
 
 const stats = [
   { label: "ACTIVE PLAYERS", value: "12,480" },
@@ -16,7 +67,16 @@ const features = [
   { icon: Trophy, tag: "BRACKETS", title: "Live brackets & rankings", body: "Auto-generated draws. Real-time scoring. Auto-updated DUPR after every event." },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const dbFeatured = await getFeaturedTournaments();
+  // Fall back to mock data only when no real tournaments are open yet.
+  const featuredList: FeaturedCard[] = dbFeatured.length > 0
+    ? dbFeatured
+    : tournaments.slice(0, 3).map((t) => ({
+        id: t.id, name: t.name, img: t.img, location: t.location, date: t.date,
+        filled: t.filled, spots: t.spots, prize: t.prize, status: t.status, featured: false,
+      }));
+
   return (
     <PageShell>
       {/* HERO */}
@@ -104,12 +164,15 @@ export default function LandingPage() {
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {tournaments.slice(0, 3).map((t) => (
+            {featuredList.map((t) => (
               <Link key={t.id} href={`/tournaments/${t.id}`} data-testid={`featured-tournament-${t.id}`} className="group border border-border rounded-2xl overflow-hidden bg-card hover:border-primary transition-all">
                 <div className="relative h-44 overflow-hidden">
                   <img src={t.img} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                  <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-mono tracking-widest font-bold">{t.status.toUpperCase()}</div>
+                  <div className="absolute top-3 left-3 flex gap-2">
+                    <span className="px-2.5 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-mono tracking-widest font-bold">{(t.status === "filling_fast" ? "Filling Fast" : t.status).toUpperCase()}</span>
+                    {t.featured && <span className="px-2.5 py-1 rounded-full bg-amber-400 text-black text-[10px] font-mono tracking-widest font-bold flex items-center gap-1"><Trophy size={9} weight="fill" /> FEATURED</span>}
+                  </div>
                   <div className="absolute bottom-3 left-3 right-3"><div className="font-display text-2xl text-white tracking-wide">{t.name}</div></div>
                 </div>
                 <div className="p-5 space-y-2">
