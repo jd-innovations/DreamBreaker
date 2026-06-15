@@ -402,7 +402,7 @@ export default function DirectorPage() {
     setSavingDetails(true);
     const fd = new FormData(e.currentTarget);
     const supabase = createClient();
-    const updates = {
+    const updates: Record<string, unknown> = {
       name: fd.get("name") as string,
       venue_name: fd.get("venue_name") as string,
       venue_address: fd.get("venue_address") as string,
@@ -414,13 +414,31 @@ export default function DirectorPage() {
       rules: (fd.get("rules") as string) || null,
       prize_pool_cents: fd.get("prize_pool") ? Math.round(parseFloat(fd.get("prize_pool") as string) * 100) : null,
     };
+
+    // If the tournament is already live/approved, editing it sends it back to
+    // the admin approval queue and clears the prior approval stamps. Drafts and
+    // pending tournaments just save in place.
+    const liveStatuses = ["approved", "open", "filling_fast", "registration_closed"];
+    const needsReapproval = !!selected && liveStatuses.includes(selected.status);
+    if (needsReapproval) {
+      updates.status = "pending_approval";
+      updates.submitted_for_approval_at = new Date().toISOString();
+      updates.approved_at = null;
+      updates.approved_by = null;
+      updates.rejected_reason = null;
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any).from("tournaments").update(updates).eq("id", selected!.id);
     setSavingDetails(false);
     if (error) { toast.error("Failed to save."); return; }
-    setTournaments((prev) => prev.map((t) => t.id === selected!.id ? { ...t, ...updates } : t));
+    setTournaments((prev) => prev.map((t) => t.id === selected!.id ? { ...t, ...updates } as Tournament : t));
     setEditingDetails(false);
-    toast.success("Details saved!");
+    if (needsReapproval) {
+      toast.success("Saved — resubmitted for admin approval.", { description: "Your changes will be live once an admin re-approves." });
+    } else {
+      toast.success("Details saved!");
+    }
   };
 
   const addSponsor = async (e: React.FormEvent<HTMLFormElement>) => {
