@@ -938,7 +938,7 @@ export default function AdminPage() {
 
               <div className="text-xs text-muted-foreground font-mono">{filteredTournaments.length} TOURNAMENTS</div>
 
-              <div className="rounded-2xl border border-border bg-card overflow-hidden">
+              <div className="rounded-2xl border border-border bg-card">
                 {filteredTournaments.length === 0 && (
                   <div className="p-12 text-center text-muted-foreground">No tournaments match your filters.</div>
                 )}
