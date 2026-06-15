@@ -221,9 +221,9 @@ export default function AdminPage() {
     setActioning(id);
     const userId = await getUserId();
     const supabase = createClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // Approval publishes the tournament immediately: set it to "open" so it
     // appears on the public listing right away (audit stamps still recorded).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any).from("tournaments").update({
       status: "open", approved_at: new Date().toISOString(), approved_by: userId, rejected_reason: null,
     }).eq("id", id);
@@ -249,12 +249,16 @@ export default function AdminPage() {
 
   const approveDirector = async (profileId: string) => {
     setActioning(profileId);
+    // Preserve a combined player_director role; only a pure player becomes a
+    // plain director on approval.
+    const current = profiles.find((p) => p.id === profileId);
+    const newRole = current?.role === "player_director" ? "player_director" : "director";
     const supabase = createClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from("profiles").update({ director_status: "approved", role: "director" }).eq("id", profileId);
+    const { error } = await (supabase as any).from("profiles").update({ director_status: "approved", role: newRole }).eq("id", profileId);
     setActioning(null);
     if (error) { toast.error("Failed to approve director."); return; }
-    setProfiles((prev) => prev.map((p) => p.id === profileId ? { ...p, director_status: "approved", role: "director" } : p));
+    setProfiles((prev) => prev.map((p) => p.id === profileId ? { ...p, director_status: "approved", role: newRole } : p));
     toast.success("Director approved!");
   };
 
