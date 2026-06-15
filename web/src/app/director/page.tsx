@@ -274,6 +274,8 @@ export default function DirectorPage() {
   const [editingBanner, setEditingBanner] = useState(false);
   const [bannerUrl, setBannerUrl] = useState("");
   const [savingBanner, setSavingBanner] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const bannerFileInputRef = useRef<HTMLInputElement>(null);
   const [editingDetails, setEditingDetails] = useState(false);
   const [savingDetails, setSavingDetails] = useState(false);
   const [showSponsorForm, setShowSponsorForm] = useState(false);
@@ -383,6 +385,25 @@ export default function DirectorPage() {
       .order("display_order", { ascending: true });
     setSponsors((spons ?? []) as Sponsor[]);
     setManagementLoaded(tid);
+  };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selected) return;
+    setBannerUploading(true);
+    const userId = await getUserId();
+    if (!userId) { toast.error("Not signed in."); setBannerUploading(false); return; }
+    const supabase = createClient();
+    const ext = file.name.split(".").pop() ?? "jpg";
+    // Stored under the uploader's own folder to satisfy storage RLS.
+    const path = `${userId}/tournament-${selected.id}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+    if (uploadError) { toast.error("Failed to upload image."); setBannerUploading(false); return; }
+    const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+    // Cache-bust so a re-uploaded image (same path) refreshes in the browser.
+    setBannerUrl(`${publicUrl}?v=${Date.now()}`);
+    setBannerUploading(false);
+    toast.success("Image uploaded — click Save Banner to apply.");
   };
 
   const saveBanner = async () => {
@@ -1311,7 +1332,25 @@ export default function DirectorPage() {
               <h3 className="font-display text-2xl tracking-wide">BANNER IMAGE</h3>
               <button onClick={() => setEditingBanner(false)} className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary"><X size={14} weight="bold" /></button>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">Paste a direct image URL. Recommended: 1600×600px.</p>
+            <p className="text-sm text-muted-foreground mb-4">Upload an image from your device or paste a direct image URL. Recommended: 1600×600px.</p>
+
+            {/* Upload from device */}
+            <button
+              type="button"
+              onClick={() => bannerFileInputRef.current?.click()}
+              disabled={bannerUploading}
+              className="w-full h-12 rounded-xl border border-dashed border-border hover:border-primary/50 hover:bg-secondary/60 flex items-center justify-center gap-2 text-sm font-display tracking-wider transition-colors mb-4 disabled:opacity-50"
+            >
+              <UploadSimple size={15} weight="bold" /> {bannerUploading ? "UPLOADING…" : "UPLOAD IMAGE"}
+            </button>
+            <input ref={bannerFileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleBannerUpload} />
+
+            <div className="flex items-center gap-3 my-4">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-[10px] font-mono tracking-widest text-muted-foreground">OR PASTE A URL</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
             <input type="url" value={bannerUrl} onChange={(e) => setBannerUrl(e.target.value)} placeholder="https://example.com/banner.jpg" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring mb-4" />
             {bannerUrl && <img src={bannerUrl} alt="Preview" className="w-full h-32 object-cover rounded-xl mb-4" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />}
             <div className="flex gap-3">
