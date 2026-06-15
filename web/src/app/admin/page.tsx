@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Lightning, X, Plus, Users, CurrencyDollar, Trophy,
-  Gauge, ChartBar, CheckCircle, Clock, Warning,
-  Gear, SignOut, CaretDown, CaretUp, TrendUp,
-  ShieldCheck, MagnifyingGlass, Bell,
-  ArrowSquareOut, Envelope, UserCircle, Megaphone,
-  CheckFat, Ticket, PencilSimple, Trash, ArrowRight,
-  WarningCircle, Broadcast, Star, ChatCircleDots,
+  Lightning, X, Users, CurrencyDollar, Trophy,
+  Gauge, CheckCircle, Clock, Warning,
+  Gear, SignOut, ShieldCheck, MagnifyingGlass, Bell,
+  ArrowSquareOut, Envelope, Megaphone,
+  CheckFat, WarningCircle, Broadcast, ChatCircleDots,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -178,10 +176,8 @@ export default function AdminPage() {
   const [composeBody, setComposeBody] = useState("");
   const [showEmailList, setShowEmailList] = useState(false);
 
-  useEffect(() => { load(); }, []);
-
-  const load = async () => {
-    setLoading(true);
+  const load = useCallback(async () => {
+    // `loading` initializes to true; the spinner shows until this resolves.
     try {
       const userId = await getUserId();
       if (!userId) { router.push("/auth"); return; }
@@ -215,7 +211,9 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => { load(); }, [load]);
 
   // ── Approvals ───────────────────────────────────────────────────────────────
 
@@ -328,14 +326,14 @@ export default function AdminPage() {
     return matchesSearch && matchesStatus;
   });
 
-  // Simulated weekly signup data
-  const weeklySignups = Array.from({ length: 12 }, (_, i) => Math.round(5 + i * 3 + Math.random() * 8));
+  // Simulated weekly signup data (computed once, not on every render)
+  const [weeklySignups] = useState(() => Array.from({ length: 12 }, (_, i) => Math.round(5 + i * 3 + Math.random() * 8)));
 
   const firstName = adminName.split(" ")[0];
 
   // ── Sidebar ───────────────────────────────────────────────────────────────────
 
-  const SidebarContent = () => (
+  const renderSidebar = () => (
     <>
       <div className="px-5 py-5 border-b border-border flex-shrink-0">
         <Link href="/" className="flex items-center gap-2">
@@ -452,14 +450,14 @@ export default function AdminPage() {
                 <X size={14} weight="bold" />
               </button>
             </div>
-            <SidebarContent />
+            {renderSidebar()}
           </aside>
         </div>
       )}
 
       {/* Desktop sidebar */}
       <aside className="w-60 flex-shrink-0 border-r border-border bg-card hidden lg:flex flex-col h-screen sticky top-0">
-        <SidebarContent />
+        {renderSidebar()}
       </aside>
 
       {/* Main */}
