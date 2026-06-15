@@ -258,6 +258,8 @@ export default function MatchmakingPage() {
   const [matchedPartner, setMatchedPartner] = useState<Partner | null>(null);
   const [messagingTarget, setMessagingTarget] = useState<Partner | null>(null);
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
+  const [activeTab, setActiveTab] = useState<"discover" | "requests">("discover");
+  const [incoming, setIncoming] = useState<Partner[]>([]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -296,6 +298,20 @@ export default function MatchmakingPage() {
 
       const { data: userProfiles } = await supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name");
       setAllUsers((userProfiles ?? []) as MessagingUserProfile[]);
+
+      // Incoming likes (people who liked me that I haven't responded to)
+      const { data: incomingSwipes } = await supabase
+        .from("matchmaking_swipes")
+        .select("requester_id")
+        .eq("target_id", user.id)
+        .eq("direction", "like");
+      if (incomingSwipes && incomingSwipes.length > 0) {
+        const incomingIds = incomingSwipes.map((s) => s.requester_id).filter((id) => !swipedIds.has(id));
+        if (incomingIds.length > 0) {
+          const { data: ip } = await supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability").in("id", incomingIds);
+          setIncoming((ip ?? []).map((p) => profileToPartner(p, meDupr, meAvail)));
+        }
+      }
 
       // Mutual matches
       const { data: mutual } = await supabase.from("v_mutual_matches").select("player_a,player_b").or(`player_a.eq.${user.id},player_b.eq.${user.id}`);
@@ -420,6 +436,135 @@ export default function MatchmakingPage() {
         </div>
       </section>
 
+      {/* Tab switcher */}
+      <div className="border-b border-border bg-card/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex gap-1">
+            {(["discover", "requests"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`relative px-5 py-3 font-mono text-xs tracking-[0.2em] border-b-2 transition-colors ${activeTab === tab ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                {tab.toUpperCase()}
+                {tab === "requests" && incoming.length > 0 && (
+                  <span className="ml-2 h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground font-mono text-[9px] inline-flex items-center justify-center">
+                    {incoming.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {activeTab === "requests" && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+          {/* Incoming likes */}
+          <section>
+            <div className="flex items-center gap-3 mb-5">
+              <h2 className="font-display text-2xl tracking-wide">INCOMING LIKES</h2>
+              {incoming.length > 0 && (
+                <span className="h-6 min-w-6 px-2 rounded-full bg-primary text-primary-foreground font-mono text-xs flex items-center justify-center">{incoming.length}</span>
+              )}
+            </div>
+            {incoming.length === 0 ? (
+              <div className="border border-dashed border-border rounded-2xl p-10 text-center text-muted-foreground">
+                <Heart size={28} weight="duotone" className="mx-auto mb-2.5 text-primary" />
+                <p className="text-sm">No pending likes yet. Keep swiping to get noticed!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {incoming.map((p) => (
+                  <div key={p.id} className="border border-border rounded-2xl bg-card p-4 flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <img src={p.img} alt="" className="h-14 w-14 rounded-xl object-cover flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-display text-lg tracking-wide truncate">{p.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {p.dupr ? `DUPR ${p.dupr}` : p.skill_level?.replace("-", " – ")}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                          <MapPin size={10} weight="bold" className="text-primary flex-shrink-0" />{p.location}
+                        </div>
+                      </div>
+                      <div className="font-mono text-xs text-primary flex-shrink-0">{p.matchPct}%</div>
+                    </div>
+                    {p.bio && <p className="text-xs text-muted-foreground line-clamp-2">{p.bio}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => {
+                          if (!myId) return;
+                          const supabase = createClient();
+                          await supabase.from("matchmaking_swipes").insert({ requester_id: myId, target_id: p.id, direction: "pass" as "like" | "pass" });
+                          setIncoming((prev) => prev.filter((x) => x.id !== p.id));
+                          toast("Passed", { description: p.name });
+                        }}
+                        className="flex-1 h-9 rounded-full border border-destructive text-destructive text-xs font-display tracking-[0.15em] hover:bg-destructive/10 transition-colors"
+                      >PASS</button>
+                      <button
+                        onClick={async () => {
+                          if (!myId) return;
+                          const supabase = createClient();
+                          await supabase.from("matchmaking_swipes").insert({ requester_id: myId, target_id: p.id, direction: "like" as "like" | "pass" });
+                          setIncoming((prev) => prev.filter((x) => x.id !== p.id));
+                          setMatches((prev) => [p, ...prev]);
+                          setTimeout(() => setMatchedPartner(p), 100);
+                        }}
+                        className="flex-1 h-9 rounded-full bg-primary text-primary-foreground text-xs font-display tracking-[0.15em] hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5"
+                      ><Heart size={13} weight="fill" /> LIKE BACK</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Mutual matches */}
+          <section>
+            <div className="flex items-center gap-3 mb-5">
+              <h2 className="font-display text-2xl tracking-wide">MUTUAL MATCHES</h2>
+              {matches.length > 0 && (
+                <span className="h-6 min-w-6 px-2 rounded-full bg-primary text-primary-foreground font-mono text-xs flex items-center justify-center">{matches.length}</span>
+              )}
+            </div>
+            {matches.length === 0 ? (
+              <div className="border border-dashed border-border rounded-2xl p-10 text-center text-muted-foreground">
+                <Heartbeat size={28} weight="duotone" className="mx-auto mb-2.5 text-primary" />
+                <p className="text-sm">No mutual matches yet. Like someone back to connect!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {matches.map((m) => (
+                  <div key={m.id} className="border border-border rounded-2xl bg-card p-4 flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <img src={m.img} alt="" className="h-14 w-14 rounded-xl object-cover flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-display text-lg tracking-wide truncate">{m.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {m.dupr ? `DUPR ${m.dupr}` : m.skill_level?.replace("-", " – ")}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                          <MapPin size={10} weight="bold" className="text-primary flex-shrink-0" />{m.location}
+                        </div>
+                      </div>
+                      <div className="font-mono text-xs text-primary flex-shrink-0">{m.matchPct}%</div>
+                    </div>
+                    <button
+                      onClick={() => setMessagingTarget(m)}
+                      className="w-full h-9 rounded-full bg-primary text-primary-foreground text-xs font-display tracking-[0.15em] hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <ChatCircleDots size={14} weight="fill" /> MESSAGE
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {activeTab === "discover" && (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* Card deck */}
         <div className="lg:col-span-2 flex flex-col items-center">
@@ -678,6 +823,7 @@ export default function MatchmakingPage() {
 
         </aside>
       </div>
+      )}
 
       {/* Filter drawer */}
       {showFilters && (
