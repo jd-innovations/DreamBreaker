@@ -222,13 +222,15 @@ export default function AdminPage() {
     const userId = await getUserId();
     const supabase = createClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Approval publishes the tournament immediately: set it to "open" so it
+    // appears on the public listing right away (audit stamps still recorded).
     const { error } = await (supabase as any).from("tournaments").update({
-      status: "approved", approved_at: new Date().toISOString(), approved_by: userId, rejected_reason: null,
+      status: "open", approved_at: new Date().toISOString(), approved_by: userId, rejected_reason: null,
     }).eq("id", id);
     setActioning(null);
     if (error) { toast.error("Failed to approve."); return; }
-    setTournaments((prev) => prev.map((t) => t.id === id ? { ...t, status: "approved", approved_at: new Date().toISOString() } : t));
-    toast.success("Tournament approved!");
+    setTournaments((prev) => prev.map((t) => t.id === id ? { ...t, status: "open", approved_at: new Date().toISOString() } : t));
+    toast.success("Tournament approved & published!");
   };
 
   const rejectTournament = async (id: string, reason: string) => {
