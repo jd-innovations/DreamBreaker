@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import {
   Heart, X, XCircle, Lightning, MapPin, Star, ArrowRight, Trophy,
   SlidersHorizontal, ArrowLeft, ArrowUp, Users, Heartbeat,
-  CheckCircle,
+  CheckCircle, ChatCircleDots,
 } from "@phosphor-icons/react";
+import { MessagingPanel } from "@/components/messaging/panel";
+import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
 import Link from "next/link";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
@@ -253,6 +255,9 @@ export default function MatchmakingPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [sheetPartner, setSheetPartner] = useState<Partner | null>(null);
+  const [matchedPartner, setMatchedPartner] = useState<Partner | null>(null);
+  const [messagingTarget, setMessagingTarget] = useState<Partner | null>(null);
+  const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -289,6 +294,9 @@ export default function MatchmakingPage() {
       const partners = (profiles ?? []).filter((p) => !swipedIds.has(p.id)).map((p) => profileToPartner(p, meDupr, meAvail));
       setDeck(partners.length > 0 ? [...partners].reverse() : matchPartners.map((p) => mockToPartner(p, meDupr, meAvail)));
 
+      const { data: userProfiles } = await supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name");
+      setAllUsers((userProfiles ?? []) as MessagingUserProfile[]);
+
       // Mutual matches
       const { data: mutual } = await supabase.from("v_mutual_matches").select("player_a,player_b").or(`player_a.eq.${user.id},player_b.eq.${user.id}`);
       if (mutual && mutual.length > 0) {
@@ -319,8 +327,23 @@ export default function MatchmakingPage() {
       await supabase.from("matchmaking_swipes").insert({
         requester_id: myId,
         target_id: top.id,
-        direction: (dir === "left" ? "pass" : dir === "up" ? "super" : "like") as "like" | "pass",
+        direction: (dir === "left" ? "pass" : "like") as "like" | "pass",
       });
+
+      if (dir === "right" || dir === "up") {
+        // Check if the other person already liked us back → mutual match
+        const { data: theirSwipe } = await supabase
+          .from("matchmaking_swipes")
+          .select("id")
+          .eq("requester_id", top.id)
+          .eq("target_id", myId)
+          .in("direction", ["like"] as ("like" | "pass")[])
+          .maybeSingle();
+
+        if (theirSwipe) {
+          setTimeout(() => setMatchedPartner(top), 350);
+        }
+      }
     }
 
     setTimeout(() => {
@@ -328,10 +351,10 @@ export default function MatchmakingPage() {
       setSwipeDir(null);
       if (dir === "right") {
         setMatches((m) => [top, ...m]);
-        toast.success(`Liked ${top.name}!`, { description: "If they like you back, it's a match." });
+        if (!matchedPartner) toast.success(`Liked ${top.name}!`, { description: "If they like you back, it's a match." });
       } else if (dir === "up") {
         setMatches((m) => [top, ...m]);
-        toast.success(`Super-connected with ${top.name}!`, { description: "They'll see you at the top of their queue." });
+        if (!matchedPartner) toast.success(`Super-connected with ${top.name}!`, { description: "They'll see you at the top of their queue." });
       }
     }, 300);
   }, [top, myId]);
@@ -670,6 +693,72 @@ export default function MatchmakingPage() {
           onLike={() => { swipe("right"); setSheetPartner(null); }}
           onSuperConnect={() => { swipe("up"); setSheetPartner(null); }}
         />
+      )}
+
+      {/* It's a Match! modal */}
+      {matchedPartner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="relative w-full max-w-sm bg-card border border-border rounded-3xl overflow-hidden shadow-2xl text-center">
+            {/* Glow */}
+            <div className="absolute -top-16 left-1/2 -translate-x-1/2 h-48 w-48 rounded-full bg-primary/25 blur-3xl pointer-events-none" />
+
+            <div className="px-8 pt-10 pb-8 relative">
+              {/* Avatars */}
+              <div className="flex items-center justify-center gap-[-12px] mb-6">
+                <img src={matchedPartner.img} alt="" className="h-20 w-20 rounded-2xl object-cover border-4 border-background shadow-lg -mr-3 z-10" />
+                <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center shadow-lg z-20 border-2 border-background">
+                  <Heart size={18} weight="fill" className="text-primary-foreground" />
+                </div>
+                <div className="h-20 w-20 rounded-2xl bg-primary/10 border-4 border-background shadow-lg -ml-3 z-10 flex items-center justify-center">
+                  <span className="font-display text-2xl text-primary">YOU</span>
+                </div>
+              </div>
+
+              <div className="font-mono text-[10px] tracking-[0.35em] text-primary mb-1">IT'S A MATCH</div>
+              <h2 className="font-display text-3xl tracking-wide mb-2">YOU & {matchedPartner.name.split(" ")[0].toUpperCase()}</h2>
+              <p className="text-sm text-muted-foreground mb-8">
+                You both liked each other. Start a conversation and set up a game!
+              </p>
+
+              <div className="space-y-3">
+                <button
+                  onClick={() => { setMessagingTarget(matchedPartner); setMatchedPartner(null); }}
+                  className="w-full h-12 rounded-full bg-primary text-primary-foreground font-display tracking-[0.2em] text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
+                >
+                  <ChatCircleDots size={18} weight="fill" /> SEND A MESSAGE
+                </button>
+                <button
+                  onClick={() => setMatchedPartner(null)}
+                  className="w-full h-12 rounded-full border border-border text-sm font-display tracking-[0.15em] hover:bg-secondary transition-colors"
+                >
+                  KEEP SWIPING
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Messaging overlay */}
+      {messagingTarget && myId && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-3xl bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{ height: "min(620px, 90vh)" }}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+              <span className="font-display tracking-wider text-sm">MESSAGE {messagingTarget.name.split(" ")[0].toUpperCase()}</span>
+              <button onClick={() => setMessagingTarget(null)} className="h-7 w-7 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors">
+                <X size={13} weight="bold" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <MessagingPanel
+                currentUserId={myId}
+                allUsers={allUsers}
+                initialRecipientId={messagingTarget.id}
+                compact
+              />
+            </div>
+          </div>
+        </div>
       )}
     </PageShell>
   );
