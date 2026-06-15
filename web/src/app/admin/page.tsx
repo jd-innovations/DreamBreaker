@@ -169,6 +169,7 @@ export default function AdminPage() {
   const [editTarget, setEditTarget] = useState<Tournament | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [featuringId, setFeaturingId] = useState<string | null>(null);
+  const [dmRecipientId, setDmRecipientId] = useState<string | null>(null);
 
   const [messagingUnread, setMessagingUnread] = useState(0);
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
@@ -988,6 +989,16 @@ export default function AdminPage() {
                             <Prohibit size={13} />
                           </button>
                         )}
+                        <button onClick={() => { setDmRecipientId(t.director_id); setNavSection("messages"); }}
+                          title="Message director"
+                          className="h-8 w-8 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors">
+                          <ChatCircleDots size={13} />
+                        </button>
+                        <button onClick={() => { setComposeRecipientType("individual"); setComposeRecipientId(t.director_id); setNavSection("comms"); }}
+                          title="Email director"
+                          className="h-8 w-8 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors">
+                          <Envelope size={13} />
+                        </button>
                         <button onClick={() => setConfirmAction({ type: "delete", t })} disabled={actioning === t.id}
                           title="Delete tournament"
                           className="h-8 w-8 rounded-full border border-border hover:bg-red-500/10 hover:text-red-400 hover:border-red-400/40 flex items-center justify-center transition-colors disabled:opacity-50">
@@ -1238,6 +1249,7 @@ export default function AdminPage() {
               <MessagingPanel
                 currentUserId={currentUserId}
                 allUsers={allUsers}
+                initialRecipientId={dmRecipientId ?? undefined}
                 onUnreadChange={setMessagingUnread}
               />
             </div>
