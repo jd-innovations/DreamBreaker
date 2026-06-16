@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Heart, X, XCircle, Lightning, MapPin, Star, ArrowRight, Trophy,
+  Heart, X, XCircle, Plug, MapPin, Star, ArrowRight, Trophy,
   SlidersHorizontal, ArrowLeft, ArrowUp, Users, Heartbeat,
-  CheckCircle, ChatCircleDots,
+  CheckCircle, ChatCircleDots, ArrowCounterClockwise,
 } from "@phosphor-icons/react";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
@@ -260,6 +260,7 @@ export default function MatchmakingPage() {
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
   const [activeTab, setActiveTab] = useState<"discover" | "requests">("discover");
   const [incoming, setIncoming] = useState<Partner[]>([]);
+  const [lastPassed, setLastPassed] = useState<Partner | null>(null);
   // Swipe drag
   const [drag, setDrag] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
@@ -336,8 +337,23 @@ export default function MatchmakingPage() {
 
   const top = deck[deck.length - 1];
 
+  const undo = useCallback(async () => {
+    if (!lastPassed) return;
+    if (myId) {
+      const supabase = createClient();
+      await supabase.from("matchmaking_swipes")
+        .delete()
+        .eq("requester_id", myId)
+        .eq("target_id", lastPassed.id)
+        .eq("direction", "pass");
+    }
+    setDeck((d) => [...d, lastPassed]);
+    setLastPassed(null);
+  }, [lastPassed, myId]);
+
   const swipe = useCallback(async (dir: "left" | "right" | "up") => {
     if (!top) return;
+    if (dir === "left") setLastPassed(top);
     setSwipeDir(dir);
     if (typeof navigator !== "undefined" && navigator.vibrate) {
       navigator.vibrate(dir === "up" ? [40, 20, 40] : dir === "right" ? 40 : 20);
@@ -730,7 +746,7 @@ export default function MatchmakingPage() {
                         {topCard.matchReasons.length > 0 && (
                           <div className="mb-4">
                             <p className="font-mono text-[9px] tracking-[0.25em] text-primary mb-2 flex items-center gap-1.5">
-                              <Lightning size={10} weight="fill" /> WHY WE MATCHED YOU
+                              <Plug size={10} weight="fill" /> WHY WE MATCHED YOU
                             </p>
                             <div className="flex flex-wrap gap-2">
                               {topCard.matchReasons.map((r) => <ReasonPill key={r} label={r} />)}
@@ -774,8 +790,13 @@ export default function MatchmakingPage() {
                         <button onClick={() => swipe("left")} className="flex-1 h-12 rounded-full border-2 border-destructive text-destructive font-display tracking-[0.15em] text-sm flex items-center justify-center gap-2 hover:bg-destructive/10 transition-colors active:scale-95">
                           <XCircle size={18} weight="fill" /> PASS
                         </button>
+                        {lastPassed && (
+                          <button onClick={undo} className="h-10 w-10 rounded-full border border-border text-muted-foreground flex items-center justify-center transition-all hover:border-primary hover:text-primary active:scale-95 flex-shrink-0" title="Undo last pass">
+                            <ArrowCounterClockwise size={16} weight="bold" />
+                          </button>
+                        )}
                         <button onClick={() => swipe("up")} className="h-12 w-12 rounded-full bg-foreground text-background flex items-center justify-center transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="Super Connect">
-                          <Lightning size={20} weight="fill" />
+                          <Plug size={20} weight="fill" />
                         </button>
                         <button onClick={() => swipe("right")} className="flex-1 h-12 rounded-full bg-primary text-primary-foreground font-display tracking-[0.15em] text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors active:scale-95">
                           <Heart size={18} weight="fill" /> LIKE
@@ -801,13 +822,22 @@ export default function MatchmakingPage() {
                   >
                     <XCircle size={18} weight="fill" /> PASS
                   </button>
+                  {lastPassed && (
+                    <button
+                      onClick={undo}
+                      className="h-10 w-10 rounded-full border border-border text-muted-foreground flex items-center justify-center transition-all hover:border-primary hover:text-primary active:scale-95 flex-shrink-0"
+                      title="Undo last pass"
+                    >
+                      <ArrowCounterClockwise size={16} weight="bold" />
+                    </button>
+                  )}
                   <button
                     onClick={() => swipe("up")}
                     data-testid="swipe-up-btn"
                     className="h-12 w-12 rounded-full bg-foreground text-background flex items-center justify-center transition-all hover:scale-105 active:scale-95 flex-shrink-0"
                     title="Super Connect"
                   >
-                    <Lightning size={20} weight="fill" />
+                    <Plug size={20} weight="fill" />
                   </button>
                   <button
                     onClick={() => swipe("right")}
