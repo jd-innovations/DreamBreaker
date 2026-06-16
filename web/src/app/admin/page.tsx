@@ -1561,10 +1561,6 @@ export default function AdminPage() {
           {/* ── Messages ── */}
           {navSection === "messages" && currentUserId && (
             <div className="space-y-4">
-              <div>
-                <h2 className="font-display text-xl tracking-wide">MESSAGES</h2>
-                <p className="text-sm text-muted-foreground">Direct messaging with directors and users</p>
-              </div>
               <MessagingPanel
                 currentUserId={currentUserId}
                 allUsers={allUsers}
