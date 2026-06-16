@@ -12,6 +12,7 @@ import {
   Star, PencilSimple, Trash, Prohibit, DotsThree,
   Flag,
 } from "@phosphor-icons/react";
+import { Logo } from "@/components/layout/logo";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
@@ -593,9 +594,8 @@ export default function AdminPage() {
   const renderSidebar = () => (
     <>
       <div className="px-5 py-5 border-b border-border flex-shrink-0">
-        <Link href="/" className="flex items-center gap-2">
-          <Lightning size={18} weight="fill" className="text-primary" />
-          <span className="font-display tracking-wider text-sm">Compete Pickleball</span>
+        <Link href="/">
+          <Logo />
         </Link>
         <div className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mt-1">ADMIN PORTAL</div>
       </div>

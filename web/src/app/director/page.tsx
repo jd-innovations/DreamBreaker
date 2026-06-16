@@ -13,6 +13,7 @@ import {
 } from "@phosphor-icons/react";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
+import { Logo } from "@/components/layout/logo";
 import { NotificationBell } from "@/components/notifications/bell";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -549,9 +550,8 @@ export default function DirectorPage() {
     <>
       {/* Logo */}
       <div className="px-5 py-5 border-b border-border">
-        <Link href="/" className="flex items-center gap-2">
-          <Lightning size={18} weight="fill" className="text-primary" />
-          <span className="font-display tracking-wider text-sm">Compete Pickleball</span>
+        <Link href="/">
+          <Logo />
         </Link>
         <div className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mt-1">TOURNAMENT DIRECTOR</div>
       </div>
