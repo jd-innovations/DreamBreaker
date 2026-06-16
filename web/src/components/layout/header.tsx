@@ -143,13 +143,16 @@ export function Header() {
               >
                 Login
               </Link>
-              <Link
-                href="/auth?mode=signup"
-                className="h-8 px-3 sm:h-10 sm:px-5 rounded-full font-semibold text-xs sm:text-sm border border-foreground/30 bg-foreground/10 text-foreground hover:bg-foreground/20 transition-colors inline-flex items-center"
-                data-testid="header-getstarted-btn"
-              >
-                Get Started
-              </Link>
+              <div className="group relative inline-flex p-[1.5px] rounded-full">
+                <span className="absolute inset-0 rounded-full bg-gradient-to-r from-violet-500 via-pink-400 to-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 group-hover:animate-pulse" />
+                <Link
+                  href="/auth?mode=signup"
+                  className="relative h-8 px-3 sm:h-10 sm:px-5 rounded-full font-semibold text-xs sm:text-sm dark:bg-zinc-950 bg-white text-foreground hover:bg-secondary/40 transition-colors inline-flex items-center z-10"
+                  data-testid="header-getstarted-btn"
+                >
+                  Get Started
+                </Link>
+              </div>
             </>
           )}
 
