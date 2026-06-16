@@ -938,7 +938,7 @@ export default function MatchmakingPage() {
               <div className="space-y-3">
                 <button
                   onClick={() => { setMessagingTarget(matchedPartner); setMatchedPartner(null); }}
-                  className="w-full h-12 rounded-full bg-primary text-primary-foreground font-display tracking-[0.2em] text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
+                  className="w-full h-12 rounded-full border border-white/20 bg-white/10 text-white font-display tracking-[0.2em] text-sm flex items-center justify-center gap-2 hover:bg-white/15 transition-colors"
                 >
                   <ChatCircleDots size={18} weight="fill" /> SEND A MESSAGE
                 </button>
