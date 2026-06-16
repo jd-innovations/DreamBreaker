@@ -115,10 +115,12 @@ export function Header() {
               </button>
               <Link
                 href="/dashboard"
-                className="h-10 px-5 rounded-full font-semibold text-sm bg-gradient-to-r from-violet-600/50 to-purple-500/50 text-white hover:brightness-110 transition-all inline-flex items-center font-mono tracking-widest"
+                className="p-[1.5px] rounded-full bg-gradient-to-r from-violet-500 via-pink-400 to-cyan-400 hover:brightness-110 transition-all inline-flex"
                 data-testid="header-getstarted-btn"
               >
-                {initials ?? "ME"}
+                <span className="h-[37px] px-5 rounded-full font-mono tracking-widest text-sm bg-gradient-to-r from-violet-600/50 to-purple-500/50 text-white inline-flex items-center">
+                  {initials ?? "ME"}
+                </span>
               </Link>
             </>
           ) : (
