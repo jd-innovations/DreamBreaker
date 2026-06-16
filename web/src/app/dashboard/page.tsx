@@ -732,7 +732,7 @@ export default function DashboardPage() {
 
           {/* ── Messages ── */}
           {navSection === "messages" && currentUserId && (
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden pb-[90px] lg:pb-0">
               <MessagingPanel
                 currentUserId={currentUserId}
                 allUsers={allUsers}
