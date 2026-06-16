@@ -434,7 +434,7 @@ export default function DirectorTournamentPage() {
 
       const { data: regs } = await supabase
         .from("registrations")
-        .select("id,player_id,status,division_id,created_at,profiles(full_name,dupr,skill_level)")
+        .select("id,player_id,status,division_id,created_at,profiles!player_id(full_name,dupr,skill_level)")
         .eq("tournament_id", id)
         .order("created_at", { ascending: true });
       setRegistrations((regs ?? []) as unknown as Registration[]);

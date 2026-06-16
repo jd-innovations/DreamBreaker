@@ -382,7 +382,7 @@ export default function DirectorPage() {
     if (regsLoaded === tid) return;
     const supabase = createClient();
     const { data } = await supabase.from("registrations")
-      .select("id,player_id,status,division_id,created_at,profiles(full_name,dupr,skill_level)")
+      .select("id,player_id,status,division_id,created_at,profiles!player_id(full_name,dupr,skill_level)")
       .eq("tournament_id", tid)
       .order("created_at", { ascending: true });
     setRegistrations((data ?? []) as unknown as Registration[]);
