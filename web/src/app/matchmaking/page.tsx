@@ -172,7 +172,7 @@ function InfoChip({ label, value }: { label: string; value: string }) {
 
 function ReasonPill({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-foreground/20 bg-foreground/8 text-xs font-mono text-foreground">
+    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-foreground/30 bg-foreground/10 text-xs font-mono text-foreground">
       <CheckCircle size={11} weight="fill" />{label}
     </span>
   );
@@ -594,7 +594,7 @@ export default function MatchmakingPage() {
                     </div>
                     <button
                       onClick={() => setMessagingTarget(m)}
-                      className="w-full h-9 rounded-full border border-foreground/20 bg-foreground/8 text-foreground text-xs font-mono tracking-[0.15em] hover:bg-foreground/15 transition-colors flex items-center justify-center gap-1.5"
+                      className="w-full h-9 rounded-full border border-foreground/30 bg-foreground/10 text-foreground text-xs font-mono tracking-[0.15em] hover:bg-foreground/20 transition-colors flex items-center justify-center gap-1.5"
                     >
                       <ChatCircleDots size={14} weight="fill" /> MESSAGE
                     </button>
@@ -660,7 +660,7 @@ export default function MatchmakingPage() {
                       onPointerCancel={onCardPointerUp}
                     >
                       <img src={topCard.img} alt="" draggable={false} className="h-full w-full object-cover object-top pointer-events-none" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:via-transparent lg:to-background" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:via-transparent lg:to-card" />
 
                       {/* Match ring */}
                       <div className="absolute top-4 left-4">
@@ -938,7 +938,7 @@ export default function MatchmakingPage() {
               <div className="space-y-3">
                 <button
                   onClick={() => { setMessagingTarget(matchedPartner); setMatchedPartner(null); }}
-                  className="w-full h-12 rounded-full border border-foreground/20 bg-foreground/8 text-foreground font-display tracking-[0.2em] text-sm flex items-center justify-center gap-2 hover:bg-foreground/15 transition-colors"
+                  className="w-full h-12 rounded-full border border-foreground/30 bg-foreground/10 text-foreground font-display tracking-[0.2em] text-sm flex items-center justify-center gap-2 hover:bg-foreground/20 transition-colors"
                 >
                   <ChatCircleDots size={18} weight="fill" /> SEND A MESSAGE
                 </button>
