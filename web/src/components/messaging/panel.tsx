@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import {
   PaperPlaneRight, MagnifyingGlass, PencilSimpleLine, ArrowLeft,
-  ChatCircle, Checks,
+  ChatCircle, Checks, Heart,
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -33,6 +34,8 @@ interface Conversation {
   otherName: string;
   otherRole: string;
   otherAvatar: string | null;
+  otherDupr: number | null;
+  otherSkill: string | null;
   lastBody: string;
   lastAt: string | null;
   unread: number;
@@ -43,6 +46,16 @@ export interface UserProfile {
   full_name: string | null;
   role: string;
   avatar_url?: string | null;
+  dupr?: number | null;
+  skill_level?: string | null;
+}
+
+export interface MatchSummary {
+  id: string;
+  name: string;
+  avatar: string | null;
+  dupr?: number | null;
+  skill?: string | null;
 }
 
 export interface MessagingPanelProps {
@@ -51,6 +64,17 @@ export interface MessagingPanelProps {
   initialRecipientId?: string;
   onUnreadChange?: (count: number) => void;
   compact?: boolean;
+  /** When provided, renders the Tinder-style NEW MATCHES strip (player context). */
+  matches?: MatchSummary[];
+  /** Count shown on the likes tile in the matches strip. */
+  likesCount?: number;
+}
+
+// "Name, 4.2" — DUPR if available, else self-rated skill band.
+function metaLabel(dupr: number | null | undefined, skill: string | null | undefined) {
+  if (dupr != null) return String(dupr);
+  if (skill) return skill;
+  return null;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -85,17 +109,25 @@ function gradientFor(seed: string) {
   return GRADIENTS[h % GRADIENTS.length];
 }
 
-function Avatar({ name, url, seed, size = 48, ring = false }: { name: string | null; url?: string | null; seed: string; size?: number; ring?: boolean }) {
-  const ringCls = ring ? "p-[2px] bg-gradient-to-tr from-primary to-fuchsia-500" : "";
+function Avatar({ name, url, seed, size = 48, ring = false, online = false }: { name: string | null; url?: string | null; seed: string; size?: number; ring?: boolean; online?: boolean }) {
+  const inner = url ? (
+    <img src={url} alt="" className="rounded-full object-cover h-full w-full" style={{ width: size, height: size }} />
+  ) : (
+    <div className={`rounded-full flex items-center justify-center text-white font-display bg-gradient-to-tr ${gradientFor(seed)}`}
+      style={{ width: size, height: size, fontSize: size * 0.36 }}>
+      {initials(name)}
+    </div>
+  );
   return (
-    <div className={`rounded-full flex-shrink-0 ${ringCls}`} style={ring ? { width: size + 4, height: size + 4 } : undefined}>
-      {url ? (
-        <img src={url} alt="" className="rounded-full object-cover h-full w-full" style={{ width: size, height: size }} />
-      ) : (
-        <div className={`rounded-full flex items-center justify-center text-white font-display bg-gradient-to-tr ${gradientFor(seed)}`}
-          style={{ width: size, height: size, fontSize: size * 0.36 }}>
-          {initials(name)}
+    <div className="relative flex-shrink-0" style={{ width: ring ? size + 6 : size, height: ring ? size + 6 : size }}>
+      {ring ? (
+        <div className="rounded-full p-[2.5px] bg-gradient-to-tr from-primary to-fuchsia-500 h-full w-full flex items-center justify-center">
+          <div className="rounded-full bg-card p-[1.5px]">{inner}</div>
         </div>
+      ) : inner}
+      {online && (
+        <span className="absolute bottom-0 right-0 rounded-full bg-emerald-500 border-2 border-card"
+          style={{ height: Math.max(10, size * 0.24), width: Math.max(10, size * 0.24) }} />
       )}
     </div>
   );
@@ -126,7 +158,10 @@ export function MessagingPanel({
   initialRecipientId,
   onUnreadChange,
   compact = false,
+  matches,
+  likesCount = 0,
 }: MessagingPanelProps) {
+  const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [profileCache, setProfileCache] = useState<Record<string, UserProfile>>({});
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
@@ -178,7 +213,7 @@ export function MessagingPanel({
       const pMap: Record<string, UserProfile> = { ...profileCache };
       if (missingIds.length > 0) {
         const { data: profs } = await supabase.from("profiles")
-          .select("id,full_name,role,avatar_url")
+          .select("id,full_name,role,avatar_url,dupr,skill_level")
           .in("id", missingIds);
         for (const p of profs ?? []) pMap[p.id] = p as UserProfile;
         setProfileCache(pMap);
@@ -206,6 +241,8 @@ export function MessagingPanel({
           otherName: pMap[otherId]?.full_name ?? "Unknown",
           otherRole: pMap[otherId]?.role ?? "player",
           otherAvatar: pMap[otherId]?.avatar_url ?? null,
+          otherDupr: pMap[otherId]?.dupr ?? null,
+          otherSkill: pMap[otherId]?.skill_level ?? null,
           lastBody: last?.body ?? "",
           lastAt: last?.created_at ?? c.last_message_at,
           unread,
@@ -249,6 +286,23 @@ export function MessagingPanel({
     return () => { supabase.removeChannel(channel); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId, selectedConvId]);
+
+  // ── Presence (active-now green dots) ─────────────────────────────────────────
+  useEffect(() => {
+    if (!currentUserId) return;
+    const channel = supabase.channel("presence:messaging", {
+      config: { presence: { key: currentUserId } },
+    });
+    channel
+      .on("presence", { event: "sync" }, () => {
+        setOnlineIds(new Set(Object.keys(channel.presenceState())));
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") await channel.track({ online_at: new Date().toISOString() });
+      });
+    return () => { supabase.removeChannel(channel); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId]);
 
   // Auto-scroll
   useEffect(() => {
@@ -310,6 +364,8 @@ export function MessagingPanel({
       otherName: otherProfile?.full_name ?? "Unknown",
       otherRole: otherProfile?.role ?? "player",
       otherAvatar: otherProfile?.avatar_url ?? null,
+      otherDupr: otherProfile?.dupr ?? null,
+      otherSkill: otherProfile?.skill_level ?? null,
       lastBody: "",
       lastAt: null,
       unread: 0,
@@ -455,6 +511,33 @@ export function MessagingPanel({
         {/* Conversation list */}
         {!showNewConvo && (
           <div className="flex-1 overflow-y-auto">
+            {/* NEW MATCHES strip — player context only */}
+            {matches && (matches.length > 0 || likesCount > 0) && (
+              <div className="px-4 pt-1 pb-3">
+                <div className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mb-3">NEW MATCHES</div>
+                <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-hide">
+                  {likesCount > 0 && (
+                    <Link href="/matchmaking" className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                      <div className="h-[58px] w-[58px] rounded-full bg-gradient-to-br from-primary to-fuchsia-600 flex items-center justify-center shadow-lg shadow-primary/30">
+                        <Heart size={24} weight="fill" className="text-white" />
+                      </div>
+                      <span className="text-[11px] font-semibold text-primary">{likesCount > 99 ? "99+" : likesCount}</span>
+                    </Link>
+                  )}
+                  {matches.map((mt) => (
+                    <button key={mt.id} onClick={() => startOrOpenConversation(mt.id)} className="flex flex-col items-center gap-1.5 flex-shrink-0 w-[58px]">
+                      <Avatar name={mt.name} url={mt.avatar} seed={mt.id} size={52} ring online={onlineIds.has(mt.id)} />
+                      <span className="text-[11px] truncate w-full text-center">{mt.name.split(" ")[0]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {matches && (matches.length > 0 || likesCount > 0) && !loadingConvos && filteredConvos.length > 0 && (
+              <div className="px-4 pb-1.5 font-mono text-[10px] tracking-[0.2em] text-muted-foreground">CONVERSATIONS</div>
+            )}
+
             {loadingConvos && (
               <div className="flex justify-center py-12">
                 <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -469,24 +552,33 @@ export function MessagingPanel({
                 </button>
               </div>
             )}
-            {filteredConvos.map((c) => (
-              <button key={c.id} onClick={() => openConversation(c.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mx-1 my-0.5 transition-colors text-left ${selectedConvId === c.id ? "bg-secondary" : "hover:bg-secondary/50"}`}>
-                <Avatar name={c.otherName} url={c.otherAvatar} seed={c.otherId} size={52} ring={c.unread > 0} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline justify-between gap-1">
-                    <span className={`text-sm truncate ${c.unread > 0 ? "font-bold text-foreground" : "font-medium"}`}>{c.otherName}</span>
-                    {c.lastAt && <span className="text-[11px] text-muted-foreground flex-shrink-0">{timeAgo(c.lastAt)}</span>}
+            {filteredConvos.map((c) => {
+              const meta = metaLabel(c.otherDupr, c.otherSkill);
+              return (
+                <button key={c.id} onClick={() => openConversation(c.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left ${selectedConvId === c.id ? "bg-secondary" : "hover:bg-secondary/40"}`}>
+                  <Avatar name={c.otherName} url={c.otherAvatar} seed={c.otherId} size={56} online={onlineIds.has(c.otherId)} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`text-[15px] truncate ${c.unread > 0 ? "font-bold text-foreground" : "font-semibold"}`}>
+                        {c.otherName}{meta ? <span className="text-muted-foreground font-normal">, {meta}</span> : null}
+                      </span>
+                      {c.lastAt && <span className="text-[12px] text-muted-foreground flex-shrink-0">{timeAgo(c.lastAt)}</span>}
+                    </div>
+                    <div className="flex items-center justify-between gap-2 mt-0.5">
+                      <span className={`text-[13px] truncate ${c.unread > 0 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                        {c.lastBody || <span className="italic opacity-50">No messages yet</span>}
+                      </span>
+                      {c.unread > 0 && (
+                        <span className="h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center flex-shrink-0">
+                          {c.unread > 9 ? "9+" : c.unread}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className={`text-[13px] truncate flex-1 ${c.unread > 0 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                      {c.lastBody || <span className="italic opacity-50">No messages yet</span>}
-                    </span>
-                    {c.unread > 0 && <span className="h-2.5 w-2.5 rounded-full bg-primary flex-shrink-0" />}
-                  </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

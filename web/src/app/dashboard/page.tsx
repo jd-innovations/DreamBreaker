@@ -15,7 +15,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { MessagingPanel } from "@/components/messaging/panel";
-import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
+import type { UserProfile as MessagingUserProfile, MatchSummary } from "@/components/messaging/panel";
 import { NotificationBell } from "@/components/notifications/bell";
 import { MatchSettingsPanel } from "@/components/shared/match-settings-panel";
 import { playerStats, tournaments as mockTournaments, recentMatches as mockMatches } from "@/data/mock-data";
@@ -136,6 +136,8 @@ export default function DashboardPage() {
   const [messagingUnread, setMessagingUnread] = useState(0);
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [mmMatches, setMmMatches] = useState<MatchSummary[]>([]);
+  const [mmLikes, setMmLikes] = useState(0);
   // Captured once at mount; used to decide whether holds are still active.
   const [now] = useState(() => Date.now());
 
@@ -157,6 +159,18 @@ export default function DashboardPage() {
 
       const { data: userProfiles } = await supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name");
       setAllUsers((userProfiles ?? []) as MessagingUserProfile[]);
+
+      // Matchmaking matches + pending likes → "New Matches" strip in Messages
+      const { data: mutual } = await supabase.from("v_mutual_matches").select("player_a,player_b").or(`player_a.eq.${user.id},player_b.eq.${user.id}`);
+      const matchIds = (mutual ?? []).map((m) => m.player_a === user.id ? m.player_b : m.player_a).filter(Boolean) as string[];
+      if (matchIds.length > 0) {
+        const { data: mp } = await supabase.from("profiles").select("id,full_name,avatar_url,dupr,skill_level").in("id", matchIds);
+        setMmMatches((mp ?? []).map((p) => ({ id: p.id, name: p.full_name ?? "Player", avatar: p.avatar_url, dupr: p.dupr, skill: p.skill_level })));
+      }
+      const { data: mySwipes } = await supabase.from("matchmaking_swipes").select("target_id").eq("requester_id", user.id);
+      const swipedSet = new Set((mySwipes ?? []).map((s) => s.target_id));
+      const { data: incomingLikes } = await supabase.from("matchmaking_swipes").select("requester_id").eq("target_id", user.id).eq("direction", "like");
+      setMmLikes(new Set((incomingLikes ?? []).map((s) => s.requester_id).filter((id) => !swipedSet.has(id))).size);
 
       const { data: prof } = await supabase
         .from("profiles")
@@ -635,6 +649,8 @@ export default function DashboardPage() {
                 currentUserId={currentUserId}
                 allUsers={allUsers}
                 onUnreadChange={setMessagingUnread}
+                matches={mmMatches}
+                likesCount={mmLikes}
               />
             </div>
           )}
