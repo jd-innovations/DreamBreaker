@@ -42,12 +42,16 @@ type SavedTournament = {
 
 type UpcomingEvent = {
   id: string;
+  registration_id: string;
   name: string;
   city: string;
   state: string;
   event_date: string;
   status: string;
   hold_expires_at?: string | null;
+  director_id?: string | null;
+  cancellation_policy?: string | null;
+  entry_fee_cents?: number | null;
 };
 
 type DisplayMatch = {
@@ -140,11 +144,14 @@ export default function DashboardPage() {
   const [mmLikes, setMmLikes] = useState(0);
   // Captured once at mount; used to decide whether holds are still active.
   const [now] = useState(() => Date.now());
+  const [cancelTarget, setCancelTarget] = useState<UpcomingEvent | null>(null);
+  const [cancelConfirming, setCancelConfirming] = useState(false);
+  const [dmDirectorId, setDmDirectorId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        setUpcoming(mockTournaments.slice(0, 2).map((t) => { const [city, state] = t.location.split(", "); return { id: t.id, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" }; }));
+        setUpcoming(mockTournaments.slice(0, 2).map((t, i) => { const [city, state] = t.location.split(", "); return { id: t.id, registration_id: `mock-reg-${i}`, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" }; }));
         setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
         setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments, duprDelta: playerStats.duprDelta });
         setLoading(false);
@@ -179,25 +186,26 @@ export default function DashboardPage() {
         .single();
       if (prof) setProfile(prof);
 
-      const { data: regs } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: regs } = await (supabase as any)
         .from("registrations")
-        .select("status, hold_expires_at, tournament:tournaments!tournament_id(id, name, city, state, event_date, status)")
+        .select("id, status, hold_expires_at, tournament:tournaments!tournament_id(id, name, city, state, event_date, status, director_id, cancellation_policy, entry_fee_cents)")
         .eq("player_id", user.id)
         .in("status", ["held", "registered", "checked_in"])
         .order("created_at", { ascending: false })
         .limit(10);
 
       const liveUpcoming: UpcomingEvent[] = (regs ?? [])
-        .map((r) => {
-          const t = r.tournament as { id: string; name: string; city: string; state: string; event_date: string; status: string } | null;
+        .map((r: { id: string; status: string; hold_expires_at?: string | null; tournament: { id: string; name: string; city: string; state: string; event_date: string; status: string; director_id?: string | null; cancellation_policy?: string | null; entry_fee_cents?: number | null } | null }) => {
+          const t = r.tournament;
           if (!t) return null;
-          return { id: t.id, name: t.name, city: t.city, state: t.state, event_date: t.event_date, status: r.status, hold_expires_at: (r as { hold_expires_at?: string | null }).hold_expires_at };
+          return { id: t.id, registration_id: r.id, name: t.name, city: t.city, state: t.state, event_date: t.event_date, status: r.status, hold_expires_at: r.hold_expires_at, director_id: t.director_id, cancellation_policy: t.cancellation_policy, entry_fee_cents: t.entry_fee_cents };
         })
         .filter(Boolean) as UpcomingEvent[];
 
-      setUpcoming(liveUpcoming.length > 0 ? liveUpcoming : mockTournaments.slice(0, 2).map((t) => {
+      setUpcoming(liveUpcoming.length > 0 ? liveUpcoming : mockTournaments.slice(0, 2).map((t, i) => {
         const [city, state] = t.location.split(", ");
-        return { id: t.id, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" };
+        return { id: t.id, registration_id: `mock-reg-${i}`, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" };
       }));
 
       const { data: matchRows } = await supabase
@@ -238,7 +246,7 @@ export default function DashboardPage() {
     }
 
     load().catch(() => {
-      setUpcoming(mockTournaments.slice(0, 2).map((t) => { const [city, state] = t.location.split(", "); return { id: t.id, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" }; }));
+      setUpcoming(mockTournaments.slice(0, 2).map((t, i) => { const [city, state] = t.location.split(", "); return { id: t.id, registration_id: `mock-reg-${i}`, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" }; }));
       setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
       setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments, duprDelta: playerStats.duprDelta });
       setLoading(false);
@@ -330,6 +338,7 @@ export default function DashboardPage() {
   );
 
   return (
+    <>
     <div className="flex h-screen bg-background overflow-hidden">
 
       {/* ── Desktop sidebar ── */}
@@ -514,6 +523,7 @@ export default function DashboardPage() {
                       const holdActive = holdExpiry && holdExpiry.getTime() > now;
                       return (
                         <div key={e.id} className="px-6 py-5 space-y-3">
+                          {/* Event info row */}
                           <Link href={`/tournaments/${e.id}`} className="flex items-start gap-4 hover:opacity-80 transition-opacity block">
                             <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isHeld ? "bg-amber-400/10" : "bg-primary/10"}`}>
                               <Calendar size={18} weight="bold" className={isHeld ? "text-amber-500" : "text-primary"} />
@@ -528,6 +538,8 @@ export default function DashboardPage() {
                             </div>
                             <ArrowRight size={16} className="text-muted-foreground flex-shrink-0 mt-1" />
                           </Link>
+
+                          {/* Hold expiry bar */}
                           {isHeld && holdActive && (
                             <div className="flex items-center gap-2 ml-14">
                               <Clock size={13} className="text-amber-500 flex-shrink-0" />
@@ -541,6 +553,29 @@ export default function DashboardPage() {
                               </Link>
                             </div>
                           )}
+
+                          {/* Quick actions */}
+                          <div className="flex items-center gap-2 ml-14 flex-wrap">
+                            <Link href={`/tournaments/${e.id}`}>
+                              <button className="h-8 px-4 rounded-full border border-border text-xs font-mono tracking-wide hover:bg-secondary/60 transition-colors flex items-center gap-1.5">
+                                <Ticket size={13} /> VIEW DETAILS
+                              </button>
+                            </Link>
+                            {e.director_id && (
+                              <button
+                                onClick={() => { setDmDirectorId(e.director_id!); setNavSection("messages"); }}
+                                className="h-8 px-4 rounded-full border border-border text-xs font-mono tracking-wide hover:bg-secondary/60 transition-colors flex items-center gap-1.5"
+                              >
+                                <ChatCircleDots size={13} /> MESSAGE DIRECTOR
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setCancelTarget(e)}
+                              className="h-8 px-4 rounded-full border border-destructive/50 text-destructive text-xs font-mono tracking-wide hover:bg-destructive/10 transition-colors flex items-center gap-1.5 ml-auto"
+                            >
+                              <X size={13} weight="bold" /> CANCEL
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -647,6 +682,7 @@ export default function DashboardPage() {
                 onUnreadChange={setMessagingUnread}
                 matches={mmMatches}
                 likesCount={mmLikes}
+                initialRecipientId={dmDirectorId ?? undefined}
               />
             </div>
           )}
@@ -727,5 +763,112 @@ export default function DashboardPage() {
       </nav>
 
     </div>
+
+    {/* ── Cancel Registration Lightbox ───────────────────────────────────── */}
+    {cancelTarget && (() => {
+      const eventDate = new Date(cancelTarget.event_date);
+      const daysUntil = Math.ceil((eventDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      const feeCents = cancelTarget.entry_fee_cents ?? 0;
+      const refundTier = daysUntil >= 7 ? "full" : daysUntil >= 3 ? "half" : "none";
+      const refundLabel = refundTier === "full"
+        ? feeCents > 0 ? `Full refund — $${(feeCents / 100).toFixed(2)}` : "Full refund eligible"
+        : refundTier === "half"
+          ? feeCents > 0 ? `50% refund — $${(feeCents / 200).toFixed(2)}` : "50% refund eligible"
+          : "No refund (within 72 hours)";
+      const refundColor = refundTier === "full" ? "text-emerald-400" : refundTier === "half" ? "text-amber-400" : "text-destructive";
+      const policy = cancelTarget.cancellation_policy ?? "Full refund if cancelled 7 or more days before the event. 50% refund if cancelled 3–6 days before. No refund within 72 hours of the event start.";
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-card border border-border rounded-3xl overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="px-6 pt-6 pb-4 border-b border-border">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-mono text-[10px] tracking-[0.25em] text-destructive mb-1">CANCEL REGISTRATION</p>
+                  <h2 className="font-display text-xl tracking-wide leading-tight">{cancelTarget.name}</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">{cancelTarget.city}, {cancelTarget.state} · {formatDate(cancelTarget.event_date)}</p>
+                </div>
+                <button onClick={() => setCancelTarget(null)} className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary flex-shrink-0 transition-colors">
+                  <X size={14} weight="bold" />
+                </button>
+              </div>
+            </div>
+
+            {/* Consequences */}
+            <div className="px-6 py-5 space-y-4">
+              {/* Refund status */}
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-secondary/60 border border-border">
+                <div>
+                  <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mb-0.5">REFUND STATUS</p>
+                  <p className={`font-semibold text-sm ${refundColor}`}>{refundLabel}</p>
+                </div>
+                <div className={`text-xs font-mono px-3 py-1.5 rounded-full border ${refundTier === "full" ? "border-emerald-400/40 text-emerald-400 bg-emerald-400/10" : refundTier === "half" ? "border-amber-400/40 text-amber-400 bg-amber-400/10" : "border-destructive/40 text-destructive bg-destructive/10"}`}>
+                  {daysUntil > 0 ? `${daysUntil}d away` : "Today"}
+                </div>
+              </div>
+
+              {/* What happens */}
+              <div>
+                <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mb-3">WHAT HAPPENS IF YOU CANCEL</p>
+                <ul className="space-y-2.5">
+                  {[
+                    { icon: "⚠️", text: "Your registered spot will be immediately released to the waitlist." },
+                    { icon: "🔒", text: "You may not be able to re-register if the event fills up." },
+                    { icon: "💳", text: refundLabel },
+                    { icon: "📊", text: "No impact to your DUPR rating for this event." },
+                  ].map(({ icon, text }) => (
+                    <li key={text} className="flex items-start gap-3 text-sm text-muted-foreground">
+                      <span className="text-base leading-tight flex-shrink-0">{icon}</span>
+                      <span className="leading-snug">{text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Policy */}
+              <details className="group">
+                <summary className="cursor-pointer font-mono text-[10px] tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors list-none flex items-center gap-1.5">
+                  <span className="group-open:rotate-90 transition-transform inline-block">▶</span> CANCELLATION POLICY
+                </summary>
+                <p className="mt-2 text-xs text-muted-foreground leading-relaxed border-l-2 border-border pl-3">{policy}</p>
+              </details>
+            </div>
+
+            {/* CTAs */}
+            <div className="px-6 pb-6 flex gap-3">
+              <button
+                onClick={() => setCancelTarget(null)}
+                className="flex-1 h-11 rounded-full border border-border text-sm font-display tracking-[0.15em] hover:bg-secondary transition-colors"
+              >
+                KEEP REGISTRATION
+              </button>
+              <button
+                disabled={cancelConfirming}
+                onClick={async () => {
+                  if (cancelTarget.registration_id.startsWith("mock-")) {
+                    setUpcoming((prev) => prev.filter((e) => e.id !== cancelTarget.id));
+                    setCancelTarget(null);
+                    return;
+                  }
+                  setCancelConfirming(true);
+                  const supabase = createClient();
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  await (supabase as any).from("registrations").update({ status: "cancelled" }).eq("id", cancelTarget.registration_id);
+                  setUpcoming((prev) => prev.filter((e) => e.id !== cancelTarget.id));
+                  setCancelTarget(null);
+                  setCancelConfirming(false);
+                }}
+                className="flex-1 h-11 rounded-full bg-destructive text-white text-sm font-display tracking-[0.15em] hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {cancelConfirming ? <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> : null}
+                CONFIRM CANCEL
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+    </>
   );
 }
