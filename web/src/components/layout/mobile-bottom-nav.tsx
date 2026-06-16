@@ -32,14 +32,18 @@ export function MobileBottomNav() {
               data-testid={`bottom-nav-${label.toLowerCase()}`}
               className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all"
             >
-              <div className={`h-9 w-9 flex items-center justify-center rounded-xl transition-all ${active ? "bg-primary shadow-lg shadow-primary/40" : ""}`}>
-                <Icon
-                  size={20}
-                  weight={active ? "fill" : "regular"}
-                  className={active ? "text-primary-foreground" : "text-muted-foreground"}
-                />
-              </div>
-              <span className={`text-[10px] font-mono tracking-wide transition-colors ${active ? "text-primary" : "text-muted-foreground"}`}>
+              {active ? (
+                <div className="p-[1.5px] rounded-xl bg-gradient-to-r from-violet-500 via-pink-400 to-cyan-400">
+                  <div className="h-[34px] w-[34px] rounded-[10px] flex items-center justify-center bg-gradient-to-br dark:from-zinc-950 dark:to-zinc-800 from-white to-zinc-100">
+                    <Icon size={20} weight="fill" className="dark:text-white text-zinc-900" />
+                  </div>
+                </div>
+              ) : (
+                <div className="h-9 w-9 flex items-center justify-center rounded-xl">
+                  <Icon size={20} weight="regular" className="text-muted-foreground" />
+                </div>
+              )}
+              <span className={`text-[10px] font-mono tracking-wide transition-colors ${active ? "text-foreground" : "text-muted-foreground"}`}>
                 {label.toUpperCase()}
               </span>
             </Link>
