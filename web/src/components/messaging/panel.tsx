@@ -72,8 +72,8 @@ export interface MessagingPanelProps {
 
 // "Name, 4.2" — DUPR if available, else self-rated skill band.
 function metaLabel(dupr: number | null | undefined, skill: string | null | undefined) {
-  if (dupr != null) return String(dupr);
-  if (skill) return skill;
+  if (dupr != null) return `${dupr} DUPR`;
+  if (skill) return skill.replace("-", " – ");
   return null;
 }
 

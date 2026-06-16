@@ -72,7 +72,7 @@ interface Registration {
   status: string;
   division_id: string | null;
   created_at: string;
-  profiles: { full_name: string | null; dupr_rating: number | null } | null;
+  profiles: { full_name: string | null; dupr: number | null; skill_level: string | null } | null;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -340,7 +340,7 @@ export default function DirectorPage() {
     if (regsLoaded === tid) return;
     const supabase = createClient();
     const { data } = await supabase.from("registrations")
-      .select("id,player_id,status,division_id,created_at,profiles(full_name,dupr_rating)")
+      .select("id,player_id,status,division_id,created_at,profiles(full_name,dupr,skill_level)")
       .eq("tournament_id", tid)
       .order("created_at", { ascending: true });
     setRegistrations((data ?? []) as unknown as Registration[]);
@@ -975,7 +975,7 @@ export default function DirectorPage() {
                               <span className="font-medium truncate max-w-[120px]">{r.profiles?.full_name ?? "Unknown"}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground hidden sm:table-cell">{r.profiles?.dupr_rating ?? "—"}</td>
+                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground hidden sm:table-cell">{r.profiles?.dupr ?? r.profiles?.skill_level?.replace("-", " – ") ?? "—"}</td>
                           <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">{r.division_id ? "Division" : "Open"}</td>
                           <td className="px-4 py-3">
                             <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${r.status === "registered" ? "text-primary border-primary/30 bg-primary/10" : r.status === "checked_in" ? "text-green-400 border-green-400/30 bg-green-400/10" : "text-amber-400 border-amber-400/30 bg-amber-400/10"}`}>
@@ -1030,7 +1030,7 @@ export default function DirectorPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm truncate">{r.profiles?.full_name ?? "Unknown"}</div>
-                      <div className="text-xs text-muted-foreground">DUPR {r.profiles?.dupr_rating ?? "—"}</div>
+                      <div className="text-xs text-muted-foreground">{r.profiles?.dupr ? `DUPR ${r.profiles.dupr}` : r.profiles?.skill_level?.replace("-", " – ") ?? "—"}</div>
                     </div>
                     {r.status === "checked_in" ? (
                       <span className="flex items-center gap-1.5 text-green-400 text-xs font-mono">

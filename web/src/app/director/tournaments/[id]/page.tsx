@@ -63,7 +63,7 @@ interface Registration {
   status: string;
   division_id: string | null;
   created_at: string;
-  profiles: { full_name: string | null; dupr_rating: number | null } | null;
+  profiles: { full_name: string | null; dupr: number | null; skill_level: string | null } | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -162,7 +162,7 @@ export default function DirectorTournamentPage() {
       // Registrations
       const { data: regs } = await supabase
         .from("registrations")
-        .select("id,player_id,status,division_id,created_at,profiles(full_name,dupr_rating)")
+        .select("id,player_id,status,division_id,created_at,profiles(full_name,dupr,skill_level)")
         .eq("tournament_id", id)
         .order("created_at", { ascending: true });
       setRegistrations((regs ?? []) as unknown as Registration[]);
@@ -637,7 +637,7 @@ export default function DirectorTournamentPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate">{r.profiles?.full_name ?? "Unknown Player"}</div>
-                        <div className="text-xs text-muted-foreground">{div?.name ?? "Open"} · DUPR {r.profiles?.dupr_rating ?? "—"}</div>
+                        <div className="text-xs text-muted-foreground">{div?.name ?? "Open"} · {r.profiles?.dupr ? `DUPR ${r.profiles.dupr}` : r.profiles?.skill_level?.replace("-", " – ") ?? "—"}</div>
                       </div>
                       <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${r.status === "registered" ? "text-primary border-primary/30 bg-primary/10" : "text-amber-400 border-amber-400/30 bg-amber-400/10"}`}>
                         {r.status === "registered" ? "REGISTERED" : "HELD"}
