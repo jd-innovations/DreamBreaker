@@ -641,10 +641,6 @@ export default function DashboardPage() {
           {/* ── Messages ── */}
           {navSection === "messages" && currentUserId && (
             <div className="space-y-4">
-              <div>
-                <h2 className="font-display text-xl tracking-wide">MESSAGES</h2>
-                <p className="text-sm text-muted-foreground">Chat with players, directors, and staff</p>
-              </div>
               <MessagingPanel
                 currentUserId={currentUserId}
                 allUsers={allUsers}
