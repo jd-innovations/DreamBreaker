@@ -786,8 +786,8 @@ export default function MatchmakingPage() {
                       </div>
 
                       {/* Desktop action buttons inline in card */}
-                      <div className="hidden lg:flex items-center gap-3 mt-5">
-                        <button onClick={() => swipe("left")} className="flex-1 h-12 rounded-full border-2 border-red-500 text-red-400 flex items-center justify-center hover:bg-red-500/10 transition-all active:scale-95">
+                      <div className="hidden lg:flex items-center justify-center gap-3 mt-5">
+                        <button onClick={() => swipe("left")} className="flex-1 h-12 rounded-full h-12 w-12 border-2 border-red-500 text-red-400 flex items-center justify-center hover:bg-red-500/10 transition-all active:scale-95 flex-shrink-0">
                           <XCircle size={20} weight="fill" />
                         </button>
                         {lastPassed && (
@@ -798,7 +798,7 @@ export default function MatchmakingPage() {
                         <button onClick={() => swipe("up")} className="h-12 w-12 rounded-full border-2 border-violet-500 text-violet-400 flex items-center justify-center hover:bg-violet-500/10 transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="Super Connect">
                           <Plug size={20} weight="fill" />
                         </button>
-                        <button onClick={() => swipe("right")} className="flex-1 h-12 rounded-full border-2 border-primary text-primary flex items-center justify-center hover:bg-primary/10 transition-all active:scale-95">
+                        <button onClick={() => swipe("right")} className="flex-1 h-12 rounded-full h-12 w-12 border-2 border-primary text-primary flex items-center justify-center hover:bg-primary/10 transition-all active:scale-95 flex-shrink-0">
                           <Heart size={20} weight="fill" />
                         </button>
                       </div>
@@ -814,11 +814,11 @@ export default function MatchmakingPage() {
             <>
               {/* Mobile — fixed above bottom nav */}
               <div className="fixed bottom-5 left-0 right-0 px-6 lg:hidden z-40">
-                <div className="flex items-center gap-3 max-w-sm mx-auto bg-background/80 backdrop-blur-md border border-border rounded-full px-4 py-3 shadow-lg">
+                <div className="flex items-center justify-center gap-3 mx-auto bg-background/80 backdrop-blur-md border border-border rounded-full px-4 py-3 shadow-lg w-fit">
                   <button
                     onClick={() => swipe("left")}
                     data-testid="swipe-left-btn"
-                    className="flex-1 h-12 rounded-full border-2 border-red-500 text-red-400 flex items-center justify-center hover:bg-red-500/10 transition-all active:scale-95"
+                    className="flex-1 h-12 rounded-full h-12 w-12 border-2 border-red-500 text-red-400 flex items-center justify-center hover:bg-red-500/10 transition-all active:scale-95 flex-shrink-0"
                   >
                     <XCircle size={20} weight="fill" />
                   </button>
@@ -842,7 +842,7 @@ export default function MatchmakingPage() {
                   <button
                     onClick={() => swipe("right")}
                     data-testid="swipe-right-btn"
-                    className="flex-1 h-12 rounded-full border-2 border-primary text-primary flex items-center justify-center hover:bg-primary/10 transition-all active:scale-95"
+                    className="flex-1 h-12 rounded-full h-12 w-12 border-2 border-primary text-primary flex items-center justify-center hover:bg-primary/10 transition-all active:scale-95 flex-shrink-0"
                   >
                     <Heart size={20} weight="fill" />
                   </button>
