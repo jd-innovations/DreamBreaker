@@ -139,9 +139,19 @@ function FunnelBar({ label, value, total, pct }: { label: string; value: number;
 
 // ── Create Dialog ─────────────────────────────────────────────────────────────
 
+const TOURNAMENT_STRUCTURES = [
+  { key: "single_elim",  label: "Single Elim",    desc: "Lose once, eliminated",         short: "SE"  },
+  { key: "double_elim",  label: "Double Elim",    desc: "Two losses to eliminate",        short: "DE"  },
+  { key: "round_robin",  label: "Round Robin",    desc: "Everyone plays everyone",        short: "RR"  },
+  { key: "pool_bracket", label: "Pool → Bracket", desc: "Pool play seeds into bracket",  short: "PB"  },
+  { key: "mlp",          label: "MLP Format",     desc: "Team-based, Dreambreaker end",  short: "MLP" },
+];
+
 function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (t: Tournament) => void }) {
   const [loading, setLoading] = useState(false);
   const [selectedFormats, setSelectedFormats] = useState<Set<string>>(new Set(["doubles/mens"]));
+  const [structure, setStructure] = useState("single_elim");
+  const [poolCount, setPoolCount] = useState(4);
 
   const toggleFormat = (key: string) => {
     setSelectedFormats((prev) => {
@@ -173,6 +183,8 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
         event_date: fd.get("date") as string,
         format: primaryFmt?.format ?? "doubles",
         formats: [...selectedFormats].map((k) => k.split("/")[0]),
+        tournament_format: structure,
+        pool_count: structure === "pool_bracket" ? poolCount : null,
         draw_size: parseInt(fd.get("capacity") as string, 10),
         entry_fee_cents: Math.round(parseFloat(fd.get("entry_fee") as string) * 100),
         hold_fee_cents: Math.round(parseFloat(fd.get("hold_fee") as string) * 100),
@@ -212,9 +224,38 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
             <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">STATE</label><input name="state" required placeholder="FL" maxLength={2} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
             <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">ZIP</label><input name="zip_code" required placeholder="34202" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
           </div>
+          {/* Tournament Structure */}
+          <div>
+            <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-2">TOURNAMENT STRUCTURE</label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {TOURNAMENT_STRUCTURES.map((s) => (
+                <button type="button" key={s.key} onClick={() => setStructure(s.key)}
+                  className={`relative h-14 px-3 rounded-xl border text-left text-xs transition-all flex flex-col justify-center gap-0.5 ${structure === s.key ? "border-primary bg-primary/10 text-foreground" : "border-border hover:border-primary/50 text-muted-foreground"}`}>
+                  {structure === s.key && <div className="absolute top-1.5 right-1.5 h-3.5 w-3.5 rounded-full bg-primary flex items-center justify-center"><svg width="7" height="7" viewBox="0 0 7 7" fill="none"><path d="M1 3.5l1.5 1.5 3-3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></div>}
+                  <span className="font-mono text-[10px] text-primary font-bold">{s.short}</span>
+                  <span className="font-semibold text-[11px] leading-tight">{s.label}</span>
+                </button>
+              ))}
+            </div>
+            {structure === "pool_bracket" && (
+              <div className="mt-3 flex items-center gap-3">
+                <label className="font-mono text-[10px] tracking-widest text-muted-foreground whitespace-nowrap">NUMBER OF POOLS</label>
+                <div className="flex gap-2">
+                  {[2, 3, 4, 6, 8].map((n) => (
+                    <button type="button" key={n} onClick={() => setPoolCount(n)}
+                      className={`h-9 w-9 rounded-xl border font-mono text-sm transition-all ${poolCount === n ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:border-primary/50"}`}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Events / Divisions */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="font-mono text-[10px] tracking-widest text-muted-foreground">EVENTS / FORMATS</label>
+              <label className="font-mono text-[10px] tracking-widest text-muted-foreground">EVENTS / DIVISIONS</label>
               <span className="font-mono text-[10px] text-primary">{selectedFormats.size} SELECTED</span>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
