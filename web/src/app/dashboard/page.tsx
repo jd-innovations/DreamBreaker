@@ -354,7 +354,7 @@ export default function DashboardPage() {
 
   return (
     <>
-    <div className="flex h-svh bg-background overflow-hidden">
+    <div className="flex fixed inset-0 bg-background overflow-hidden">
 
       {/* ── Desktop sidebar ── */}
       <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-card flex-shrink-0">
@@ -403,7 +403,7 @@ export default function DashboardPage() {
         </header>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8 space-y-6">
+        <div className={navSection === "messages" ? "flex-1 flex flex-col overflow-hidden" : "flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8 space-y-6"}>
 
           {/* ── Dashboard overview ── */}
           {navSection === "dashboard" && (
@@ -732,7 +732,7 @@ export default function DashboardPage() {
 
           {/* ── Messages ── */}
           {navSection === "messages" && currentUserId && (
-            <div className="space-y-4">
+            <div className="flex-1 flex flex-col overflow-hidden">
               <MessagingPanel
                 currentUserId={currentUserId}
                 allUsers={allUsers}

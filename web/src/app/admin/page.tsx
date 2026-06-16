@@ -711,7 +711,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="fixed inset-0 bg-background flex">
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
@@ -734,7 +734,7 @@ export default function AdminPage() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 min-h-screen overflow-y-auto pb-20 lg:pb-0">
+      <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -770,7 +770,7 @@ export default function AdminPage() {
           </div>
         </header>
 
-        <div className="px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
+        <div className={navSection === "messages" ? "flex-1 flex flex-col overflow-hidden" : "flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 pb-24 lg:pb-8"}>
 
           {/* ── Dashboard ── */}
           {navSection === "dashboard" && (
@@ -1703,7 +1703,7 @@ export default function AdminPage() {
 
           {/* ── Messages ── */}
           {navSection === "messages" && currentUserId && (
-            <div className="space-y-4">
+            <div className="flex-1 flex flex-col overflow-hidden">
               <MessagingPanel
                 currentUserId={currentUserId}
                 allUsers={allUsers}
