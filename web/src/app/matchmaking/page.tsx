@@ -787,18 +787,18 @@ export default function MatchmakingPage() {
 
                       {/* Desktop action buttons inline in card */}
                       <div className="hidden lg:flex items-center gap-3 mt-5">
-                        <button onClick={() => swipe("left")} className="flex-1 h-12 rounded-full bg-gradient-to-r from-red-600/50 to-rose-500/50 text-white font-display tracking-[0.15em] text-sm flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 hover:brightness-110 transition-all active:scale-95">
+                        <button onClick={() => swipe("left")} className="flex-1 h-12 rounded-full bg-gradient-to-r border-2 border-red-500 text-red-400 font-display tracking-[0.15em] text-sm flex items-center justify-center gap-2 hover:bg-red-500/10 transition-all active:scale-95">
                           <XCircle size={18} weight="fill" /> PASS
                         </button>
                         {lastPassed && (
-                          <button onClick={undo} className="h-10 w-10 rounded-full bg-gradient-to-br from-yellow-400/50 to-amber-500/50 text-white flex items-center justify-center shadow-lg shadow-yellow-400/20 hover:brightness-110 transition-all active:scale-95 flex-shrink-0" title="Undo last pass">
+                          <button onClick={undo} className="h-10 w-10 rounded-full bg-gradient-to-br border-2 border-yellow-400 text-yellow-400 flex items-center justify-center hover:bg-yellow-400/10 transition-all active:scale-95 flex-shrink-0" title="Undo last pass">
                             <ArrowCounterClockwise size={16} weight="bold" />
                           </button>
                         )}
-                        <button onClick={() => swipe("up")} className="h-12 w-12 rounded-full bg-gradient-to-br from-violet-600/50 to-purple-500/50 text-white flex items-center justify-center shadow-lg shadow-purple-500/20 hover:brightness-110 transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="Super Connect">
+                        <button onClick={() => swipe("up")} className="h-12 w-12 rounded-full bg-gradient-to-br border-2 border-violet-500 text-violet-400 flex items-center justify-center hover:bg-violet-500/10 transition-all hover:scale-105 active:scale-95 flex-shrink-0" title="Super Connect">
                           <Plug size={20} weight="fill" />
                         </button>
-                        <button onClick={() => swipe("right")} className="flex-1 h-12 rounded-full bg-gradient-to-r from-primary/50 to-lime-400/50 text-white font-display tracking-[0.15em] text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:brightness-110 transition-all active:scale-95">
+                        <button onClick={() => swipe("right")} className="flex-1 h-12 rounded-full bg-gradient-to-r border-2 border-primary text-primary font-display tracking-[0.15em] text-sm flex items-center justify-center gap-2 hover:bg-primary/10 transition-all active:scale-95">
                           <Heart size={18} weight="fill" /> LIKE
                         </button>
                       </div>
@@ -818,7 +818,7 @@ export default function MatchmakingPage() {
                   <button
                     onClick={() => swipe("left")}
                     data-testid="swipe-left-btn"
-                    className="flex-1 h-12 rounded-full bg-gradient-to-r from-red-600/50 to-rose-500/50 text-white font-display tracking-[0.15em] text-sm flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 hover:brightness-110 transition-all active:scale-95"
+                    className="flex-1 h-12 rounded-full bg-gradient-to-r border-2 border-red-500 text-red-400 font-display tracking-[0.15em] text-sm flex items-center justify-center gap-2 hover:bg-red-500/10 transition-all active:scale-95"
                   >
                     <XCircle size={18} weight="fill" /> PASS
                   </button>
@@ -842,7 +842,7 @@ export default function MatchmakingPage() {
                   <button
                     onClick={() => swipe("right")}
                     data-testid="swipe-right-btn"
-                    className="flex-1 h-12 rounded-full bg-gradient-to-r from-primary/50 to-lime-400/50 text-white font-display tracking-[0.15em] text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:brightness-110 transition-all active:scale-95"
+                    className="flex-1 h-12 rounded-full bg-gradient-to-r border-2 border-primary text-primary font-display tracking-[0.15em] text-sm flex items-center justify-center gap-2 hover:bg-primary/10 transition-all active:scale-95"
                   >
                     <Heart size={18} weight="fill" /> LIKE
                   </button>
