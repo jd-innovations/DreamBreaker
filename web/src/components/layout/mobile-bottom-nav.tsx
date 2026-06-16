@@ -15,6 +15,8 @@ const tabs = [
 export function MobileBottomNav() {
   const pathname = usePathname();
 
+  if (pathname === "/matchmaking") return null;
+
   return (
     <nav
       className="lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-sm"
