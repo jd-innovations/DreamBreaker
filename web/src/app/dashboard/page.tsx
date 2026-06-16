@@ -38,6 +38,7 @@ type SavedTournament = {
   city: string;
   state: string;
   event_date: string;
+  director_id?: string | null;
 };
 
 type UpcomingEvent = {
@@ -147,6 +148,7 @@ export default function DashboardPage() {
   const [cancelTarget, setCancelTarget] = useState<UpcomingEvent | null>(null);
   const [cancelConfirming, setCancelConfirming] = useState(false);
   const [dmDirectorId, setDmDirectorId] = useState<string | null>(null);
+  const [removingBookmarkId, setRemovingBookmarkId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -228,11 +230,11 @@ export default function DashboardPage() {
       const { count } = await supabase.from("registrations").select("tournament_id", { count: "exact", head: true }).eq("player_id", user.id).in("status", ["registered", "checked_in"]);
       if (count && count > 0) setStats((s) => ({ ...s, tournaments: count }));
 
-      const { data: bookmarkRows } = await supabase.from("tournament_bookmarks").select("id, tournament:tournaments!tournament_id(id, name, city, state, event_date)").eq("player_id", user.id).order("created_at", { ascending: false }).limit(10);
+      const { data: bookmarkRows } = await supabase.from("tournament_bookmarks").select("id, tournament:tournaments!tournament_id(id, name, city, state, event_date, director_id)").eq("player_id", user.id).order("created_at", { ascending: false }).limit(10);
       if (bookmarkRows && bookmarkRows.length > 0) {
         setSaved(bookmarkRows.map((b) => {
-          const t = b.tournament as { id: string; name: string; city: string; state: string; event_date: string } | null;
-          return { id: b.id, tournamentId: t?.id ?? "", name: t?.name ?? "—", city: t?.city ?? "", state: t?.state ?? "", event_date: t?.event_date ?? "" };
+          const t = b.tournament as { id: string; name: string; city: string; state: string; event_date: string; director_id?: string | null } | null;
+          return { id: b.id, tournamentId: t?.id ?? "", name: t?.name ?? "—", city: t?.city ?? "", state: t?.state ?? "", event_date: t?.event_date ?? "", director_id: t?.director_id };
         }));
       }
 
@@ -655,17 +657,58 @@ export default function DashboardPage() {
                 ) : (
                   <div className="divide-y divide-border">
                     {saved.map((t) => (
-                      <Link key={t.id} href={`/tournaments/${t.tournamentId}`} className="px-6 py-5 flex items-start gap-4 hover:bg-secondary/40 transition-colors block">
-                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <BookmarkSimple size={18} weight="fill" className="text-primary" />
+                      <div key={t.id} className="px-6 py-5 space-y-3">
+                        {/* Info row */}
+                        <Link href={`/tournaments/${t.tournamentId}`} className="flex items-start gap-4 hover:opacity-80 transition-opacity block">
+                          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <BookmarkSimple size={18} weight="fill" className="text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold">{t.name}</div>
+                            <div className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1.5"><MapPin size={12} /> {t.city}, {t.state}</div>
+                            {t.event_date && <div className="text-[10px] font-mono mt-1 text-muted-foreground">{formatDate(t.event_date)}</div>}
+                          </div>
+                          <ArrowRight size={16} className="text-muted-foreground flex-shrink-0 mt-1" />
+                        </Link>
+
+                        {/* Quick actions */}
+                        <div className="flex items-center gap-2 ml-14 flex-wrap">
+                          <Link href={`/tournaments/${t.tournamentId}`}>
+                            <button className="h-8 px-4 rounded-full border border-border text-xs font-mono tracking-wide hover:bg-secondary/60 transition-colors flex items-center gap-1.5">
+                              <Ticket size={13} /> VIEW DETAILS
+                            </button>
+                          </Link>
+                          <Link href={`/tournaments/${t.tournamentId}`}>
+                            <button className="h-8 px-4 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-mono tracking-wide hover:bg-primary/20 transition-colors flex items-center gap-1.5">
+                              <Lightning size={13} weight="fill" /> REGISTER
+                            </button>
+                          </Link>
+                          {t.director_id && (
+                            <button
+                              onClick={() => { setDmDirectorId(t.director_id!); setNavSection("messages"); }}
+                              className="h-8 px-4 rounded-full border border-border text-xs font-mono tracking-wide hover:bg-secondary/60 transition-colors flex items-center gap-1.5"
+                            >
+                              <ChatCircleDots size={13} /> MESSAGE DIRECTOR
+                            </button>
+                          )}
+                          <button
+                            disabled={removingBookmarkId === t.id}
+                            onClick={async () => {
+                              setRemovingBookmarkId(t.id);
+                              const supabase = createClient();
+                              await supabase.from("tournament_bookmarks").delete().eq("id", t.id);
+                              setSaved((prev) => prev.filter((s) => s.id !== t.id));
+                              setRemovingBookmarkId(null);
+                            }}
+                            className="h-8 px-4 rounded-full border border-destructive/50 text-destructive text-xs font-mono tracking-wide hover:bg-destructive/10 transition-colors flex items-center gap-1.5 ml-auto disabled:opacity-50"
+                          >
+                            {removingBookmarkId === t.id
+                              ? <span className="h-3 w-3 rounded-full border-2 border-destructive border-t-transparent animate-spin" />
+                              : <BookmarkSimple size={13} />}
+                            REMOVE
+                          </button>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-semibold">{t.name}</div>
-                          <div className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1.5"><MapPin size={12} /> {t.city}, {t.state}</div>
-                          {t.event_date && <div className="text-[10px] font-mono mt-1 text-muted-foreground">{formatDate(t.event_date)}</div>}
-                        </div>
-                        <ArrowRight size={16} className="text-muted-foreground flex-shrink-0 mt-1" />
-                      </Link>
+                      </div>
                     ))}
                   </div>
                 )}
