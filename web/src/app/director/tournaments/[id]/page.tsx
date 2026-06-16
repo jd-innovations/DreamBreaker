@@ -454,7 +454,7 @@ export default function DirectorTournamentPage() {
             player_id: s.player_id,
             seed_number: s.seed_number,
             pool_letter: s.pool_letter,
-            locked: s.locked,
+            locked: s.locked ?? false,
             name: reg?.profiles?.full_name ?? "Unknown",
             dupr: reg?.profiles?.dupr ?? null,
             skill_level: reg?.profiles?.skill_level ?? null,

@@ -790,9 +790,15 @@ export type Database = {
           hand: string | null
           handle: string | null
           id: string
+          is_discoverable: boolean
           location_city: string | null
           location_coords: unknown
           location_state: string | null
+          looking_status: string
+          notif_hold_expiry: boolean
+          notif_liked_you: boolean
+          notif_new_match: boolean
+          notif_tournaments: boolean
           paddle: string | null
           play_style: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -820,9 +826,15 @@ export type Database = {
           hand?: string | null
           handle?: string | null
           id: string
+          is_discoverable?: boolean
           location_city?: string | null
           location_coords?: unknown
           location_state?: string | null
+          looking_status?: string
+          notif_hold_expiry?: boolean
+          notif_liked_you?: boolean
+          notif_new_match?: boolean
+          notif_tournaments?: boolean
           paddle?: string | null
           play_style?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -850,9 +862,15 @@ export type Database = {
           hand?: string | null
           handle?: string | null
           id?: string
+          is_discoverable?: boolean
           location_city?: string | null
           location_coords?: unknown
           location_state?: string | null
+          looking_status?: string
+          notif_hold_expiry?: boolean
+          notif_liked_you?: boolean
+          notif_new_match?: boolean
+          notif_tournaments?: boolean
           paddle?: string | null
           play_style?: string | null
           role?: Database["public"]["Enums"]["user_role"]
