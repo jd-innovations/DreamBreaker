@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft, Lightning, MapPin, Calendar, Users, CurrencyDollar,
   Trophy, PencilSimple, CheckCircle, Clock, Warning, Trash,
@@ -357,13 +357,17 @@ function ScoreModal({
 export default function DirectorTournamentPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "sponsors" | "roster" | "bracket" | "dayof">("overview");
+  const validTabs = ["overview", "sponsors", "roster", "bracket", "dayof"] as const;
+  type TabId = typeof validTabs[number];
+  const initialTab = (validTabs.includes(searchParams.get("tab") as TabId) ? searchParams.get("tab") : "overview") as TabId;
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
 
   // Edit state
   const [editingBanner, setEditingBanner] = useState(false);
