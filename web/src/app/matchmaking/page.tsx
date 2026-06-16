@@ -594,7 +594,7 @@ export default function MatchmakingPage() {
                     </div>
                     <button
                       onClick={() => setMessagingTarget(m)}
-                      className="w-full h-9 rounded-full bg-primary text-primary-foreground text-xs font-display tracking-[0.15em] hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5"
+                      className="w-full h-9 rounded-full border border-white/20 bg-white/10 text-white text-xs font-mono tracking-[0.15em] hover:bg-white/15 transition-colors flex items-center justify-center gap-1.5"
                     >
                       <ChatCircleDots size={14} weight="fill" /> MESSAGE
                     </button>
