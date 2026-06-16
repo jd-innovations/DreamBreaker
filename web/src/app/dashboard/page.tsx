@@ -854,7 +854,7 @@ export default function DashboardPage() {
             {/* Consequences */}
             <div className="px-6 py-5 space-y-4">
               {/* Refund status */}
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-secondary/60 border border-border">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-secondary/60 border border-white/10">
                 <div>
                   <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mb-0.5">REFUND STATUS</p>
                   <p className={`font-semibold text-sm ${refundColor}`}>{refundLabel}</p>
@@ -895,7 +895,7 @@ export default function DashboardPage() {
             <div className="px-6 pb-6 flex gap-3">
               <button
                 onClick={() => setCancelTarget(null)}
-                className="flex-1 h-11 rounded-full border border-border text-sm font-display tracking-[0.15em] hover:bg-secondary transition-colors"
+                className="flex-1 h-9 rounded-full border border-white/20 text-sm font-display tracking-[0.15em] hover:bg-secondary transition-colors"
               >
                 KEEP REGISTRATION
               </button>
@@ -915,7 +915,7 @@ export default function DashboardPage() {
                   setCancelTarget(null);
                   setCancelConfirming(false);
                 }}
-                className="flex-1 h-11 rounded-full bg-destructive text-white text-sm font-display tracking-[0.15em] hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 h-9 rounded-full bg-destructive text-white text-sm font-display tracking-[0.15em] border border-white/20 hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {cancelConfirming ? <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> : null}
                 CONFIRM CANCEL
@@ -963,7 +963,7 @@ export default function DashboardPage() {
                 </div>
                 <button
                   onClick={() => { setRegisterTarget(null); setNavSection("events"); }}
-                  className="h-11 px-8 rounded-full bg-primary text-primary-foreground font-display tracking-[0.15em] text-sm hover:bg-primary/90 transition-colors"
+                  className="h-9 px-8 rounded-full bg-primary text-primary-foreground font-display tracking-[0.15em] text-sm border border-white/20 hover:bg-primary/90 transition-colors"
                 >
                   VIEW MY EVENTS
                 </button>
@@ -973,11 +973,11 @@ export default function DashboardPage() {
                 <div className="px-6 py-5 space-y-5">
                   {/* Tournament summary */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-secondary/60 rounded-2xl px-4 py-3">
+                    <div className="bg-secondary/60 border border-white/10 rounded-2xl px-4 py-3">
                       <p className="font-mono text-[9px] tracking-[0.2em] text-muted-foreground mb-0.5">ENTRY FEE</p>
                       <p className="font-display text-lg tracking-wide">{fee > 0 ? `$${(fee / 100).toFixed(2)}` : "FREE"}</p>
                     </div>
-                    <div className="bg-secondary/60 rounded-2xl px-4 py-3">
+                    <div className="bg-secondary/60 border border-white/10 rounded-2xl px-4 py-3">
                       <p className="font-mono text-[9px] tracking-[0.2em] text-muted-foreground mb-0.5">SKILL LEVEL</p>
                       <p className="font-display text-lg tracking-wide">
                         {t.skill_min || t.skill_max ? `${t.skill_min ?? "?"} – ${t.skill_max ?? "?"}` : "Open"}
@@ -1026,7 +1026,7 @@ export default function DashboardPage() {
                 <div className="px-6 pb-6 flex gap-3">
                   <button
                     onClick={() => setRegisterTarget(null)}
-                    className="flex-1 h-11 rounded-full border border-border text-sm font-display tracking-[0.15em] hover:bg-secondary transition-colors"
+                    className="flex-1 h-9 rounded-full border border-white/20 text-sm font-display tracking-[0.15em] hover:bg-secondary transition-colors"
                   >
                     CANCEL
                   </button>
@@ -1058,7 +1058,7 @@ export default function DashboardPage() {
                         setSaved((prev) => prev.filter((s) => s.tournamentId !== t.tournamentId));
                       }
                     }}
-                    className="flex-1 h-11 rounded-full bg-primary text-primary-foreground text-sm font-display tracking-[0.15em] hover:bg-primary/90 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+                    className="flex-1 h-9 rounded-full bg-primary text-primary-foreground text-sm font-display tracking-[0.15em] border border-white/20 hover:bg-primary/90 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
                   >
                     {registering ? <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> : null}
                     {fee > 0 ? `PAY $${(fee / 100).toFixed(2)} & REGISTER` : "COMPLETE REGISTRATION"}

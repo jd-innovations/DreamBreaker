@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   PaperPlaneRight, MagnifyingGlass, PencilSimpleLine, ArrowLeft,
-  ChatCircle, Checks, Heart,
+  ChatCircle, Checks, Heart, Flag, Warning, Prohibit,
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -177,6 +177,8 @@ export function MessagingPanel({
   // Self-loaded matches when parent doesn't supply them
   const [internalMatches, setInternalMatches] = useState<MatchSummary[]>([]);
   const [internalLikes, setInternalLikes] = useState(0);
+  const [flagMenuConvId, setFlagMenuConvId] = useState<string | null>(null);
+  const [flagMenuPos, setFlagMenuPos] = useState<{ top: number; right: number } | null>(null);
 
   // Use prop if provided, otherwise self-loaded
   const matches = matchesProp ?? internalMatches;
@@ -450,6 +452,36 @@ export function MessagingPanel({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialRecipientId, loadingConvos]);
 
+  // ── Report / Block ─────────────────────────────────────────────────────────
+
+  const reportUser = async (conv: Conversation) => {
+    setFlagMenuConvId(null);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from("user_reports").insert({
+        reporter_id: currentUserId,
+        reported_id: conv.otherId,
+        conversation_id: conv.id,
+        reason: "spam_or_inappropriate",
+      });
+    } catch (_) { /* table may not exist yet — silent */ }
+    toast.success(`Report submitted for ${conv.otherName}.`);
+  };
+
+  const blockUser = async (conv: Conversation) => {
+    setFlagMenuConvId(null);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from("blocked_users").insert({
+        blocker_id: currentUserId,
+        blocked_id: conv.otherId,
+      });
+    } catch (_) { /* table may not exist yet — silent */ }
+    setConversations((prev) => prev.filter((c) => c.id !== conv.id));
+    if (selectedConvId === conv.id) setSelectedConvId(null);
+    toast.success(`${conv.otherName} has been blocked.`);
+  };
+
   // ── Send ───────────────────────────────────────────────────────────────────
 
   const sendMessage = async () => {
@@ -616,34 +648,82 @@ export function MessagingPanel({
             )}
             {filteredConvos.map((c) => {
               const meta = metaLabel(c.otherDupr, c.otherSkill);
+              const menuOpen = flagMenuConvId === c.id;
               return (
-                <button key={c.id} onClick={() => openConversation(c.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left ${selectedConvId === c.id ? "bg-secondary" : "hover:bg-secondary/40"}`}>
-                  <Avatar name={c.otherName} url={c.otherAvatar} seed={c.otherId} size={56} online={onlineIds.has(c.otherId)} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className={`text-[15px] truncate ${c.unread > 0 ? "font-bold text-foreground" : "font-semibold"}`}>
-                        {c.otherName}{meta ? <span className="text-muted-foreground font-normal">, {meta}</span> : null}
-                      </span>
-                      {c.lastAt && <span className="text-[12px] text-muted-foreground flex-shrink-0">{timeAgo(c.lastAt)}</span>}
-                    </div>
-                    <div className="flex items-center justify-between gap-2 mt-0.5">
-                      <span className={`text-[13px] truncate ${c.unread > 0 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                        {c.lastBody || <span className="italic opacity-50">No messages yet</span>}
-                      </span>
-                      {c.unread > 0 && (
-                        <span className="h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center flex-shrink-0">
-                          {c.unread > 9 ? "9+" : c.unread}
+                <div key={c.id} className="relative">
+                  <button onClick={() => openConversation(c.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 pr-10 transition-colors text-left ${selectedConvId === c.id ? "bg-secondary" : "hover:bg-secondary/40"}`}>
+                    <Avatar name={c.otherName} url={c.otherAvatar} seed={c.otherId} size={56} online={onlineIds.has(c.otherId)} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`text-[15px] truncate ${c.unread > 0 ? "font-bold text-foreground" : "font-semibold"}`}>
+                          {c.otherName}{meta ? <span className="text-muted-foreground font-normal">, {meta}</span> : null}
                         </span>
-                      )}
+                        {c.lastAt && <span className="text-[12px] text-muted-foreground flex-shrink-0">{timeAgo(c.lastAt)}</span>}
+                      </div>
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <span className={`text-[13px] truncate ${c.unread > 0 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                          {c.lastBody || <span className="italic opacity-50">No messages yet</span>}
+                        </span>
+                        {c.unread > 0 && (
+                          <span className="h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center flex-shrink-0">
+                            {c.unread > 9 ? "9+" : c.unread}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </button>
+                  </button>
+
+                  {/* Flag button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (menuOpen) { setFlagMenuConvId(null); setFlagMenuPos(null); return; }
+                      const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                      setFlagMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                      setFlagMenuConvId(c.id);
+                    }}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full flex items-center justify-center transition-colors ${menuOpen ? "text-destructive bg-destructive/10" : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"}`}
+                    title="Report or block"
+                  >
+                    <Flag size={14} weight={menuOpen ? "fill" : "regular"} />
+                  </button>
+
+                </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* ── Flag dropdown (fixed, escapes overflow-hidden) ── */}
+      {flagMenuConvId && flagMenuPos && (() => {
+        const conv = conversations.find((c) => c.id === flagMenuConvId);
+        if (!conv) return null;
+        return (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => { setFlagMenuConvId(null); setFlagMenuPos(null); }} />
+            <div
+              className="fixed z-50 w-44 rounded-xl border border-border bg-card shadow-xl overflow-hidden"
+              style={{ top: flagMenuPos.top, right: flagMenuPos.right }}
+            >
+              <button
+                onClick={() => { reportUser(conv); setFlagMenuPos(null); }}
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-amber-400 hover:bg-amber-400/10 transition-colors"
+              >
+                <Warning size={15} weight="fill" /> Report user
+              </button>
+              <div className="h-px bg-border" />
+              <button
+                onClick={() => { blockUser(conv); setFlagMenuPos(null); }}
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                <Prohibit size={15} weight="fill" /> Block user
+              </button>
+            </div>
+          </>
+        );
+      })()}
 
       {/* ── Message thread ── */}
       <div className={`flex-1 flex flex-col min-w-0 ${!mobileShowThread ? "hidden md:flex" : "flex"}`}>

@@ -10,6 +10,7 @@ import {
   ArrowSquareOut, Envelope, Megaphone,
   CheckFat, WarningCircle, Broadcast, ChatCircleDots,
   Star, PencilSimple, Trash, Prohibit, DotsThree,
+  Flag,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -191,7 +192,20 @@ function RejectModal({ tournamentName, onConfirm, onClose }: { tournamentName: s
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type NavSection = "dashboard" | "approvals" | "directors" | "users" | "tournaments" | "finance" | "comms" | "messages" | "email_templates" | "settings";
+type NavSection = "dashboard" | "approvals" | "directors" | "users" | "tournaments" | "finance" | "comms" | "messages" | "email_templates" | "settings" | "reports";
+
+interface UserReport {
+  id: string;
+  reporter_id: string;
+  reported_id: string;
+  conversation_id: string | null;
+  reason: string;
+  notes: string | null;
+  status: string;
+  created_at: string;
+  reporter_name?: string;
+  reported_name?: string;
+}
 
 export default function AdminPage() {
   const router = useRouter();
@@ -234,6 +248,8 @@ export default function AdminPage() {
   const [messagingUnread, setMessagingUnread] = useState(0);
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [reports, setReports] = useState<UserReport[]>([]);
+  const [actioningReport, setActioningReport] = useState<string | null>(null);
 
   // Comms
   const [messages, setMessages] = useState<Message[]>([]);
@@ -301,6 +317,19 @@ export default function AdminPage() {
       const { data: spons } = await (supabase as any).from("email_sponsors")
         .select("id,name,logo_url,link,active,sort_order").order("sort_order");
       setEmailSponsors((spons ?? []) as EmailSponsor[]);
+
+      // Load user reports
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: rpts } = await (supabase as any).from("user_reports")
+        .select("id,reporter_id,reported_id,conversation_id,reason,notes,status,created_at")
+        .order("created_at", { ascending: false });
+      if (rpts && rpts.length > 0) {
+        const allIds = [...new Set([...(rpts as UserReport[]).map((r) => r.reporter_id), ...(rpts as UserReport[]).map((r) => r.reported_id)])];
+        const { data: rptProfs } = await supabase.from("profiles").select("id,full_name").in("id", allIds);
+        const nameMap: Record<string, string> = {};
+        for (const p of rptProfs ?? []) nameMap[p.id] = p.full_name ?? "Unknown";
+        setReports((rpts as UserReport[]).map((r) => ({ ...r, reporter_name: nameMap[r.reporter_id], reported_name: nameMap[r.reported_id] })));
+      }
     } finally {
       setLoading(false);
     }
@@ -596,6 +625,17 @@ export default function AdminPage() {
           </button>
         ))}
 
+        <button onClick={() => { setNavSection("reports"); setMobileSidebarOpen(false); }}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "reports" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+          <Flag size={16} weight={navSection === "reports" ? "fill" : "regular"} />
+          Reports
+          {reports.filter((r) => r.status === "pending").length > 0 && (
+            <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === "reports" ? "bg-white/20 text-white" : "bg-destructive/20 text-destructive"}`}>
+              {reports.filter((r) => r.status === "pending").length}
+            </span>
+          )}
+        </button>
+
         <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">MANAGEMENT</div>
         {([
           { id: "users", icon: Users, label: "Users", badge: profiles.length },
@@ -712,6 +752,7 @@ export default function AdminPage() {
                 {navSection === "comms" && "Communications"}
                 {navSection === "email_templates" && "Email Templates"}
                 {navSection === "settings" && "Platform Settings"}
+                {navSection === "reports" && "User Reports"}
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
                 {pendingTournaments.length > 0 && `${pendingTournaments.length} tournament${pendingTournaments.length > 1 ? "s" : ""} pending approval`}
@@ -1555,6 +1596,108 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ── Reports ── */}
+          {navSection === "reports" && (
+            <div className="space-y-4 max-w-3xl">
+              {/* Summary chips */}
+              <div className="flex gap-3 flex-wrap">
+                {[
+                  { label: "PENDING", value: reports.filter((r) => r.status === "pending").length, color: "text-destructive border-destructive/30 bg-destructive/10" },
+                  { label: "REVIEWED", value: reports.filter((r) => r.status === "reviewed").length, color: "text-amber-400 border-amber-400/30 bg-amber-400/10" },
+                  { label: "ACTIONED", value: reports.filter((r) => r.status === "actioned").length, color: "text-emerald-400 border-emerald-400/30 bg-emerald-400/10" },
+                  { label: "DISMISSED", value: reports.filter((r) => r.status === "dismissed").length, color: "text-muted-foreground border-border" },
+                ].map((s) => (
+                  <div key={s.label} className={`px-4 py-2 rounded-xl border text-xs font-mono ${s.color}`}>
+                    {s.value} {s.label}
+                  </div>
+                ))}
+              </div>
+
+              {reports.length === 0 ? (
+                <div className="rounded-2xl border border-border bg-card p-12 text-center text-muted-foreground">
+                  <Flag size={32} className="mx-auto mb-3 opacity-30" />
+                  <p className="font-mono text-[11px] tracking-widest">NO REPORTS YET</p>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-border bg-card overflow-hidden divide-y divide-border">
+                  {reports.map((r) => {
+                    const isPending = r.status === "pending";
+                    const reasonLabel: Record<string, string> = {
+                      spam_or_inappropriate: "Spam / Inappropriate",
+                      harassment: "Harassment",
+                      hate_speech: "Hate Speech",
+                      impersonation: "Impersonation",
+                      other: "Other",
+                    };
+                    return (
+                      <div key={r.id} className="p-5 flex items-start gap-4">
+                        {/* Icon */}
+                        <div className={`h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 ${isPending ? "bg-destructive/10" : "bg-secondary"}`}>
+                          <Flag size={16} weight="fill" className={isPending ? "text-destructive" : "text-muted-foreground"} />
+                        </div>
+
+                        {/* Body */}
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm">{r.reported_name ?? r.reported_id}</span>
+                            <span className="font-mono text-[10px] px-2 py-0.5 rounded-full border border-destructive/30 text-destructive bg-destructive/10">
+                              {reasonLabel[r.reason] ?? r.reason}
+                            </span>
+                            <span className={`font-mono text-[10px] px-2 py-0.5 rounded-full border ${
+                              isPending ? "border-amber-400/30 text-amber-400 bg-amber-400/10"
+                              : r.status === "actioned" ? "border-emerald-400/30 text-emerald-400 bg-emerald-400/10"
+                              : "border-border text-muted-foreground"
+                            }`}>
+                              {r.status.toUpperCase()}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Reported by <span className="text-foreground">{r.reporter_name ?? r.reporter_id}</span> · {fmtDate(r.created_at)}
+                          </p>
+                          {r.notes && <p className="text-xs text-muted-foreground italic">&ldquo;{r.notes}&rdquo;</p>}
+                        </div>
+
+                        {/* Actions */}
+                        {isPending && (
+                          <div className="flex gap-2 flex-shrink-0">
+                            <button
+                              disabled={actioningReport === r.id}
+                              onClick={async () => {
+                                setActioningReport(r.id);
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                await (createClient() as any).from("user_reports").update({ status: "actioned", reviewed_at: new Date().toISOString() }).eq("id", r.id);
+                                setReports((prev) => prev.map((x) => x.id === r.id ? { ...x, status: "actioned" } : x));
+                                setActioningReport(null);
+                                toast.success("Report actioned.");
+                              }}
+                              className="h-8 px-3 rounded-full border border-emerald-400/40 text-emerald-400 text-xs font-mono hover:bg-emerald-400/10 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                            >
+                              <CheckCircle size={13} weight="fill" /> ACTION
+                            </button>
+                            <button
+                              disabled={actioningReport === r.id}
+                              onClick={async () => {
+                                setActioningReport(r.id);
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                await (createClient() as any).from("user_reports").update({ status: "dismissed", reviewed_at: new Date().toISOString() }).eq("id", r.id);
+                                setReports((prev) => prev.map((x) => x.id === r.id ? { ...x, status: "dismissed" } : x));
+                                setActioningReport(null);
+                                toast("Report dismissed.");
+                              }}
+                              className="h-8 px-3 rounded-full border border-border text-muted-foreground text-xs font-mono hover:bg-secondary transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                            >
+                              <X size={13} weight="bold" /> DISMISS
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
