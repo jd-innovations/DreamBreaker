@@ -100,6 +100,7 @@ interface CourtMatch {
   player_a: string;
   player_b: string;
   round: string;
+  is_bye?: boolean;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -147,7 +148,12 @@ function buildElimPairs(seeds: BracketSeed[]): GeneratedMatch[] {
   const pairs: GeneratedMatch[] = [];
   for (let i = 0; i < size / 2; i++) {
     const a = seeds[i], b = seeds[size - 1 - i];
-    if (a && b) pairs.push({ round: 1, match_index: i, seed_a: i + 1, seed_b: size - i, name_a: a.name, name_b: b.name });
+    if (a && b) {
+      pairs.push({ round: 1, match_index: i, seed_a: i + 1, seed_b: size - i, name_a: a.name, name_b: b.name });
+    } else if (a) {
+      // Top seed gets a bye — include in schedule so it appears in the queue
+      pairs.push({ round: 1, match_index: i, seed_a: i + 1, seed_b: 0, name_a: a.name, name_b: "BYE" });
+    }
   }
   return pairs;
 }
@@ -779,8 +785,15 @@ export default function DirectorPage() {
     const fmt = selected?.tournament_format ?? "single_elim";
     const matches = fmt === "round_robin" ? buildRoundRobinSchedule(seeds) : buildElimPairs(seeds);
     setGeneratedMatches(matches);
-    setMatchQueue(matches.map((m) => ({ player_a: m.name_a, player_b: m.name_b, round: fmt === "round_robin" ? "Round Robin" : `Round ${m.round}` })));
-    toast.success(`${matches.length} match${matches.length !== 1 ? "es" : ""} generated.`);
+    setMatchQueue(matches.map((m) => ({
+      player_a: m.name_a,
+      player_b: m.name_b,
+      round: fmt === "round_robin" ? "Round Robin" : `Round ${m.round}`,
+      is_bye: m.name_b === "BYE",
+    })));
+    const realMatches = matches.filter((m) => m.name_b !== "BYE").length;
+    const byes = matches.length - realMatches;
+    toast.success(`${realMatches} match${realMatches !== 1 ? "es" : ""} generated${byes > 0 ? ` · ${byes} bye${byes > 1 ? "s" : ""}` : ""}.`);
   }, [seeds, selected]);
 
   const lockBracket = useCallback(async () => {
@@ -822,14 +835,37 @@ export default function DirectorPage() {
     if (match) setMatchQueue((prev) => [match, ...prev]);
     setCourtAssignments((prev) => ({ ...prev, [courtNum]: null }));
   };
-  const completeMatch = (courtNum: number, scoreA: number, scoreB: number) => {
+  const completeMatch = async (courtNum: number, scoreA: number, scoreB: number) => {
     const match = courtAssignments[courtNum];
-    if (!match) return;
+    if (!match || !selectedId) return;
     const winner = scoreA > scoreB ? match.player_a : match.player_b;
-    setCompletedMatches((prev) => new Set(prev).add(`${match.player_a}-${match.player_b}`));
+    // Persist to DB
+    const supabase = createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from("court_assignments").insert({
+      tournament_id: selectedId,
+      court_number: courtNum,
+      player_a: match.player_a,
+      player_b: match.player_b,
+      round_label: match.round,
+      score_a: scoreA,
+      score_b: scoreB,
+      winner,
+      status: "completed",
+      completed_at: new Date().toISOString(),
+    });
+    setCompletedMatches((prev) => new Set(prev).add(`${match.player_a} ${scoreA}–${scoreB} ${match.player_b}`));
     setCourtAssignments((prev) => ({ ...prev, [courtNum]: null }));
     setScoreModal(null);
-    toast.success(`Match complete — ${winner} wins ${scoreA}–${scoreB}.`);
+    toast.success(`${winner} wins ${scoreA}–${scoreB} · saved.`);
+  };
+
+  const advanceBye = (idx: number) => {
+    const match = matchQueue[idx];
+    if (!match || !selectedId) return;
+    setMatchQueue((prev) => prev.filter((_, i) => i !== idx));
+    setCompletedMatches((prev) => new Set(prev).add(`${match.player_a} BYE`));
+    toast.success(`${match.player_a} advances (bye).`);
   };
 
   // Simulated weekly registration data (last 12 weeks)
@@ -1687,14 +1723,16 @@ export default function DirectorPage() {
 
               {generatedMatches.length > 0 && (
                 <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
-                  <h3 className="font-mono text-[10px] tracking-widest text-muted-foreground">MATCH SCHEDULE PREVIEW · {generatedMatches.length} MATCHES</h3>
+                  <h3 className="font-mono text-[10px] tracking-widest text-muted-foreground">
+                    MATCH SCHEDULE · {generatedMatches.filter((m) => m.name_b !== "BYE").length} MATCHES · {generatedMatches.filter((m) => m.name_b === "BYE").length} BYES
+                  </h3>
                   <div className="space-y-2 max-h-72 overflow-y-auto">
                     {generatedMatches.map((m, i) => (
-                      <div key={i} className="flex items-center justify-between rounded-xl bg-secondary/50 px-3 py-2 text-sm">
+                      <div key={i} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${m.name_b === "BYE" ? "bg-muted-foreground/5 opacity-60" : "bg-secondary/50"}`}>
                         <span className="font-mono text-[10px] text-muted-foreground w-20 flex-shrink-0">R{m.round} · M{m.match_index + 1}</span>
                         <span className="flex-1 truncate text-center">{m.name_a}</span>
-                        <span className="font-mono text-xs text-muted-foreground px-2">VS</span>
-                        <span className="flex-1 truncate text-center">{m.name_b}</span>
+                        <span className="font-mono text-xs text-muted-foreground px-2">{m.name_b === "BYE" ? "—" : "VS"}</span>
+                        <span className={`flex-1 truncate text-center ${m.name_b === "BYE" ? "text-muted-foreground italic text-xs" : ""}`}>{m.name_b}</span>
                       </div>
                     ))}
                   </div>
@@ -1768,9 +1806,21 @@ export default function DirectorPage() {
 
                   {matchQueue.length > 0 && (
                     <div>
-                      <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">MATCH QUEUE · {matchQueue.length} PENDING — DRAG TO COURT</p>
+                      <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">
+                        MATCH QUEUE · {matchQueue.filter((m) => !m.is_bye).length} MATCHES · {matchQueue.filter((m) => m.is_bye).length} BYES — DRAG TO COURT
+                      </p>
                       <div className="space-y-2">
-                        {matchQueue.map((match, idx) => (
+                        {matchQueue.map((match, idx) => match.is_bye ? (
+                          <div key={idx} className="flex items-center gap-3 rounded-xl border border-dashed border-muted-foreground/30 bg-secondary/30 px-4 py-3">
+                            <span className="px-2 py-0.5 rounded-full bg-muted-foreground/10 font-mono text-[9px] tracking-widest text-muted-foreground flex-shrink-0">BYE</span>
+                            <span className="font-mono text-[10px] text-muted-foreground flex-shrink-0">{match.round}</span>
+                            <span className="text-sm font-semibold flex-1 truncate">{match.player_a}</span>
+                            <button onClick={() => advanceBye(idx)}
+                              className="flex-shrink-0 h-7 px-3 rounded-full border border-primary/40 bg-primary/10 text-primary font-mono text-[9px] tracking-widest hover:bg-primary/20 transition-colors">
+                              ADVANCE →
+                            </button>
+                          </div>
+                        ) : (
                           <div key={idx} draggable onDragStart={() => handleMatchDragStart(idx)} onDragEnd={handleMatchDragEnd}
                             className={`flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 cursor-grab active:cursor-grabbing transition-all ${draggingMatchIdx === idx ? "opacity-40 scale-95" : "hover:border-primary/40"}`}>
                             <DotsSixVertical size={14} className="text-muted-foreground flex-shrink-0" />
@@ -1789,11 +1839,12 @@ export default function DirectorPage() {
                   {completedMatches.size > 0 && (
                     <div className="rounded-2xl border border-border bg-card p-4">
                       <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-2">COMPLETED · {completedMatches.size}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {Array.from(completedMatches).map((key) => (
-                          <span key={key} className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-mono text-primary flex items-center gap-1.5">
-                            <CheckFat size={10} weight="fill" /> {key.split("-")[0]}
-                          </span>
+                      <div className="space-y-1.5">
+                        {Array.from(completedMatches).map((result) => (
+                          <div key={result} className="flex items-center gap-2 text-xs">
+                            <CheckFat size={10} weight="fill" className="text-primary flex-shrink-0" />
+                            <span className="font-mono text-foreground">{result}</span>
+                          </div>
                         ))}
                       </div>
                     </div>
