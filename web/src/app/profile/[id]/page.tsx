@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   MapPin, Trophy, Medal, Star, ChatCircleDots, ArrowLeft,
-  Lightning,
+  Lightning, ShieldStar,
 } from "@phosphor-icons/react";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
@@ -26,6 +26,7 @@ type PublicProfile = {
   bio: string | null;
   play_style: string[] | null;
   role: string;
+  director_status?: string | null;
 };
 
 function initials(name: string | null) {
@@ -60,7 +61,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ id: st
 
       const { data: prof } = await supabase
         .from("profiles")
-        .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,role")
+        .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,role,director_status")
         .eq("id", id)
         .single();
 
@@ -141,7 +142,14 @@ export default function PublicProfilePage({ params }: { params: Promise<{ id: st
                 : initials(profile.full_name)}
             </div>
             <div className="flex-1 min-w-0 text-center sm:text-left">
-              <h1 className="font-display text-3xl tracking-wide">{profile.full_name ?? "Player"}</h1>
+              <div className="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
+                <h1 className="font-display text-3xl tracking-wide">{profile.full_name ?? "Player"}</h1>
+                {profile.director_status === "approved" && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-400 font-mono text-[9px] tracking-[0.2em]">
+                    <ShieldStar size={11} weight="fill" /> DIRECTOR
+                  </span>
+                )}
+              </div>
               {profile.handle && <div className="font-mono text-sm text-muted-foreground mt-0.5">@{profile.handle}</div>}
               {ratingLabel && <div className="font-mono text-sm text-primary mt-1">{ratingLabel}</div>}
               {(profile.location_city || profile.location_state) && (

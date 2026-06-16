@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   PaperPlaneRight, MagnifyingGlass, PencilSimpleLine, ArrowLeft,
-  ChatCircle, Checks, Heart, Flag, Warning, Prohibit,
+  ChatCircle, Checks, Heart, Flag, Warning, Prohibit, ShieldStar,
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -36,6 +36,7 @@ interface Conversation {
   otherAvatar: string | null;
   otherDupr: number | null;
   otherSkill: string | null;
+  otherIsDirector: boolean;
   lastBody: string;
   lastAt: string | null;
   unread: number;
@@ -48,6 +49,7 @@ export interface UserProfile {
   avatar_url?: string | null;
   dupr?: number | null;
   skill_level?: string | null;
+  director_status?: string | null;
 }
 
 export interface MatchSummary {
@@ -222,7 +224,7 @@ export function MessagingPanel({
       const pMap: Record<string, UserProfile> = { ...profileCache };
       if (missingIds.length > 0) {
         const { data: profs } = await supabase.from("profiles")
-          .select("id,full_name,role,avatar_url,dupr,skill_level")
+          .select("id,full_name,role,avatar_url,dupr,skill_level,director_status")
           .in("id", missingIds);
         for (const p of profs ?? []) pMap[p.id] = p as UserProfile;
         setProfileCache(pMap);
@@ -252,6 +254,7 @@ export function MessagingPanel({
           otherAvatar: pMap[otherId]?.avatar_url ?? null,
           otherDupr: pMap[otherId]?.dupr ?? null,
           otherSkill: pMap[otherId]?.skill_level ?? null,
+          otherIsDirector: (pMap[otherId] as UserProfile | undefined)?.director_status === "approved",
           lastBody: last?.body ?? "",
           lastAt: last?.created_at ?? c.last_message_at,
           unread,
@@ -430,6 +433,7 @@ export function MessagingPanel({
       otherAvatar: otherProfile?.avatar_url ?? null,
       otherDupr: otherProfile?.dupr ?? null,
       otherSkill: otherProfile?.skill_level ?? null,
+      otherIsDirector: otherProfile?.director_status === "approved",
       lastBody: "",
       lastAt: null,
       unread: 0,
@@ -653,7 +657,14 @@ export function MessagingPanel({
                 <div key={c.id} className="relative">
                   <button onClick={() => openConversation(c.id)}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 pr-10 transition-colors text-left ${selectedConvId === c.id ? "bg-secondary" : "hover:bg-secondary/40"}`}>
-                    <Avatar name={c.otherName} url={c.otherAvatar} seed={c.otherId} size={56} online={onlineIds.has(c.otherId)} />
+                    <div className="relative flex-shrink-0">
+                      <Avatar name={c.otherName} url={c.otherAvatar} seed={c.otherId} size={56} online={onlineIds.has(c.otherId)} />
+                      {c.otherIsDirector && (
+                        <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-amber-400 border-2 border-background flex items-center justify-center">
+                          <ShieldStar size={8} weight="fill" className="text-black" />
+                        </span>
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <span className={`text-[15px] truncate ${c.unread > 0 ? "font-bold text-foreground" : "font-semibold"}`}>

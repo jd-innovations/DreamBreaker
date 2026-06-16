@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import {
   Trophy, Users, Lightning, MapPin, Calendar, Star,
   PencilSimple, Medal, CheckCircle, Check, Camera,
-  EyeSlash, Eye, UserMinus, Clock, BookmarkSimple,
+  EyeSlash, Eye, UserMinus, Clock, BookmarkSimple, ShieldStar,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
@@ -20,7 +20,7 @@ type Profile = Pick<
   Tables<"profiles">,
   | "id" | "full_name" | "handle" | "dupr" | "skill_level"
   | "location_city" | "location_state" | "avatar_url" | "cover_url" | "bio"
-  | "play_style" | "availability" | "hand" | "created_at" | "role"
+  | "play_style" | "availability" | "hand" | "created_at" | "role" | "director_status"
 >;
 
 type EditFields = {
@@ -269,7 +269,7 @@ export default function ProfilePage() {
 
       const { data: prof } = await supabase
         .from("profiles")
-        .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,cover_url,bio,play_style,availability,hand,created_at,role")
+        .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,cover_url,bio,play_style,availability,hand,created_at,role,director_status")
         .eq("id", user.id)
         .single();
       if (prof) {
@@ -660,7 +660,14 @@ export default function ProfilePage() {
               )}
             </div>
             <div className="pb-1">
-              <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl tracking-wide">{name}</h1>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl tracking-wide">{name}</h1>
+                {(profile as { director_status?: string | null } | null)?.director_status === "approved" && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-400 font-mono text-[9px] tracking-[0.2em]">
+                    <ShieldStar size={11} weight="fill" /> DIRECTOR
+                  </span>
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-3 mt-1">
                 {profile?.handle && <span className="font-mono text-xs text-primary">{profile.handle}</span>}
                 <span className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin size={12} weight="bold" />{location}</span>

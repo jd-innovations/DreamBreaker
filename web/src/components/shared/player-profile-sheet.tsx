@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import {
   X, Heart, XCircle, Plug, MapPin, Star, Trophy,
-  Users, Calendar, CheckCircle, Medal,
+  Users, Calendar, CheckCircle, Medal, ShieldStar,
 } from "@phosphor-icons/react";
 
 interface SheetPartner {
@@ -25,6 +25,7 @@ interface SheetPartner {
   isTopRated: boolean;
   isVerified: boolean;
   badges: string[];
+  isDirector?: boolean;
 }
 
 interface PlayerProfileSheetProps {
@@ -110,9 +111,14 @@ export function PlayerProfileSheet({ partner, onClose, onPass, onLike, onSuperCo
 
             {/* Name overlay — always on dark gradient so stays white */}
             <div className="absolute bottom-4 left-5 right-5">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-display text-3xl tracking-wide text-white leading-tight">{partner.name}</h2>
                 {partner.isVerified && <CheckCircle size={18} weight="fill" className="text-primary flex-shrink-0" />}
+                {partner.isDirector && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 font-mono text-[9px] tracking-[0.2em]">
+                    <ShieldStar size={10} weight="fill" /> DIRECTOR
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {partner.dupr ? (

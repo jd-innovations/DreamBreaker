@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Sun, Moon, List, X, Bell } from "@phosphor-icons/react";
+import { Sun, Moon, List, X, Bell, ShieldStar } from "@phosphor-icons/react";
 import { Logo } from "./logo";
 import { useTheme } from "./theme-provider";
 import { createClient } from "@/lib/supabase/client";
@@ -20,6 +20,7 @@ export function Header() {
   const { theme, toggle } = useTheme();
   const [open, setOpen] = useState(false);
   const [initials, setInitials] = useState<string | null>(null);
+  const [isDirector, setIsDirector] = useState(false);
   const [authed, setAuthed] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -32,20 +33,25 @@ export function Header() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) return;
       setAuthed(true);
       const name = session.user.user_metadata?.full_name as string | undefined;
       setInitials(name ? toInitials(name) : (session.user.email?.split("@")[0] ?? "").slice(0, 2).toUpperCase() || null);
+      const { data: prof } = await supabase.from("profiles").select("director_status").eq("id", session.user.id).single();
+      setIsDirector((prof as { director_status?: string | null } | null)?.director_status === "approved");
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setAuthed(!!session);
       if (session) {
         const name = session.user.user_metadata?.full_name as string | undefined;
         setInitials(name ? toInitials(name) : (session.user.email?.split("@")[0] ?? "").slice(0, 2).toUpperCase() || null);
+        const { data: prof } = await supabase.from("profiles").select("director_status").eq("id", session.user.id).single();
+        setIsDirector((prof as { director_status?: string | null } | null)?.director_status === "approved");
       } else {
         setInitials(null);
+        setIsDirector(false);
       }
     });
     return () => listener.subscription.unsubscribe();
@@ -115,12 +121,17 @@ export function Header() {
               </button>
               <Link
                 href="/dashboard"
-                className="p-[1.5px] rounded-full bg-gradient-to-r from-violet-500 via-pink-400 to-cyan-400 hover:brightness-110 transition-all inline-flex"
+                className="relative p-[1.5px] rounded-full bg-gradient-to-r from-violet-500 via-pink-400 to-cyan-400 hover:brightness-110 transition-all inline-flex"
                 data-testid="header-getstarted-btn"
               >
                 <span className="h-[37px] px-5 rounded-full font-mono tracking-widest text-sm bg-gradient-to-br dark:from-zinc-950 dark:to-zinc-800 from-white to-zinc-100 dark:text-white text-zinc-900 inline-flex items-center">
                   {initials ?? "ME"}
                 </span>
+                {isDirector && (
+                  <span className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-amber-400 border-2 border-background flex items-center justify-center shadow-sm">
+                    <ShieldStar size={11} weight="fill" className="text-black" />
+                  </span>
+                )}
               </Link>
             </>
           ) : (
