@@ -447,8 +447,8 @@ export default function DirectorTournamentPage() {
         .order("seed_number", { ascending: true });
 
       if (seedRows && seedRows.length > 0) {
-        const regMap = new Map((regs ?? []).map((r: Registration) => [r.player_id, r]));
-        const mapped: BracketSeed[] = seedRows.map((s: { player_id: string; seed_number: number; pool_letter: string | null; locked: boolean }) => {
+        const regMap = new Map((regs as unknown as Registration[] ?? []).map((r: Registration) => [r.player_id, r]));
+        const mapped: BracketSeed[] = seedRows.map((s: { player_id: string; seed_number: number; pool_letter: string | null; locked: boolean | null }) => {
           const reg = regMap.get(s.player_id);
           return {
             player_id: s.player_id,
