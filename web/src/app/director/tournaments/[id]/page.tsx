@@ -94,6 +94,7 @@ interface CourtMatch {
   player_b: string;
   round: string;
   match_id?: string;
+  is_bye?: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -153,10 +154,8 @@ function serpentinePool(seedIndex: number, poolCount: number): string {
 function buildElimPairs(seeds: BracketSeed[]): GeneratedMatch[] {
   const n = seeds.length;
   if (n < 2) return [];
-  // Find next power of 2
   let size = 1;
   while (size < n) size *= 2;
-  // Build round 1 matchups using standard bracket ordering
   const pairs: GeneratedMatch[] = [];
   for (let i = 0; i < size / 2; i++) {
     const aIdx = i;
@@ -164,14 +163,10 @@ function buildElimPairs(seeds: BracketSeed[]): GeneratedMatch[] {
     const seedA = seeds[aIdx];
     const seedB = seeds[bIdx];
     if (seedA && seedB) {
-      pairs.push({
-        round: 1,
-        match_index: i,
-        seed_a: aIdx + 1,
-        seed_b: bIdx + 1,
-        name_a: seedA.name,
-        name_b: seedB.name,
-      });
+      pairs.push({ round: 1, match_index: i, seed_a: aIdx + 1, seed_b: bIdx + 1, name_a: seedA.name, name_b: seedB.name });
+    } else if (seedA) {
+      // Top seed gets a bye — still include so they appear in Day Of queue
+      pairs.push({ round: 1, match_index: i, seed_a: aIdx + 1, seed_b: 0, name_a: seedA.name, name_b: "BYE" });
     }
   }
   return pairs;
@@ -541,8 +536,11 @@ export default function DirectorTournamentPage() {
       player_a: m.name_a,
       player_b: m.name_b,
       round: fmt === "round_robin" ? "Round Robin" : `Round ${m.round}`,
+      is_bye: m.name_b === "BYE",
     })));
-    toast.success(`${matches.length} match${matches.length !== 1 ? "es" : ""} generated.`);
+    const real = matches.filter((m) => m.name_b !== "BYE").length;
+    const byes = matches.length - real;
+    toast.success(`${real} match${real !== 1 ? "es" : ""}${byes > 0 ? ` + ${byes} bye${byes > 1 ? "s" : ""}` : ""} generated.`);
   }, [seeds, tournament]);
 
   // Save + lock seeds to DB
@@ -1200,10 +1198,25 @@ export default function DirectorTournamentPage() {
                 {matchQueue.length > 0 && (
                   <div>
                     <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">
-                      MATCH QUEUE · {matchQueue.length} PENDING — DRAG TO COURT
+                      MATCH QUEUE · {matchQueue.filter((m) => !m.is_bye).length} MATCHES{matchQueue.filter((m) => m.is_bye).length > 0 ? ` · ${matchQueue.filter((m) => m.is_bye).length} BYES` : ""} — DRAG TO COURT
                     </p>
                     <div className="space-y-2">
-                      {matchQueue.map((match, idx) => (
+                      {matchQueue.map((match, idx) => match.is_bye ? (
+                        <div key={idx} className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-secondary/30 px-4 py-3">
+                          <span className="font-mono text-[9px] tracking-widest text-muted-foreground px-2 py-0.5 rounded-full bg-secondary border border-border flex-shrink-0">BYE</span>
+                          <span className="text-sm font-semibold flex-1 truncate">{match.player_a}</span>
+                          <button
+                            onClick={() => {
+                              setMatchQueue((prev) => prev.filter((_, i) => i !== idx));
+                              setCompletedMatches((prev) => new Set(prev).add(match.player_a));
+                              toast.success(`${match.player_a} advances (bye).`);
+                            }}
+                            className="flex-shrink-0 h-7 px-3 rounded-full border border-primary/40 bg-primary/10 text-primary font-mono text-[9px] tracking-widest hover:bg-primary/20 transition-colors"
+                          >
+                            ADVANCE →
+                          </button>
+                        </div>
+                      ) : (
                         <div
                           key={idx}
                           draggable
@@ -1212,9 +1225,7 @@ export default function DirectorTournamentPage() {
                           className={`flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 cursor-grab active:cursor-grabbing transition-all ${draggingMatchIdx === idx ? "opacity-40 scale-95" : "hover:border-primary/40"}`}
                         >
                           <DotsSixVertical size={14} className="text-muted-foreground flex-shrink-0" />
-                          <div className="flex-shrink-0">
-                            <span className="font-mono text-[10px] text-muted-foreground">{match.round}</span>
-                          </div>
+                          <span className="font-mono text-[10px] text-muted-foreground flex-shrink-0">{match.round}</span>
                           <div className="flex-1 min-w-0 flex items-center gap-2">
                             <span className="text-sm font-semibold truncate flex-1">{match.player_a}</span>
                             <span className="font-mono text-[10px] text-muted-foreground flex-shrink-0">VS</span>
