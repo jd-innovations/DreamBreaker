@@ -39,6 +39,12 @@ type SavedTournament = {
   state: string;
   event_date: string;
   director_id?: string | null;
+  entry_fee_cents?: number | null;
+  formats?: string[];
+  skill_min?: number | null;
+  skill_max?: number | null;
+  venue_name?: string | null;
+  description?: string | null;
 };
 
 type UpcomingEvent = {
@@ -149,6 +155,11 @@ export default function DashboardPage() {
   const [cancelConfirming, setCancelConfirming] = useState(false);
   const [dmDirectorId, setDmDirectorId] = useState<string | null>(null);
   const [removingBookmarkId, setRemovingBookmarkId] = useState<string | null>(null);
+  const [registerTarget, setRegisterTarget] = useState<SavedTournament | null>(null);
+  const [registerFormat, setRegisterFormat] = useState<string>("");
+  const [waiverAccepted, setWaiverAccepted] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  const [registerDone, setRegisterDone] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -230,11 +241,12 @@ export default function DashboardPage() {
       const { count } = await supabase.from("registrations").select("tournament_id", { count: "exact", head: true }).eq("player_id", user.id).in("status", ["registered", "checked_in"]);
       if (count && count > 0) setStats((s) => ({ ...s, tournaments: count }));
 
-      const { data: bookmarkRows } = await supabase.from("tournament_bookmarks").select("id, tournament:tournaments!tournament_id(id, name, city, state, event_date, director_id)").eq("player_id", user.id).order("created_at", { ascending: false }).limit(10);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: bookmarkRows } = await (supabase as any).from("tournament_bookmarks").select("id, tournament:tournaments!tournament_id(id, name, city, state, event_date, director_id, entry_fee_cents, formats, skill_min, skill_max, venue_name, description)").eq("player_id", user.id).order("created_at", { ascending: false }).limit(10);
       if (bookmarkRows && bookmarkRows.length > 0) {
-        setSaved(bookmarkRows.map((b) => {
-          const t = b.tournament as { id: string; name: string; city: string; state: string; event_date: string; director_id?: string | null } | null;
-          return { id: b.id, tournamentId: t?.id ?? "", name: t?.name ?? "—", city: t?.city ?? "", state: t?.state ?? "", event_date: t?.event_date ?? "", director_id: t?.director_id };
+        setSaved(bookmarkRows.map((b: { id: string; tournament: unknown }) => {
+          const t = b.tournament as { id: string; name: string; city: string; state: string; event_date: string; director_id?: string | null; entry_fee_cents?: number | null; formats?: string[]; skill_min?: number | null; skill_max?: number | null; venue_name?: string | null; description?: string | null } | null;
+          return { id: b.id, tournamentId: t?.id ?? "", name: t?.name ?? "—", city: t?.city ?? "", state: t?.state ?? "", event_date: t?.event_date ?? "", director_id: t?.director_id, entry_fee_cents: t?.entry_fee_cents, formats: t?.formats, skill_min: t?.skill_min, skill_max: t?.skill_max, venue_name: t?.venue_name, description: t?.description };
         }));
       }
 
@@ -678,11 +690,12 @@ export default function DashboardPage() {
                               <Ticket size={13} /> VIEW DETAILS
                             </button>
                           </Link>
-                          <Link href={`/tournaments/${t.tournamentId}`}>
-                            <button className="h-8 px-4 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-mono tracking-wide hover:bg-primary/20 transition-colors flex items-center gap-1.5">
-                              <Lightning size={13} weight="fill" /> REGISTER
-                            </button>
-                          </Link>
+                          <button
+                            onClick={() => { setRegisterTarget(t); setRegisterFormat((t.formats ?? [])[0] ?? ""); setWaiverAccepted(false); setRegisterDone(false); }}
+                            className="h-8 px-4 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-mono tracking-wide hover:bg-primary/20 transition-colors flex items-center gap-1.5"
+                          >
+                            <Lightning size={13} weight="fill" /> REGISTER
+                          </button>
                           {t.director_id && (
                             <button
                               onClick={() => { setDmDirectorId(t.director_id!); setNavSection("messages"); }}
@@ -908,6 +921,151 @@ export default function DashboardPage() {
                 CONFIRM CANCEL
               </button>
             </div>
+          </div>
+        </div>
+      );
+    })()}
+
+    {/* ── Register Lightbox ──────────────────────────────────────────────── */}
+    {registerTarget && (() => {
+      const t = registerTarget;
+      const fee = t.entry_fee_cents ?? 0;
+      const fmts = t.formats ?? [];
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-card border border-border rounded-3xl overflow-hidden shadow-2xl">
+
+            {/* Header */}
+            <div className="px-6 pt-6 pb-4 border-b border-border">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-mono text-[10px] tracking-[0.25em] text-primary mb-1">REGISTER</p>
+                  <h2 className="font-display text-xl tracking-wide leading-tight">{t.name}</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {t.venue_name ? `${t.venue_name} · ` : ""}{t.city}, {t.state} · {formatDate(t.event_date)}
+                  </p>
+                </div>
+                <button onClick={() => setRegisterTarget(null)} className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary flex-shrink-0 transition-colors">
+                  <X size={14} weight="bold" />
+                </button>
+              </div>
+            </div>
+
+            {registerDone ? (
+              /* ── Success state ── */
+              <div className="px-6 py-10 text-center space-y-4">
+                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <Trophy size={32} weight="duotone" className="text-primary" />
+                </div>
+                <div>
+                  <p className="font-display text-xl tracking-wide">YOU&apos;RE IN!</p>
+                  <p className="text-sm text-muted-foreground mt-1">Registration confirmed for {t.name}.</p>
+                </div>
+                <button
+                  onClick={() => { setRegisterTarget(null); setNavSection("events"); }}
+                  className="h-11 px-8 rounded-full bg-primary text-primary-foreground font-display tracking-[0.15em] text-sm hover:bg-primary/90 transition-colors"
+                >
+                  VIEW MY EVENTS
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="px-6 py-5 space-y-5">
+                  {/* Tournament summary */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-secondary/60 rounded-2xl px-4 py-3">
+                      <p className="font-mono text-[9px] tracking-[0.2em] text-muted-foreground mb-0.5">ENTRY FEE</p>
+                      <p className="font-display text-lg tracking-wide">{fee > 0 ? `$${(fee / 100).toFixed(2)}` : "FREE"}</p>
+                    </div>
+                    <div className="bg-secondary/60 rounded-2xl px-4 py-3">
+                      <p className="font-mono text-[9px] tracking-[0.2em] text-muted-foreground mb-0.5">SKILL LEVEL</p>
+                      <p className="font-display text-lg tracking-wide">
+                        {t.skill_min || t.skill_max ? `${t.skill_min ?? "?"} – ${t.skill_max ?? "?"}` : "Open"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Format selector */}
+                  {fmts.length > 0 && (
+                    <div>
+                      <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mb-2">SELECT FORMAT</p>
+                      <div className="flex flex-wrap gap-2">
+                        {fmts.map((f) => (
+                          <button
+                            key={f}
+                            onClick={() => setRegisterFormat(f)}
+                            className={`h-8 px-4 rounded-full text-xs font-mono border transition-colors ${registerFormat === f ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/50"}`}
+                          >
+                            {f}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Description snippet */}
+                  {t.description && (
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{t.description}</p>
+                  )}
+
+                  {/* Waiver */}
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <div
+                      onClick={() => setWaiverAccepted((v) => !v)}
+                      className={`mt-0.5 h-5 w-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${waiverAccepted ? "bg-primary border-primary" : "border-border group-hover:border-primary/50"}`}
+                    >
+                      {waiverAccepted && <span className="text-primary-foreground text-[10px] font-bold">✓</span>}
+                    </div>
+                    <span className="text-xs text-muted-foreground leading-relaxed">
+                      I agree to the tournament waiver and release of liability. I understand the cancellation policy applies to this registration.
+                    </span>
+                  </label>
+                </div>
+
+                {/* CTAs */}
+                <div className="px-6 pb-6 flex gap-3">
+                  <button
+                    onClick={() => setRegisterTarget(null)}
+                    className="flex-1 h-11 rounded-full border border-border text-sm font-display tracking-[0.15em] hover:bg-secondary transition-colors"
+                  >
+                    CANCEL
+                  </button>
+                  <button
+                    disabled={!waiverAccepted || registering || (fmts.length > 0 && !registerFormat)}
+                    onClick={async () => {
+                      if (!currentUserId || !waiverAccepted) return;
+                      setRegistering(true);
+                      const supabase = createClient();
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      const { data: reg } = await (supabase as any)
+                        .from("registrations")
+                        .insert({
+                          tournament_id: t.tournamentId,
+                          player_id: currentUserId,
+                          status: "registered",
+                          waiver_accepted_at: new Date().toISOString(),
+                        })
+                        .select("id")
+                        .single();
+                      setRegistering(false);
+                      if (reg) {
+                        setRegisterDone(true);
+                        // Optimistically add to upcoming events and remove from saved
+                        setUpcoming((prev) => [
+                          { id: t.tournamentId, registration_id: reg.id, name: t.name, city: t.city, state: t.state, event_date: t.event_date, status: "registered", director_id: t.director_id },
+                          ...prev,
+                        ]);
+                        setSaved((prev) => prev.filter((s) => s.tournamentId !== t.tournamentId));
+                      }
+                    }}
+                    className="flex-1 h-11 rounded-full bg-primary text-primary-foreground text-sm font-display tracking-[0.15em] hover:bg-primary/90 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+                  >
+                    {registering ? <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> : null}
+                    {fee > 0 ? `PAY $${(fee / 100).toFixed(2)} & REGISTER` : "COMPLETE REGISTRATION"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       );
