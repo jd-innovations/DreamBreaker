@@ -158,8 +158,8 @@ export function MessagingPanel({
   initialRecipientId,
   onUnreadChange,
   compact = false,
-  matches,
-  likesCount = 0,
+  matches: matchesProp,
+  likesCount: likesCountProp = 0,
 }: MessagingPanelProps) {
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -174,6 +174,13 @@ export function MessagingPanel({
   const [loadingConvos, setLoadingConvos] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [mobileShowThread, setMobileShowThread] = useState(false);
+  // Self-loaded matches when parent doesn't supply them
+  const [internalMatches, setInternalMatches] = useState<MatchSummary[]>([]);
+  const [internalLikes, setInternalLikes] = useState(0);
+
+  // Use prop if provided, otherwise self-loaded
+  const matches = matchesProp ?? internalMatches;
+  const likesCount = matchesProp !== undefined ? likesCountProp : internalLikes;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -258,6 +265,61 @@ export function MessagingPanel({
   }, [currentUserId]);
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
+
+  // ── Self-load mutual matches when parent doesn't supply them ───────────────
+  useEffect(() => {
+    if (matchesProp !== undefined || !currentUserId) return;
+    (async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: mutual } = await (supabase as any)
+        .from("v_mutual_matches")
+        .select("player_a,player_b")
+        .or(`player_a.eq.${currentUserId},player_b.eq.${currentUserId}`);
+
+      const matchIds = (mutual ?? [])
+        .map((m: { player_a: string; player_b: string }) =>
+          m.player_a === currentUserId ? m.player_b : m.player_a)
+        .filter(Boolean) as string[];
+
+      if (matchIds.length > 0) {
+        const { data: mp } = await supabase
+          .from("profiles")
+          .select("id,full_name,avatar_url,dupr,skill_level")
+          .in("id", matchIds);
+        setInternalMatches(
+          (mp ?? []).map((p) => ({
+            id: p.id,
+            name: p.full_name ?? "Player",
+            avatar: p.avatar_url,
+            dupr: p.dupr,
+            skill: p.skill_level,
+          }))
+        );
+      }
+
+      // Incoming likes count (people who liked me that I haven't swiped on)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: mySwipes } = await (supabase as any)
+        .from("matchmaking_swipes")
+        .select("target_id")
+        .eq("requester_id", currentUserId);
+      const swipedSet = new Set((mySwipes ?? []).map((s: { target_id: string }) => s.target_id));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: incoming } = await (supabase as any)
+        .from("matchmaking_swipes")
+        .select("requester_id")
+        .eq("target_id", currentUserId)
+        .eq("direction", "like");
+      setInternalLikes(
+        new Set(
+          (incoming ?? [])
+            .map((s: { requester_id: string }) => s.requester_id)
+            .filter((id: string) => !swipedSet.has(id))
+        ).size
+      );
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId, matchesProp]);
 
   // ── Real-time ──────────────────────────────────────────────────────────────
 
