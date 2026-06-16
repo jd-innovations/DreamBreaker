@@ -46,7 +46,7 @@ export function Footer() {
         </div>
       </div>
       <div className="border-t border-border py-5 text-center text-xs text-muted-foreground font-mono">
-        © 2026 DREAM BREAKER PB · ALL RIGHTS RESERVED
+        © 2026 COMPETE PICKLEBALL · ALL RIGHTS RESERVED
       </div>
     </footer>
   );

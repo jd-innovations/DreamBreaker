@@ -20,7 +20,7 @@ export function DreamBreakerInsights({ insight, className = "" }: DreamBreakerIn
         <div className="flex items-center gap-1.5 mb-1.5">
           <Sparkle size={11} weight="fill" className="text-primary flex-shrink-0" />
           <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.35em] font-bold text-muted-foreground uppercase">
-            DreamBreaker Insights
+            Compete Insights
           </span>
         </div>
         <div className="font-display text-xl sm:text-2xl md:text-3xl tracking-wide leading-tight">

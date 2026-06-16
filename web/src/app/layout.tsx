@@ -33,7 +33,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "DreamBreaker PB — Pickleball Tournaments",
+  title: "Compete Pickleball — Pickleball Tournaments",
   description:
     "Compete in elite pickleball tournaments. Find partners. Hold your spot. Earn your rank.",
 };

@@ -629,7 +629,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               <div className="border border-border rounded-2xl p-6 bg-card">
                 <h3 className="font-display text-2xl tracking-wide mb-3">ABOUT THIS EVENT</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">
-                  {t.description ?? `The ${t.name} is part of the Dream Breaker PB Pro Circuit. ${formatDisplay} with players from across the region competing for ${prizeDisplay} in cash + sponsor prizes. Pool play seeds into a knockout bracket. Live scoring on every court.`}
+                  {t.description ?? `The ${t.name} is part of the Compete Pickleball Pro Circuit. ${formatDisplay} with players from across the region competing for ${prizeDisplay} in cash + sponsor prizes. Pool play seeds into a knockout bracket. Live scoring on every court.`}
                 </p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -930,7 +930,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               <BookmarkButton tournamentId={t.id} className="flex-1 w-auto rounded-xl" />
               <ShareButton
                 title={t.name}
-                text={`Check out ${t.name} on DreamBreaker PB — ${t.city}, ${t.state}`}
+                text={`Check out ${t.name} on Compete Pickleball — ${t.city}, ${t.state}`}
                 url={typeof window !== "undefined" ? window.location.href : `/tournaments/${t.id}`}
                 className="flex-1"
               />

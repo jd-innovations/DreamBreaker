@@ -595,7 +595,7 @@ export default function AdminPage() {
       <div className="px-5 py-5 border-b border-border flex-shrink-0">
         <Link href="/" className="flex items-center gap-2">
           <Lightning size={18} weight="fill" className="text-primary" />
-          <span className="font-display tracking-wider text-sm">DreamBreakerPB</span>
+          <span className="font-display tracking-wider text-sm">Compete Pickleball</span>
         </Link>
         <div className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mt-1">ADMIN PORTAL</div>
       </div>
@@ -1277,7 +1277,7 @@ export default function AdminPage() {
                 <h3 className="font-semibold mb-4">Platform Fee Breakdown</h3>
                 {[
                   { label: "Gross Entry Fees Collected", value: fmt(totalRevenue), note: "Sum of all confirmed registrations × entry fee" },
-                  { label: "Platform Revenue (5%)", value: fmt(platformRevenue), note: "DreamBreakerPB earnings", highlight: true },
+                  { label: "Platform Revenue (5%)", value: fmt(platformRevenue), note: "Compete Pickleball earnings", highlight: true },
                   { label: "Director Payouts Due", value: fmt(totalRevenue - platformRevenue), note: "95% owed to directors after events" },
                 ].map((r) => (
                   <div key={r.label} className={`flex items-center justify-between py-4 border-b border-border last:border-0 ${r.highlight ? "bg-primary/5 -mx-6 px-6 rounded" : ""}`}>
@@ -1337,7 +1337,7 @@ export default function AdminPage() {
 
                   <div>
                     <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">SUBJECT</label>
-                    <input value={composeSubject} onChange={(e) => setComposeSubject(e.target.value)} placeholder="e.g. Important update from DreamBreakerPB"
+                    <input value={composeSubject} onChange={(e) => setComposeSubject(e.target.value)} placeholder="e.g. Important update from Compete Pickleball"
                       className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
                   </div>
 

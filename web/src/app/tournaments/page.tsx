@@ -197,7 +197,7 @@ export default function TournamentsPage() {
                         <BookmarkButton tournamentId={t.id} size="sm" />
                         <ShareButton
                           title={t.name}
-                          text={`Check out ${t.name} on DreamBreaker PB — ${t.city}, ${t.state}`}
+                          text={`Check out ${t.name} on Compete Pickleball — ${t.city}, ${t.state}`}
                           url={`${typeof window !== "undefined" ? window.location.origin : ""}/tournaments/${t.id}`}
                           size="sm"
                         />

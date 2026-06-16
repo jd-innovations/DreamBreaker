@@ -551,7 +551,7 @@ export default function DirectorPage() {
       <div className="px-5 py-5 border-b border-border">
         <Link href="/" className="flex items-center gap-2">
           <Lightning size={18} weight="fill" className="text-primary" />
-          <span className="font-display tracking-wider text-sm">DreamBreakerPB</span>
+          <span className="font-display tracking-wider text-sm">Compete Pickleball</span>
         </Link>
         <div className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mt-1">TOURNAMENT DIRECTOR</div>
       </div>
