@@ -172,7 +172,7 @@ function InfoChip({ label, value }: { label: string; value: string }) {
 
 function ReasonPill({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 bg-white/10 text-xs font-mono text-white">
+    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-foreground/20 bg-foreground/8 text-xs font-mono text-foreground">
       <CheckCircle size={11} weight="fill" />{label}
     </span>
   );
@@ -594,7 +594,7 @@ export default function MatchmakingPage() {
                     </div>
                     <button
                       onClick={() => setMessagingTarget(m)}
-                      className="w-full h-9 rounded-full border border-white/20 bg-white/10 text-white text-xs font-mono tracking-[0.15em] hover:bg-white/15 transition-colors flex items-center justify-center gap-1.5"
+                      className="w-full h-9 rounded-full border border-foreground/20 bg-foreground/8 text-foreground text-xs font-mono tracking-[0.15em] hover:bg-foreground/15 transition-colors flex items-center justify-center gap-1.5"
                     >
                       <ChatCircleDots size={14} weight="fill" /> MESSAGE
                     </button>
@@ -938,7 +938,7 @@ export default function MatchmakingPage() {
               <div className="space-y-3">
                 <button
                   onClick={() => { setMessagingTarget(matchedPartner); setMatchedPartner(null); }}
-                  className="w-full h-12 rounded-full border border-white/20 bg-white/10 text-white font-display tracking-[0.2em] text-sm flex items-center justify-center gap-2 hover:bg-white/15 transition-colors"
+                  className="w-full h-12 rounded-full border border-foreground/20 bg-foreground/8 text-foreground font-display tracking-[0.2em] text-sm flex items-center justify-center gap-2 hover:bg-foreground/15 transition-colors"
                 >
                   <ChatCircleDots size={18} weight="fill" /> SEND A MESSAGE
                 </button>
