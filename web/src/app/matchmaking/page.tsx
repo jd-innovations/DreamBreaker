@@ -172,7 +172,7 @@ function InfoChip({ label, value }: { label: string; value: string }) {
 
 function ReasonPill({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/40 bg-primary/8 text-xs font-mono text-primary">
+    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 bg-white/10 text-xs font-mono text-white">
       <CheckCircle size={11} weight="fill" />{label}
     </span>
   );
@@ -705,9 +705,9 @@ export default function MatchmakingPage() {
                         </div>
                         <div className="flex items-center gap-3 mt-1 flex-wrap">
                           {topCard.dupr ? (
-                            <span className="bg-primary text-primary-foreground text-xs font-mono font-bold px-2.5 py-1 rounded-full">{topCard.dupr} DUPR</span>
+                            <span className="bg-white/15 text-white text-xs font-mono font-bold px-2.5 py-1 rounded-full border border-white/20">{topCard.dupr} DUPR</span>
                           ) : topCard.skill_level ? (
-                            <span className="bg-secondary/80 text-foreground text-xs font-mono px-2.5 py-1 rounded-full flex items-center gap-1"><Star size={11} weight="fill" className="text-primary" />{topCard.skill_level.replace("-", " – ")}</span>
+                            <span className="bg-white/10 text-white text-xs font-mono px-2.5 py-1 rounded-full border border-white/20 flex items-center gap-1"><Star size={11} weight="fill" className="text-white/70" />{topCard.skill_level.replace("-", " – ")}</span>
                           ) : null}
                           <span className="flex items-center gap-1 text-white/80 text-xs"><MapPin size={12} weight="bold" />{topCard.location}{topCard.distance ? ` · ${topCard.distance}` : ""}</span>
                         </div>
@@ -725,7 +725,7 @@ export default function MatchmakingPage() {
                           </div>
                           <div className="flex items-center gap-3 flex-wrap">
                             {topCard.dupr ? (
-                              <span className="bg-primary text-primary-foreground text-xs font-mono font-bold px-3 py-1.5 rounded-full">{topCard.dupr} DUPR</span>
+                              <span className="bg-secondary text-foreground text-xs font-mono font-bold px-3 py-1.5 rounded-full border border-border">{topCard.dupr} DUPR</span>
                             ) : topCard.skill_level ? (
                               <span className="bg-secondary text-foreground text-xs font-mono px-3 py-1.5 rounded-full flex items-center gap-1"><Star size={11} weight="fill" className="text-primary" />{topCard.skill_level.replace("-", " – ")}</span>
                             ) : null}
@@ -745,7 +745,7 @@ export default function MatchmakingPage() {
                         {/* Why matched */}
                         {topCard.matchReasons.length > 0 && (
                           <div className="mb-4">
-                            <p className="font-mono text-[9px] tracking-[0.25em] text-primary mb-2 flex items-center gap-1.5">
+                            <p className="font-mono text-[9px] tracking-[0.25em] text-muted-foreground mb-2 flex items-center gap-1.5">
                               <Plug size={10} weight="fill" /> WHY WE MATCHED YOU
                             </p>
                             <div className="flex flex-wrap gap-2">
