@@ -11,6 +11,7 @@ import {
   ArrowRight, Medal, Star, BookmarkSimple, Clock,
   Gauge, ChatCircleDots, Ticket, UserCircle,
   Gear, SignOut, List, X, SlidersHorizontal,
+  Warning, LockSimple, CreditCard, ChartBar, CaretRight,
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
@@ -869,13 +870,13 @@ export default function DashboardPage() {
                 <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mb-3">WHAT HAPPENS IF YOU CANCEL</p>
                 <ul className="space-y-2.5">
                   {[
-                    { icon: "⚠️", text: "Your registered spot will be immediately released to the waitlist." },
-                    { icon: "🔒", text: "You may not be able to re-register if the event fills up." },
-                    { icon: "💳", text: refundLabel },
-                    { icon: "📊", text: "No impact to your DUPR rating for this event." },
-                  ].map(({ icon, text }) => (
+                    { Icon: Warning, color: "text-amber-400", text: "Your registered spot will be immediately released to the waitlist." },
+                    { Icon: LockSimple, color: "text-muted-foreground", text: "You may not be able to re-register if the event fills up." },
+                    { Icon: CreditCard, color: refundColor, text: refundLabel },
+                    { Icon: ChartBar, color: "text-muted-foreground", text: "No impact to your DUPR rating for this event." },
+                  ].map(({ Icon, color, text }) => (
                     <li key={text} className="flex items-start gap-3 text-sm text-muted-foreground">
-                      <span className="text-base leading-tight flex-shrink-0">{icon}</span>
+                      <Icon size={17} weight="bold" className={`flex-shrink-0 mt-0.5 ${color}`} />
                       <span className="leading-snug">{text}</span>
                     </li>
                   ))}
@@ -885,7 +886,7 @@ export default function DashboardPage() {
               {/* Policy */}
               <details className="group">
                 <summary className="cursor-pointer font-mono text-[10px] tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors list-none flex items-center gap-1.5">
-                  <span className="group-open:rotate-90 transition-transform inline-block">▶</span> CANCELLATION POLICY
+                  <CaretRight size={11} weight="bold" className="group-open:rotate-90 transition-transform" /> CANCELLATION POLICY
                 </summary>
                 <p className="mt-2 text-xs text-muted-foreground leading-relaxed border-l-2 border-border pl-3">{policy}</p>
               </details>
