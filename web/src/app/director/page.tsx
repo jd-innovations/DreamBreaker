@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -9,7 +9,8 @@ import {
   ChartBar, ClipboardText, Gear, SignOut, CaretDown, CaretUp,
   TrendUp, TrendDown, Ticket, Star, Funnel, MagnifyingGlass,
   ArrowSquareOut, Broadcast, Trash, Globe, Image, UploadSimple, FloppyDisk,
-  ChatCircleDots,
+  ChatCircleDots, DotsSixVertical, Lock, LockOpen, ArrowsClockwise,
+  SoccerBall, CheckFat,
 } from "@phosphor-icons/react";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
@@ -32,6 +33,8 @@ interface Tournament {
   event_date: string;
   format: string;
   formats?: string[] | null;
+  tournament_format?: string | null;
+  pool_count?: number | null;
   draw_size: number;
   spots_filled: number;
   entry_fee_cents: number;
@@ -76,6 +79,29 @@ interface Registration {
   profiles: { full_name: string | null; dupr: number | null; skill_level: string | null } | null;
 }
 
+interface BracketSeed {
+  player_id: string;
+  seed_number: number;
+  pool_letter: string | null;
+  locked: boolean;
+  name: string;
+  dupr: number | null;
+  skill_level: string | null;
+}
+interface GeneratedMatch {
+  round: number;
+  match_index: number;
+  seed_a: number;
+  seed_b: number;
+  name_a: string;
+  name_b: string;
+}
+interface CourtMatch {
+  player_a: string;
+  player_b: string;
+  round: string;
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<string, string> = {
@@ -94,6 +120,138 @@ const TIER_COLORS: Record<string, string> = {
   silver: "text-slate-300 border-slate-300/40 bg-slate-300/10",
   standard: "text-muted-foreground border-border",
 };
+
+const STRUCTURE_LABELS: Record<string, string> = {
+  single_elim: "Single Elimination", double_elim: "Double Elimination",
+  round_robin: "Round Robin", pool_bracket: "Pool Play → Bracket", mlp: "MLP Format",
+};
+const POOL_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+const POOL_COLORS: Record<string, string> = {
+  A: "border-violet-500/40 bg-violet-500/10 text-violet-400",
+  B: "border-cyan-500/40 bg-cyan-500/10 text-cyan-400",
+  C: "border-amber-500/40 bg-amber-500/10 text-amber-400",
+  D: "border-pink-500/40 bg-pink-500/10 text-pink-400",
+  E: "border-green-500/40 bg-green-500/10 text-green-400",
+  F: "border-orange-500/40 bg-orange-500/10 text-orange-400",
+};
+function serpentinePool(idx: number, poolCount: number) {
+  const cycle = poolCount * 2 - 2;
+  const pos = idx % cycle;
+  return POOL_LETTERS[pos < poolCount ? pos : cycle - pos];
+}
+function buildElimPairs(seeds: BracketSeed[]): GeneratedMatch[] {
+  const n = seeds.length;
+  if (n < 2) return [];
+  let size = 1;
+  while (size < n) size *= 2;
+  const pairs: GeneratedMatch[] = [];
+  for (let i = 0; i < size / 2; i++) {
+    const a = seeds[i], b = seeds[size - 1 - i];
+    if (a && b) pairs.push({ round: 1, match_index: i, seed_a: i + 1, seed_b: size - i, name_a: a.name, name_b: b.name });
+  }
+  return pairs;
+}
+function buildRoundRobinSchedule(seeds: BracketSeed[]): GeneratedMatch[] {
+  const m: GeneratedMatch[] = [];
+  let idx = 0;
+  for (let i = 0; i < seeds.length; i++)
+    for (let j = i + 1; j < seeds.length; j++)
+      m.push({ round: 1, match_index: idx++, seed_a: i + 1, seed_b: j + 1, name_a: seeds[i].name, name_b: seeds[j].name });
+  return m;
+}
+
+function SeedRow({ seed, index, locked, isDragging, isDragOver, onDragStart, onDragEnter, onDragEnd, onDragOver, onDrop }: {
+  seed: BracketSeed; index: number; locked: boolean;
+  isDragging: boolean; isDragOver: boolean;
+  onDragStart: () => void; onDragEnter: () => void; onDragEnd: () => void;
+  onDragOver: (e: React.DragEvent) => void; onDrop: () => void;
+}) {
+  return (
+    <div draggable={!locked} onDragStart={onDragStart} onDragEnter={onDragEnter} onDragEnd={onDragEnd} onDragOver={onDragOver} onDrop={onDrop}
+      className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-all select-none
+        ${isDragging ? "opacity-40" : ""} ${isDragOver ? "border-primary bg-primary/5 scale-[1.01]" : "border-border bg-card"}
+        ${locked ? "cursor-default" : "cursor-grab active:cursor-grabbing"}`}>
+      {!locked && <DotsSixVertical size={14} className="text-muted-foreground flex-shrink-0" />}
+      <div className="h-7 w-7 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
+        <span className="font-mono text-xs font-bold text-primary">{index + 1}</span>
+      </div>
+      {seed.pool_letter && (
+        <span className={`px-2 py-0.5 rounded-full border font-mono text-[9px] tracking-widest font-bold ${POOL_COLORS[seed.pool_letter] ?? "border-border text-muted-foreground"}`}>
+          {seed.pool_letter}
+        </span>
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold truncate">{seed.name}</div>
+        <div className="text-xs text-muted-foreground">{seed.dupr ? `DUPR ${seed.dupr}` : seed.skill_level?.replace("-", " – ") ?? "—"}</div>
+      </div>
+    </div>
+  );
+}
+
+function PoolColumn({ letter, seeds, locked, draggingPlayerId, dragOverPool, onDragOver, onDrop, onSeedDragStart, onSeedDragEnd }: {
+  letter: string; seeds: BracketSeed[]; locked: boolean;
+  draggingPlayerId: string | null; dragOverPool: string | null;
+  onDragOver: (e: React.DragEvent, pool: string) => void; onDrop: (pool: string) => void;
+  onSeedDragStart: (id: string) => void; onSeedDragEnd: () => void;
+}) {
+  return (
+    <div onDragOver={(e) => onDragOver(e, letter)} onDrop={() => onDrop(letter)}
+      className={`flex-1 min-w-0 rounded-2xl border-2 p-3 transition-all ${dragOverPool === letter ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
+      <div className={`font-mono text-[10px] tracking-[0.3em] font-bold mb-3 px-1 ${POOL_COLORS[letter]?.split(" ")[2] ?? "text-muted-foreground"}`}>POOL {letter}</div>
+      <div className="space-y-2">
+        {seeds.length === 0 && <div className="h-12 rounded-xl border-2 border-dashed border-border flex items-center justify-center"><span className="text-xs text-muted-foreground">Drop here</span></div>}
+        {seeds.map((s) => (
+          <div key={s.player_id} draggable={!locked} onDragStart={() => onSeedDragStart(s.player_id)} onDragEnd={onSeedDragEnd}
+            className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 transition-all ${draggingPlayerId === s.player_id ? "opacity-40" : ""} ${locked ? "cursor-default" : "cursor-grab active:cursor-grabbing"} border-border bg-secondary/40`}>
+            {!locked && <DotsSixVertical size={12} className="text-muted-foreground flex-shrink-0" />}
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-semibold truncate">{s.name}</div>
+              <div className="text-[10px] text-muted-foreground">{s.dupr ? `DUPR ${s.dupr}` : s.skill_level?.replace("-", " – ") ?? "—"}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ScoreModal({ match, courtNum, onClose, onSave }: {
+  match: CourtMatch; courtNum: number; onClose: () => void; onSave: (a: number, b: number) => void;
+}) {
+  const [scoreA, setScoreA] = React.useState("");
+  const [scoreB, setScoreB] = React.useState("");
+  return (
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-6 shadow-2xl">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-display text-xl tracking-wide">ENTER SCORE</h3>
+          <button onClick={onClose} className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary"><X size={13} weight="bold" /></button>
+        </div>
+        <div className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">COURT {courtNum} · {match.round.toUpperCase()}</div>
+        <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center mb-6">
+          <div className="text-center">
+            <div className="text-xs text-muted-foreground mb-1 truncate">{match.player_a}</div>
+            <input type="number" min={0} max={99} value={scoreA} onChange={(e) => setScoreA(e.target.value)}
+              className="w-full h-14 rounded-xl bg-secondary border border-border text-center text-2xl font-display outline-none focus:ring-2 focus:ring-ring" placeholder="0" />
+          </div>
+          <div className="text-muted-foreground font-mono text-sm">VS</div>
+          <div className="text-center">
+            <div className="text-xs text-muted-foreground mb-1 truncate">{match.player_b}</div>
+            <input type="number" min={0} max={99} value={scoreB} onChange={(e) => setScoreB(e.target.value)}
+              className="w-full h-14 rounded-xl bg-secondary border border-border text-center text-2xl font-display outline-none focus:ring-2 focus:ring-ring" placeholder="0" />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 h-11 rounded-full border border-border hover:bg-secondary font-display tracking-wider text-sm">CANCEL</button>
+          <button onClick={() => { const a = parseInt(scoreA, 10), b = parseInt(scoreB, 10); if (isNaN(a) || isNaN(b)) { toast.error("Enter both scores."); return; } onSave(a, b); }}
+            className="flex-1 h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-wider text-sm flex items-center justify-center gap-2">
+            <CheckFat size={14} weight="fill" /> CONFIRM
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const FORMAT_OPTIONS = [
   { label: "Men's Doubles",   format: "doubles",       gender: "mens",  short: "MD" },
@@ -293,7 +451,7 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type NavSection = "dashboard" | "registrations" | "checkin" | "analytics" | "settings" | "manage" | "sponsors" | "publicpage" | "messages";
+type NavSection = "dashboard" | "registrations" | "checkin" | "analytics" | "settings" | "manage" | "sponsors" | "publicpage" | "messages" | "bracket" | "dayof";
 
 export default function DirectorPage() {
   const router = useRouter();
@@ -325,6 +483,25 @@ export default function DirectorPage() {
   const [addingSponsor, setAddingSponsor] = useState(false);
   const [removingSponsor, setRemovingSponsor] = useState<string | null>(null);
   const detailsFormRef = useRef<HTMLFormElement>(null);
+
+  // Bracket state
+  const [seeds, setSeeds] = useState<BracketSeed[]>([]);
+  const [bracketLocked, setBracketLocked] = useState(false);
+  const [savingSeeds, setSavingSeeds] = useState(false);
+  const [generatedMatches, setGeneratedMatches] = useState<GeneratedMatch[]>([]);
+  const [dragSeedIdx, setDragSeedIdx] = useState<number | null>(null);
+  const [dragOverSeedIdx, setDragOverSeedIdx] = useState<number | null>(null);
+  const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
+  const [dragOverPool, setDragOverPool] = useState<string | null>(null);
+  const [seedsLoaded, setSeedsLoaded] = useState<string | null>(null);
+  // Day-of state
+  const [courts, setCourts] = useState(4);
+  const [courtAssignments, setCourtAssignments] = useState<Record<number, CourtMatch | null>>({});
+  const [matchQueue, setMatchQueue] = useState<CourtMatch[]>([]);
+  const [draggingMatchIdx, setDraggingMatchIdx] = useState<number | null>(null);
+  const [dragOverCourt, setDragOverCourt] = useState<number | null>(null);
+  const [scoreModal, setScoreModal] = useState<{ match: CourtMatch; court: number } | null>(null);
+  const [completedMatches, setCompletedMatches] = useState<Set<string>>(new Set());
 
   const [messagingUnread, setMessagingUnread] = useState(0);
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
@@ -406,7 +583,7 @@ export default function DirectorPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: t } = await (supabase as any)
       .from("tournaments")
-      .select("id,name,city,state,venue_name,venue_address,zip_code,event_date,format,formats,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,hold_duration_hours,prize_pool_cents,description,rules,cover_img_url,status,created_at")
+      .select("id,name,city,state,venue_name,venue_address,zip_code,event_date,format,formats,tournament_format,pool_count,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,hold_duration_hours,prize_pool_cents,description,rules,cover_img_url,status,created_at")
       .eq("id", tid)
       .single();
     if (t) {
@@ -548,6 +725,113 @@ export default function DirectorPage() {
     toast.success("Player checked in!");
   };
 
+  const loadSeeds = useCallback(async (tid: string) => {
+    if (seedsLoaded === tid) return;
+    await loadRegistrations(tid);
+    const supabase = createClient();
+    const { data: seedRows } = await supabase.from("bracket_seeds").select("player_id,seed_number,pool_letter,locked").eq("tournament_id", tid).order("seed_number", { ascending: true });
+    if (seedRows && seedRows.length > 0) {
+      const { data: regsData } = await supabase.from("registrations").select("id,player_id,status,division_id,created_at,profiles!player_id(full_name,dupr,skill_level)").eq("tournament_id", tid);
+      const regMap = new Map((regsData as unknown as Registration[] ?? []).map((r: Registration) => [r.player_id, r]));
+      const mapped: BracketSeed[] = seedRows.map((s: { player_id: string; seed_number: number; pool_letter: string | null; locked: boolean | null }) => {
+        const reg = regMap.get(s.player_id);
+        return { player_id: s.player_id, seed_number: s.seed_number, pool_letter: s.pool_letter, locked: s.locked ?? false, name: reg?.profiles?.full_name ?? "Unknown", dupr: reg?.profiles?.dupr ?? null, skill_level: reg?.profiles?.skill_level ?? null };
+      });
+      setSeeds(mapped);
+      setBracketLocked(mapped.some((s) => s.locked));
+    } else {
+      setSeeds([]);
+      setBracketLocked(false);
+    }
+    setSeedsLoaded(tid);
+  }, [seedsLoaded]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const autoSeed = useCallback(() => {
+    const registered = registrations.filter((r) => r.status === "registered" || r.status === "checked_in");
+    const sorted = [...registered].sort((a, b) => (b.profiles?.dupr ?? 0) - (a.profiles?.dupr ?? 0));
+    const poolCount = selected?.pool_count ?? 4;
+    const fmt = selected?.tournament_format ?? "single_elim";
+    setSeeds(sorted.map((r, i) => ({ player_id: r.player_id, seed_number: i + 1, pool_letter: fmt === "pool_bracket" ? serpentinePool(i, poolCount) : null, locked: false, name: r.profiles?.full_name ?? "Unknown", dupr: r.profiles?.dupr ?? null, skill_level: r.profiles?.skill_level ?? null })));
+    setBracketLocked(false);
+    setGeneratedMatches([]);
+    toast.success("Auto-seeded by DUPR rating.");
+  }, [registrations, selected]);
+
+  const handleSeedDragStart = (idx: number) => setDragSeedIdx(idx);
+  const handleSeedDragEnter = (idx: number) => {
+    if (dragSeedIdx === null || dragSeedIdx === idx) return;
+    setDragOverSeedIdx(idx);
+    setSeeds((prev) => { const next = [...prev]; const [item] = next.splice(dragSeedIdx, 1); next.splice(idx, 0, item); return next.map((s, i) => ({ ...s, seed_number: i + 1 })); });
+    setDragSeedIdx(idx);
+  };
+  const handleSeedDragEnd = () => { setDragSeedIdx(null); setDragOverSeedIdx(null); };
+  const handlePoolDragStart = (playerId: string) => setDraggingPlayerId(playerId);
+  const handlePoolDragEnd = () => { setDraggingPlayerId(null); setDragOverPool(null); };
+  const handlePoolDragOver = (e: React.DragEvent, pool: string) => { e.preventDefault(); setDragOverPool(pool); };
+  const handlePoolDrop = (pool: string) => {
+    if (!draggingPlayerId) return;
+    setSeeds((prev) => prev.map((s) => s.player_id === draggingPlayerId ? { ...s, pool_letter: pool } : s));
+    setDraggingPlayerId(null); setDragOverPool(null);
+  };
+
+  const generateMatches = useCallback(() => {
+    if (seeds.length < 2) { toast.error("Need at least 2 seeded players."); return; }
+    const fmt = selected?.tournament_format ?? "single_elim";
+    const matches = fmt === "round_robin" ? buildRoundRobinSchedule(seeds) : buildElimPairs(seeds);
+    setGeneratedMatches(matches);
+    setMatchQueue(matches.map((m) => ({ player_a: m.name_a, player_b: m.name_b, round: fmt === "round_robin" ? "Round Robin" : `Round ${m.round}` })));
+    toast.success(`${matches.length} match${matches.length !== 1 ? "es" : ""} generated.`);
+  }, [seeds, selected]);
+
+  const lockBracket = useCallback(async () => {
+    if (!selectedId || seeds.length === 0) { toast.error("No seeds to lock."); return; }
+    setSavingSeeds(true);
+    const supabase = createClient();
+    await supabase.from("bracket_seeds").delete().eq("tournament_id", selectedId);
+    const { error } = await supabase.from("bracket_seeds").insert(seeds.map((s) => ({ tournament_id: selectedId, player_id: s.player_id, seed_number: s.seed_number, pool_letter: s.pool_letter, locked: true })));
+    setSavingSeeds(false);
+    if (error) { toast.error("Failed to lock bracket."); return; }
+    setSeeds((prev) => prev.map((s) => ({ ...s, locked: true })));
+    setBracketLocked(true);
+    toast.success("Bracket locked and saved.");
+  }, [seeds, selectedId]);
+
+  const unlockBracket = useCallback(async () => {
+    if (!selectedId) return;
+    const supabase = createClient();
+    await supabase.from("bracket_seeds").update({ locked: false }).eq("tournament_id", selectedId);
+    setSeeds((prev) => prev.map((s) => ({ ...s, locked: false })));
+    setBracketLocked(false);
+    toast.success("Bracket unlocked for editing.");
+  }, [selectedId]);
+
+  const handleMatchDragStart = (idx: number) => setDraggingMatchIdx(idx);
+  const handleMatchDragEnd = () => { setDraggingMatchIdx(null); setDragOverCourt(null); };
+  const handleCourtDragOver = (e: React.DragEvent, court: number) => { e.preventDefault(); setDragOverCourt(court); };
+  const handleCourtDrop = (courtNum: number) => {
+    if (draggingMatchIdx === null) return;
+    const match = matchQueue[draggingMatchIdx];
+    if (!match) return;
+    setCourtAssignments((prev) => ({ ...prev, [courtNum]: match }));
+    setMatchQueue((prev) => prev.filter((_, i) => i !== draggingMatchIdx));
+    setDraggingMatchIdx(null); setDragOverCourt(null);
+    toast.success(`Match assigned to Court ${courtNum}.`);
+  };
+  const clearCourt = (courtNum: number) => {
+    const match = courtAssignments[courtNum];
+    if (match) setMatchQueue((prev) => [match, ...prev]);
+    setCourtAssignments((prev) => ({ ...prev, [courtNum]: null }));
+  };
+  const completeMatch = (courtNum: number, scoreA: number, scoreB: number) => {
+    const match = courtAssignments[courtNum];
+    if (!match) return;
+    const winner = scoreA > scoreB ? match.player_a : match.player_b;
+    setCompletedMatches((prev) => new Set(prev).add(`${match.player_a}-${match.player_b}`));
+    setCourtAssignments((prev) => ({ ...prev, [courtNum]: null }));
+    setScoreModal(null);
+    toast.success(`Match complete — ${winner} wins ${scoreA}–${scoreB}.`);
+  };
+
   // Simulated weekly registration data (last 12 weeks)
   const weeklyData = selected
     ? (() => {
@@ -621,7 +905,7 @@ export default function DirectorPage() {
         {tournamentPickerOpen && (
           <div className="mt-1 space-y-0.5 max-h-48 overflow-y-auto">
             {tournaments.map((t) => (
-              <button key={t.id} onClick={() => { setSelectedId(t.id); setTournamentPickerOpen(false); setRegsLoaded(null); setManagementLoaded(null); setMobileSidebarOpen(false); }}
+              <button key={t.id} onClick={() => { setSelectedId(t.id); setTournamentPickerOpen(false); setRegsLoaded(null); setManagementLoaded(null); setSeedsLoaded(null); setSeeds([]); setBracketLocked(false); setGeneratedMatches([]); setMatchQueue([]); setCourtAssignments({}); setCompletedMatches(new Set()); setMobileSidebarOpen(false); }}
                 className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${t.id === selectedId ? "bg-primary/10 text-foreground" : "hover:bg-secondary text-muted-foreground"}`}>
                 <div className="flex items-center gap-2">
                   <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[t.status]}`} />
@@ -671,17 +955,21 @@ export default function DirectorPage() {
           { id: "manage", icon: PencilSimple, label: "Manage" },
           { id: "sponsors", icon: Star, label: "Sponsors" },
           { id: "publicpage", icon: Eye, label: "Public Page" },
+          { id: "bracket", icon: Trophy, label: "Bracket" },
+          { id: "dayof", icon: SoccerBall, label: "Day Of" },
         ] as const).map(({ id, icon: Icon, label }) => (
           <button key={id}
             onClick={() => {
               setNavSection(id);
               setMobileSidebarOpen(false);
               if (selectedId && (id === "manage" || id === "sponsors")) loadManagement(selectedId);
+              if (selectedId && (id === "bracket" || id === "dayof")) { loadSeeds(selectedId); loadRegistrations(selectedId); }
             }}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
             <Icon size={16} weight={navSection === id ? "fill" : "regular"} />
             {label}
             {id === "sponsors" && sponsors.length > 0 && <span className="ml-auto text-[10px] font-mono bg-primary/20 text-primary px-1.5 rounded-full">{sponsors.length}</span>}
+            {id === "bracket" && seeds.length > 0 && <span className="ml-auto text-[10px] font-mono bg-primary/20 text-primary px-1.5 rounded-full">{seeds.length}</span>}
           </button>
         ))}
 
@@ -1308,6 +1596,214 @@ export default function DirectorPage() {
                 onUnreadChange={setMessagingUnread}
               />
             </div>
+          )}
+
+          {/* ── Bracket ── */}
+          {navSection === "bracket" && selected && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="px-3 py-1.5 rounded-full border border-border bg-card font-mono text-xs">
+                  {STRUCTURE_LABELS[selected.tournament_format ?? "single_elim"] ?? "Single Elimination"}
+                </span>
+                {selected.tournament_format === "pool_bracket" && (
+                  <span className="px-3 py-1.5 rounded-full border border-border bg-card font-mono text-xs text-muted-foreground">{selected.pool_count ?? 4} pools</span>
+                )}
+                {bracketLocked && (
+                  <span className="px-3 py-1.5 rounded-full border border-primary/40 bg-primary/10 font-mono text-xs text-primary flex items-center gap-1.5">
+                    <Lock size={10} weight="fill" /> LOCKED
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button onClick={autoSeed} disabled={bracketLocked} className="flex items-center gap-2 h-10 px-5 rounded-full border border-border hover:bg-secondary font-display tracking-wider text-sm transition-colors disabled:opacity-40">
+                  <ArrowsClockwise size={14} weight="bold" /> AUTO-SEED BY DUPR
+                </button>
+                <button onClick={generateMatches} disabled={seeds.length < 2 || bracketLocked} className="flex items-center gap-2 h-10 px-5 rounded-full border border-border hover:bg-secondary font-display tracking-wider text-sm transition-colors disabled:opacity-40">
+                  <Gauge size={14} weight="fill" /> GENERATE MATCHES
+                </button>
+                {!bracketLocked ? (
+                  <button onClick={lockBracket} disabled={seeds.length === 0 || savingSeeds} className="flex items-center gap-2 h-10 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-wider text-sm transition-colors disabled:opacity-40">
+                    <Lock size={14} weight="fill" /> {savingSeeds ? "SAVING…" : "LOCK BRACKET"}
+                  </button>
+                ) : (
+                  <button onClick={unlockBracket} className="flex items-center gap-2 h-10 px-5 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 font-display tracking-wider text-sm transition-colors">
+                    <LockOpen size={14} weight="fill" /> UNLOCK
+                  </button>
+                )}
+              </div>
+
+              {seeds.length === 0 && registrations.filter((r) => r.status === "registered").length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+                  <Trophy size={32} className="text-muted-foreground mx-auto mb-3" />
+                  <p className="font-display text-xl tracking-wide mb-1">NO REGISTERED PLAYERS</p>
+                  <p className="text-sm text-muted-foreground">Players must register before you can seed the bracket.</p>
+                </div>
+              ) : selected.tournament_format === "pool_bracket" ? (
+                <div className="space-y-4">
+                  <p className="font-mono text-[10px] tracking-widest text-muted-foreground">DRAG PLAYERS BETWEEN POOLS · SERPENTINE AUTO-SEEDED</p>
+                  <div className="flex gap-3 overflow-x-auto pb-2">
+                    {POOL_LETTERS.slice(0, selected.pool_count ?? 4).map((letter) => (
+                      <PoolColumn key={letter} letter={letter} seeds={seeds.filter((s) => s.pool_letter === letter)} locked={bracketLocked}
+                        draggingPlayerId={draggingPlayerId} dragOverPool={dragOverPool}
+                        onDragOver={handlePoolDragOver} onDrop={handlePoolDrop}
+                        onSeedDragStart={handlePoolDragStart} onSeedDragEnd={handlePoolDragEnd} />
+                    ))}
+                  </div>
+                  {seeds.filter((s) => !s.pool_letter).length > 0 && (
+                    <div className="rounded-2xl border border-dashed border-amber-500/40 bg-amber-500/5 p-4">
+                      <p className="font-mono text-[10px] tracking-widest text-amber-400 mb-3">UNASSIGNED — DRAG TO A POOL</p>
+                      <div className="flex flex-wrap gap-2">
+                        {seeds.filter((s) => !s.pool_letter).map((s) => (
+                          <div key={s.player_id} draggable={!bracketLocked} onDragStart={() => handlePoolDragStart(s.player_id)} onDragEnd={handlePoolDragEnd}
+                            className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 cursor-grab active:cursor-grabbing">
+                            <DotsSixVertical size={12} className="text-muted-foreground" />
+                            <span className="text-xs font-semibold">{s.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">{bracketLocked ? "BRACKET LOCKED — UNLOCK TO EDIT" : "DRAG TO REORDER SEEDS"}</p>
+                  {seeds.map((seed, idx) => (
+                    <SeedRow key={seed.player_id} seed={seed} index={idx} locked={bracketLocked}
+                      isDragging={dragSeedIdx === idx} isDragOver={dragOverSeedIdx === idx}
+                      onDragStart={() => handleSeedDragStart(idx)} onDragEnter={() => handleSeedDragEnter(idx)}
+                      onDragEnd={handleSeedDragEnd} onDragOver={(e) => e.preventDefault()} onDrop={() => {}} />
+                  ))}
+                  {seeds.length === 0 && registrations.filter((r) => r.status === "registered").map((r) => (
+                    <div key={r.id} className="flex items-center gap-3 rounded-xl border border-dashed border-border px-3 py-2.5 text-muted-foreground">
+                      <div className="h-7 w-7 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0"><span className="font-mono text-xs">?</span></div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm truncate">{r.profiles?.full_name ?? "Unknown"}</div>
+                        <div className="text-xs">{r.profiles?.dupr ? `DUPR ${r.profiles.dupr}` : r.profiles?.skill_level ?? "—"}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {generatedMatches.length > 0 && (
+                <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+                  <h3 className="font-mono text-[10px] tracking-widest text-muted-foreground">MATCH SCHEDULE PREVIEW · {generatedMatches.length} MATCHES</h3>
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {generatedMatches.map((m, i) => (
+                      <div key={i} className="flex items-center justify-between rounded-xl bg-secondary/50 px-3 py-2 text-sm">
+                        <span className="font-mono text-[10px] text-muted-foreground w-20 flex-shrink-0">R{m.round} · M{m.match_index + 1}</span>
+                        <span className="flex-1 truncate text-center">{m.name_a}</span>
+                        <span className="font-mono text-xs text-muted-foreground px-2">VS</span>
+                        <span className="flex-1 truncate text-center">{m.name_b}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Day Of ── */}
+          {navSection === "dayof" && selected && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 flex-wrap">
+                <span className="font-mono text-[10px] tracking-widest text-muted-foreground">COURTS</span>
+                <div className="flex gap-2">
+                  {[2, 3, 4, 6, 8].map((n) => (
+                    <button key={n} onClick={() => setCourts(n)} className={`h-9 w-9 rounded-xl border font-mono text-sm transition-all ${courts === n ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:border-primary/50"}`}>{n}</button>
+                  ))}
+                </div>
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  {Object.values(courtAssignments).filter(Boolean).length} ACTIVE · {completedMatches.size} DONE
+                </span>
+              </div>
+
+              {matchQueue.length === 0 && Object.values(courtAssignments).every((v) => !v) && (
+                <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+                  <SoccerBall size={32} className="text-muted-foreground mx-auto mb-3" />
+                  <p className="font-display text-xl tracking-wide mb-1">NO MATCHES QUEUED</p>
+                  <p className="text-sm text-muted-foreground">Generate matches in the Bracket tab first, then return here on tournament day.</p>
+                  <button onClick={() => setNavSection("bracket")} className="mt-4 h-10 px-6 rounded-full border border-border hover:bg-secondary font-display tracking-wider text-sm transition-colors">GO TO BRACKET</button>
+                </div>
+              )}
+
+              {(matchQueue.length > 0 || Object.values(courtAssignments).some(Boolean)) && (
+                <>
+                  <div>
+                    <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">COURTS — DRAG A MATCH FROM THE QUEUE TO ASSIGN</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {Array.from({ length: courts }, (_, i) => i + 1).map((courtNum) => {
+                        const match = courtAssignments[courtNum];
+                        const isOver = dragOverCourt === courtNum;
+                        return (
+                          <div key={courtNum} onDragOver={(e) => handleCourtDragOver(e, courtNum)} onDrop={() => handleCourtDrop(courtNum)} onDragLeave={() => setDragOverCourt(null)}
+                            className={`rounded-2xl border-2 p-3 min-h-[120px] flex flex-col transition-all ${isOver ? "border-primary bg-primary/5 scale-[1.02]" : match ? "border-primary/30 bg-card" : "border-dashed border-border bg-card/50"}`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-mono text-[10px] tracking-widest text-muted-foreground">COURT {courtNum}</span>
+                              {match && <button onClick={() => clearCourt(courtNum)} className="h-5 w-5 rounded-full hover:bg-destructive/10 hover:text-destructive flex items-center justify-center transition-colors"><X size={10} weight="bold" /></button>}
+                            </div>
+                            {match ? (
+                              <div className="flex-1 flex flex-col justify-between">
+                                <div>
+                                  <div className="text-xs font-mono text-muted-foreground mb-2">{match.round}</div>
+                                  <div className="space-y-1">
+                                    <div className="text-sm font-semibold truncate">{match.player_a}</div>
+                                    <div className="font-mono text-[10px] text-muted-foreground text-center">VS</div>
+                                    <div className="text-sm font-semibold truncate">{match.player_b}</div>
+                                  </div>
+                                </div>
+                                <button onClick={() => setScoreModal({ match, court: courtNum })}
+                                  className="mt-3 w-full h-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-mono text-[10px] tracking-widest transition-colors flex items-center justify-center gap-1.5">
+                                  <CheckFat size={11} weight="fill" /> SCORE
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex-1 flex items-center justify-center text-muted-foreground/40"><span className="text-xs font-mono">EMPTY</span></div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {matchQueue.length > 0 && (
+                    <div>
+                      <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">MATCH QUEUE · {matchQueue.length} PENDING — DRAG TO COURT</p>
+                      <div className="space-y-2">
+                        {matchQueue.map((match, idx) => (
+                          <div key={idx} draggable onDragStart={() => handleMatchDragStart(idx)} onDragEnd={handleMatchDragEnd}
+                            className={`flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 cursor-grab active:cursor-grabbing transition-all ${draggingMatchIdx === idx ? "opacity-40 scale-95" : "hover:border-primary/40"}`}>
+                            <DotsSixVertical size={14} className="text-muted-foreground flex-shrink-0" />
+                            <span className="font-mono text-[10px] text-muted-foreground flex-shrink-0">{match.round}</span>
+                            <div className="flex-1 min-w-0 flex items-center gap-2">
+                              <span className="text-sm font-semibold truncate flex-1">{match.player_a}</span>
+                              <span className="font-mono text-[10px] text-muted-foreground flex-shrink-0">VS</span>
+                              <span className="text-sm font-semibold truncate flex-1 text-right">{match.player_b}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {completedMatches.size > 0 && (
+                    <div className="rounded-2xl border border-border bg-card p-4">
+                      <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-2">COMPLETED · {completedMatches.size}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Array.from(completedMatches).map((key) => (
+                          <span key={key} className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-mono text-primary flex items-center gap-1.5">
+                            <CheckFat size={10} weight="fill" /> {key.split("-")[0]}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+          {scoreModal && (
+            <ScoreModal match={scoreModal.match} courtNum={scoreModal.court} onClose={() => setScoreModal(null)} onSave={(a, b) => completeMatch(scoreModal.court, a, b)} />
           )}
 
           {/* ── Public Page preview ── */}
