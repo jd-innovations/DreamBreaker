@@ -541,7 +541,7 @@ export function MessagingPanel({
     (!newSearch || (u.full_name ?? "").toLowerCase().includes(newSearch.toLowerCase()))
   );
 
-  const panelHeight = compact ? "h-[520px]" : "h-[calc(100vh-160px)] min-h-[520px]";
+  const panelHeight = compact ? "h-[520px]" : "h-[calc(100svh-160px)] min-h-[520px]";
 
   return (
     <div className={`flex ${panelHeight} rounded-2xl border border-border bg-card overflow-hidden`}>

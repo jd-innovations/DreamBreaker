@@ -729,7 +729,7 @@ export default function AdminPage() {
       )}
 
       {/* Desktop sidebar */}
-      <aside className="w-60 flex-shrink-0 border-r border-border bg-card hidden lg:flex flex-col h-screen sticky top-0">
+      <aside className="w-60 flex-shrink-0 border-r border-border bg-card hidden lg:flex flex-col h-svh sticky top-0">
         {renderSidebar()}
       </aside>
 

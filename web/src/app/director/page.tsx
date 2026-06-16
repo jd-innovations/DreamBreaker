@@ -700,7 +700,7 @@ export default function DirectorPage() {
       )}
 
       {/* ── Desktop Sidebar ── */}
-      <aside className="w-60 flex-shrink-0 border-r border-border bg-card hidden lg:flex flex-col h-screen sticky top-0">
+      <aside className="w-60 flex-shrink-0 border-r border-border bg-card hidden lg:flex flex-col h-svh sticky top-0">
         {renderSidebar()}
       </aside>
 
@@ -1282,7 +1282,7 @@ export default function DirectorPage() {
                   <ArrowSquareOut size={13} /> OPEN
                 </a>
               </div>
-              <div className="rounded-2xl border border-border overflow-hidden" style={{ height: "calc(100vh - 200px)", minHeight: 480 }}>
+              <div className="rounded-2xl border border-border overflow-hidden" style={{ height: "calc(100svh - 200px)", minHeight: 480 }}>
                 <iframe
                   src={`/tournaments/${selected.id}`}
                   className="w-full h-full"

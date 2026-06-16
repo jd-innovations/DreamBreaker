@@ -354,7 +354,7 @@ export default function DashboardPage() {
 
   return (
     <>
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-svh bg-background overflow-hidden">
 
       {/* ── Desktop sidebar ── */}
       <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-card flex-shrink-0">
