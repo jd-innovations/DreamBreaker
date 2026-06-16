@@ -19,10 +19,16 @@ const navLinks = [
 export function Header() {
   const { theme, toggle } = useTheme();
   const [open, setOpen] = useState(false);
-  const [firstName, setFirstName] = useState<string | null>(null);
+  const [initials, setInitials] = useState<string | null>(null);
   const [authed, setAuthed] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+
+  const toInitials = (fullName: string) => {
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
 
   useEffect(() => {
     const supabase = createClient();
@@ -30,16 +36,16 @@ export function Header() {
       if (!session) return;
       setAuthed(true);
       const name = session.user.user_metadata?.full_name as string | undefined;
-      setFirstName(name ? name.split(" ")[0] : session.user.email?.split("@")[0] ?? null);
+      setInitials(name ? toInitials(name) : (session.user.email?.split("@")[0] ?? "").slice(0, 2).toUpperCase() || null);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setAuthed(!!session);
       if (session) {
         const name = session.user.user_metadata?.full_name as string | undefined;
-        setFirstName(name ? name.split(" ")[0] : session.user.email?.split("@")[0] ?? null);
+        setInitials(name ? toInitials(name) : (session.user.email?.split("@")[0] ?? "").slice(0, 2).toUpperCase() || null);
       } else {
-        setFirstName(null);
+        setInitials(null);
       }
     });
     return () => listener.subscription.unsubscribe();
@@ -109,10 +115,10 @@ export function Header() {
               </button>
               <Link
                 href="/dashboard"
-                className="h-10 px-5 rounded-full font-semibold text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors inline-flex items-center"
+                className="h-10 px-5 rounded-full font-semibold text-sm bg-gradient-to-r from-violet-600/50 to-purple-500/50 text-white hover:brightness-110 transition-all inline-flex items-center font-mono tracking-widest"
                 data-testid="header-getstarted-btn"
               >
-                {firstName ? firstName.toUpperCase() : "PROFILE"}
+                {initials ?? "ME"}
               </Link>
             </>
           ) : (
@@ -126,7 +132,7 @@ export function Header() {
               </Link>
               <Link
                 href="/auth?mode=signup"
-                className="h-10 px-5 rounded-full font-semibold text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors inline-flex items-center"
+                className="h-10 px-5 rounded-full font-semibold text-sm bg-gradient-to-r from-violet-600/50 to-purple-500/50 text-white hover:brightness-110 transition-all inline-flex items-center"
                 data-testid="header-getstarted-btn"
               >
                 Get Started
