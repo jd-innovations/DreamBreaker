@@ -320,9 +320,9 @@ export default function MatchmakingPage() {
       }
 
       // Mutual matches
-      const { data: mutual } = await supabase.from("v_mutual_matches").select("player_a,player_b").or(`player_a.eq.${user.id},player_b.eq.${user.id}`);
+      const { data: mutual } = await supabase.from("v_mutual_matches").select("user_a,user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
       if (mutual && mutual.length > 0) {
-        const ids = mutual.map((m) => m.player_a === user.id ? m.player_b : m.player_a).filter(Boolean) as string[];
+        const ids = mutual.map((m) => m.user_a === user.id ? m.user_b : m.user_a).filter(Boolean) as string[];
         const { data: mp } = await supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability").in("id", ids);
         setMatches((mp ?? []).map((p) => profileToPartner(p, meDupr, meAvail)));
       }

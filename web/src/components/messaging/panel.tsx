@@ -278,12 +278,12 @@ export function MessagingPanel({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: mutual } = await (supabase as any)
         .from("v_mutual_matches")
-        .select("player_a,player_b")
-        .or(`player_a.eq.${currentUserId},player_b.eq.${currentUserId}`);
+        .select("user_a,user_b")
+        .or(`user_a.eq.${currentUserId},user_b.eq.${currentUserId}`);
 
       const matchIds = (mutual ?? [])
-        .map((m: { player_a: string; player_b: string }) =>
-          m.player_a === currentUserId ? m.player_b : m.player_a)
+        .map((m: { user_a: string; user_b: string }) =>
+          m.user_a === currentUserId ? m.user_b : m.user_a)
         .filter(Boolean) as string[];
 
       if (matchIds.length > 0) {

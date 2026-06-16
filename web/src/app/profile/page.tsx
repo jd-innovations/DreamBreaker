@@ -389,9 +389,9 @@ export default function ProfilePage() {
       }
 
       // Partners from mutual matches
-      const { data: mutual } = await supabase.from("v_mutual_matches").select("player_a,player_b").or(`player_a.eq.${user.id},player_b.eq.${user.id}`);
+      const { data: mutual } = await supabase.from("v_mutual_matches").select("user_a,user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
       if (mutual && mutual.length > 0) {
-        const ids = mutual.map((m) => m.player_a === user.id ? m.player_b : m.player_a).filter(Boolean) as string[];
+        const ids = mutual.map((m) => m.user_a === user.id ? m.user_b : m.user_a).filter(Boolean) as string[];
         const { data: pp } = await supabase.from("profiles").select("id,full_name,avatar_url,dupr,skill_level,location_city,location_state,play_style").in("id", ids);
         setPartners((pp ?? []).map((p) => ({ id: p.id, name: p.full_name, avatar: p.avatar_url, dupr: p.dupr, skill_level: p.skill_level, location: [p.location_city, p.location_state].filter(Boolean).join(", ") || "—", badges: [p.play_style].filter(Boolean) as string[] })));
       } else {

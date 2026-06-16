@@ -183,8 +183,8 @@ export default function DashboardPage() {
       setAllUsers((userProfiles ?? []) as MessagingUserProfile[]);
 
       // Matchmaking matches + pending likes → "New Matches" strip in Messages
-      const { data: mutual } = await supabase.from("v_mutual_matches").select("player_a,player_b").or(`player_a.eq.${user.id},player_b.eq.${user.id}`);
-      const matchIds = (mutual ?? []).map((m) => m.player_a === user.id ? m.player_b : m.player_a).filter(Boolean) as string[];
+      const { data: mutual } = await supabase.from("v_mutual_matches").select("user_a,user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
+      const matchIds = (mutual ?? []).map((m) => m.user_a === user.id ? m.user_b : m.user_a).filter(Boolean) as string[];
       if (matchIds.length > 0) {
         const { data: mp } = await supabase.from("profiles").select("id,full_name,avatar_url,dupr,skill_level").in("id", matchIds);
         setMmMatches((mp ?? []).map((p) => ({ id: p.id, name: p.full_name ?? "Player", avatar: p.avatar_url, dupr: p.dupr, skill: p.skill_level })));
