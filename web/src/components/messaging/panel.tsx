@@ -564,7 +564,7 @@ export function MessagingPanel({
             <div className="relative">
               <MagnifyingGlass size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search"
-                className="w-full h-9 rounded-full bg-secondary border-0 pl-9 pr-3 text-sm outline-none focus:ring-1 focus:ring-ring" />
+                className="w-full h-9 rounded-full bg-secondary border-0 pl-9 pr-3 text-[16px] outline-none focus:ring-1 focus:ring-ring" />
             </div>
           </div>
         )}
@@ -580,7 +580,7 @@ export function MessagingPanel({
             </div>
             <div className="px-3 py-2 flex-shrink-0">
               <input value={newSearch} onChange={(e) => setNewSearch(e.target.value)} placeholder="Search users…" autoFocus
-                className="w-full h-8 rounded-lg bg-secondary border-0 px-3 text-xs outline-none focus:ring-1 focus:ring-ring" />
+                className="w-full h-8 rounded-lg bg-secondary border-0 px-3 text-[16px] outline-none focus:ring-1 focus:ring-ring" />
             </div>
             <div className="flex-1 overflow-y-auto">
               {newConvoUsers.length === 0 && (
@@ -816,7 +816,7 @@ export function MessagingPanel({
                   onKeyDown={handleKeyDown}
                   placeholder="Message…"
                   rows={1}
-                  className="flex-1 bg-transparent border-0 text-sm outline-none resize-none py-1.5"
+                  className="flex-1 bg-transparent border-0 text-[16px] leading-snug outline-none resize-none py-1.5"
                   style={{ minHeight: "28px", maxHeight: "120px" }}
                   onInput={(e) => {
                     const el = e.target as HTMLTextAreaElement;
