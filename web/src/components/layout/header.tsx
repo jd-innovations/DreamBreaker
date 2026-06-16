@@ -145,7 +145,7 @@ export function Header() {
               </Link>
               <Link
                 href="/auth?mode=signup"
-                className="h-10 px-5 rounded-full font-semibold text-sm bg-gradient-to-r from-violet-600/50 to-purple-500/50 text-white hover:brightness-110 transition-all inline-flex items-center"
+                className="h-8 px-3 sm:h-10 sm:px-5 rounded-full font-semibold text-xs sm:text-sm border border-foreground/30 bg-foreground/10 text-foreground hover:bg-foreground/20 transition-colors inline-flex items-center"
                 data-testid="header-getstarted-btn"
               >
                 Get Started
