@@ -3,9 +3,10 @@
 
 import { useEffect, useState, useRef } from "react";
 import {
-  Trophy, Users, Lightning, MapPin, Calendar, Star,
-  PencilSimple, Medal, CheckCircle, Check, Camera,
+  Trophy, Users, MapPin, Calendar, Star,
+  PencilSimple, Medal, Check, Camera,
   EyeSlash, Eye, UserMinus, Clock, BookmarkSimple, ShieldStar,
+  ChatCircleDots, ArrowSquareOut, X,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
@@ -13,6 +14,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { toast } from "sonner";
+import { MessagingPanel } from "@/components/messaging/panel";
+import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
 import { playerStats, matchPartners, recentMatches as mockMatches, tournaments as mockTournaments } from "@/data/mock-data";
 import type { Tables } from "@/lib/supabase/database.types";
 
@@ -245,6 +248,8 @@ export default function ProfilePage() {
   const [matchFilter, setMatchFilter] = useState("All");
   const [hiddenMatchIds, setHiddenMatchIds] = useState<Set<string>>(new Set());
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
+  const [messagingRecipientId, setMessagingRecipientId] = useState<string | null>(null);
   const [tournamentEntries, setTournamentEntries] = useState<TournamentEntry[]>([]);
   const [bookmarkedTournaments, setBookmarkedTournaments] = useState<BookmarkedTournament[]>([]);
   const [stats, setStats] = useState({ wins: 0, losses: 0, tournaments: 0 });
@@ -259,6 +264,10 @@ export default function ProfilePage() {
       if (!userId) { setLoading(false); return; }
       userIdRef.current = userId;
       const user = { id: userId };
+
+      // All users for messaging
+      const { data: usersData } = await supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name");
+      setAllUsers((usersData ?? []) as MessagingUserProfile[]);
 
       // Fetch hidden match IDs
       const { data: hiddenRows } = await supabase
@@ -822,21 +831,38 @@ export default function ProfilePage() {
                           </div>
                         )}
                       </div>
-                      {editing ? (
-                        <button
-                          onClick={() => removePartner(p.id, p.name)}
-                          title="Remove partner"
-                          className="h-9 w-9 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 border border-destructive/30 transition-colors flex-shrink-0"
-                          data-testid={`partner-remove-${p.id}`}
-                        >
-                          <UserMinus size={16} weight="bold" />
-                        </button>
-                      ) : (
-                        <div className="flex flex-col gap-1.5 flex-shrink-0">
-                          <CheckCircle size={18} weight="fill" className="text-primary" />
-                          <Lightning size={18} weight="fill" className="text-primary/40" />
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {editing ? (
+                          <button
+                            onClick={() => removePartner(p.id, p.name)}
+                            title="Remove partner"
+                            className="h-9 w-9 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 border border-destructive/30 transition-colors"
+                            data-testid={`partner-remove-${p.id}`}
+                          >
+                            <UserMinus size={16} weight="bold" />
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setMessagingRecipientId(p.id)}
+                              title="Message"
+                              className="h-9 w-9 rounded-full flex items-center justify-center border border-foreground/30 bg-foreground/10 text-foreground hover:bg-foreground/20 transition-colors"
+                              data-testid={`partner-message-${p.id}`}
+                            >
+                              <ChatCircleDots size={16} weight="fill" />
+                            </button>
+                            <Link href={`/profile/${p.id}`}>
+                              <div
+                                title="View profile"
+                                className="h-9 w-9 rounded-full flex items-center justify-center border border-foreground/30 bg-foreground/10 text-foreground hover:bg-foreground/20 transition-colors"
+                                data-testid={`partner-view-${p.id}`}
+                              >
+                                <ArrowSquareOut size={16} weight="bold" />
+                              </div>
+                            </Link>
+                          </>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -952,6 +978,33 @@ export default function ProfilePage() {
 
         </div>
       </div>
+      {/* Messaging overlay */}
+      {messagingRecipientId && profile && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-3xl bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{ height: "min(620px, 90vh)" }}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+              <span className="font-display tracking-wider text-sm">
+                MESSAGE {(allUsers.find((u) => u.id === messagingRecipientId)?.full_name ?? "PLAYER").split(" ")[0].toUpperCase()}
+              </span>
+              <button
+                onClick={() => setMessagingRecipientId(null)}
+                className="h-7 w-7 rounded-full border border-border hover:bg-secondary flex items-center justify-center transition-colors"
+              >
+                <X size={13} weight="bold" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <MessagingPanel
+                currentUserId={profile.id}
+                allUsers={allUsers}
+                initialRecipientId={messagingRecipientId}
+                onUnreadChange={() => {}}
+                compact
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }
