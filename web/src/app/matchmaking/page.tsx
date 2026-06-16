@@ -594,7 +594,7 @@ export default function MatchmakingPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* Card deck */}
         <div className="lg:col-span-2 flex flex-col items-center">
-          <div className="relative w-full max-w-sm lg:max-w-none select-none" style={{ height: "min(600px, calc(100dvh - 280px))" }} data-testid="swipe-deck">
+          <div className="relative w-full max-w-sm lg:max-w-none select-none" style={{ height: "min(600px, calc(100dvh - 200px))" }} data-testid="swipe-deck">
             {loading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
@@ -792,7 +792,7 @@ export default function MatchmakingPage() {
           {!loading && visibleDeck.length > 0 && (
             <>
               {/* Mobile — fixed above bottom nav */}
-              <div className="fixed bottom-[100px] left-0 right-0 px-6 lg:hidden z-40">
+              <div className="fixed bottom-5 left-0 right-0 px-6 lg:hidden z-40">
                 <div className="flex items-center gap-3 max-w-sm mx-auto bg-background/80 backdrop-blur-md border border-border rounded-full px-4 py-3 shadow-lg">
                   <button
                     onClick={() => swipe("left")}
