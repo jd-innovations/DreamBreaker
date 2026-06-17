@@ -164,6 +164,22 @@ export function ProfileSettings({ userId }: { userId: string }) {
 
   return (
     <div className="border border-border rounded-2xl bg-card p-6 space-y-6">
+      {/* Sticky header with always-visible Save */}
+      <div className="flex items-center justify-between gap-3 sticky top-0 z-10 -mx-6 -mt-6 px-6 py-4 bg-card/95 backdrop-blur border-b border-border rounded-t-2xl">
+        <div>
+          <p className="font-display text-lg tracking-wide">EDIT PROFILE</p>
+          <p className="text-xs text-muted-foreground">Your photo and details across DreamBreaker</p>
+        </div>
+        <button
+          onClick={save}
+          disabled={saving}
+          className="h-10 px-6 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 font-display tracking-[0.18em] text-sm flex items-center gap-2 transition-colors flex-shrink-0"
+        >
+          {saving ? <span className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" /> : <Check size={15} weight="bold" />}
+          {saving ? "SAVING…" : "SAVE"}
+        </button>
+      </div>
+
       {/* Avatar */}
       <div className="flex items-center gap-5">
         <div className="relative flex-shrink-0">
