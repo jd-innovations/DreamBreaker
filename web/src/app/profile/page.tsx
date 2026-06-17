@@ -634,11 +634,14 @@ export default function ProfilePage() {
         <div className="flex items-end justify-between -mt-12 lg:-mt-20 pb-6 border-b border-border">
           <div className="flex items-end gap-5 min-w-0">
             <div className="relative flex-shrink-0">
-              <img
-                src={avatarUrl}
-                alt="Avatar"
-                className={`h-24 w-24 lg:h-36 lg:w-36 rounded-2xl lg:rounded-3xl border-4 lg:border-[5px] border-background object-cover transition-opacity ${avatarUploading ? "opacity-50" : ""}`}
-              />
+              {/* Multi-colored gradient ring outline */}
+              <div className="rounded-full p-[3px] lg:p-[4px] bg-gradient-to-tr from-violet-500 via-pink-400 to-cyan-400">
+                <img
+                  src={avatarUrl}
+                  alt="Avatar"
+                  className={`h-24 w-24 lg:h-36 lg:w-36 rounded-full border-2 border-background object-cover transition-opacity ${avatarUploading ? "opacity-50" : ""}`}
+                />
+              </div>
               {/* Online indicator (view mode) or camera button (edit mode) */}
               {editing ? (
                 <>
@@ -646,13 +649,13 @@ export default function ProfilePage() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={avatarUploading}
-                    className="absolute inset-0 rounded-2xl bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity disabled:cursor-wait"
+                    className="absolute inset-[3px] lg:inset-[4px] rounded-full bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity disabled:cursor-wait"
                     data-testid="avatar-upload-btn"
                   >
                     <Camera size={24} weight="fill" className="text-white" />
                   </button>
                   {avatarUploading && (
-                    <div className="absolute inset-0 rounded-2xl flex items-center justify-center">
+                    <div className="absolute inset-[3px] lg:inset-[4px] rounded-full flex items-center justify-center">
                       <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                     </div>
                   )}
@@ -665,12 +668,12 @@ export default function ProfilePage() {
                   />
                 </>
               ) : (
-                <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-primary border-2 border-background" />
+                <div className="absolute bottom-1.5 right-1.5 h-5 w-5 rounded-full bg-primary border-2 border-background" />
               )}
             </div>
             <div className="pb-1">
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl tracking-wide">{name}</h1>
+                <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl tracking-wide text-white">{name}</h1>
                 {(profile as { director_status?: string | null } | null)?.director_status === "approved" && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-400 font-mono text-[9px] tracking-[0.2em]">
                     <ShieldStar size={11} weight="fill" /> DIRECTOR
