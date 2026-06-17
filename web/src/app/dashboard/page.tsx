@@ -20,6 +20,7 @@ import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile, MatchSummary } from "@/components/messaging/panel";
 import { NotificationBell } from "@/components/notifications/bell";
 import { MatchSettingsPanel } from "@/components/shared/match-settings-panel";
+import { ProfileSettings } from "@/components/dashboard/profile-settings";
 import { playerStats, tournaments as mockTournaments, recentMatches as mockMatches, COURT_IMG } from "@/data/mock-data";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -994,19 +995,15 @@ export default function DashboardPage() {
             <div className="space-y-4">
               <div>
                 <h2 className="font-display text-xl tracking-wide">SETTINGS</h2>
-                <p className="text-sm text-muted-foreground">Manage your account and preferences</p>
+                <p className="text-sm text-muted-foreground">Update your photo, location, and player details</p>
               </div>
+              {currentUserId
+                ? <ProfileSettings userId={currentUserId} />
+                : <div className="border border-border rounded-2xl bg-card p-6 text-sm text-muted-foreground">Sign in to edit your profile.</div>}
               <div className="border border-border rounded-2xl bg-card p-6 space-y-4">
-                <h3 className="font-semibold">Account</h3>
-                <Link href="/profile">
-                  <button className="w-full sm:w-auto h-10 px-6 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors flex items-center gap-2">
-                    <UserCircle size={15} /> EDIT PROFILE
-                  </button>
-                </Link>
-              </div>
-              <div className="border border-border rounded-2xl bg-card p-6 space-y-4">
-                <h3 className="font-semibold">Links</h3>
+                <h3 className="font-semibold">Quick links</h3>
                 <div className="flex flex-wrap gap-3">
+                  <Link href="/profile"><button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">PUBLIC PROFILE</button></Link>
                   <Link href="/tournaments"><button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">TOURNAMENTS</button></Link>
                   <Link href="/matchmaking"><button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">MATCHMAKING</button></Link>
                   <Link href="/holds"><button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">MY HOLDS</button></Link>
