@@ -153,7 +153,7 @@ export function Header() {
                   className="relative h-8 px-3 sm:h-10 sm:px-5 rounded-full font-semibold text-xs sm:text-sm dark:bg-zinc-950 bg-white text-foreground inline-flex items-center z-10"
                   data-testid="header-getstarted-btn"
                 >
-                  Get Started
+                  0-0-2
                 </Link>
               </div>
             </>
