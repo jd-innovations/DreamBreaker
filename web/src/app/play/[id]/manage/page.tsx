@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
+import { withTimeout } from "@/lib/with-timeout";
 import {
   type PlayEvent, type PlayParticipant, type PlayMatch,
   eventTypeLabel, statusLabel, displayName, generateRoundRobin, computeStandings,
@@ -37,10 +38,10 @@ export default function ManagePlayEventPage({ params }: { params: Promise<{ id: 
 
   const reload = useCallback(async () => {
     const supabase = createClient();
-    const [{ data: parts }, { data: ms }] = await Promise.all([
+    const [{ data: parts }, { data: ms }] = await withTimeout(Promise.all([
       supabase.from("play_participants").select("*").eq("event_id", id).order("created_at", { ascending: true }),
       supabase.from("play_matches").select("*").eq("event_id", id).order("round", { ascending: true }),
-    ]);
+    ]));
     setParticipants(parts ?? []);
     setMatches(ms ?? []);
   }, [id]);
@@ -52,7 +53,7 @@ export default function ManagePlayEventPage({ params }: { params: Promise<{ id: 
       const uid = await getUserId();
       if (!uid) { router.replace(`/auth?redirect=/play/${id}/manage`); return; }
 
-      const { data: ev } = await supabase.from("play_events").select("*").eq("id", id).single();
+      const { data: ev } = await withTimeout(supabase.from("play_events").select("*").eq("id", id).single());
       if (!ev) { setLoading(false); return; }
       if (ev.organizer_id !== uid) { setLoading(false); setAuthorized(false); return; }
 

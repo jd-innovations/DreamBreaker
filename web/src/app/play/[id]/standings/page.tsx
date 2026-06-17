@@ -10,6 +10,7 @@ import {
 import { PageShell } from "@/components/layout/page-shell";
 import { ShareButton } from "@/components/shared/share-button";
 import { createClient } from "@/lib/supabase/client";
+import { withTimeout } from "@/lib/with-timeout";
 import {
   type PlayEvent, type PlayParticipantPublic, type PlayMatch,
   statusLabel, displayName, computeStandings, formatEventDate,
@@ -27,11 +28,11 @@ export default function StandingsPage({ params }: { params: Promise<{ id: string
     const supabase = createClient();
     async function load() {
       setShareUrl(typeof window !== "undefined" ? `${window.location.origin}/play/${id}/standings` : "");
-      const [{ data: ev }, { data: parts }, { data: ms }] = await Promise.all([
+      const [{ data: ev }, { data: parts }, { data: ms }] = await withTimeout(Promise.all([
         supabase.from("play_events").select("*").eq("id", id).single(),
         supabase.from("play_participants_public").select("*").eq("event_id", id),
         supabase.from("play_matches").select("*").eq("event_id", id),
-      ]);
+      ]));
       setEvent(ev);
       setParticipants(parts ?? []);
       setMatches(ms ?? []);

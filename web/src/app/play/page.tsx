@@ -5,10 +5,11 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  MapPin, Calendar, Users, Plus, Confetti, ArrowRight, Sparkle,
+  MapPin, Calendar, Users, Plus, Confetti, ArrowRight, Sparkle, WarningCircle, ArrowClockwise,
 } from "@phosphor-icons/react";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
+import { withTimeout } from "@/lib/with-timeout";
 import {
   type PlayEvent, eventTypeLabel, statusLabel, skillLabel, formatEventDate, formatEventTime,
 } from "@/lib/community-play";
@@ -88,33 +89,40 @@ function EventCard({ e }: { e: EventWithCount }) {
 export default function PlayBrowsePage() {
   const [events, setEvents] = useState<EventWithCount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [filter, setFilter] = useState<(typeof STATUS_FILTERS)[number]>("All");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    const supabase = createClient();
+    let cancelled = false;
     async function load() {
-      const { data: rows } = await supabase
-        .from("play_events")
-        .select("*")
-        .neq("status", "cancelled")
-        .order("event_date", { ascending: true });
+      try {
+        const supabase = createClient();
+        const { data: rows } = await withTimeout(
+          supabase.from("play_events").select("*").neq("status", "cancelled").order("event_date", { ascending: true }),
+        );
+        if (cancelled) return;
+        if (!rows || rows.length === 0) { setEvents([]); return; }
 
-      if (!rows || rows.length === 0) { setEvents([]); setLoading(false); return; }
+        const ids = rows.map((r) => r.id);
+        const { data: parts } = await withTimeout(
+          supabase.from("play_participants_public").select("event_id").in("event_id", ids),
+        );
+        if (cancelled) return;
 
-      const ids = rows.map((r) => r.id);
-      const { data: parts } = await supabase
-        .from("play_participants_public")
-        .select("event_id")
-        .in("event_id", ids);
+        const counts: Record<string, number> = {};
+        (parts ?? []).forEach((p) => { if (p.event_id) counts[p.event_id] = (counts[p.event_id] ?? 0) + 1; });
 
-      const counts: Record<string, number> = {};
-      (parts ?? []).forEach((p) => { if (p.event_id) counts[p.event_id] = (counts[p.event_id] ?? 0) + 1; });
-
-      setEvents(rows.map((r) => ({ ...r, participant_count: counts[r.id] ?? 0 })));
-      setLoading(false);
+        setEvents(rows.map((r) => ({ ...r, participant_count: counts[r.id] ?? 0 })));
+      } catch {
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
-    load().catch(() => setLoading(false));
-  }, []);
+    load();
+    return () => { cancelled = true; };
+  }, [reloadKey]);
 
   const filtered = events.filter((e) => {
     if (filter === "All") return true;
@@ -177,6 +185,17 @@ export default function PlayBrowsePage() {
                 <div className="space-y-2"><div className="h-3 w-1/2 bg-secondary rounded" /><div className="h-3 w-2/3 bg-secondary rounded" /></div>
               </div>
             ))}
+          </div>
+        ) : error ? (
+          <div className="border border-dashed border-border rounded-3xl py-20 text-center">
+            <WarningCircle size={44} weight="duotone" className="mx-auto mb-4 text-primary" />
+            <h3 className="font-display text-2xl tracking-wide mb-2">COULDN&apos;T LOAD EVENTS</h3>
+            <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-6">
+              The connection timed out. This can happen on a flaky network or a stale session. If it keeps happening, try signing out and back in.
+            </p>
+            <button onClick={() => { setLoading(true); setError(false); setReloadKey((k) => k + 1); }} className="h-11 px-7 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-sm transition-colors inline-flex items-center gap-2">
+              <ArrowClockwise size={16} weight="bold" /> RETRY
+            </button>
           </div>
         ) : filtered.length === 0 ? (
           <div className="border border-dashed border-border rounded-3xl py-20 text-center">

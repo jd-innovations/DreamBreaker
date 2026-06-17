@@ -13,6 +13,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { ShareButton } from "@/components/shared/share-button";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
+import { withTimeout } from "@/lib/with-timeout";
 import {
   type PlayEvent, type PlayParticipantPublic,
   eventTypeLabel, statusLabel, skillLabel, formatEventDate, formatEventTime, displayName,
@@ -41,7 +42,7 @@ export default function PlayEventPage({ params }: { params: Promise<{ id: string
     const supabase = createClient();
     async function load() {
       setShareUrl(typeof window !== "undefined" ? `${window.location.origin}/play/${id}` : "");
-      const { data: ev } = await supabase.from("play_events").select("*").eq("id", id).single();
+      const { data: ev } = await withTimeout(supabase.from("play_events").select("*").eq("id", id).single());
       if (!ev) { setLoading(false); return; }
       setEvent(ev);
 

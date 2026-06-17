@@ -10,6 +10,7 @@ import {
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
+import { withTimeout } from "@/lib/with-timeout";
 import {
   type PlayEvent, eventTypeLabel, skillLabel, formatEventDate, formatEventTime,
 } from "@/lib/community-play";
@@ -30,7 +31,7 @@ export default function JoinPlayEventPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     const supabase = createClient();
     async function load() {
-      const { data: ev } = await supabase.from("play_events").select("*").eq("id", id).single();
+      const { data: ev } = await withTimeout(supabase.from("play_events").select("*").eq("id", id).single());
       setEvent(ev);
       if (ev) {
         const { count: c } = await supabase.from("play_participants_public").select("id", { count: "exact", head: true }).eq("event_id", id);

@@ -4,6 +4,36 @@ A running log of system debug/health passes. Most recent first.
 
 ---
 
+## 2026-06-17 — Incident: `/play` endless spinner (stale auth session)
+
+**Symptom:** `/play` stuck on its loading spinner in the user's normal browser
+profile; worked in incognito.
+
+**Diagnosis:** Deployment was healthy (server 200, correct Supabase URL baked
+into the bundle, anon REST API returned events). Root cause was a
+**stale/corrupt auth session** in the browser — Supabase's auth token refresh
+hung, and pages had no timeout, so they spun forever. Logging out and back in
+(fresh token) resolved it; incognito worked because it had no stored session.
+Note: Vercel `NEXT_PUBLIC_SUPABASE_URL` is still misconfigured (holds the anon
+JWT, not the URL); `client.ts` falls back correctly so it's not the cause, but
+should be fixed in the Vercel dashboard. See [[dreambreaker-supabase-env-misconfig]].
+
+**Hardening shipped:**
+- New `lib/with-timeout.ts` — rejects a thenable that doesn't settle in N ms.
+- `getUserId` (`lib/dev-user.ts`) now wraps `auth.getUser()` in an 8s timeout →
+  returns null instead of hanging, so a bad session degrades to signed-out
+  (page can redirect to /auth) rather than an infinite spinner. App-wide fix.
+- `/play` browse: timeout-guarded loads + a proper error state with a **Retry**
+  button.
+- `/play/[id]`, `/standings`, `/join`, `/manage`: primary loads wrapped in
+  `withTimeout` so they fall through to their existing not-found/empty states
+  instead of hanging.
+
+**Still recommended:** correct the Vercel env var; optionally auto-clear a
+failed session on timeout.
+
+---
+
 ## 2026-06-16 23:55 EDT (2026-06-17 03:55 UTC)
 
 **Scope:** Full system pass after a day of shipping (Community Play, partner
