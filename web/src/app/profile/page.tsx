@@ -13,6 +13,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
+import { ensureFreshSession } from "@/lib/ensure-session";
 import { toast } from "sonner";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
@@ -418,6 +419,14 @@ export default function ProfilePage() {
     setLocalAvatar(objectUrl);
     setAvatarUploading(true);
 
+    const ok = await ensureFreshSession();
+    if (!ok) {
+      toast.error("Your session expired. Please sign out and sign back in to upload a photo.");
+      setLocalAvatar(null);
+      setAvatarUploading(false);
+      return;
+    }
+
     const supabase = createClient();
     const ext = file.name.split(".").pop() ?? "jpg";
     const path = `${profile.id}/avatar.${ext}`;
@@ -433,16 +442,20 @@ export default function ProfilePage() {
       return;
     }
 
+    // Cache-bust so the new image shows immediately even though the path is reused.
     const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-    const { error: updateError } = await supabase
+    const bustedUrl = `${publicUrl}?v=${Date.now()}`;
+    const { data: updated, error: updateError } = await supabase
       .from("profiles")
-      .update({ avatar_url: publicUrl })
-      .eq("id", profile.id);
+      .update({ avatar_url: bustedUrl })
+      .eq("id", profile.id)
+      .select("id");
 
-    if (updateError) {
-      toast.error("Photo uploaded but profile not updated.");
+    if (updateError || !updated || updated.length === 0) {
+      toast.error("Couldn't save your photo — your session may have expired. Sign out and back in.");
+      setLocalAvatar(null);
     } else {
-      setProfile((p) => p ? { ...p, avatar_url: publicUrl } : p);
+      setProfile((p) => p ? { ...p, avatar_url: bustedUrl } : p);
       toast.success("Profile photo updated.");
     }
     setAvatarUploading(false);
@@ -480,9 +493,11 @@ export default function ProfilePage() {
     if (!profile) return;
     setLocalCover(url);
     setShowCoverPicker(false);
+    const ok = await ensureFreshSession();
+    if (!ok) { toast.error("Your session expired. Please sign out and back in."); setLocalCover(null); return; }
     const supabase = createClient();
-    const { error } = await supabase.from("profiles").update({ cover_url: url }).eq("id", profile.id);
-    if (error) { toast.error("Failed to save cover."); setLocalCover(null); return; }
+    const { data, error } = await supabase.from("profiles").update({ cover_url: url }).eq("id", profile.id).select("id");
+    if (error || !data || data.length === 0) { toast.error("Couldn't save cover — your session may have expired."); setLocalCover(null); return; }
     setProfile((p) => p ? { ...p, cover_url: url } : p);
     toast.success("Cover updated.");
   };
@@ -494,15 +509,18 @@ export default function ProfilePage() {
     setLocalCover(objectUrl);
     setShowCoverPicker(false);
     setCoverUploading(true);
+    const ok = await ensureFreshSession();
+    if (!ok) { toast.error("Your session expired. Please sign out and back in."); setLocalCover(null); setCoverUploading(false); return; }
     const supabase = createClient();
     const ext = file.name.split(".").pop() ?? "jpg";
     const path = `${profile.id}/cover.${ext}`;
     const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
     if (uploadError) { toast.error("Failed to upload cover."); setLocalCover(null); setCoverUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-    const { error: updateError } = await supabase.from("profiles").update({ cover_url: publicUrl }).eq("id", profile.id);
-    if (updateError) { toast.error("Cover uploaded but not saved."); } else {
-      setProfile((p) => p ? { ...p, cover_url: publicUrl } : p);
+    const bustedUrl = `${publicUrl}?v=${Date.now()}`;
+    const { data: updated, error: updateError } = await supabase.from("profiles").update({ cover_url: bustedUrl }).eq("id", profile.id).select("id");
+    if (updateError || !updated || updated.length === 0) { toast.error("Couldn't save cover — your session may have expired."); setLocalCover(null); } else {
+      setProfile((p) => p ? { ...p, cover_url: bustedUrl } : p);
       toast.success("Cover photo updated.");
     }
     setCoverUploading(false);
@@ -511,8 +529,14 @@ export default function ProfilePage() {
   const saveProfile = async () => {
     if (!profile) return;
     setSaving(true);
+    const ok = await ensureFreshSession();
+    if (!ok) {
+      setSaving(false);
+      toast.error("Your session expired. Please sign out and sign back in to save changes.");
+      return;
+    }
     const supabase = createClient();
-    const { error } = await supabase.from("profiles").update({
+    const { data, error } = await supabase.from("profiles").update({
       bio: fields.bio || null,
       play_style: fields.play_style.length > 0 ? fields.play_style.join(", ") : null,
       availability: fields.availability.length > 0 ? fields.availability.join(", ") : null,
@@ -520,9 +544,13 @@ export default function ProfilePage() {
       skill_level: fields.skill_level || null,
       location_city: fields.location_city || null,
       location_state: fields.location_state || null,
-    }).eq("id", profile.id);
+    }).eq("id", profile.id).select("id");
     setSaving(false);
     if (error) { toast.error("Failed to save profile."); return; }
+    if (!data || data.length === 0) {
+      toast.error("Couldn't save — your session may have expired. Please sign out and back in.");
+      return;
+    }
     setProfile((p) => p ? { ...p, bio: fields.bio || null, skill_level: fields.skill_level || null, hand: (fields.hand as "right" | "left" | "ambidextrous") || null, play_style: fields.play_style.join(", ") || null, availability: fields.availability.join(", ") || null, location_city: fields.location_city || null, location_state: fields.location_state || null } : p);
     setEditing(false);
     toast.success("Profile saved.");
