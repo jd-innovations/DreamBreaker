@@ -144,8 +144,8 @@ export function Header() {
                 Login
               </Link>
               <div className="group relative inline-flex p-[1.5px] rounded-full">
-                {/* crisp gradient ring */}
-                <span className="absolute inset-0 rounded-full bg-gradient-to-r from-violet-500 via-pink-400 to-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                {/* crisp gradient ring — always visible */}
+                <span className="absolute inset-0 rounded-full bg-gradient-to-r from-violet-500 via-pink-400 to-cyan-400 opacity-100 transition-opacity duration-300" />
                 {/* glow halo for the animation feel */}
                 <span className="absolute inset-0 rounded-full bg-gradient-to-r from-violet-500 via-pink-400 to-cyan-400 opacity-0 group-hover:opacity-50 blur-[6px] transition-opacity duration-300" />
                 <Link

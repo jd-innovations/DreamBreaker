@@ -716,11 +716,11 @@ export default function ProfilePage() {
             </div>
           </div>
           {editing ? (
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex flex-col gap-2 flex-shrink-0 items-stretch">
               <button
                 onClick={saveProfile}
                 disabled={saving}
-                className="h-10 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2 text-sm font-display tracking-[0.15em] transition-colors"
+                className="h-10 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2 text-sm font-display tracking-[0.15em] transition-colors"
                 data-testid="profile-save-btn-header"
               >
                 {saving ? <span className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" /> : <Check size={16} weight="bold" />}
@@ -728,7 +728,7 @@ export default function ProfilePage() {
               </button>
               <button
                 onClick={cancelEdit}
-                className="h-10 px-5 rounded-full border border-border flex items-center gap-2 text-sm hover:bg-secondary/60 transition-colors"
+                className="h-10 px-5 rounded-full border border-border flex items-center justify-center gap-2 text-sm hover:bg-secondary/60 transition-colors"
                 data-testid="profile-edit-btn"
               >
                 <X size={16} weight="bold" /> Cancel
