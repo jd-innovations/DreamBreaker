@@ -12,6 +12,7 @@ import {
   Gauge, ChatCircleDots, Ticket, UserCircle,
   Gear, SignOut, List, X, SlidersHorizontal,
   Warning, LockSimple, CreditCard, ChartBar, CaretRight,
+  UsersThree, PencilSimple, Copy, CheckCircle,
 } from "@phosphor-icons/react";
 import { Logo } from "@/components/layout/logo";
 import { createClient } from "@/lib/supabase/client";
@@ -79,6 +80,15 @@ type RecommendedTournament = {
   registeredCount: number;
   partnerSeekers: number;
   proximityScore: number;
+};
+
+type HostedPlayEvent = {
+  id: string;
+  name: string;
+  event_date: string;
+  status: string;
+  participant_count: number;
+  max_players: number;
 };
 
 type DisplayMatch = {
@@ -291,6 +301,8 @@ export default function DashboardPage() {
   const [registering, setRegistering] = useState(false);
   const [registerDone, setRegisterDone] = useState(false);
   const [recommended, setRecommended] = useState<RecommendedTournament[]>([]);
+  const [hostedPlay, setHostedPlay] = useState<HostedPlayEvent[]>([]);
+  const [copiedPlayId, setCopiedPlayId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -430,6 +442,26 @@ export default function DashboardPage() {
             const [city, state] = t.location.split(", ");
             return { id: t.id, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, format: t.format.split(" · ")[0].toLowerCase().replace(/ /g, "_"), entry_fee_cents: t.entryFee * 100, capacity: t.spots, venue_name: t.venue, skill_min: null, skill_max: null, registeredCount: t.filled, partnerSeekers: 0, proximityScore: 3 };
           }));
+        }
+      }
+
+      // Community Play events hosted by this user
+      {
+        const { data: playRows } = await supabase
+          .from("play_events")
+          .select("id, name, event_date, status, max_players, play_participants(count)")
+          .eq("organizer_id", user.id)
+          .order("event_date", { ascending: false })
+          .limit(20);
+        if (playRows && playRows.length > 0) {
+          setHostedPlay(playRows.map((e: { id: string; name: string; event_date: string; status: string; max_players: number; play_participants: { count: number }[] | { count: number } }) => ({
+            id: e.id,
+            name: e.name,
+            event_date: e.event_date,
+            status: e.status,
+            max_players: e.max_players,
+            participant_count: Array.isArray(e.play_participants) ? (e.play_participants[0]?.count ?? 0) : (e.play_participants?.count ?? 0),
+          })));
         }
       }
 
@@ -802,6 +834,88 @@ export default function DashboardPage() {
               </div>
             </div>
             {/* end MY EVENTS inner space-y-4 */}
+
+              {/* Community Play — hosted events */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="font-display text-xl tracking-wide">COMMUNITY PLAY</h2>
+                    <p className="text-sm text-muted-foreground">Events you&apos;ve hosted</p>
+                  </div>
+                  <Link href="/play/create">
+                    <button className="h-9 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors flex items-center gap-1.5">
+                      NEW EVENT <ArrowRight size={13} weight="bold" />
+                    </button>
+                  </Link>
+                </div>
+                <div className="border border-border rounded-2xl bg-card overflow-hidden">
+                  {hostedPlay.length === 0 ? (
+                    <div className="px-6 py-16 text-center">
+                      <UsersThree size={36} weight="duotone" className="mx-auto mb-3 text-primary" />
+                      <p className="font-display tracking-wide text-muted-foreground">NO EVENTS YET</p>
+                      <p className="text-xs text-muted-foreground mt-1 mb-4">Host a round robin and invite your crew</p>
+                      <Link href="/play/create">
+                        <button className="h-10 px-6 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors">
+                          CREATE EVENT
+                        </button>
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {hostedPlay.map((e) => {
+                        const statusColors: Record<string, string> = {
+                          draft: "bg-secondary text-muted-foreground",
+                          open: "bg-primary/10 text-primary",
+                          active: "bg-blue-500/10 text-blue-500",
+                          completed: "bg-secondary text-muted-foreground",
+                        };
+                        const chipCls = statusColors[e.status] ?? "bg-secondary text-muted-foreground";
+                        const isCopied = copiedPlayId === e.id;
+                        return (
+                          <div key={e.id} className="px-6 py-5 space-y-3">
+                            <div className="flex items-start gap-4">
+                              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                <UsersThree size={18} weight="bold" className="text-primary" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-semibold">{e.name}</div>
+                                <div className="flex items-center gap-3 mt-1.5">
+                                  <span className="text-[10px] font-mono text-muted-foreground">{formatDate(e.event_date)}</span>
+                                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${chipCls}`}>{e.status.toUpperCase()}</span>
+                                  <span className="text-[10px] font-mono text-muted-foreground">{e.participant_count}/{e.max_players} players</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 ml-14 flex-wrap">
+                              <Link href={`/play/${e.id}/manage`}>
+                                <button className="h-8 px-4 rounded-full border border-border text-xs font-mono tracking-wide hover:bg-secondary/60 transition-colors flex items-center gap-1.5">
+                                  <PencilSimple size={13} /> MANAGE
+                                </button>
+                              </Link>
+                              <Link href={`/play/${e.id}`}>
+                                <button className="h-8 px-4 rounded-full border border-border text-xs font-mono tracking-wide hover:bg-secondary/60 transition-colors flex items-center gap-1.5">
+                                  <UsersThree size={13} /> VIEW
+                                </button>
+                              </Link>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(`${window.location.origin}/play/${e.id}`);
+                                  setCopiedPlayId(e.id);
+                                  setTimeout(() => setCopiedPlayId(null), 2000);
+                                }}
+                                className="h-8 px-4 rounded-full border border-border text-xs font-mono tracking-wide hover:bg-secondary/60 transition-colors flex items-center gap-1.5"
+                              >
+                                {isCopied ? <CheckCircle size={13} className="text-green-500" /> : <Copy size={13} />}
+                                {isCopied ? "COPIED!" : "SHARE LINK"}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Recommended for you — full list in events tab */}
               {recommended.length > 0 && (
