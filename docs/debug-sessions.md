@@ -4,6 +4,36 @@ A running log of system debug/health passes. Most recent first.
 
 ---
 
+## 2026-06-17 — ROOT CAUSE: profile edits never saved (RLS infinite recursion)
+
+**Symptom:** Could not save any profile change — location, avatar, cover.
+
+**Real root cause (confirmed by test):** The `profiles: own update` RLS policy's
+WITH CHECK queried `profiles` from inside a `profiles` policy:
+`role = (select role from profiles where id = auth.uid())`. That recurses →
+Postgres `42P17 "infinite recursion detected in policy for relation profiles"`
+→ **500 on every authenticated profile UPDATE**. Reads were fine (SELECT is
+`using (true)`), so the profile loaded but no save ever landed. Introduced
+after the last good save (2026-06-14).
+
+Verified by signing up a throwaway user via the auth API and PATCHing
+`/rest/v1/profiles` — got 500/42P17 before the fix, 200 after. (Test users
+cleaned up.)
+
+NOTE: the earlier "expired session / silent 0-row write" theory for this was
+**wrong** — it was a hard 500, not a silent failure. The `ensureFreshSession`
+guard + `.select()` checks shipped earlier are harmless and still fine, but the
+actual blocker was the recursive policy.
+
+**Fix (migration 20260617000001):** rewrite WITH CHECK to use the SECURITY
+DEFINER helper `current_user_role()` (reads role bypassing RLS, no recursion),
+preserving the "can't change your own role" guard.
+
+**Follow-up worth doing:** add a `proxy.ts` (Next 16's renamed middleware) for
+Supabase session refresh — still missing, good practice for session longevity.
+
+---
+
 ## 2026-06-17 — Incident: profile saves silently failing (expired token writes)
 
 **Symptom:** Editing location and uploading a profile/cover image appeared to
