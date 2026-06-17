@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+export const dynamic = "force-dynamic";
+
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Heart, X, XCircle, Plug, MapPin, Star, ArrowRight, Trophy,
@@ -246,7 +248,7 @@ function FilterDrawer({ filters, onChange, onClose }: { filters: Filters; onChan
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function MatchmakingPage() {
+function MatchmakingInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tournamentIdParam = searchParams.get("tournament_id");
@@ -1084,5 +1086,19 @@ export default function MatchmakingPage() {
         </div>
       )}
     </PageShell>
+  );
+}
+
+export default function MatchmakingPage() {
+  return (
+    <Suspense fallback={
+      <PageShell>
+        <div className="flex items-center justify-center py-32">
+          <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+        </div>
+      </PageShell>
+    }>
+      <MatchmakingInner />
+    </Suspense>
   );
 }
