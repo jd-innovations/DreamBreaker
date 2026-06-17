@@ -190,6 +190,55 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* COMMUNITY PLAY */}
+      <section className="border-t border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <div className="rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card to-card p-8 lg:p-12 relative overflow-hidden">
+            <div className="absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
+            <div className="relative grid lg:grid-cols-2 gap-8 items-center">
+              <div>
+                <div className="font-mono text-[11px] tracking-[0.3em] text-primary mb-3 flex items-center gap-2">
+                  <Heart size={13} weight="fill" /> / COMMUNITY PLAY
+                </div>
+                <h2 className="font-display text-4xl sm:text-5xl tracking-wide leading-[0.95] mb-4">
+                  CASUAL GAMES,<br />ZERO HASSLE
+                </h2>
+                <p className="text-muted-foreground text-base leading-relaxed max-w-md mb-6">
+                  Host or join a recreational round robin in minutes. Players join without an account —
+                  organizers get a shareable link, auto-generated matches, and live standings.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link href="/play">
+                    <button className="rounded-full h-13 px-7 py-3.5 bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.18em] text-sm transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+                      EXPLORE EVENTS <ArrowRight size={16} weight="bold" />
+                    </button>
+                  </Link>
+                  <Link href="/play/create">
+                    <button className="rounded-full h-13 px-7 py-3.5 border border-border hover:bg-secondary font-display tracking-[0.18em] text-sm transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+                      <Plus size={16} weight="bold" /> HOST AN EVENT
+                    </button>
+                  </Link>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { icon: Plus, label: "Create in a minute" },
+                  { icon: Users, label: "No-account join" },
+                  { icon: Trophy, label: "Live standings" },
+                ].map((f) => (
+                  <div key={f.label} className="rounded-2xl border border-border bg-background/60 p-4 text-center flex flex-col items-center gap-2">
+                    <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center">
+                      <f.icon size={18} weight="fill" className="text-primary" />
+                    </div>
+                    <span className="text-xs text-muted-foreground leading-tight">{f.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="border border-border rounded-3xl p-10 lg:p-16 bg-card relative overflow-hidden">

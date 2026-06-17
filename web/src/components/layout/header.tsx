@@ -3,17 +3,19 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Sun, Moon, List, X, Bell, ShieldStar } from "@phosphor-icons/react";
+import { Sun, Moon, List, X, ShieldStar } from "@phosphor-icons/react";
 import { Logo } from "./logo";
 import { useTheme } from "./theme-provider";
 import { createClient } from "@/lib/supabase/client";
+import { NotificationBell } from "@/components/notifications/bell";
 
 const navLinks = [
-  { to: "/tournaments",  label: "Tournaments", testid: "nav-tournaments" },
-  { to: "/matchmaking",  label: "Matchmaking",  testid: "nav-matchmaking" },
-  { to: "/dashboard",    label: "Player",       testid: "nav-player" },
-  { to: "/director",     label: "Director",     testid: "nav-director" },
-  { to: "/admin",        label: "Admin",        testid: "nav-admin" },
+  { to: "/tournaments",  label: "Tournaments",   testid: "nav-tournaments" },
+  { to: "/play",         label: "Community Play", testid: "nav-community-play" },
+  { to: "/matchmaking",  label: "Matchmaking",   testid: "nav-matchmaking" },
+  { to: "/dashboard",    label: "Player",        testid: "nav-player" },
+  { to: "/director",     label: "Director",      testid: "nav-director" },
+  { to: "/admin",        label: "Admin",         testid: "nav-admin" },
 ];
 
 export function Header() {
@@ -22,6 +24,7 @@ export function Header() {
   const [initials, setInitials] = useState<string | null>(null);
   const [isDirector, setIsDirector] = useState(false);
   const [authed, setAuthed] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -36,6 +39,7 @@ export function Header() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) return;
       setAuthed(true);
+      setUserId(session.user.id);
       const name = session.user.user_metadata?.full_name as string | undefined;
       setInitials(name ? toInitials(name) : (session.user.email?.split("@")[0] ?? "").slice(0, 2).toUpperCase() || null);
       const { data: prof } = await supabase.from("profiles").select("director_status").eq("id", session.user.id).single();
@@ -45,11 +49,13 @@ export function Header() {
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setAuthed(!!session);
       if (session) {
+        setUserId(session.user.id);
         const name = session.user.user_metadata?.full_name as string | undefined;
         setInitials(name ? toInitials(name) : (session.user.email?.split("@")[0] ?? "").slice(0, 2).toUpperCase() || null);
         const { data: prof } = await supabase.from("profiles").select("director_status").eq("id", session.user.id).single();
         setIsDirector((prof as { director_status?: string | null } | null)?.director_status === "approved");
       } else {
+        setUserId(null);
         setInitials(null);
         setIsDirector(false);
       }
@@ -89,16 +95,10 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          {/* Notification bell — placeholder until notification service is live */}
-          {authed && (
-            <button
-              aria-label="Notifications"
-              data-testid="header-notifications-btn"
-              className="hidden lg:flex h-10 w-10 rounded-full border border-border items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors relative"
-              onClick={() => {/* wire up notification panel here */}}
-            >
-              <Bell size={18} weight="bold" />
-            </button>
+          {authed && userId && (
+            <div className="hidden lg:flex" data-testid="header-notifications-btn">
+              <NotificationBell userId={userId} />
+            </div>
           )}
 
           <button

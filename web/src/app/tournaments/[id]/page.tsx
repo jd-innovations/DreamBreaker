@@ -83,7 +83,7 @@ type Division = {
   entry_fee_cents: number | null;
 };
 
-type DivisionReg = { status: string; hold_expires_at: string | null; division_id: string | null };
+type DivisionReg = { status: string; hold_expires_at: string | null; division_id: string | null; waitlist_position?: number | null };
 
 function divisionLabel(d: Division) {
   return d.name || d.format.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -107,6 +107,7 @@ type LiveTournament = {
   entry_fee_cents: number;
   hold_fee_cents: number;
   hold_duration_hours: number;
+  hold_cutoff_days: number;
   prize_pool_cents: number | null;
   event_date: string;
   registration_opens_at: string | null;
@@ -143,6 +144,7 @@ function mockToLive(t: typeof mockTournaments[0]) {
     entry_fee_cents: t.entryFee * 100,
     hold_fee_cents: t.holdFee * 100,
     hold_duration_hours: 72,
+    hold_cutoff_days: 7,
     prize_pool_cents: parseInt(t.prize.replace(/[^0-9]/g, ""), 10) * 100,
     event_date: t.dateISO,
     registration_opens_at: null,
@@ -174,14 +176,18 @@ function DivisionHoldExpiry({ expiry }: { expiry: Date | null }) {
 }
 
 function DivisionCard({
-  div, divFee, holdFee, isHeld, isRegistered, holdExpire, completing, cancelling, onHold, onComplete, onCancel,
+  div, divFee, holdFee, isHeld, isRegistered, holdExpire, completing, cancelling,
+  isFull, holdWindowClosed, onHold, onComplete, onCancel, onWaitlist, joiningWaitlist, waitlistPos,
 }: {
   div: Division; divFee: number; holdFee: number;
   isHeld: boolean; isRegistered: boolean; holdExpire: Date | null;
   completing: boolean; cancelling: boolean;
+  isFull: boolean; holdWindowClosed: boolean;
   onHold: () => void; onComplete: () => void; onCancel: () => void;
+  onWaitlist: () => void; joiningWaitlist: boolean; waitlistPos: number | null;
 }) {
   const pct = Math.round((div.spots_filled / div.draw_size) * 100);
+  const divFull = div.spots_filled >= div.draw_size || isFull;
   const fee = divFee / 100;
   const hold = holdFee / 100;
 
@@ -190,7 +196,7 @@ function DivisionCard({
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="font-display tracking-wide text-base">{divisionLabel(div)}</div>
-          <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{div.draw_size - div.spots_filled} spots left · ${fee} entry</div>
+          <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{Math.max(0, div.draw_size - div.spots_filled)} spots left · ${fee} entry</div>
         </div>
         {isRegistered && <CheckCircle size={18} weight="fill" className="text-primary flex-shrink-0 mt-0.5" />}
         {isHeld && <DivisionHoldExpiry expiry={holdExpire} />}
@@ -211,10 +217,25 @@ function DivisionCard({
             {cancelling ? "…" : "CANCEL"}
           </button>
         </div>
-      ) : (
-        <button onClick={onHold} className="w-full h-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-xs flex items-center justify-center gap-1.5 transition-colors">
-          <HandGrabbing size={13} weight="fill" /> HOLD MY SPOT · ${hold}
+      ) : waitlistPos !== null ? (
+        <div className="text-[10px] font-mono text-muted-foreground tracking-widest flex items-center gap-1.5">
+          <Clock size={11} weight="fill" className="text-primary" /> WAITLISTED · #{waitlistPos}
+        </div>
+      ) : divFull ? (
+        <button onClick={onWaitlist} disabled={joiningWaitlist} className="w-full h-9 rounded-full border border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 font-display tracking-[0.15em] text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50">
+          <Clock size={12} weight="fill" /> {joiningWaitlist ? "JOINING…" : "JOIN WAITLIST"}
         </button>
+      ) : (
+        <>
+          {!holdWindowClosed && (
+            <button onClick={onHold} className="w-full h-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-xs flex items-center justify-center gap-1.5 transition-colors">
+              <HandGrabbing size={13} weight="fill" /> HOLD MY SPOT · ${hold}
+            </button>
+          )}
+          {holdWindowClosed && (
+            <div className="text-[10px] font-mono text-muted-foreground text-center">Hold window closed</div>
+          )}
+        </>
       )}
     </div>
   );
@@ -253,7 +274,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
         .select(`
           id, name, city, state, venue_name, venue_address, cover_img_url,
           format, bracket_type, skill_min, skill_max, draw_size, spots_filled,
-          entry_fee_cents, hold_fee_cents, hold_duration_hours, prize_pool_cents,
+          entry_fee_cents, hold_fee_cents, hold_duration_hours, hold_cutoff_days, prize_pool_cents,
           event_date, registration_opens_at, registration_closes_at,
           created_at, status, description, rules,
           director:profiles!director_id (
@@ -308,10 +329,13 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
         const { data: userRegs } = await supabase
           .from("registrations")
-          .select("status, hold_expires_at, division_id")
+          .select("status, hold_expires_at, division_id, waitlist_position")
           .eq("tournament_id", id)
           .eq("player_id", userId)
-          .in("status", ["held", "registered", "checked_in"]);
+          .in("status", ["held", "registered", "checked_in", "waitlisted", "waitlist_offered"]);
+        // Track waitlist position if on list
+        const wlReg = (userRegs ?? []).find((r) => r.status === "waitlisted" || r.status === "waitlist_offered") as { waitlist_position?: number } | undefined;
+        if (wlReg?.waitlist_position) setWaitlistPosition(wlReg.waitlist_position);
         if (userRegs && userRegs.length > 0) {
           const map = new Map<string, DivisionReg>();
           for (const r of userRegs) {
@@ -492,6 +516,42 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     toast.info("Hold cancelled. Your spot has been released.");
   };
 
+  const [joiningWaitlist, setJoiningWaitlist] = useState(false);
+  const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
+
+  const joinWaitlist = async (divisionId: string | null) => {
+    const userId = await getUserId();
+    if (!userId) { toast.error("Sign in to join the waitlist."); return; }
+    setJoiningWaitlist(true);
+    try {
+      const supabase = createClient();
+      // Get next waitlist position for this tournament
+      const { data: lastPos } = await supabase
+        .from("registrations")
+        .select("waitlist_position")
+        .eq("tournament_id", id)
+        .in("status", ["waitlisted", "waitlist_offered"])
+        .order("waitlist_position", { ascending: false })
+        .limit(1)
+        .single();
+      const nextPos = ((lastPos as { waitlist_position: number | null } | null)?.waitlist_position ?? 0) + 1;
+      const { error } = await supabase.from("registrations").insert({
+        tournament_id: id,
+        player_id: userId,
+        division_id: divisionId,
+        status: "waitlisted",
+        waitlist_position: nextPos,
+      });
+      if (error) { toast.error("Could not join waitlist. You may already be on it."); return; }
+      setWaitlistPosition(nextPos);
+      toast.success(`You're #${nextPos} on the waitlist!`, {
+        description: "We'll notify you by email when a spot opens up.",
+      });
+    } finally {
+      setJoiningWaitlist(false);
+    }
+  };
+
   const handleRegister = () =>
     toast.success("Registration complete!", {
       description: `You're in for ${tournament?.name ?? "this tournament"}. Bracket releases 48h before play.`,
@@ -517,6 +577,12 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
   const t = tournament;
   const pct = Math.round((spotsFilled / t.draw_size) * 100);
+  const spotsLeft = t.draw_size - spotsFilled;
+  const isFull = spotsLeft <= 0;
+  // Hold cutoff: holds are disabled this many days before the event
+  const holdCutoffDate = new Date(t.event_date);
+  holdCutoffDate.setDate(holdCutoffDate.getDate() - (t.hold_cutoff_days ?? 7));
+  const holdWindowClosed = new Date() >= holdCutoffDate;
   const prizeDisplay = t.prize_pool_cents
     ? `$${(t.prize_pool_cents / 100).toLocaleString()}`
     : "—";
@@ -849,6 +915,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                     const isRegistered = reg?.status === "registered" || reg?.status === "checked_in";
                     const divHoldExpire = reg?.hold_expires_at ? new Date(reg.hold_expires_at) : null;
 
+                    const divWaitlistPos = reg?.status === "waitlisted" || reg?.status === "waitlist_offered" ? (reg.waitlist_position ?? null) : null;
                     return (
                       <DivisionCard
                         key={div.id}
@@ -860,9 +927,14 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                         holdExpire={divHoldExpire}
                         completing={completing === key}
                         cancelling={cancelling === key}
+                        isFull={isFull}
+                        holdWindowClosed={holdWindowClosed}
                         onHold={() => { setActiveDivision(div); setHoldOpen(true); }}
                         onComplete={() => completeRegistration(div.id)}
                         onCancel={() => cancelHold(div.id)}
+                        onWaitlist={() => joinWaitlist(div.id)}
+                        joiningWaitlist={joiningWaitlist}
+                        waitlistPos={divWaitlistPos}
                       />
                     );
                   })}
@@ -905,14 +977,35 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                     </div>
                     <p className="text-center text-xs text-muted-foreground">Bracket drops 48h before play · {new Date(t.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
                   </div>
+                ) : waitlistPosition !== null ? (
+                  <div className="space-y-2">
+                    <div className="w-full h-12 rounded-full bg-secondary border border-border font-display tracking-[0.15em] flex items-center justify-center gap-2 text-sm" data-testid="waitlist-state">
+                      <Clock size={17} weight="fill" className="text-primary" /> WAITLISTED · #{waitlistPosition}
+                    </div>
+                    <p className="text-center text-xs text-muted-foreground">You&apos;ll be notified when a spot opens up.</p>
+                  </div>
+                ) : isFull ? (
+                  <button
+                    onClick={() => joinWaitlist(null)}
+                    disabled={joiningWaitlist}
+                    className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                    data-testid="join-waitlist-btn"
+                  >
+                    <Clock size={17} weight="fill" /> {joiningWaitlist ? "JOINING…" : "JOIN WAITLIST"}
+                  </button>
                 ) : (
                   <>
-                    <button onClick={() => { setActiveDivision(null); setHoldOpen(true); }} className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors" data-testid="hold-spot-trigger-btn">
-                      <HandGrabbing size={17} weight="fill" /> HOLD MY SPOT
-                    </button>
+                    {!holdWindowClosed && (
+                      <button onClick={() => { setActiveDivision(null); setHoldOpen(true); }} className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors" data-testid="hold-spot-trigger-btn">
+                        <HandGrabbing size={17} weight="fill" /> HOLD MY SPOT
+                      </button>
+                    )}
                     <button onClick={handleRegister} className="w-full h-12 rounded-full border border-border hover:bg-secondary/60 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors" data-testid="register-now-btn">
                       <Lightning size={16} weight="fill" className="text-primary" /> REGISTER NOW · ${entryFee}
                     </button>
+                    {holdWindowClosed && (
+                      <p className="text-center text-xs text-muted-foreground">Hold My Spot is no longer available — within {t.hold_cutoff_days ?? 7} days of event.</p>
+                    )}
                   </>
                 )
               )}
@@ -936,7 +1029,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               />
             </div>
 
-            <Link href="/matchmaking">
+            <Link href={`/matchmaking?tournament_id=${t.id}`}>
               <button className="w-full h-11 rounded-full border border-dashed border-border font-semibold text-sm hover:bg-secondary/60 transition-colors" data-testid="find-partner-link">
                 Need a partner? Find one →
               </button>

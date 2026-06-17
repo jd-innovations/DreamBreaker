@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Heart, X, XCircle, Plug, MapPin, Star, ArrowRight, Trophy,
   SlidersHorizontal, ArrowLeft, ArrowUp, Users, Heartbeat,
@@ -38,6 +38,12 @@ interface Partner {
   mutuals: number;
   isTopRated: boolean;
   isVerified: boolean;
+}
+
+interface TournamentContext {
+  id: string;
+  name: string;
+  partners: Partner[];
 }
 
 interface Filters {
@@ -242,6 +248,9 @@ function FilterDrawer({ filters, onChange, onClose }: { filters: Filters; onChan
 
 export default function MatchmakingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tournamentIdParam = searchParams.get("tournament_id");
+  const [tournamentContext, setTournamentContext] = useState<TournamentContext | null>(null);
   const [deck, setDeck] = useState<Partner[]>([]);
   const [matches, setMatches] = useState<Partner[]>([]);
   const [swipeDir, setSwipeDir] = useState<"left" | "right" | "up" | null>(null);
@@ -327,13 +336,44 @@ export default function MatchmakingPage() {
         setMatches((mp ?? []).map((p) => profileToPartner(p, meDupr, meAvail)));
       }
 
+      // Tournament partner pool — if launched from a tournament CTA
+      if (tournamentIdParam) {
+        const { data: tData } = await supabase
+          .from("tournaments")
+          .select("id, name")
+          .eq("id", tournamentIdParam)
+          .single();
+
+        if (tData) {
+          const { data: partnerRegs } = await supabase
+            .from("registrations")
+            .select("player_id, profiles!player_id(id, full_name, handle, dupr, skill_level, location_city, location_state, avatar_url, bio, play_style, availability)")
+            .eq("tournament_id", tournamentIdParam)
+            .eq("needs_partner", true)
+            .in("status", ["held", "registered", "checked_in"])
+            .neq("player_id", user.id);
+
+          const tournamentPartners = (partnerRegs ?? [])
+            .map((r) => r.profiles as { id: string; full_name: string; handle: string | null; dupr: number | null; skill_level: string | null; location_city: string | null; location_state: string | null; avatar_url: string | null; bio: string | null; play_style: string | null; availability: string | null } | null)
+            .filter(Boolean)
+            .map((p) => ({
+              ...profileToPartner(p!, meDupr, meAvail),
+              tournamentOverlap: (tData as { name: string }).name,
+            }));
+
+          if (tournamentPartners.length > 0) {
+            setTournamentContext({ id: tData.id, name: (tData as { name: string }).name, partners: tournamentPartners });
+          }
+        }
+      }
+
       setLoading(false);
     }
     load().catch(() => {
       setDeck(matchPartners.map((p) => mockToPartner(p, null, null)));
       setLoading(false);
     });
-  }, []);
+  }, [tournamentIdParam]);
 
   const top = deck[deck.length - 1];
 
@@ -350,6 +390,33 @@ export default function MatchmakingPage() {
     setDeck((d) => [...d, lastPassed]);
     setLastPassed(null);
   }, [lastPassed, myId]);
+
+  const connectWith = useCallback(async (partner: Partner) => {
+    if (!myId) return;
+    const supabase = createClient();
+    await supabase.from("matchmaking_swipes").insert({
+      requester_id: myId,
+      target_id: partner.id,
+      direction: "like" as "like" | "pass",
+    });
+    const { data: theirSwipe } = await supabase
+      .from("matchmaking_swipes")
+      .select("id")
+      .eq("requester_id", partner.id)
+      .eq("target_id", myId)
+      .eq("direction", "like")
+      .maybeSingle();
+    if (theirSwipe) {
+      setTimeout(() => setMatchedPartner(partner), 100);
+    } else {
+      toast.success(`Liked ${partner.name}!`, { description: "If they like you back, it's a match." });
+    }
+    setMatches((m) => (m.find((x) => x.id === partner.id) ? m : [partner, ...m]));
+    // remove from tournament context so they don't show twice
+    setTournamentContext((ctx) =>
+      ctx ? { ...ctx, partners: ctx.partners.filter((p) => p.id !== partner.id) } : ctx,
+    );
+  }, [myId]);
 
   const swipe = useCallback(async (dir: "left" | "right" | "up") => {
     if (!top) return;
@@ -603,6 +670,47 @@ export default function MatchmakingPage() {
               </div>
             )}
           </section>
+        </div>
+      )}
+
+      {activeTab === "discover" && tournamentContext && tournamentContext.partners.length > 0 && (
+        <div className="border-b border-border bg-primary/5">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Users size={13} weight="fill" className="text-primary" />
+              <span className="font-mono text-[10px] tracking-[0.25em] text-primary font-bold">PARTNER NEEDED</span>
+              <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground">· {tournamentContext.name}</span>
+              <span className="ml-auto text-[10px] font-mono text-muted-foreground">{tournamentContext.partners.length} looking</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+              {tournamentContext.partners.map((p) => (
+                <div key={p.id} className="flex-shrink-0 w-52 border border-primary/30 bg-card rounded-2xl p-3 flex flex-col gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <img src={p.img} alt="" className="h-10 w-10 rounded-xl object-cover flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-display text-sm tracking-wide truncate">{p.name}</div>
+                      <div className="text-[10px] font-mono text-muted-foreground truncate">
+                        {p.dupr ? `DUPR ${p.dupr}` : p.skill_level ?? "—"}
+                      </div>
+                    </div>
+                    <div className="font-mono text-[10px] text-primary flex-shrink-0">{p.matchPct}%</div>
+                  </div>
+                  {p.location && (
+                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <MapPin size={9} weight="bold" className="text-primary flex-shrink-0" />
+                      <span className="truncate">{p.location}</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => connectWith(p)}
+                    className="w-full h-7 rounded-full bg-primary text-primary-foreground font-mono text-[10px] tracking-[0.2em] flex items-center justify-center gap-1.5 hover:bg-primary/90 transition-colors"
+                  >
+                    <Heart size={11} weight="fill" /> CONNECT
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

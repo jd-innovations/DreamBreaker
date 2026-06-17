@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
+import { BracketTree } from "@/components/shared/bracket-tree";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ interface Tournament {
   hold_fee_cents: number;
   hold_duration_hours: number;
   prize_pool_cents: number | null;
+  hold_cutoff_days: number;
   description: string | null;
   rules: string | null;
   cover_img_url: string | null;
@@ -406,7 +408,7 @@ export default function DirectorTournamentPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: t, error } = await (supabase as any)
         .from("tournaments")
-        .select("id,name,city,state,venue_name,venue_address,zip_code,event_date,format,formats,tournament_format,pool_count,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,hold_duration_hours,prize_pool_cents,description,rules,cover_img_url,status,created_at")
+        .select("id,name,city,state,venue_name,venue_address,zip_code,event_date,format,formats,tournament_format,pool_count,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,hold_duration_hours,hold_cutoff_days,prize_pool_cents,description,rules,cover_img_url,status,created_at")
         .eq("id", id)
         .eq("director_id", userId)
         .single();
@@ -508,6 +510,17 @@ export default function DirectorTournamentPage() {
     setDragSeedIdx(idx);
   };
   const handleSeedDragEnd = () => { setDragSeedIdx(null); setDragOverSeedIdx(null); };
+
+  // Bracket tree click-to-swap
+  const handleSwapSeeds = useCallback((seedNumA: number, seedNumB: number) => {
+    setSeeds((prev) =>
+      prev.map((s) => {
+        if (s.seed_number === seedNumA) return { ...s, seed_number: seedNumB };
+        if (s.seed_number === seedNumB) return { ...s, seed_number: seedNumA };
+        return s;
+      }).sort((a, b) => a.seed_number - b.seed_number)
+    );
+  }, []);
 
   // Pool drag-and-drop
   const handlePoolDragStart = (playerId: string) => setDraggingPlayerId(playerId);
@@ -630,6 +643,7 @@ export default function DirectorTournamentPage() {
       description: (fd.get("description") as string) || null,
       rules: (fd.get("rules") as string) || null,
       prize_pool_cents: fd.get("prize_pool") ? Math.round(parseFloat(fd.get("prize_pool") as string) * 100) : null,
+      hold_cutoff_days: parseInt(fd.get("hold_cutoff_days") as string, 10) || 7,
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any).from("tournaments").update(updates).eq("id", id);
@@ -874,6 +888,22 @@ export default function DirectorTournamentPage() {
                   <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">RULES &amp; NOTES</label>
                   <textarea name="rules" rows={3} defaultValue={tournament.rules ?? ""} className="w-full rounded-xl bg-secondary border border-border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none" />
                 </div>
+                <div>
+                  <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">
+                    HOLD CUTOFF (DAYS BEFORE EVENT)
+                  </label>
+                  <input
+                    name="hold_cutoff_days"
+                    type="number"
+                    min={1}
+                    max={90}
+                    defaultValue={tournament.hold_cutoff_days ?? 7}
+                    className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Unredeemed holds are cancelled this many days before the event. The hold fee is forfeited and waitlisted players are promoted in order, each with 24 hours to complete payment.
+                  </p>
+                </div>
                 <button type="submit" disabled={savingDetails} className="w-full h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] text-sm disabled:opacity-50 flex items-center justify-center gap-2">
                   <FloppyDisk size={15} weight="bold" />{savingDetails ? "SAVING…" : "SAVE CHANGES"}
                 </button>
@@ -898,7 +928,7 @@ export default function DirectorTournamentPage() {
                       <CurrencyDollar size={16} className="text-primary mt-0.5 flex-shrink-0" />
                       <div>
                         <div className="text-sm font-semibold">{fmt(tournament.entry_fee_cents)} entry · {fmt(tournament.hold_fee_cents)} hold</div>
-                        <div className="text-xs text-muted-foreground">Hold valid for {tournament.hold_duration_hours}h</div>
+                        <div className="text-xs text-muted-foreground">Hold valid for {tournament.hold_duration_hours}h · Cutoff {tournament.hold_cutoff_days ?? 7} days before event</div>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -1047,29 +1077,22 @@ export default function DirectorTournamentPage() {
                   </div>
                 )}
               </div>
+            ) : seeds.length > 0 ? (
+              /* Visual bracket tree */
+              <div className="pt-2">
+                <BracketTree
+                  seeds={seeds}
+                  locked={bracketLocked}
+                  onSwapSeeds={handleSwapSeeds}
+                />
+              </div>
             ) : (
-              /* Seed list (single elim / round robin / double elim) */
+              /* Unseeded registered players — shown before Auto-Seed is run */
               <div className="space-y-2">
                 <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">
-                  {bracketLocked ? "BRACKET LOCKED — UNLOCK TO EDIT" : "DRAG TO REORDER SEEDS"}
+                  RUN AUTO-SEED OR LOCK BRACKET TO GENERATE THE DRAW
                 </p>
-                {seeds.map((seed, idx) => (
-                  <SeedRow
-                    key={seed.player_id}
-                    seed={seed}
-                    index={idx}
-                    locked={bracketLocked}
-                    isDragging={dragSeedIdx === idx}
-                    isDragOver={dragOverSeedIdx === idx}
-                    onDragStart={() => handleSeedDragStart(idx)}
-                    onDragEnter={() => handleSeedDragEnter(idx)}
-                    onDragEnd={handleSeedDragEnd}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => {}}
-                  />
-                ))}
-                {/* Registered players not yet seeded */}
-                {seeds.length === 0 && registrations.filter((r) => r.status === "registered").map((r) => (
+                {registrations.filter((r) => r.status === "registered").map((r) => (
                   <div key={r.id} className="flex items-center gap-3 rounded-xl border border-dashed border-border px-3 py-2.5 text-muted-foreground">
                     <div className="h-7 w-7 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
                       <span className="font-mono text-xs">?</span>
@@ -1080,27 +1103,6 @@ export default function DirectorTournamentPage() {
                     </div>
                   </div>
                 ))}
-              </div>
-            )}
-
-            {/* Generated matches preview */}
-            {generatedMatches.length > 0 && (
-              <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
-                <h3 className="font-mono text-[10px] tracking-widest text-muted-foreground">
-                  MATCH SCHEDULE PREVIEW · {generatedMatches.length} MATCHES
-                </h3>
-                <div className="space-y-2 max-h-72 overflow-y-auto">
-                  {generatedMatches.map((m, i) => (
-                    <div key={i} className="flex items-center justify-between rounded-xl bg-secondary/50 px-3 py-2 text-sm">
-                      <span className="font-mono text-[10px] text-muted-foreground w-20 flex-shrink-0">
-                        {m.round === 1 ? "R1" : `R${m.round}`} · M{m.match_index + 1}
-                      </span>
-                      <span className="flex-1 truncate text-center">{m.name_a}</span>
-                      <span className="font-mono text-xs text-muted-foreground px-2">VS</span>
-                      <span className="flex-1 truncate text-center">{m.name_b}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
           </div>

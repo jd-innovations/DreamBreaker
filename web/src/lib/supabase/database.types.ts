@@ -699,6 +699,187 @@ export type Database = {
           },
         ]
       }
+      play_events: {
+        Row: {
+          city: string | null
+          created_at: string
+          event_date: string
+          event_type: Database["public"]["Enums"]["play_event_type"]
+          format: string | null
+          id: string
+          location: string
+          max_players: number
+          name: string
+          notes: string | null
+          organizer_id: string
+          skill_max: number | null
+          skill_min: number | null
+          slug: string | null
+          start_time: string | null
+          state: string | null
+          status: Database["public"]["Enums"]["play_event_status"]
+          updated_at: string
+          venue_name: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string
+          event_date: string
+          event_type?: Database["public"]["Enums"]["play_event_type"]
+          format?: string | null
+          id?: string
+          location: string
+          max_players: number
+          name: string
+          notes?: string | null
+          organizer_id: string
+          skill_max?: number | null
+          skill_min?: number | null
+          slug?: string | null
+          start_time?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["play_event_status"]
+          updated_at?: string
+          venue_name?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string
+          event_date?: string
+          event_type?: Database["public"]["Enums"]["play_event_type"]
+          format?: string | null
+          id?: string
+          location?: string
+          max_players?: number
+          name?: string
+          notes?: string | null
+          organizer_id?: string
+          skill_max?: number | null
+          skill_min?: number | null
+          slug?: string | null
+          start_time?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["play_event_status"]
+          updated_at?: string
+          venue_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "play_events_organizer_id_fkey"
+            columns: ["organizer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      play_participants: {
+        Row: {
+          added_by_organizer: boolean
+          claimed_by: string | null
+          created_at: string
+          email: string
+          event_id: string
+          first_name: string
+          gender: string | null
+          id: string
+          last_initial: string | null
+          phone: string | null
+          self_rating: string | null
+        }
+        Insert: {
+          added_by_organizer?: boolean
+          claimed_by?: string | null
+          created_at?: string
+          email: string
+          event_id: string
+          first_name: string
+          gender?: string | null
+          id?: string
+          last_initial?: string | null
+          phone?: string | null
+          self_rating?: string | null
+        }
+        Update: {
+          added_by_organizer?: boolean
+          claimed_by?: string | null
+          created_at?: string
+          email?: string
+          event_id?: string
+          first_name?: string
+          gender?: string | null
+          id?: string
+          last_initial?: string | null
+          phone?: string | null
+          self_rating?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "play_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "play_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "play_participants_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      play_matches: {
+        Row: {
+          court: number | null
+          created_at: string
+          event_id: string
+          id: string
+          player_a_id: string | null
+          player_b_id: string | null
+          round: number
+          score_a: number | null
+          score_b: number | null
+          updated_at: string
+          winner: number | null
+        }
+        Insert: {
+          court?: number | null
+          created_at?: string
+          event_id: string
+          id?: string
+          player_a_id?: string | null
+          player_b_id?: string | null
+          round: number
+          score_a?: number | null
+          score_b?: number | null
+          updated_at?: string
+          winner?: number | null
+        }
+        Update: {
+          court?: number | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          player_a_id?: string | null
+          player_b_id?: string | null
+          round?: number
+          score_a?: number | null
+          score_b?: number | null
+          updated_at?: string
+          winner?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "play_matches_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "play_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_settings: {
         Row: {
           description: string | null
@@ -903,12 +1084,16 @@ export type Database = {
           partner_id: string | null
           player_id: string
           replaces_registration_id: string | null
+          hold_expired_at: string | null
+          needs_partner: boolean
           status: Database["public"]["Enums"]["registration_status"]
           stripe_entry_intent_id: string | null
           stripe_hold_intent_id: string | null
           tournament_id: string
           updated_at: string
           waiver_accepted_at: string | null
+          waitlist_offer_expires_at: string | null
+          waitlist_position: number | null
         }
         Insert: {
           added_by_director_id?: string | null
@@ -918,9 +1103,11 @@ export type Database = {
           director_added?: boolean
           division_id?: string | null
           entry_fee_paid_cents?: number
+          hold_expired_at?: string | null
           hold_expires_at?: string | null
           hold_fee_paid_cents?: number
           id?: string
+          needs_partner?: boolean
           partner_id?: string | null
           player_id: string
           replaces_registration_id?: string | null
@@ -930,6 +1117,8 @@ export type Database = {
           tournament_id: string
           updated_at?: string
           waiver_accepted_at?: string | null
+          waitlist_offer_expires_at?: string | null
+          waitlist_position?: number | null
         }
         Update: {
           added_by_director_id?: string | null
@@ -939,9 +1128,11 @@ export type Database = {
           director_added?: boolean
           division_id?: string | null
           entry_fee_paid_cents?: number
+          hold_expired_at?: string | null
           hold_expires_at?: string | null
           hold_fee_paid_cents?: number
           id?: string
+          needs_partner?: boolean
           partner_id?: string | null
           player_id?: string
           replaces_registration_id?: string | null
@@ -951,6 +1142,8 @@ export type Database = {
           tournament_id?: string
           updated_at?: string
           waiver_accepted_at?: string | null
+          waitlist_offer_expires_at?: string | null
+          waitlist_position?: number | null
         }
         Relationships: [
           {
@@ -1166,6 +1359,7 @@ export type Database = {
           featured: boolean
           format: Database["public"]["Enums"]["tournament_format"]
           formats: string[] | null
+          hold_cutoff_days: number
           hold_duration_hours: number
           hold_fee_cents: number
           id: string
@@ -1208,6 +1402,7 @@ export type Database = {
           featured?: boolean
           format: Database["public"]["Enums"]["tournament_format"]
           formats?: string[] | null
+          hold_cutoff_days?: number
           hold_duration_hours?: number
           hold_fee_cents: number
           id?: string
@@ -1250,6 +1445,7 @@ export type Database = {
           featured?: boolean
           format?: Database["public"]["Enums"]["tournament_format"]
           formats?: string[] | null
+          hold_cutoff_days?: number
           hold_duration_hours?: number
           hold_fee_cents?: number
           id?: string
@@ -1439,6 +1635,27 @@ export type Database = {
       }
     }
     Views: {
+      play_participants_public: {
+        Row: {
+          created_at: string | null
+          event_id: string | null
+          first_name: string | null
+          gender: string | null
+          id: string | null
+          is_claimed: boolean | null
+          last_initial: string | null
+          self_rating: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "play_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "play_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       geography_columns: {
         Row: {
           coord_dimension: number | null
@@ -2473,6 +2690,18 @@ export type Database = {
         | "round_robin_to_double_elim"
       director_status: "pending" | "approved" | "suspended"
       match_direction: "like" | "pass" | "super"
+      play_event_status:
+        | "open"
+        | "full"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+      play_event_type:
+        | "round_robin"
+        | "mixer"
+        | "ladder"
+        | "open_play"
+        | "kings_court"
       registration_status:
         | "held"
         | "registered"
@@ -2481,6 +2710,9 @@ export type Database = {
         | "disqualified"
         | "no_show"
         | "substitute"
+        | "waitlisted"
+        | "waitlist_offered"
+        | "expired_hold"
       report_reason:
         | "spam_or_inappropriate"
         | "harassment"
@@ -2662,6 +2894,8 @@ export const Constants = {
       ],
       director_status: ["pending", "approved", "suspended"],
       match_direction: ["like", "pass", "super"],
+      play_event_status: ["open", "full", "in_progress", "completed", "cancelled"],
+      play_event_type: ["round_robin", "mixer", "ladder", "open_play", "kings_court"],
       registration_status: [
         "held",
         "registered",
@@ -2670,6 +2904,9 @@ export const Constants = {
         "disqualified",
         "no_show",
         "substitute",
+        "waitlisted",
+        "waitlist_offered",
+        "expired_hold",
       ],
       report_reason: [
         "spam_or_inappropriate",

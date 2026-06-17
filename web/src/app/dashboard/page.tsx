@@ -20,7 +20,7 @@ import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile, MatchSummary } from "@/components/messaging/panel";
 import { NotificationBell } from "@/components/notifications/bell";
 import { MatchSettingsPanel } from "@/components/shared/match-settings-panel";
-import { playerStats, tournaments as mockTournaments, recentMatches as mockMatches } from "@/data/mock-data";
+import { playerStats, tournaments as mockTournaments, recentMatches as mockMatches, COURT_IMG } from "@/data/mock-data";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Profile = {
@@ -61,6 +61,23 @@ type UpcomingEvent = {
   director_id?: string | null;
   cancellation_policy?: string | null;
   entry_fee_cents?: number | null;
+};
+
+type RecommendedTournament = {
+  id: string;
+  name: string;
+  city: string;
+  state: string;
+  event_date: string;
+  format: string | null;
+  entry_fee_cents: number | null;
+  capacity: number | null;
+  venue_name: string | null;
+  skill_min: number | null;
+  skill_max: number | null;
+  registeredCount: number;
+  partnerSeekers: number;
+  proximityScore: number;
 };
 
 type DisplayMatch = {
@@ -126,6 +143,116 @@ function processMatch(
   };
 }
 
+// ── Recommended card ──────────────────────────────────────────────────────────
+const COURT_IMGS = [
+  COURT_IMG,
+  "https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=600&h=400&fit=crop",
+];
+
+const GRAD_CLASSES = [
+  "from-primary/40 via-primary/10",
+  "from-violet-500/40 via-violet-500/10",
+  "from-sky-500/40 via-sky-500/10",
+  "from-emerald-500/40 via-emerald-500/10",
+];
+
+function RecommendedCard({ t, idx }: { t: RecommendedTournament; idx: number }) {
+  const img = COURT_IMGS[idx % COURT_IMGS.length];
+  const grad = GRAD_CLASSES[idx % GRAD_CLASSES.length];
+  const spotsLeft = t.capacity ? t.capacity - t.registeredCount : null;
+  const spotsLow = spotsLeft !== null && spotsLeft <= 5 && spotsLeft > 0;
+  const formatLabel = (t.format ?? "").replace(/_/g, " ").toUpperCase() || "OPEN";
+  const entryFee = t.entry_fee_cents ? `$${(t.entry_fee_cents / 100).toFixed(0)}` : "FREE";
+  const dateStr = new Date(t.event_date).toLocaleDateString("en-US", {
+    weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+  });
+
+  return (
+    <Link href={`/tournaments/${t.id}`} className="block group">
+      <div className="border border-border rounded-2xl bg-card overflow-hidden hover:border-primary/40 hover:shadow-lg transition-all duration-200">
+        {/* Photo */}
+        <div className={`relative aspect-[16/9] overflow-hidden bg-gradient-to-br ${grad} to-background`}>
+          <img
+            src={img} alt=""
+            className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+          {/* Top badges */}
+          <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
+            <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-sm text-white font-mono text-[10px] tracking-[0.12em]">
+              {formatLabel}
+            </span>
+            {spotsLow && (
+              <span className="px-2.5 py-1 rounded-full bg-amber-400 text-black font-mono text-[10px] tracking-[0.08em] font-bold flex items-center gap-1 flex-shrink-0">
+                <Lightning size={9} weight="fill" /> {spotsLeft} LEFT
+              </span>
+            )}
+          </div>
+
+          {/* Name + date at bottom of photo */}
+          <div className="absolute bottom-3 left-3 right-3">
+            <p className="text-white/60 text-[10px] font-mono mb-0.5">{dateStr}</p>
+            <h3 className="font-display text-white text-lg tracking-wide leading-tight line-clamp-1">{t.name}</h3>
+          </div>
+        </div>
+
+        {/* Details */}
+        <div className="p-4 space-y-2.5">
+          {/* Location */}
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <MapPin size={11} weight="bold" className="text-primary flex-shrink-0" />
+            <span className="truncate">{t.venue_name ? `${t.venue_name} · ` : ""}{t.city}, {t.state}</span>
+          </div>
+
+          {/* Skill + format chips */}
+          {(t.skill_min || t.skill_max) && (
+            <div className="flex flex-wrap gap-1.5">
+              <span className="px-2 py-1 rounded-lg bg-secondary border border-border text-[10px] font-mono">
+                {t.skill_min ?? "?"} – {t.skill_max ?? "?"}
+              </span>
+              <span className="px-2 py-1 rounded-lg bg-secondary border border-border text-[10px] font-mono">
+                {formatLabel}
+              </span>
+            </div>
+          )}
+
+          {/* Partner seekers */}
+          {t.partnerSeekers > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-mono text-primary">
+                <Users size={11} weight="fill" />
+                {t.partnerSeekers} seeking partner
+              </span>
+            </div>
+          )}
+
+          {/* Bottom: count + fee */}
+          <div className="flex items-end justify-between pt-1.5 border-t border-border/60">
+            <div className="space-y-1">
+              <p className="text-[11px] text-muted-foreground">
+                {t.registeredCount}{t.capacity ? `/${t.capacity}` : ""} registered
+              </p>
+              {t.capacity && (
+                <div className="w-20 h-1.5 bg-secondary rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all"
+                    style={{ width: `${Math.min((t.registeredCount / t.capacity) * 100, 100)}%` }}
+                  />
+                </div>
+              )}
+            </div>
+            <span className="font-display text-xl tracking-wide">{entryFee}</span>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const router = useRouter();
@@ -162,6 +289,7 @@ export default function DashboardPage() {
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [registerDone, setRegisterDone] = useState(false);
+  const [recommended, setRecommended] = useState<RecommendedTournament[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -169,6 +297,10 @@ export default function DashboardPage() {
         setUpcoming(mockTournaments.slice(0, 2).map((t, i) => { const [city, state] = t.location.split(", "); return { id: t.id, registration_id: `mock-reg-${i}`, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" }; }));
         setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
         setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments, duprDelta: playerStats.duprDelta });
+        setRecommended(mockTournaments.slice(2).map((t) => {
+          const [city, state] = t.location.split(", ");
+          return { id: t.id, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, format: t.format.split(" · ")[0].toLowerCase().replace(/ /g, "_"), entry_fee_cents: t.entryFee * 100, capacity: t.spots, venue_name: t.venue, skill_min: null, skill_max: null, registeredCount: t.filled, partnerSeekers: 0, proximityScore: 3 };
+        }));
         setLoading(false);
         return;
       }
@@ -252,6 +384,54 @@ export default function DashboardPage() {
         }));
       }
 
+      // Recommended tournaments — ordered by proximity then date
+      {
+        const validRegisteredIds = liveUpcoming.filter((e) => !e.id.startsWith("mock-")).map((e) => e.id);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let recQuery = (supabase as any)
+          .from("tournaments")
+          .select("id, name, city, state, event_date, format, entry_fee_cents, capacity, venue_name, skill_min, skill_max")
+          .neq("status", "draft")
+          .order("event_date")
+          .limit(12);
+        if (validRegisteredIds.length > 0) {
+          recQuery = recQuery.not("id", "in", `(${validRegisteredIds.join(",")})`);
+        }
+        const { data: recRows, error: recError } = await recQuery;
+        console.log("[recommended]", recRows?.length ?? 0, "rows", recError?.message ?? "");
+        if (recRows && recRows.length > 0) {
+          const recIds = recRows.map((r: { id: string }) => r.id);
+
+          const [{ data: regRows }, { data: partnerRows }] = await Promise.all([
+            supabase.from("registrations").select("tournament_id").in("tournament_id", recIds).in("status", ["registered", "checked_in"]),
+            supabase.from("registrations").select("tournament_id").in("tournament_id", recIds).eq("needs_partner", true).in("status", ["held", "registered"]),
+          ]);
+
+          const regMap: Record<string, number> = {};
+          (regRows ?? []).forEach((r: { tournament_id: string }) => { regMap[r.tournament_id] = (regMap[r.tournament_id] ?? 0) + 1; });
+          const partnerMap: Record<string, number> = {};
+          (partnerRows ?? []).forEach((r: { tournament_id: string }) => { partnerMap[r.tournament_id] = (partnerMap[r.tournament_id] ?? 0) + 1; });
+
+          const rec: RecommendedTournament[] = recRows
+            .map((t: { id: string; name: string; city: string; state: string; event_date: string; format: string | null; entry_fee_cents: number | null; capacity: number | null; venue_name: string | null; skill_min: number | null; skill_max: number | null }) => ({
+              ...t,
+              registeredCount: regMap[t.id] ?? 0,
+              partnerSeekers: partnerMap[t.id] ?? 0,
+              proximityScore: (prof?.location_city && t.city === prof.location_city) ? 1 : (prof?.location_state && t.state === prof.location_state) ? 2 : 3,
+            }))
+            .sort((a: RecommendedTournament, b: RecommendedTournament) =>
+              a.proximityScore - b.proximityScore || new Date(a.event_date).getTime() - new Date(b.event_date).getTime(),
+            );
+          setRecommended(rec);
+        } else {
+          // No live tournaments yet — show mock data so the section is always visible
+          setRecommended(mockTournaments.slice(2).map((t) => {
+            const [city, state] = t.location.split(", ");
+            return { id: t.id, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, format: t.format.split(" · ")[0].toLowerCase().replace(/ /g, "_"), entry_fee_cents: t.entryFee * 100, capacity: t.spots, venue_name: t.venue, skill_min: null, skill_max: null, registeredCount: t.filled, partnerSeekers: 0, proximityScore: 3 };
+          }));
+        }
+      }
+
       const { data: duprRows } = await supabase.from("dupr_history").select("delta").eq("player_id", user.id).order("recorded_at", { ascending: false }).limit(5);
       if (duprRows && duprRows.length > 0) {
         const delta = duprRows.reduce((sum, r) => sum + (r.delta ?? 0), 0);
@@ -265,6 +445,10 @@ export default function DashboardPage() {
       setUpcoming(mockTournaments.slice(0, 2).map((t, i) => { const [city, state] = t.location.split(", "); return { id: t.id, registration_id: `mock-reg-${i}`, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" }; }));
       setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
       setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments, duprDelta: playerStats.duprDelta });
+      setRecommended(mockTournaments.slice(2).map((t) => {
+        const [city, state] = t.location.split(", ");
+        return { id: t.id, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, format: t.format.split(" · ")[0].toLowerCase().replace(/ /g, "_"), entry_fee_cents: t.entryFee * 100, capacity: t.spots, venue_name: t.venue, skill_min: null, skill_max: null, registeredCount: t.filled, partnerSeekers: 0, proximityScore: 3 };
+      }));
       setLoading(false);
     });
   }, []);
@@ -509,11 +693,29 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
-            </div>
+
+              {/* Recommended for you — teaser on dashboard overview */}
+              {recommended.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-display text-xl tracking-wide">RECOMMENDED FOR YOU</h2>
+                    <button onClick={() => setNavSection("events")} className="text-xs text-primary hover:underline font-mono flex items-center gap-1">
+                      Browse all <ArrowRight size={12} weight="bold" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {recommended.slice(0, 3).map((t, i) => (
+                      <RecommendedCard key={t.id} t={t} idx={i} />
+                    ))}
+                  </div>
+                </div>
+              )}
+          </div>
           )}
 
           {/* ── My Events ── */}
           {navSection === "events" && (
+            <div className="space-y-8">
             <div className="space-y-4">
               <div>
                 <h2 className="font-display text-xl tracking-wide">MY EVENTS</h2>
@@ -597,6 +799,32 @@ export default function DashboardPage() {
                   </div>
                 )}
               </div>
+            </div>
+            {/* end MY EVENTS inner space-y-4 */}
+
+              {/* Recommended for you — full list in events tab */}
+              {recommended.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="font-display text-xl tracking-wide">RECOMMENDED FOR YOU</h2>
+                      <p className="text-sm text-muted-foreground">
+                        Tournaments near you{recommended[0]?.proximityScore === 1 ? ` in ${recommended[0].city}` : recommended[0]?.proximityScore === 2 ? ` in ${recommended[0].state}` : ""}
+                      </p>
+                    </div>
+                    <Link href="/tournaments">
+                      <button className="h-9 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors flex items-center gap-1.5">
+                        BROWSE ALL <ArrowRight size={13} weight="bold" />
+                      </button>
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {recommended.map((t, i) => (
+                      <RecommendedCard key={t.id} t={t} idx={i} />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

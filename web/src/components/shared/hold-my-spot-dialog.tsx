@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Lightning, ShieldCheck, Clock, CheckCircle, WarningCircle } from "@phosphor-icons/react";
+import { Lightning, ShieldCheck, Clock, CheckCircle, WarningCircle, Users } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,9 @@ export function HoldMySpotDialog({ open, onOpenChange, tournament, onSuccess }: 
   const [step, setStep] = useState<"review" | "success">("review");
   const [loading, setLoading] = useState(false);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [needsPartner, setNeedsPartner] = useState(false);
+
+  const isDoubles = /double/i.test(tournament.format);
 
   const confirm = async () => {
     setLoading(true);
@@ -89,6 +92,7 @@ export function HoldMySpotDialog({ open, onOpenChange, tournament, onSuccess }: 
         hold_expires_at: holdExpiry,
         hold_fee_paid_cents: 0,
         entry_fee_paid_cents: 0,
+        needs_partner: isDoubles ? needsPartner : false,
       };
       if (tournament.division_id) insertPayload.division_id = tournament.division_id;
 
@@ -111,6 +115,7 @@ export function HoldMySpotDialog({ open, onOpenChange, tournament, onSuccess }: 
   const reset = () => {
     setStep("review");
     setExpiresAt(null);
+    setNeedsPartner(false);
     onOpenChange(false);
   };
 
@@ -153,6 +158,29 @@ export function HoldMySpotDialog({ open, onOpenChange, tournament, onSuccess }: 
               </div>
             </div>
 
+            {isDoubles && (
+              <button
+                type="button"
+                onClick={() => setNeedsPartner((v) => !v)}
+                className={`w-full flex items-center gap-3 rounded-xl border p-3.5 text-left transition-colors ${
+                  needsPartner
+                    ? "border-primary/40 bg-primary/5"
+                    : "border-border hover:border-primary/30 hover:bg-secondary/40"
+                }`}
+              >
+                <div className={`h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${needsPartner ? "bg-primary/20" : "bg-secondary"}`}>
+                  <Users size={16} weight="bold" className={needsPartner ? "text-primary" : "text-muted-foreground"} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold">I need a partner</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">We&apos;ll surface you to other solo registrants looking for a doubles partner at this event.</div>
+                </div>
+                <div className={`h-5 w-9 rounded-full flex-shrink-0 flex items-center transition-colors px-0.5 ${needsPartner ? "bg-primary justify-end" : "bg-border justify-start"}`}>
+                  <div className="h-4 w-4 rounded-full bg-white shadow-sm" />
+                </div>
+              </button>
+            )}
+
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 flex items-start gap-2 text-sm">
               <WarningCircle size={16} weight="fill" className="text-primary flex-shrink-0 mt-0.5" />
               <p className="text-muted-foreground">
@@ -192,11 +220,26 @@ export function HoldMySpotDialog({ open, onOpenChange, tournament, onSuccess }: 
               ) : (
                 <> for <span className="text-primary font-semibold">{tournament.hold_duration_hours} hours</span></>
               )}.
-              {" "}Find it in your dashboard and profile under Tournaments.
+              {needsPartner
+                ? " We'll match you with other players seeking a partner for this event."
+                : " Find it in your dashboard and profile under Tournaments."}
             </p>
-            <Button onClick={reset} className="rounded-full bg-primary text-primary-foreground mt-6 px-6" data-testid="hold-done-btn">
-              Done
-            </Button>
+            <div className="flex flex-col gap-2 mt-6 w-full max-w-xs mx-auto">
+              {needsPartner && (
+                <Button
+                  asChild
+                  className="rounded-full bg-primary text-primary-foreground px-6"
+                  data-testid="find-partner-now-btn"
+                >
+                  <a href={`/matchmaking?tournament_id=${tournament.id}`}>
+                    <Users size={15} className="mr-2" /> Find My Partner Now
+                  </a>
+                </Button>
+              )}
+              <Button variant={needsPartner ? "outline" : "default"} onClick={reset} className="rounded-full px-6" data-testid="hold-done-btn">
+                Done
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
