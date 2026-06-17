@@ -715,13 +715,34 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-          <button
-            onClick={() => editing ? cancelEdit() : setEditing(true)}
-            className="h-10 px-5 rounded-full border border-border flex items-center gap-2 text-sm hover:bg-secondary/60 transition-colors"
-            data-testid="profile-edit-btn"
-          >
-            <PencilSimple size={16} weight="bold" /> {editing ? "Cancel" : "Edit"}
-          </button>
+          {editing ? (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={saveProfile}
+                disabled={saving}
+                className="h-10 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2 text-sm font-display tracking-[0.15em] transition-colors"
+                data-testid="profile-save-btn-header"
+              >
+                {saving ? <span className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" /> : <Check size={16} weight="bold" />}
+                {saving ? "Saving…" : "Save"}
+              </button>
+              <button
+                onClick={cancelEdit}
+                className="h-10 px-5 rounded-full border border-border flex items-center gap-2 text-sm hover:bg-secondary/60 transition-colors"
+                data-testid="profile-edit-btn"
+              >
+                <X size={16} weight="bold" /> Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setEditing(true)}
+              className="h-10 px-5 rounded-full border border-border flex items-center gap-2 text-sm hover:bg-secondary/60 transition-colors flex-shrink-0"
+              data-testid="profile-edit-btn"
+            >
+              <PencilSimple size={16} weight="bold" /> Edit
+            </button>
+          )}
         </div>
 
         {/* Stat bar */}
