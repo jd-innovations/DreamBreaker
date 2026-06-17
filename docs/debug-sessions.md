@@ -4,6 +4,32 @@ A running log of system debug/health passes. Most recent first.
 
 ---
 
+## 2026-06-17 — Incident: profile saves silently failing (expired token writes)
+
+**Symptom:** Editing location and uploading a profile/cover image appeared to
+work (optimistic preview + "saved" toast) but nothing persisted.
+
+**Diagnosis:** Same expired-session family as the `/play` spinner, but on
+writes. An expired access token still passes public reads, so the profile
+loaded, but RLS-guarded `profiles` UPDATEs (and storage uploads) matched 0
+rows. Supabase `.update()` without `.select()` returns `{data:null,error:null}`
+on a 0-row match, so the app showed a false success. Confirmed on the row:
+`location_*` null, `updated_at` stuck at 2026-06-14 (last good save).
+
+**Fix shipped (commit 0844127):**
+- New `lib/ensure-session.ts` — force-refreshes the auth token before a write
+  (auto-fixes the common case without manual re-login).
+- `saveProfile`, avatar upload, cover preset/upload: refresh session first,
+  use `.select()` to detect 0-row writes, show an actionable "session expired,
+  sign in again" message instead of a fake success.
+- Cache-bust avatar/cover URLs so re-uploads to the same path show immediately.
+
+**Immediate user workaround:** sign out and back in (refreshes the token), then
+edit. Location fields live in the profile **About tab** (Edit mode); avatar via
+the camera overlay on the photo (Edit mode).
+
+---
+
 ## 2026-06-17 — Incident: `/play` endless spinner (stale auth session)
 
 **Symptom:** `/play` stuck on its loading spinner in the user's normal browser
