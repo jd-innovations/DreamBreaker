@@ -7,6 +7,7 @@ import Link from "next/link";
 import {
   MapPin, Calendar, Clock, Users, Sparkle, ArrowLeft, Confetti,
   ArrowRight, NotePencil, Gear, Trophy, CheckCircle, UserCircle,
+  ChatCircleDots, ShieldStar,
 } from "@phosphor-icons/react";
 import { PageShell } from "@/components/layout/page-shell";
 import { ShareButton } from "@/components/shared/share-button";
@@ -17,12 +18,23 @@ import {
   eventTypeLabel, statusLabel, skillLabel, formatEventDate, formatEventTime, displayName,
 } from "@/lib/community-play";
 
+type Organizer = {
+  id: string;
+  full_name: string | null;
+  handle: string | null;
+  avatar_url: string | null;
+  director_status: string | null;
+  director_events_hosted: number | null;
+};
+
 export default function PlayEventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [event, setEvent] = useState<PlayEvent | null>(null);
   const [participants, setParticipants] = useState<PlayParticipantPublic[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOrganizer, setIsOrganizer] = useState(false);
+  const [viewerId, setViewerId] = useState<string | null>(null);
+  const [organizer, setOrganizer] = useState<Organizer | null>(null);
   const [shareUrl, setShareUrl] = useState("");
 
   useEffect(() => {
@@ -34,7 +46,15 @@ export default function PlayEventPage({ params }: { params: Promise<{ id: string
       setEvent(ev);
 
       const uid = await getUserId();
+      setViewerId(uid);
       setIsOrganizer(!!uid && uid === ev.organizer_id);
+
+      const { data: org } = await supabase
+        .from("profiles")
+        .select("id, full_name, handle, avatar_url, director_status, director_events_hosted")
+        .eq("id", ev.organizer_id)
+        .single();
+      setOrganizer(org as Organizer | null);
 
       const { data: parts } = await supabase
         .from("play_participants_public")
@@ -248,6 +268,51 @@ export default function PlayEventPage({ params }: { params: Promise<{ id: string
               <span className="ml-1 align-middle text-xs text-muted-foreground">Share this event</span>
             </div>
           </div>
+
+          {/* Organizer */}
+          {organizer && (
+            <div className="border border-border rounded-2xl bg-card p-5">
+              <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mb-3">ORGANIZER</p>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-12 w-12 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {organizer.avatar_url
+                    ? <img src={organizer.avatar_url} alt="" className="h-full w-full object-cover" />
+                    : <span className="font-display text-lg text-primary">{(organizer.full_name ?? "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</span>}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-display text-lg tracking-wide truncate">{organizer.full_name ?? "Organizer"}</span>
+                    {organizer.director_status === "approved" && <ShieldStar size={15} weight="fill" className="text-amber-400 flex-shrink-0" />}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {organizer.handle ? `@${organizer.handle}` : "Host"}
+                    {organizer.director_events_hosted ? ` · ${organizer.director_events_hosted} events hosted` : ""}
+                  </div>
+                </div>
+              </div>
+
+              {isOrganizer ? (
+                <p className="text-xs text-muted-foreground text-center py-1">You&apos;re hosting this event.</p>
+              ) : viewerId ? (
+                <Link href={`/profile/${organizer.id}`}>
+                  <button className="w-full h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-[0.15em] transition-colors flex items-center justify-center gap-2">
+                    <ChatCircleDots size={15} weight="fill" /> CONTACT ORGANIZER
+                  </button>
+                </Link>
+              ) : (
+                <>
+                  <Link href={`/auth?mode=signup&redirect=/play/${id}`}>
+                    <button className="w-full h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-[0.15em] transition-colors flex items-center justify-center gap-2">
+                      <ChatCircleDots size={15} weight="fill" /> CONTACT ORGANIZER
+                    </button>
+                  </Link>
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    Create a free account to message the organizer.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Growth nudge */}
           <div className="border border-primary/30 bg-primary/5 rounded-2xl p-5">
