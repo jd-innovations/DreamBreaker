@@ -673,7 +673,7 @@ export default function ProfilePage() {
             </div>
             <div className="pb-1">
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl tracking-wide text-white">{name}</h1>
+                <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl tracking-wide text-foreground">{name}</h1>
                 {(profile as { director_status?: string | null } | null)?.director_status === "approved" && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-400 font-mono text-[9px] tracking-[0.2em]">
                     <ShieldStar size={11} weight="fill" /> DIRECTOR
