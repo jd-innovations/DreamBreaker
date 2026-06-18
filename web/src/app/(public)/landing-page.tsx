@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { ArrowRight, Plus, Heart, Lightning, Trophy, Users, MapPin, Calendar } from "@phosphor-icons/react/dist/ssr";
 import { PageShell } from "@/components/layout/page-shell";
@@ -5,6 +6,12 @@ import { tournaments, HERO_IMG } from "@/data/mock-data";
 import { createClient } from "@/lib/supabase/server";
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&q=80";
+
+const COMMUNITY_STEPS = [
+  { n: 1, icon: Plus, title: "Create in a minute", desc: "Organizers create a round robin in just a few taps." },
+  { n: 2, icon: Users, title: "Share the link", desc: "Players join instantly without creating an account." },
+  { n: 3, icon: Trophy, title: "Live standings", desc: "Matches are generated automatically and standings update live." },
+];
 
 interface FeaturedCard {
   id: string;
@@ -195,7 +202,9 @@ export default async function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card to-card p-8 lg:p-12 relative overflow-hidden">
             <div className="absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
-            <div className="relative grid lg:grid-cols-2 gap-8 items-center">
+
+            {/* ── DESKTOP: text left, horizontal stepper right ── */}
+            <div className="relative hidden lg:grid lg:grid-cols-2 gap-12 items-center">
               <div>
                 <div className="font-mono text-[11px] tracking-[0.3em] text-primary mb-3 flex items-center gap-2">
                   <Heart size={13} weight="fill" /> / COMMUNITY PLAY
@@ -207,30 +216,83 @@ export default async function LandingPage() {
                   Host or join a recreational round robin in minutes. Players join without an account —
                   organizers get a shareable link, auto-generated matches, and live standings.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-row gap-3">
                   <Link href="/play">
-                    <button className="rounded-full h-13 px-7 py-3.5 bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.18em] text-sm transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+                    <button className="rounded-full h-13 px-7 py-3.5 bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.18em] text-sm transition-colors flex items-center justify-center gap-2">
                       EXPLORE EVENTS <ArrowRight size={16} weight="bold" />
                     </button>
                   </Link>
                   <Link href="/play/create">
-                    <button className="rounded-full h-13 px-7 py-3.5 border border-border hover:bg-secondary font-display tracking-[0.18em] text-sm transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+                    <button className="rounded-full h-13 px-7 py-3.5 border border-border hover:bg-secondary font-display tracking-[0.18em] text-sm transition-colors flex items-center justify-center gap-2">
                       <Plus size={16} weight="bold" /> HOST AN EVENT
                     </button>
                   </Link>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { icon: Plus, label: "Create in a minute" },
-                  { icon: Users, label: "No-account join" },
-                  { icon: Trophy, label: "Live standings" },
-                ].map((f) => (
-                  <div key={f.label} className="rounded-2xl border border-border bg-background/60 p-4 text-center flex flex-col items-center gap-2">
-                    <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center">
-                      <f.icon size={18} weight="fill" className="text-primary" />
+
+              <div className="flex items-start justify-between gap-2">
+                {COMMUNITY_STEPS.map((s, i) => (
+                  <Fragment key={s.n}>
+                    <div className="flex-1 flex flex-col items-center text-center px-1">
+                      <div className="relative">
+                        <span className="absolute -top-1.5 -right-1.5 z-10 h-6 w-6 rounded-full bg-primary text-primary-foreground font-mono text-xs font-bold flex items-center justify-center shadow-sm">
+                          {s.n}
+                        </span>
+                        <div className="h-20 w-20 rounded-full bg-secondary/60 border border-border flex items-center justify-center">
+                          <s.icon size={28} weight="fill" className="text-primary" />
+                        </div>
+                      </div>
+                      <h3 className="mt-5 font-semibold text-foreground">{s.title}</h3>
+                      <p className="mt-1.5 text-sm text-muted-foreground leading-snug">{s.desc}</p>
                     </div>
-                    <span className="text-xs text-muted-foreground leading-tight">{f.label}</span>
+                    {i < COMMUNITY_STEPS.length - 1 && (
+                      <ArrowRight size={20} weight="bold" className="text-muted-foreground/30 flex-shrink-0 mt-8" />
+                    )}
+                  </Fragment>
+                ))}
+              </div>
+            </div>
+
+            {/* ── MOBILE: centered text, vertical stepper ── */}
+            <div className="relative lg:hidden flex flex-col items-center text-center">
+              <div className="font-mono text-[11px] tracking-[0.3em] text-primary mb-3 flex items-center gap-2">
+                <Heart size={13} weight="fill" /> / COMMUNITY PLAY
+              </div>
+              <h2 className="font-display text-3xl sm:text-4xl tracking-wide leading-[0.95] mb-4">
+                CASUAL GAMES, ZERO HASSLE
+              </h2>
+              <p className="text-muted-foreground text-base leading-relaxed mb-6 max-w-md">
+                Host or join a recreational round robin in minutes. Players join without an account —
+                organizers get a shareable link, auto-generated matches, and live standings.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 mb-8 w-full sm:w-auto">
+                <Link href="/play" className="w-full sm:w-auto">
+                  <button className="rounded-full h-13 px-7 py-3.5 bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.18em] text-sm transition-colors flex items-center justify-center gap-2 w-full">
+                    EXPLORE EVENTS <ArrowRight size={16} weight="bold" />
+                  </button>
+                </Link>
+                <Link href="/play/create" className="w-full sm:w-auto">
+                  <button className="rounded-full h-13 px-7 py-3.5 border border-border hover:bg-secondary font-display tracking-[0.18em] text-sm transition-colors flex items-center justify-center gap-2 w-full">
+                    <Plus size={16} weight="bold" /> HOST AN EVENT
+                  </button>
+                </Link>
+              </div>
+
+              <div className="w-full space-y-3">
+                {COMMUNITY_STEPS.map((s) => (
+                  <div key={s.n} className="rounded-2xl border border-border bg-background/40 p-4 flex items-center gap-4 text-left">
+                    <div className="relative flex-shrink-0">
+                      <span className="absolute -top-1 -right-1 z-10 h-5 w-5 rounded-full bg-primary text-primary-foreground font-mono text-[10px] font-bold flex items-center justify-center shadow-sm">
+                        {s.n}
+                      </span>
+                      <div className="h-12 w-12 rounded-full bg-secondary/60 border border-border flex items-center justify-center">
+                        <s.icon size={20} weight="fill" className="text-primary" />
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-foreground">{s.title}</h3>
+                      <p className="text-sm text-muted-foreground leading-snug">{s.desc}</p>
+                    </div>
                   </div>
                 ))}
               </div>
