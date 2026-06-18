@@ -977,6 +977,7 @@ export type Database = {
           hand: string | null
           handle: string | null
           id: string
+          is_director: boolean
           is_discoverable: boolean
           location_city: string | null
           location_coords: unknown
@@ -990,6 +991,8 @@ export type Database = {
           play_style: string | null
           role: Database["public"]["Enums"]["user_role"]
           skill_level: string | null
+          stripe_connect_account_id: string | null
+          stripe_connect_onboarded_at: string | null
           stripe_customer_id: string | null
           updated_at: string
         }
@@ -1013,6 +1016,7 @@ export type Database = {
           hand?: string | null
           handle?: string | null
           id: string
+          is_director?: boolean
           is_discoverable?: boolean
           location_city?: string | null
           location_coords?: unknown
@@ -1026,6 +1030,8 @@ export type Database = {
           play_style?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           skill_level?: string | null
+          stripe_connect_account_id?: string | null
+          stripe_connect_onboarded_at?: string | null
           stripe_customer_id?: string | null
           updated_at?: string
         }
@@ -1049,6 +1055,7 @@ export type Database = {
           hand?: string | null
           handle?: string | null
           id?: string
+          is_director?: boolean
           is_discoverable?: boolean
           location_city?: string | null
           location_coords?: unknown
@@ -1062,6 +1069,8 @@ export type Database = {
           play_style?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           skill_level?: string | null
+          stripe_connect_account_id?: string | null
+          stripe_connect_onboarded_at?: string | null
           stripe_customer_id?: string | null
           updated_at?: string
         }
@@ -1080,18 +1089,19 @@ export type Database = {
           added_by_director_id: string | null
           checked_in_at: string | null
           checked_in_by: string | null
+          converted_at: string | null
           created_at: string
           director_added: boolean
           division_id: string | null
           entry_fee_paid_cents: number
+          hold_expired_at: string | null
           hold_expires_at: string | null
           hold_fee_paid_cents: number
           id: string
+          needs_partner: boolean
           partner_id: string | null
           player_id: string
           replaces_registration_id: string | null
-          hold_expired_at: string | null
-          needs_partner: boolean
           status: Database["public"]["Enums"]["registration_status"]
           stripe_entry_intent_id: string | null
           stripe_hold_intent_id: string | null
@@ -1105,6 +1115,7 @@ export type Database = {
           added_by_director_id?: string | null
           checked_in_at?: string | null
           checked_in_by?: string | null
+          converted_at?: string | null
           created_at?: string
           director_added?: boolean
           division_id?: string | null
@@ -1130,6 +1141,7 @@ export type Database = {
           added_by_director_id?: string | null
           checked_in_at?: string | null
           checked_in_by?: string | null
+          converted_at?: string | null
           created_at?: string
           director_added?: boolean
           division_id?: string | null
