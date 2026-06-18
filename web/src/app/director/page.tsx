@@ -1,7 +1,7 @@
 ﻿"use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Lightning, X, Plus, Users, CurrencyDollar, Trophy, MapPin, Calendar,
@@ -9,7 +9,7 @@ import {
   ChartBar, ClipboardText, Gear, SignOut, CaretDown, CaretUp,
   TrendUp, TrendDown, Ticket, Star, Funnel, MagnifyingGlass,
   ArrowSquareOut, Broadcast, Trash, Globe, Image, UploadSimple, FloppyDisk,
-  ChatCircleDots,
+  ChatCircleDots, Bank, ArrowUpRight, Spinner,
 } from "@phosphor-icons/react";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
@@ -291,6 +291,25 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
   );
 }
 
+// ── Stripe return param handler (needs Suspense) ───────────────────────────────
+
+function ConnectReturnHandler({ onOnboarded }: { onOnboarded: () => void }) {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("onboarded") === "1") {
+      toast.success("Payouts enabled! You can now publish paid tournaments.");
+      onOnboarded();
+    } else if (searchParams.get("connect_incomplete") === "1") {
+      toast.warning("Stripe setup isn't finished — complete it before publishing paid tournaments.");
+    } else if (searchParams.get("connect_error")) {
+      toast.error("Something went wrong with Stripe setup. Please try again.");
+    }
+  // onOnboarded is stable (defined inline in parent), intentionally omitted from deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+  return null;
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 type NavSection = "dashboard" | "registrations" | "checkin" | "analytics" | "settings" | "manage" | "sponsors" | "publicpage" | "messages";
@@ -330,6 +349,11 @@ export default function DirectorPage() {
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+  // Stripe Connect state
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
+  const [stripeOnboarded, setStripeOnboarded] = useState<boolean>(false);
+  const [connectLoading, setConnectLoading] = useState(false);
+
   const selected = tournaments.find((t) => t.id === selectedId) ?? null;
 
   const load = useCallback(async () => {
@@ -340,12 +364,16 @@ export default function DirectorPage() {
       setCurrentUserId(userId);
       const supabase = createClient();
 
-      const { data: profile } = await supabase.from("profiles").select("full_name,role").eq("id", userId).single();
+      const { data: profile } = await supabase.from("profiles")
+        .select("full_name,role,stripe_connect_account_id,stripe_connect_onboarded_at")
+        .eq("id", userId).single();
       if (profile) {
         setProfileName((profile.full_name as string | null) ?? "Director");
         if (!["director", "player_director", "admin"].includes(profile.role as string)) {
           router.push("/dashboard"); return;
         }
+        setStripeAccountId(profile.stripe_connect_account_id ?? null);
+        setStripeOnboarded(!!profile.stripe_connect_onboarded_at);
       }
 
       const { data: userProfiles } = await supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name");
@@ -378,6 +406,7 @@ export default function DirectorPage() {
 
   useEffect(() => { load(); }, [load]);
 
+
   const loadRegistrations = async (tid: string) => {
     if (regsLoaded === tid) return;
     const supabase = createClient();
@@ -387,6 +416,20 @@ export default function DirectorPage() {
       .order("created_at", { ascending: true });
     setRegistrations((data ?? []) as unknown as Registration[]);
     setRegsLoaded(tid);
+  };
+
+  const startConnect = async () => {
+    setConnectLoading(true);
+    try {
+      const res = await fetch("/api/stripe/connect/start", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok || !json.url) { toast.error("Could not start Stripe setup. Try again."); return; }
+      window.location.href = json.url;
+    } catch {
+      toast.error("Could not reach Stripe. Check your connection.");
+    } finally {
+      setConnectLoading(false);
+    }
   };
 
   const submitForApproval = async (id: string) => {
@@ -740,6 +783,9 @@ export default function DirectorPage() {
 
   return (
     <div className="min-h-screen bg-background flex">
+      <Suspense fallback={null}>
+        <ConnectReturnHandler onOnboarded={() => setStripeOnboarded(true)} />
+      </Suspense>
       {/* ── Mobile sidebar overlay ── */}
       {mobileSidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
@@ -786,6 +832,44 @@ export default function DirectorPage() {
         </header>
 
         <div className="px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
+
+          {/* ── Stripe Connect banner ── */}
+          {!stripeOnboarded && (
+            <div className={`mb-6 rounded-2xl border p-4 flex flex-col sm:flex-row sm:items-center gap-4 ${
+              stripeAccountId
+                ? "border-amber-400/30 bg-amber-400/5"
+                : "border-primary/30 bg-primary/5"
+            }`}>
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <Bank size={20} weight="fill" className={`flex-shrink-0 mt-0.5 ${stripeAccountId ? "text-amber-400" : "text-primary"}`} />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">
+                    {stripeAccountId ? "Stripe setup incomplete" : "Set up payouts to publish paid tournaments"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {stripeAccountId
+                      ? "Your Stripe account was created but onboarding isn't finished. Complete setup to accept payments."
+                      : "Connect your bank account via Stripe — takes about 5 minutes. Free tournaments can be published without this."}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={startConnect}
+                disabled={connectLoading}
+                className="flex-shrink-0 flex items-center gap-2 h-9 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-mono text-xs tracking-wider transition-colors disabled:opacity-60"
+              >
+                {connectLoading
+                  ? <><Spinner size={14} className="animate-spin" /> CONNECTING…</>
+                  : <><ArrowUpRight size={14} weight="bold" /> {stripeAccountId ? "CONTINUE SETUP" : "SET UP PAYOUTS"}</>
+                }
+              </button>
+            </div>
+          )}
+          {stripeOnboarded && (
+            <div className="mb-6 flex items-center gap-2 text-xs text-emerald-400 font-mono tracking-wider">
+              <CheckCircle size={14} weight="fill" /> PAYOUTS ENABLED
+            </div>
+          )}
 
           {/* ── No tournaments ── */}
           {tournaments.length === 0 && (
@@ -909,11 +993,23 @@ export default function DirectorPage() {
                         <PencilSimple size={14} /> Edit Details
                       </button>
                     </Link>
-                    <button onClick={() => submitForApproval(selected.id)} disabled={publishing === selected.id}
-                      className="h-10 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors disabled:opacity-50 flex items-center gap-1.5">
-                      <CheckCircle size={14} weight="fill" />
-                      {publishing === selected.id ? "Submitting…" : "Submit for Approval"}
-                    </button>
+                    {selected.entry_fee_cents > 0 && !stripeOnboarded ? (
+                      <button
+                        onClick={startConnect}
+                        disabled={connectLoading}
+                        title="Connect a bank account before publishing paid tournaments"
+                        className="h-10 px-5 rounded-full bg-amber-500 text-white hover:bg-amber-400 text-sm font-display tracking-wider transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        <Bank size={14} weight="fill" />
+                        {connectLoading ? "Connecting…" : "Set Up Payouts First"}
+                      </button>
+                    ) : (
+                      <button onClick={() => submitForApproval(selected.id)} disabled={publishing === selected.id}
+                        className="h-10 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors disabled:opacity-50 flex items-center gap-1.5">
+                        <CheckCircle size={14} weight="fill" />
+                        {publishing === selected.id ? "Submitting…" : "Submit for Approval"}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -1166,10 +1262,21 @@ export default function DirectorPage() {
               {/* Actions */}
               <div className="flex flex-wrap gap-3">
                 {selected.status === "draft" && (
-                  <button onClick={() => submitForApproval(selected.id)} disabled={publishing === selected.id}
-                    className="flex items-center gap-2 px-5 h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-wider text-sm transition-colors disabled:opacity-50">
-                    <CheckCircle size={14} weight="fill" /> {publishing === selected.id ? "SUBMITTING…" : "SUBMIT FOR APPROVAL"}
-                  </button>
+                  selected.entry_fee_cents > 0 && !stripeOnboarded ? (
+                    <button
+                      onClick={startConnect}
+                      disabled={connectLoading}
+                      title="Connect a bank account before publishing paid tournaments"
+                      className="flex items-center gap-2 px-5 h-10 rounded-full bg-amber-500 text-white hover:bg-amber-400 font-display tracking-wider text-sm transition-colors disabled:opacity-50"
+                    >
+                      <Bank size={14} weight="fill" /> {connectLoading ? "CONNECTING…" : "SET UP PAYOUTS FIRST"}
+                    </button>
+                  ) : (
+                    <button onClick={() => submitForApproval(selected.id)} disabled={publishing === selected.id}
+                      className="flex items-center gap-2 px-5 h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-wider text-sm transition-colors disabled:opacity-50">
+                      <CheckCircle size={14} weight="fill" /> {publishing === selected.id ? "SUBMITTING…" : "SUBMIT FOR APPROVAL"}
+                    </button>
+                  )
                 )}
                 {selected.status === "pending_approval" && (
                   <div className="flex items-center gap-2 px-5 h-10 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-400 font-mono text-xs tracking-wider">
