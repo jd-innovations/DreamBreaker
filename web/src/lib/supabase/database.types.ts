@@ -836,7 +836,9 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
+          player_a2_id: string | null
           player_a_id: string | null
+          player_b2_id: string | null
           player_b_id: string | null
           round: number
           score_a: number | null
@@ -849,7 +851,9 @@ export type Database = {
           created_at?: string
           event_id: string
           id?: string
+          player_a2_id?: string | null
           player_a_id?: string | null
+          player_b2_id?: string | null
           player_b_id?: string | null
           round: number
           score_a?: number | null
@@ -862,7 +866,9 @@ export type Database = {
           created_at?: string
           event_id?: string
           id?: string
+          player_a2_id?: string | null
           player_a_id?: string | null
+          player_b2_id?: string | null
           player_b_id?: string | null
           round?: number
           score_a?: number | null

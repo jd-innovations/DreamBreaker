@@ -12,13 +12,7 @@ import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
-import { EVENT_TYPES } from "@/lib/community-play";
-
-const FORMAT_OPTIONS = [
-  "Round Robin · Singles",
-  "Round Robin · Doubles",
-  "Round Robin · Rotating Partners",
-];
+import { EVENT_TYPES, FORMAT_OPTIONS } from "@/lib/community-play";
 
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
@@ -82,7 +76,7 @@ export default function CreatePlayEventPage() {
         skill_min: skillMinRaw ? parseFloat(skillMinRaw) : null,
         skill_max: skillMaxRaw ? parseFloat(skillMaxRaw) : null,
         max_players: parseInt(fd.get("max_players") as string, 10) || 12,
-        format: (fd.get("format") as string) || FORMAT_OPTIONS[0],
+        format: (fd.get("format") as string) || FORMAT_OPTIONS[0].value,
         notes: (fd.get("notes") as string)?.trim() || null,
       })
       .select("id")
@@ -196,8 +190,8 @@ export default function CreatePlayEventPage() {
           </div>
 
           <Field label="FORMAT">
-            <select name="format" defaultValue={FORMAT_OPTIONS[0]} className={inputCls}>
-              {FORMAT_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
+            <select name="format" defaultValue={FORMAT_OPTIONS[0].value} className={inputCls}>
+              {FORMAT_OPTIONS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
             </select>
           </Field>
 

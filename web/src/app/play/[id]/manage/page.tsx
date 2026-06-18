@@ -16,7 +16,8 @@ import { getUserId } from "@/lib/dev-user";
 import { withTimeout } from "@/lib/with-timeout";
 import {
   type PlayEvent, type PlayParticipant, type PlayMatch,
-  eventTypeLabel, statusLabel, displayName, generateRoundRobin, computeStandings,
+  eventTypeLabel, statusLabel, displayName, computeStandings,
+  generateSchedule, parseFormat, formatLabel, alternatesCount, FORMAT_OPTIONS,
 } from "@/lib/community-play";
 
 const inputCls = "h-10 rounded-xl bg-secondary border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring transition-shadow";
@@ -110,24 +111,48 @@ export default function ManagePlayEventPage({ params }: { params: Promise<{ id: 
     reload();
   };
 
+  const changeFormat = async (formatValue: string) => {
+    if (!event || event.format === formatValue) return;
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("play_events").update({ format: formatValue }).eq("id", id);
+    setBusy(false);
+    if (error) { toast.error("Could not update format."); return; }
+    setEvent((e) => e ? { ...e, format: formatValue } : e);
+    toast.success(matches.length > 0 ? "Format changed — regenerate matches to apply." : "Format updated.");
+  };
+
   const generateMatches = async () => {
-    if (participants.length < 2) { toast.error("Need at least 2 players."); return; }
+    if (!event) return;
+    const fmt = parseFormat(event.format);
+    const minPlayers = fmt === "singles" ? 2 : 4;
+    if (participants.length < minPlayers) {
+      toast.error(fmt === "singles" ? "Need at least 2 players." : "Need at least 4 players for this format.");
+      return;
+    }
     if (matches.length > 0 && !confirm("Regenerate matches? This clears existing matches and scores.")) return;
     setBusy(true);
     const supabase = createClient();
     // Clear existing
     if (matches.length > 0) await supabase.from("play_matches").delete().eq("event_id", id);
 
-    const rounds = generateRoundRobin(participants.map((p) => p.id));
-    const rows = rounds.flatMap((r) =>
-      r.pairs
-        .filter(([a, b]) => a !== null && b !== null) // skip BYE rows
-        .map(([a, b], i) => ({ event_id: id, round: r.round, court: i + 1, player_a_id: a, player_b_id: b })),
-    );
+    const schedule = generateSchedule(fmt, participants.map((p) => p.id));
+    if (schedule.length === 0) {
+      setBusy(false);
+      toast.error("Not enough players to build a schedule for this format.");
+      return;
+    }
+    const rows = schedule.map((m) => ({
+      event_id: id, round: m.round, court: m.court,
+      player_a_id: m.a1, player_a2_id: m.a2,
+      player_b_id: m.b1, player_b2_id: m.b2,
+    }));
     const { error } = await supabase.from("play_matches").insert(rows);
     setBusy(false);
     if (error) { toast.error("Could not generate matches."); console.error(error); return; }
-    toast.success(`${rows.length} matches generated across ${rounds.length} rounds.`);
+    const roundCount = new Set(schedule.map((m) => m.round)).size;
+    const sat = alternatesCount(fmt, participants.length);
+    toast.success(`${rows.length} matches across ${roundCount} rounds.${sat > 0 ? ` ${sat} player${sat > 1 ? "s" : ""} sitting out as alternate${sat > 1 ? "s" : ""}.` : ""}`);
     reload();
   };
 
@@ -169,6 +194,9 @@ export default function ManagePlayEventPage({ params }: { params: Promise<{ id: 
     const p = participants.find((x) => x.id === pid);
     return p ? displayName(p) : "—";
   };
+  // A side may be a single player or a pair (doubles / rotating).
+  const sideName = (p1: string | null, p2: string | null) =>
+    p2 ? `${nameOf(p1)} & ${nameOf(p2)}` : nameOf(p1);
 
   const rounds = [...new Set(matches.map((m) => m.round))].sort((a, b) => a - b);
   const completedCount = matches.filter((m) => m.winner != null).length;
@@ -204,7 +232,7 @@ export default function ManagePlayEventPage({ params }: { params: Promise<{ id: 
               }`}>{statusLabel(event.status).toUpperCase()}</span>
             </div>
             <h1 className="font-display text-3xl tracking-wide">{event.name}</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{eventTypeLabel(event.event_type)} · {participants.length}/{event.max_players} players</p>
+            <p className="text-sm text-muted-foreground mt-0.5">{eventTypeLabel(event.event_type)} · {formatLabel(event.format)} · {participants.length}/{event.max_players} players</p>
           </div>
         </div>
 
@@ -219,6 +247,44 @@ export default function ManagePlayEventPage({ params }: { params: Promise<{ id: 
             <ShareNetwork size={13} weight="bold" /> COPY
           </button>
         </div>
+
+        {/* Format selector */}
+        {(() => {
+          const editable = event.status === "open" || event.status === "full";
+          const activeFmt = parseFormat(event.format);
+          const activeOpt = FORMAT_OPTIONS.find((o) => o.format === activeFmt);
+          return (
+            <div className="border border-border rounded-2xl bg-card p-4 mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Gear size={16} weight="fill" className="text-primary" />
+                <h2 className="font-display text-sm tracking-[0.18em]">FORMAT</h2>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {FORMAT_OPTIONS.map((o) => (
+                  <button
+                    key={o.format}
+                    onClick={() => editable && changeFormat(o.value)}
+                    disabled={!editable || busy}
+                    className={`px-4 h-9 rounded-full text-xs font-mono tracking-wider border transition-colors ${
+                      activeFmt === o.format
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : editable
+                          ? "border-border hover:border-primary/50"
+                          : "border-border/50 text-muted-foreground/60 cursor-not-allowed"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+              {activeOpt && <p className="mt-2.5 text-xs text-muted-foreground">{activeOpt.hint}</p>}
+              {!editable && <p className="mt-1.5 text-xs text-amber-500">Format is locked once the event is live or completed.</p>}
+              {editable && matches.length > 0 && (
+                <p className="mt-1.5 text-xs text-amber-500">Changing the format requires regenerating matches.</p>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Lifecycle controls */}
         <div className="flex flex-wrap gap-2 mb-8">
@@ -331,7 +397,7 @@ export default function ManagePlayEventPage({ params }: { params: Promise<{ id: 
                   <p className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground mb-2">ROUND {r}</p>
                   <div className="space-y-2">
                     {matches.filter((m) => m.round === r).map((m) => (
-                      <MatchRow key={m.id} match={m} nameA={nameOf(m.player_a_id)} nameB={nameOf(m.player_b_id)} onSave={recordResult} locked={event.status === "completed"} />
+                      <MatchRow key={m.id} match={m} nameA={sideName(m.player_a_id, m.player_a2_id)} nameB={sideName(m.player_b_id, m.player_b2_id)} onSave={recordResult} locked={event.status === "completed"} />
                     ))}
                   </div>
                 </div>

@@ -20,6 +20,26 @@ export function eventTypeLabel(type: PlayEventType): string {
   return EVENT_TYPES.find((t) => t.value === type)?.label ?? "Round Robin";
 }
 
+// The three round-robin formats stored in play_events.format (free text).
+export type PlayFormat = "singles" | "doubles" | "rotating";
+
+export const FORMAT_OPTIONS: { value: string; format: PlayFormat; label: string; hint: string }[] = [
+  { value: "Round Robin · Singles", format: "singles", label: "Singles", hint: "1v1 — everyone plays everyone once." },
+  { value: "Round Robin · Doubles", format: "doubles", label: "Doubles (fixed pairs)", hint: "Players pair into fixed teams; teams play every other team. Best with an even number of players." },
+  { value: "Round Robin · Rotating Partners", format: "rotating", label: "Rotating Partners", hint: "Partners rotate each round so you play with different people. Works in foursomes — best with a multiple of 4 players." },
+];
+
+export function parseFormat(format: string | null): PlayFormat {
+  const f = (format ?? "").toLowerCase();
+  if (f.includes("rotat")) return "rotating";
+  if (f.includes("doubles")) return "doubles";
+  return "singles";
+}
+
+export function formatLabel(format: string | null): string {
+  return FORMAT_OPTIONS.find((o) => o.format === parseFormat(format))?.label ?? "Singles";
+}
+
 export function statusLabel(status: PlayEventStatus): string {
   switch (status) {
     case "open": return "Open";
@@ -91,6 +111,87 @@ export function generateRoundRobin(participantIds: string[]): { round: number; p
   return rounds;
 }
 
+/**
+ * A generated match. a2/b2 are null for singles; set for doubles & rotating.
+ */
+export type GeneratedMatch = {
+  round: number;
+  court: number;
+  a1: string;
+  a2: string | null;
+  b1: string;
+  b2: string | null;
+};
+
+/** Singles round robin — each participant plays every other once (1v1). */
+function generateSingles(ids: string[]): GeneratedMatch[] {
+  return generateRoundRobin(ids).flatMap((r) =>
+    r.pairs
+      .filter(([a, b]) => a !== null && b !== null)
+      .map(([a, b], i) => ({ round: r.round, court: i + 1, a1: a as string, a2: null, b1: b as string, b2: null })),
+  );
+}
+
+/**
+ * Doubles round robin with FIXED pairs. Players are paired in roster order
+ * (1&2, 3&4, …); a leftover odd player is dropped as an alternate. Teams then
+ * play a circle-method round robin against each other.
+ */
+function generateDoubles(ids: string[]): GeneratedMatch[] {
+  const teams: [string, string][] = [];
+  for (let i = 0; i + 1 < ids.length; i += 2) teams.push([ids[i], ids[i + 1]]);
+  if (teams.length < 2) return [];
+  const teamIdx = teams.map((_, i) => String(i));
+  return generateRoundRobin(teamIdx).flatMap((r) =>
+    r.pairs
+      .filter(([a, b]) => a !== null && b !== null)
+      .map(([a, b], i) => {
+        const ta = teams[parseInt(a as string, 10)];
+        const tb = teams[parseInt(b as string, 10)];
+        return { round: r.round, court: i + 1, a1: ta[0], a2: ta[1], b1: tb[0], b2: tb[1] };
+      }),
+  );
+}
+
+/**
+ * Rotating-partner doubles. Players are split into foursomes (roster order);
+ * each foursome plays its 3 canonical pairings across 3 rounds so everyone
+ * partners with — and plays against — different people. Leftover players that
+ * don't complete a foursome (count not divisible by 4) sit out as alternates.
+ */
+function generateRotating(ids: string[]): GeneratedMatch[] {
+  const groups: string[][] = [];
+  for (let i = 0; i + 3 < ids.length; i += 4) groups.push(ids.slice(i, i + 4));
+  if (groups.length === 0) return [];
+  // The three ways to split a foursome [0,1,2,3] into two pairs.
+  const pairings: [[number, number], [number, number]][] = [
+    [[0, 1], [2, 3]],
+    [[0, 2], [1, 3]],
+    [[0, 3], [1, 2]],
+  ];
+  const matches: GeneratedMatch[] = [];
+  pairings.forEach(([sideA, sideB], p) => {
+    groups.forEach((g, gi) => {
+      matches.push({ round: p + 1, court: gi + 1, a1: g[sideA[0]], a2: g[sideA[1]], b1: g[sideB[0]], b2: g[sideB[1]] });
+    });
+  });
+  return matches;
+}
+
+/** Build a match schedule for the given format. */
+export function generateSchedule(format: PlayFormat, participantIds: string[]): GeneratedMatch[] {
+  if (format === "doubles") return generateDoubles(participantIds);
+  if (format === "rotating") return generateRotating(participantIds);
+  return generateSingles(participantIds);
+}
+
+/** How many players sit out (alternates) for a given format & count. */
+export function alternatesCount(format: PlayFormat, n: number): number {
+  if (format === "doubles") return n % 2;
+  if (format === "rotating") return n % 4;
+  return 0;
+}
+
 export type Standing = {
   participantId: string;
   wins: number;
@@ -108,16 +209,24 @@ export function computeStandings(matches: PlayMatch[], participantIds: string[])
   }
 
   for (const m of matches) {
-    if (m.winner == null || m.player_a_id == null || m.player_b_id == null) continue;
-    const a = table.get(m.player_a_id);
-    const b = table.get(m.player_b_id);
-    if (!a || !b) continue;
+    if (m.winner == null) continue;
+    const teamA = [m.player_a_id, m.player_a2_id].filter((x): x is string => !!x);
+    const teamB = [m.player_b_id, m.player_b2_id].filter((x): x is string => !!x);
+    if (teamA.length === 0 || teamB.length === 0) continue;
     const sa = m.score_a ?? 0;
     const sb = m.score_b ?? 0;
-    a.played++; b.played++;
-    a.pointsFor += sa; a.pointsAgainst += sb;
-    b.pointsFor += sb; b.pointsAgainst += sa;
-    if (m.winner === 1) { a.wins++; b.losses++; } else { b.wins++; a.losses++; }
+    for (const id of teamA) {
+      const s = table.get(id);
+      if (!s) continue;
+      s.played++; s.pointsFor += sa; s.pointsAgainst += sb;
+      if (m.winner === 1) s.wins++; else s.losses++;
+    }
+    for (const id of teamB) {
+      const s = table.get(id);
+      if (!s) continue;
+      s.played++; s.pointsFor += sb; s.pointsAgainst += sa;
+      if (m.winner === 2) s.wins++; else s.losses++;
+    }
   }
 
   for (const s of table.values()) s.diff = s.pointsFor - s.pointsAgainst;
