@@ -45,11 +45,13 @@ enable_signup = false
 
 [auth.external.google]
 enabled = true
-# Set via environment: SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID / SECRET
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
 
 [auth.external.apple]
 enabled = true
-# Set via environment: SUPABASE_AUTH_EXTERNAL_APPLE_CLIENT_ID / SECRET
+client_id = "env(SUPABASE_AUTH_EXTERNAL_APPLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
 
 [realtime]
 enabled = true
