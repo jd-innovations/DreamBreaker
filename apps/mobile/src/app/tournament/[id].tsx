@@ -1,0 +1,1479 @@
+import React, { useState, useCallback } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity,
+  StyleSheet, Dimensions, Image, Modal, Pressable, Alert, ActivityIndicator, Linking,
+  LayoutAnimation, Platform, UIManager,
+} from 'react-native';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
+import { colors } from '@/theme';
+import { goBack } from '@/lib/navigation';
+import { isTournamentCompleted, getAllBrackets } from '@/lib/directorBracketStore';
+import { isTournamentCompleted as fetchHasPublishedResults } from '@/lib/supabase/brackets';
+import { StatusChip } from '@/components';
+import { VenueMapCard } from '@/components/VenueMapCard';
+import {
+  getTournamentStatus,
+  getPlayerRegistrationStatus,
+  getTournamentStatusInfo,
+  getPlayerRegStatusInfo,
+  type TournamentStatusKey,
+  type PlayerRegStatusKey,
+} from '@/lib/tournamentStatus';
+import { useSession } from '@/hooks/useSession';
+import { useTournamentBookmarks } from '@/hooks/useTournamentBookmarks';
+import { getRegistrationAvailability } from '@/lib/registrationGate';
+import { fetchTournamentById } from '@/lib/supabase/tournaments';
+import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
+import { fetchPlayerHolds, fetchPlayerRegistrations } from '@/lib/supabase/registrations';
+import { fetchFacilityById, facilityAccessType, type FacilityDetail } from '@/lib/supabase/facilities';
+import { fetchProfile, type UserProfile } from '@/lib/services/profile';
+import { supabase } from '@/lib/supabase';
+import { getOrCreateConversation } from '@/lib/conversationService';
+import { useSupportContext } from '@/lib/support/supportContext';
+import type { Tournament } from '@/lib/tournamentTypes';
+import type { DivisionData } from '@/data/divisions';
+
+const { width: SW, height: SH } = Dimensions.get('window');
+const HERO_H = SH * 0.44;
+
+// Old-architecture Android needs this opt-in for LayoutAnimation; harmless no-op elsewhere.
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+// Theme-backed alias — brand values resolve from @/theme.
+const L = {
+  bg:        colors.bg,
+  page:      colors.page,
+  navy:      colors.navy,
+  gold:      colors.gold,
+  goldLight: colors.goldLight,
+  text:      colors.text,
+  textSub:   colors.textSub,
+  textMuted: colors.textSub,
+  border:    colors.border,
+  green:     colors.success,
+  greenBg:   colors.successBg,
+  red:       colors.danger,
+  redBg:     colors.dangerBg,
+};
+
+const HERO_PHOTO     = 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&h=600&fit=crop&q=80';
+const DIRECTOR_PHOTO = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&q=80';
+
+// ─── Mock data ────────────────────────────────────────────────────────────────
+// DIVISIONS imported from @/data/divisions — kept here as a shaped alias so
+// DivisionRow props remain unchanged.
+
+const AMENITIES = [
+  { icon: 'trophy-outline',   title: 'Sanctioned',    sub: 'USAP Approved'    },
+  { icon: 'car-outline',      title: 'Free Parking',  sub: 'On Site'          },
+  { icon: 'gift-outline',     title: 'Player Gifts',  sub: 'For All Players'  },
+  { icon: 'restaurant-outline',title: 'Food & Drinks',sub: 'On Site'          },
+];
+
+function splitHeroName(name: string): [string, string] {
+  const idx = name.lastIndexOf(' ');
+  if (idx === -1) return ['', name.toUpperCase()];
+  return [name.slice(0, idx).toUpperCase(), name.slice(idx + 1).toUpperCase()];
+}
+
+function fmt(cents: number) { return `$${Math.round(cents / 100)}`; }
+
+// registrationOpensAt/registrationClosesAt come back as full timestamptz
+// strings — format both the date and local time (with zone abbreviation)
+// for the Registration & Fees card. Returns null for an unset date so the
+// caller can show a sensible fallback instead of "Invalid Date".
+function fmtRegDateTime(iso: string | null | undefined): { date: string; time: string } | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return {
+    date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    time: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }),
+  };
+}
+
+// Splits "Mixed Doubles" → ["Mixed", "Doubles"], "Men's Doubles" → ["Men's", "Doubles"]
+function splitDivisionName(name: string): [string, string] {
+  const idx = name.lastIndexOf(' ');
+  if (idx === -1) return [name, ''];
+  return [name.slice(0, idx), name.slice(idx + 1)];
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+type DivDisplayStatus = 'available' | 'waitlist' | 'held' | 'registered';
+
+function DivisionRow({
+  d, displayStatus, pastEvent, onPress,
+}: {
+  d: DivisionData;
+  displayStatus?: DivDisplayStatus;
+  pastEvent?: boolean;
+  onPress?: () => void;
+}) {
+  const status: DivDisplayStatus = displayStatus ?? (d.status as DivDisplayStatus);
+  // A past/completed tournament has nothing left to hold or register for —
+  // grey the pill out regardless of what it would otherwise show, except
+  // "Registered" which stays as a settled, positive outcome.
+  const isPastInactive = !!pastEvent && status !== 'registered';
+  const isDisabled = status === 'registered' || isPastInactive;
+  const [nameLine1, nameLine2] = splitDivisionName(d.name);
+
+  const pillStyle = isPastInactive ? [dr.statusBadge, dr.statusPast] :
+    status === 'registered' ? [dr.statusBadge, dr.statusRegistered] :
+    status === 'held'       ? [dr.statusBadge, dr.statusHeld]       :
+    status === 'available'  ? [dr.statusBadge, dr.statusAvail]      :
+                              [dr.statusBadge, dr.statusWait];
+
+  const pillTextStyle = isPastInactive ? dr.statusTextPast :
+    status === 'registered' ? dr.statusTextRegistered :
+    status === 'held'       ? dr.statusTextHeld       :
+    status === 'available'  ? dr.statusTextAvail      :
+                              dr.statusTextWait;
+
+  const pillText = isPastInactive ? 'Closed' :
+    status === 'registered' ? 'Registered ✓' :
+    status === 'held'       ? 'Held ✓'        :
+    status === 'available'  ? 'Hold My Spot'  :
+                              'Waitlist Only';
+
+  const subText = isPastInactive ? 'Tournament Completed' :
+    status === 'registered' ? "You're Registered" :
+    status === 'held'       ? 'Tap to Register'   :
+    status === 'available'  ? 'Spots Available'   :
+                              'Join Waitlist';
+
+  return (
+    <TouchableOpacity
+      style={dr.row}
+      activeOpacity={isDisabled ? 1 : 0.75}
+      onPress={isDisabled ? undefined : onPress}
+    >
+      {/* COL 1 — name + dates */}
+      <View style={dr.center}>
+        <Text style={dr.nameLine}>{nameLine1}</Text>
+        {nameLine2 ? <Text style={dr.nameLine}>{nameLine2}</Text> : null}
+        <Text style={dr.dates}>{d.dates}</Text>
+      </View>
+
+      {/* COL 2 — rating badge (top) + count + label */}
+      <View style={dr.countCol}>
+        <View style={[dr.levelBadge, { backgroundColor: d.levelNavy ? L.navy : '#3A5070' }]}>
+          <Text style={dr.levelText}>{d.level}</Text>
+        </View>
+        <Text style={[dr.countNum, status === 'waitlist' && { color: L.red }]}>
+          {d.registered} / {d.capacity}
+        </Text>
+        <Text style={dr.countLabel}>Registered</Text>
+      </View>
+
+      {/* COL 3 — status pill + sub + chevron */}
+      <View style={dr.statusCol}>
+        <View style={pillStyle}>
+          <Text style={[dr.statusText, pillTextStyle]}>{pillText}</Text>
+        </View>
+        <Text style={[dr.statusSub, status === 'waitlist' && { color: L.red }]}>
+          {subText}
+        </Text>
+        {!isDisabled && (
+          <Ionicons name="chevron-forward" size={14} color={L.textMuted} style={{ marginTop: 2 }} />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const dr = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 14, paddingHorizontal: 16, gap: 10,
+    borderBottomWidth: 1, borderBottomColor: L.border,
+  },
+  center:   { flex: 1, minWidth: 0 },
+  nameLine: { color: L.navy, fontSize: 16, fontWeight: '700', lineHeight: 20 },
+  dates:    { color: L.textMuted, fontSize: 12, marginTop: 4 },
+
+  // Col 2 — badge stacked above count
+  countCol: {
+    alignItems: 'center', flexShrink: 0, minWidth: 60, gap: 3,
+  },
+  levelBadge: {
+    borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2,
+  },
+  levelText:  { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  countNum:   { color: L.navy, fontSize: 13, fontWeight: '800' },
+  countLabel: { color: L.textMuted, fontSize: 10 },
+
+  // Col 3 — status pill + sub + chevron stacked
+  statusCol: { alignItems: 'center', flexShrink: 0, minWidth: 88, gap: 2 },
+  statusBadge: {
+    borderWidth: 1.5, borderRadius: 20,
+    paddingHorizontal: 8, paddingVertical: 3,
+  },
+  statusAvail:          { borderColor: L.green, backgroundColor: L.greenBg },
+  statusWait:           { borderColor: L.red,   backgroundColor: L.redBg   },
+  statusHeld:           { borderColor: L.gold,  backgroundColor: L.goldLight },
+  statusRegistered:     { borderColor: L.green, backgroundColor: L.greenBg  },
+  statusPast:           { borderColor: L.border, backgroundColor: L.page   },
+  statusText:           { fontSize: 11, fontWeight: '700' },
+  statusTextAvail:      { color: L.green },
+  statusTextWait:       { color: L.red   },
+  statusTextHeld:       { color: L.gold  },
+  statusTextRegistered: { color: L.green },
+  statusTextPast:       { color: L.textMuted },
+  statusSub:            { color: L.textMuted, fontSize: 10, fontWeight: '500' },
+});
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+export default function TournamentDetail() {
+  const insets = useSafeAreaInsets();
+  const { user } = useSession();
+  const { isBookmarked, toggleBookmark } = useTournamentBookmarks();
+  const [holdTooltip, setHoldTooltip] = useState(false);
+  const [heldDivIds, setHeldDivIds] = useState<Set<string>>(new Set());
+  const [regDivIds, setRegDivIds]   = useState<Set<string>>(new Set());
+  const [heldSpots, setHeldSpots]   = useState<import('@/lib/tournamentStore').HeldSpot[]>([]);
+  const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [divisions, setDivisions]   = useState<DivisionData[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const { id } = useLocalSearchParams<{ id: string }>();
+
+  useSupportContext({
+    feature: 'tournament',
+    entityType: 'tournament',
+    entityId: id,
+    entityLabel: tournament?.name,
+  });
+
+  const heroLine1 = tournament ? splitHeroName(tournament.name)[0] : '';
+  const heroLine2 = tournament ? splitHeroName(tournament.name)[1] : '';
+
+  const anyHeld       = heldDivIds.size > 0;
+  const anyRegistered = regDivIds.size > 0;
+
+  // Entry fee is charged per registrant unit — a doubles pair ("Team") unless
+  // every division on this tournament is Singles, in which case it's per player.
+  const entryUnitLabel = divisions.length > 0 && divisions.every(d => d.type === 'singles')
+    ? 'Player' : 'Team';
+
+  const [tournamentStatusKey, setTournamentStatusKey] = useState<TournamentStatusKey>('open');
+  const [playerRegStatus, setPlayerRegStatus] = useState<PlayerRegStatusKey | null>(null);
+  const [hasBrackets, setHasBrackets] = useState(false);
+  const [resultsAvailable, setResultsAvailable] = useState(false);
+  const [facility, setFacility] = useState<FacilityDetail | null>(null);
+  const [directorUserId, setDirectorUserId] = useState<string | null>(null);
+  const [directorProfile, setDirectorProfile] = useState<UserProfile | null>(null);
+  const [msgingDirector, setMsgingDirector] = useState(false);
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [directorModalVisible, setDirectorModalVisible] = useState(false);
+
+  // CTA stack starts collapsed (Register Now only); scrolling up expands it
+  // to all 3 actions, scrolling down collapses it back to just Register Now.
+  // Animated with LayoutAnimation so the extra buttons ease in/out instead of
+  // popping in abruptly.
+  const [ctasExpanded, setCtasExpanded] = useState(false);
+  const ctasExpandedRef = React.useRef(false);
+  const lastScrollY = React.useRef(0);
+  const setCtasExpandedAnimated = useCallback((next: boolean) => {
+    if (ctasExpandedRef.current === next) return;
+    ctasExpandedRef.current = next;
+    LayoutAnimation.configureNext(LayoutAnimation.create(
+      220,
+      LayoutAnimation.Types.easeInEaseOut,
+      LayoutAnimation.Properties.opacity,
+    ));
+    setCtasExpanded(next);
+  }, []);
+  const onCtaScroll = useCallback((e: { nativeEvent: { contentOffset: { y: number } } }) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const dy = y - lastScrollY.current;
+    if (dy > 6) setCtasExpandedAnimated(true);
+    else if (dy < -6) setCtasExpandedAnimated(false);
+    lastScrollY.current = y;
+  }, [setCtasExpandedAnimated]);
+
+  const openDirectorDM = useCallback(async () => {
+    if (!directorUserId) {
+      Alert.alert('Director unavailable', 'This tournament has no director set up for messaging yet.');
+      return;
+    }
+    if (!user) {
+      Alert.alert('Sign in required', 'Please sign in to send messages.');
+      return;
+    }
+    if (user.id === directorUserId) return;
+    setMsgingDirector(true);
+    try {
+      const convId = await getOrCreateConversation(user.id, directorUserId);
+      router.push(`/conversation/${convId}` as never);
+    } catch (e: unknown) {
+      Alert.alert('Could not open chat', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setMsgingDirector(false);
+    }
+  }, [directorUserId, user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      async function load() {
+        setLoading(true);
+        const [t, divs] = await Promise.all([
+          fetchTournamentById(id),
+          fetchDivisionsForTournament(id),
+        ]);
+        if (!active) return;
+        setTournament(t);
+        setDivisions(divs);
+        if (t) setTournamentStatusKey(getTournamentStatus(t));
+        setDirectorUserId(t?.directorId ?? null);
+        setHasBrackets(getAllBrackets(id).length > 0);
+        setResultsAvailable(false);
+        fetchHasPublishedResults(id).then(r => { if (active) setResultsAvailable(r); }).catch(() => {});
+        setFacility(null);
+        if (t?.facilityId) {
+          fetchFacilityById(t.facilityId).then(f => { if (active) setFacility(f); }).catch(() => {});
+        }
+        setDirectorProfile(null);
+        if (t?.directorId) {
+          fetchProfile(t.directorId).then(p => { if (active) setDirectorProfile(p); }).catch(() => {});
+        }
+
+        if (user?.id) {
+          const [holds, regs] = await Promise.all([
+            fetchPlayerHolds(user.id),
+            fetchPlayerRegistrations(user.id),
+          ]);
+          if (!active) return;
+          const myHolds = holds.filter(h => h.tournamentId === id);
+          setHeldSpots(myHolds);
+          setHeldDivIds(new Set(myHolds.map(h => h.divisionId)));
+          setRegDivIds(new Set(regs.filter(r => r.tournamentId === id).map(r => r.divisionId)));
+          const isReg = regs.some(r => r.tournamentId === id);
+          const isHeld = holds.some(h => h.tournamentId === id);
+          setPlayerRegStatus(isReg ? 'registered' : isHeld ? 'held' : null);
+        }
+        setLoading(false);
+      }
+      load();
+      return () => { active = false; };
+    }, [id, user?.id]),
+  );
+
+  if (loading || !tournament) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={colors.gold} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={s.root}>
+      <StatusBar style="light" />
+
+      {/* ── FLOATING TOP CONTROLS (over hero) ── */}
+      <View style={[s.topControls, { top: insets.top + 8 }]} pointerEvents="box-none">
+        <TouchableOpacity style={s.topCircle} onPress={() => goBack()} activeOpacity={0.8}>
+          <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+        <View style={s.topRight}>
+          <TouchableOpacity
+            style={s.topCircle}
+            activeOpacity={0.8}
+            onPress={() => Alert.alert('Coming Soon', 'Tournament sharing will be available in a future update.')}
+          >
+            <Ionicons name="share-outline" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <TouchableOpacity style={s.topCircle} onPress={() => toggleBookmark(id)} activeOpacity={0.8}>
+            <Ionicons name={isBookmarked(id) ? 'heart' : 'heart-outline'} size={20} color={isBookmarked(id) ? '#FF6B6B' : '#FFFFFF'} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ── SCROLLABLE CONTENT ── */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 250 }}
+        onScroll={onCtaScroll}
+        scrollEventThrottle={16}
+      >
+        {/* HERO */}
+        <View style={[s.hero, { height: HERO_H }]}>
+          <Image source={{ uri: HERO_PHOTO }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.25)', 'rgba(0,0,0,0.10)', 'rgba(0,0,0,0.72)']}
+            locations={[0, 0.4, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+
+          <View style={[s.heroContent, { paddingTop: insets.top + 60 }]}>
+            {/* Title */}
+            <Text style={s.heroLine1}>{heroLine1}</Text>
+            <Text style={s.heroLine2}>{heroLine2}</Text>
+            <View style={s.heroUnderline} />
+
+            {/* Date pill */}
+            <View style={s.datePill}>
+              <Text style={s.datePillText}>{tournament.date.toUpperCase()}</Text>
+            </View>
+
+            {/* Location */}
+            <TouchableOpacity
+              style={s.locationRow}
+              activeOpacity={0.75}
+              onPress={() => setLocationModalVisible(true)}
+            >
+              <Ionicons name="location" size={14} color="rgba(255,255,255,0.9)" />
+              <View>
+                <Text style={s.locationName}>{tournament.venue}</Text>
+                <Text style={s.locationCity}>{tournament.city}, {tournament.state}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.6)" style={{ marginLeft: 2, marginTop: 2 }} />
+            </TouchableOpacity>
+
+            {/* Photo count */}
+            <View style={s.photoCount}>
+              <Ionicons name="images-outline" size={14} color="#FFFFFF" />
+              <Text style={s.photoCountText}>24</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* WHITE CONTENT (overlaps hero) */}
+        <View style={s.whiteSheet}>
+
+          {/* STATUS CHIPS */}
+          <View style={s.statusRow}>
+            {playerRegStatus && (
+              <StatusChip
+                label={getPlayerRegStatusInfo(playerRegStatus).label}
+                variant={getPlayerRegStatusInfo(playerRegStatus).variant}
+              />
+            )}
+            <StatusChip
+              label={getTournamentStatusInfo(tournamentStatusKey).label}
+              variant={getTournamentStatusInfo(tournamentStatusKey).variant}
+            />
+            {(tournament.skillMin !== 0 || tournament.skillMax !== 0) && (
+              <StatusChip
+                label={`${tournament.skillMin}–${tournament.skillMax}`}
+                variant="green"
+                icon="speedometer-outline"
+              />
+            )}
+          </View>
+
+          {/* FACILITY CARD */}
+          {facility && (() => {
+            const access = facilityAccessType(facility);
+            const BADGE = {
+              public:     { label: 'Public',     bg: '#DCFCE7', color: '#16A34A' },
+              membership: { label: 'Membership', bg: '#FEF9C3', color: '#CA8A04' },
+              private:    { label: 'Private',    bg: '#FEE2E2', color: '#DC2626' },
+            }[access];
+            return (
+              <TouchableOpacity
+                style={fc.card}
+                activeOpacity={0.85}
+                onPress={() => router.push(`/facility/${facility.id}` as never)}
+              >
+                <View style={fc.left}>
+                  <View style={fc.nameRow}>
+                    <Text style={fc.name} numberOfLines={1}>{facility.name}</Text>
+                    {facility.verified && (
+                      <View style={fc.verBadge}>
+                        <Ionicons name="shield-checkmark" size={10} color="#2563EB" />
+                        <Text style={fc.verText}>Verified</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={fc.meta}>
+                    <View style={[fc.accessBadge, { backgroundColor: BADGE.bg }]}>
+                      <Text style={[fc.accessText, { color: BADGE.color }]}>{BADGE.label}</Text>
+                    </View>
+                    <Text style={fc.courts}>{facility.court_count} {facility.court_count === 1 ? 'Court' : 'Courts'}</Text>
+                    <Text style={fc.dot}>·</Text>
+                    <Text style={fc.loc}>{facility.city}, {facility.state}</Text>
+                  </View>
+                </View>
+                <View style={fc.right}>
+                  <Text style={fc.viewText}>View Facility</Text>
+                  <Ionicons name="chevron-forward" size={14} color={L.gold} />
+                </View>
+              </TouchableOpacity>
+            );
+          })()}
+
+          {/* HOST CARD */}
+          <View style={s.hostCard}>
+            <TouchableOpacity
+              style={s.hostLeft}
+              activeOpacity={0.75}
+              onPress={() => setDirectorModalVisible(true)}
+            >
+              <Image source={{ uri: directorProfile?.avatar_url ?? DIRECTOR_PHOTO }} style={s.hostAvatar} />
+              <View style={s.hostInfo}>
+                <Text style={s.hostedBy}>Hosted by</Text>
+                <View style={s.hostNameRow}>
+                  <Text style={s.hostName}>{directorProfile?.full_name ?? 'Tournament Director'}</Text>
+                  <Ionicons name="checkmark-circle" size={16} color="#3B82F6" style={{ marginLeft: 4 }} />
+                </View>
+                <View style={s.directorPill}>
+                  <Ionicons name="sync-circle-outline" size={12} color={L.gold} />
+                  <Text style={s.directorText}>DIRECTOR</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={L.textMuted} style={{ alignSelf: 'center' }} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+            style={s.msgDirectorBtn}
+            activeOpacity={0.8}
+            disabled={msgingDirector}
+            onPress={openDirectorDM}
+          >
+            {msgingDirector
+              ? <ActivityIndicator size="small" color={L.navy} />
+              : <Ionicons name="chatbubble-outline" size={15} color={L.navy} />}
+            <Text style={s.msgDirectorText}>Message Director</Text>
+          </TouchableOpacity>
+
+          {/* Real contextual tournament group chat — directors and registered/held players only */}
+          {(playerRegStatus != null || (!!user && user.id === directorUserId)) && (
+            <TouchableOpacity
+              style={s.msgDirectorBtn}
+              activeOpacity={0.8}
+              onPress={() => router.push(`/conversation/tournament-${id}` as never)}
+            >
+              <Ionicons name="chatbubbles-outline" size={15} color={L.navy} />
+              <Text style={s.msgDirectorText}>Tournament Chat</Text>
+            </TouchableOpacity>
+          )}
+
+          <View style={s.hostDivider} />
+
+            <View style={s.hostStats}>
+              <View style={s.hostStat}>
+                <Ionicons name="people-outline" size={22} color={L.textSub} />
+                <Text style={s.hostStatNum}>3,842</Text>
+                <Text style={s.hostStatLabel}>Players Served</Text>
+              </View>
+              <View style={s.hostStat}>
+                <Ionicons name="star-outline" size={22} color={L.textSub} />
+                <Text style={s.hostStatNum}>4.8</Text>
+                <Text style={s.hostStatLabel}>Avg. Rating{'\n'}(126 reviews)</Text>
+              </View>
+              <View style={s.hostStat}>
+                <Ionicons name="calendar-outline" size={22} color={L.textSub} />
+                <Text style={s.hostStatNum}>28</Text>
+                <Text style={s.hostStatLabel}>Tournaments{'\n'}Hosted</Text>
+              </View>
+              <TouchableOpacity
+                style={s.hostMore}
+                onPress={() => setDirectorModalVisible(true)}
+              >
+                <Ionicons name="chevron-forward" size={20} color={L.textMuted} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* DIRECTOR BANNER */}
+          <TouchableOpacity
+            style={s.directorBanner}
+            activeOpacity={0.8}
+            onPress={() => router.push(`/tournament/${tournament.id}/workspace` as never)}
+          >
+            <Ionicons name="construct-outline" size={15} color={L.gold} />
+            <Text style={s.directorBannerText}>Director: Manage Tournament</Text>
+            <Ionicons name="chevron-forward" size={14} color={L.textSub} />
+          </TouchableOpacity>
+
+          {/* VIEW BRACKETS BANNER — only when brackets have been generated */}
+          {hasBrackets && (
+            <TouchableOpacity
+              style={s.bracketsBanner}
+              activeOpacity={0.8}
+              onPress={() => router.push(`/tournament/${tournament.id}/player-brackets` as never)}
+            >
+              <Ionicons name="git-branch-outline" size={15} color={L.navy} />
+              <Text style={s.bracketsBannerText}>View Brackets</Text>
+              <Ionicons name="chevron-forward" size={14} color={L.textSub} />
+            </TouchableOpacity>
+          )}
+
+          {/* VIEW RESULTS BANNER — only when tournament is completed */}
+          {isTournamentCompleted(tournament.id) && (
+            <TouchableOpacity
+              style={s.resultsBanner}
+              activeOpacity={0.8}
+              onPress={() => router.push(`/tournament/${tournament.id}/player-results` as never)}
+            >
+              <Ionicons name="trophy-outline" size={15} color={L.gold} />
+              <Text style={s.resultsBannerText}>View Results</Text>
+              <Ionicons name="chevron-forward" size={14} color={L.textSub} />
+            </TouchableOpacity>
+          )}
+
+          {/* DESCRIPTION */}
+          <Text style={s.description}>
+            Join us for our signature summer event! 3 days of competitive play, great vibes, and unforgettable moments in beautiful Sarasota, FL.
+          </Text>
+
+          {/* AMENITIES */}
+          <View style={s.amenitiesRow}>
+            {AMENITIES.map((a) => (
+              <View key={a.title} style={s.amenityCard}>
+                <Ionicons name={a.icon as never} size={22} color={L.gold} />
+                <Text style={s.amenityTitle}>{a.title}</Text>
+                <Text style={s.amenitySub}>{a.sub}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* DIVISIONS */}
+          <View style={s.section}>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionTitle}>DIVISIONS</Text>
+              <View style={s.edtRow}>
+                <Ionicons name="time-outline" size={13} color={L.textMuted} />
+                <Text style={s.edtText}>All times in EDT</Text>
+              </View>
+            </View>
+
+            {divisions.length === 0 ? (
+              <View style={s.noDivisionsState}>
+                <Ionicons name="layers-outline" size={28} color={L.textSub} />
+                <Text style={s.noDivisionsText}>No divisions available yet.</Text>
+                <Text style={s.noDivisionsSub}>Check back soon — divisions will appear once configured.</Text>
+              </View>
+            ) : (
+              <View style={s.divisionsCard}>
+                {divisions.map((d) => {
+                  const regAvailability = getRegistrationAvailability(tournament);
+                  const displayStatus: DivDisplayStatus =
+                    regDivIds.has(d.id)  ? 'registered' :
+                    heldDivIds.has(d.id) ? 'held'        :
+                    d.status === 'open'  ? 'available'   : 'waitlist';
+
+                  return (
+                    <DivisionRow
+                      key={d.id}
+                      d={d}
+                      displayStatus={displayStatus}
+                      pastEvent={regAvailability.reason === 'completed'}
+                      onPress={() => {
+                        if (displayStatus === 'registered') return;
+                        if (displayStatus === 'waitlist') {
+                          Alert.alert('Waitlist Only', 'This division is full. Waitlist registration coming soon.');
+                          return;
+                        }
+                        if (!regAvailability.available) {
+                          Alert.alert('Registration Unavailable', regAvailability.label);
+                          return;
+                        }
+                        if (displayStatus === 'held') {
+                          router.push({
+                            pathname: `/tournament/${tournament.id}/register` as never,
+                            params: {
+                              tournamentName:   tournament.name,
+                              divisionId:       d.id,
+                              divisionName:     d.name,
+                              divisionLevel:    d.level,
+                              holdAmountCents:  String(tournament.holdFeeCents),
+                              entryAmountCents: String(tournament.entryFeeCents),
+                              date:             tournament.date,
+                              venue:            tournament.venue,
+                              city:             tournament.city,
+                              state:            tournament.state,
+                            },
+                          } as never);
+                          return;
+                        }
+                        router.push({
+                          pathname: `/tournament/${tournament.id}/hold-confirm` as never,
+                          params: { divisionId: d.id },
+                        } as never);
+                      }}
+                    />
+                  );
+                })}
+              </View>
+            )}
+          </View>
+
+          {/* REGISTRATION & FEES */}
+          <View style={s.section}>
+            <Text style={[s.sectionTitle, { marginBottom: 12 }]}>REGISTRATION & FEES</Text>
+
+            <View style={s.feesCard}>
+              <View style={s.feesGrid}>
+                <View style={s.feeRow}>
+                  <Ionicons name="calendar-outline" size={20} color={L.textSub} style={s.feeIcon} />
+                  <View style={s.feeTextCol}>
+                    <Text style={s.feeLabel}>Registration Opens</Text>
+                    {(() => {
+                      const opens = fmtRegDateTime(tournament.registrationOpensAt);
+                      return opens ? (
+                        <Text style={s.feeValue}>{opens.date} <Text style={s.feeUnit}>{opens.time}</Text></Text>
+                      ) : (
+                        <Text style={s.feeValue}>Open now</Text>
+                      );
+                    })()}
+                  </View>
+                </View>
+                <View style={s.feeRow}>
+                  <Ionicons name="calendar-outline" size={20} color={L.textSub} style={s.feeIcon} />
+                  <View style={s.feeTextCol}>
+                    <Text style={s.feeLabel}>Registration Closes</Text>
+                    {(() => {
+                      const closes = fmtRegDateTime(tournament.registrationClosesAt);
+                      return closes ? (
+                        <Text style={s.feeValue}>{closes.date} <Text style={s.feeUnit}>{closes.time}</Text></Text>
+                      ) : (
+                        <Text style={s.feeValue}>Not set</Text>
+                      );
+                    })()}
+                  </View>
+                </View>
+                <View style={s.feeRow}>
+                  <Ionicons name="cash-outline" size={20} color={L.textSub} style={s.feeIcon} />
+                  <View style={s.feeTextCol}>
+                    <Text style={s.feeLabel}>Entry Fee</Text>
+                    <Text style={s.feeValue}>{fmt(tournament.entryFeeCents)} <Text style={s.feeUnit}>/ {entryUnitLabel.toLowerCase()} · Per Division</Text></Text>
+                  </View>
+                </View>
+                <View style={[s.feeRow, s.feeRowLast]}>
+                  <Ionicons name="shield-outline" size={20} color={L.textSub} style={s.feeIcon} />
+                  <View style={s.feeTextCol}>
+                    <View style={s.feeSubRow}>
+                      <Text style={s.feeLabel}>Hold My Spot</Text>
+                      <TouchableOpacity
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        onPress={() => setHoldTooltip(true)}
+                      >
+                        <Ionicons name="information-circle-outline" size={13} color={L.gold} />
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={s.feeValue}>{fmt(tournament.holdFeeCents)} <Text style={s.feeUnit}>Applied to entry fee</Text></Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={s.feesNote}>
+                <Ionicons name="star" size={14} color={L.gold} />
+                <Text style={s.feesNoteText}>
+                  Hold My Spot secures your place. Full balance due before registration closes.
+                </Text>
+                <TouchableOpacity onPress={() => Alert.alert('Hold My Spot', 'Reserve your place with a deposit. The deposit counts toward your entry fee and is non-refundable.')}>
+                  <Text style={s.learnMore}>Learn More</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+        </View>
+      </ScrollView>
+
+      {/* ── HOLD MY SPOT TOOLTIP ── */}
+      <Modal
+        visible={holdTooltip}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setHoldTooltip(false)}
+      >
+        <Pressable style={tt.backdrop} onPress={() => setHoldTooltip(false)}>
+          <Pressable style={tt.card} onPress={() => {}}>
+            {/* Gold icon header */}
+            <View style={tt.iconRow}>
+              <View style={tt.iconCircle}>
+                <Ionicons name="shield-checkmark-outline" size={26} color={L.gold} />
+              </View>
+            </View>
+
+            <Text style={tt.title}>Hold My Spot</Text>
+
+            <Text style={tt.body}>
+              Reserve your spot with a {fmt(tournament.holdFeeCents)} deposit. The deposit is applied toward your entry fee and is non-refundable.
+            </Text>
+
+            <View style={tt.divider} />
+
+            <Text style={tt.footer}>
+              Full registration is still required before registration closes.
+            </Text>
+
+            <TouchableOpacity style={tt.doneBtn} onPress={() => setHoldTooltip(false)} activeOpacity={0.85}>
+              <Text style={tt.doneBtnText}>Done</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* ── VENUE LOCATION SHEET ── */}
+      <Modal
+        visible={locationModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setLocationModalVisible(false)}
+      >
+        <Pressable style={sheet.backdrop} onPress={() => setLocationModalVisible(false)}>
+          <Pressable style={[sheet.card, { paddingBottom: insets.bottom + 16 }]} onPress={() => {}}>
+            <View style={sheet.handle} />
+            <View style={sheet.header}>
+              <Text style={sheet.title}>Venue</Text>
+              <TouchableOpacity onPress={() => setLocationModalVisible(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close" size={22} color={L.textSub} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={sheet.venueName}>{tournament.venue}</Text>
+            <Text style={sheet.venueAddress}>{tournament.city}, {tournament.state}</Text>
+
+            <View style={sheet.mapWrap}>
+              {facility?.latitude != null && facility?.longitude != null ? (
+                <VenueMapCard latitude={facility.latitude} longitude={facility.longitude} name={tournament.venue} />
+              ) : (
+                <View style={sheet.mapEmpty}>
+                  <Ionicons name="location-outline" size={28} color={L.textSub} />
+                  <Text style={sheet.mapEmptyText}>Exact coordinates aren't available for this venue yet.</Text>
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={sheet.primaryBtn}
+              activeOpacity={0.85}
+              onPress={() => {
+                const query = facility?.latitude != null && facility?.longitude != null
+                  ? `${facility.latitude},${facility.longitude}`
+                  : encodeURIComponent(`${tournament.venue}, ${tournament.city}, ${tournament.state}`);
+                Linking.openURL(`https://maps.google.com/?q=${query}`);
+              }}
+            >
+              <Ionicons name="navigate-outline" size={16} color="#FFFFFF" />
+              <Text style={sheet.primaryBtnText}>Open in Maps</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* ── DIRECTOR PROFILE SHEET ── */}
+      <Modal
+        visible={directorModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDirectorModalVisible(false)}
+      >
+        <Pressable style={sheet.backdrop} onPress={() => setDirectorModalVisible(false)}>
+          <Pressable style={[sheet.card, { paddingBottom: insets.bottom + 16 }]} onPress={() => {}}>
+            <View style={sheet.handle} />
+            <View style={sheet.header}>
+              <Text style={sheet.title}>Tournament Director</Text>
+              <TouchableOpacity onPress={() => setDirectorModalVisible(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close" size={22} color={L.textSub} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={sheet.directorHeader}>
+              <Image source={{ uri: directorProfile?.avatar_url ?? DIRECTOR_PHOTO }} style={sheet.directorAvatar} />
+              <View style={{ flex: 1 }}>
+                <View style={s.hostNameRow}>
+                  <Text style={sheet.directorName}>{directorProfile?.full_name ?? 'Tournament Director'}</Text>
+                  <Ionicons name="checkmark-circle" size={16} color="#3B82F6" style={{ marginLeft: 4 }} />
+                </View>
+                <View style={s.directorPill}>
+                  <Ionicons name="sync-circle-outline" size={12} color={L.gold} />
+                  <Text style={s.directorText}>DIRECTOR</Text>
+                </View>
+              </View>
+            </View>
+
+            {directorProfile?.bio && (
+              <Text style={sheet.directorBio}>{directorProfile.bio}</Text>
+            )}
+
+            <View style={[s.hostStats, { paddingHorizontal: 0 }]}>
+              <View style={s.hostStat}>
+                <Ionicons name="people-outline" size={22} color={L.textSub} />
+                <Text style={s.hostStatNum}>3,842</Text>
+                <Text style={s.hostStatLabel}>Players Served</Text>
+              </View>
+              <View style={s.hostStat}>
+                <Ionicons name="star-outline" size={22} color={L.textSub} />
+                <Text style={s.hostStatNum}>4.8</Text>
+                <Text style={s.hostStatLabel}>Avg. Rating{'\n'}(126 reviews)</Text>
+              </View>
+              <View style={s.hostStat}>
+                <Ionicons name="calendar-outline" size={22} color={L.textSub} />
+                <Text style={s.hostStatNum}>28</Text>
+                <Text style={s.hostStatLabel}>Tournaments{'\n'}Hosted</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={sheet.primaryBtn}
+              activeOpacity={0.85}
+              disabled={msgingDirector}
+              onPress={() => { setDirectorModalVisible(false); openDirectorDM(); }}
+            >
+              {msgingDirector
+                ? <ActivityIndicator size="small" color="#FFFFFF" />
+                : <Ionicons name="chatbubble-outline" size={16} color="#FFFFFF" />}
+              <Text style={sheet.primaryBtnText}>Message Director</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* ── FIXED BOTTOM BAR ── */}
+      <View style={[s.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+        <View style={s.ctaStack}>
+          {/* Registration CTA (state-driven) */}
+          {(() => {
+            const regAvailability = getRegistrationAvailability(tournament);
+
+            // If registration is not yet available due to opens_at, show a single banner row
+            if (!regAvailability.available && !anyRegistered && !anyHeld) {
+              return (
+                <View style={s.regUnavailableRow}>
+                  <Ionicons
+                    name={regAvailability.reason === 'not_open_yet' ? 'time-outline' : 'lock-closed-outline'}
+                    size={16}
+                    color={L.textSub}
+                  />
+                  <Text style={s.regUnavailableText}>{regAvailability.label}</Text>
+                </View>
+              );
+            }
+
+            // A held-but-unregistered spot on a tournament that's no longer
+            // available (e.g. completed) has nothing left to do — grey it out
+            // instead of the normal gold "still active" hold styling.
+            const heldGreyedOut = anyHeld && !anyRegistered && !regAvailability.available;
+
+            return (
+              <>
+                {/* Register / complete / registered — top, primary */}
+                {anyRegistered ? (
+                  <View style={[s.registerBtn, s.registerBtnDone]}>
+                    <Text style={s.registerBtnDoneLabel}>Registered ✓</Text>
+                  </View>
+                ) : anyHeld && !regAvailability.available ? (
+                  <View style={[s.registerBtn, s.registerBtnDisabled]}>
+                    <Text style={s.registerBtnDisabledLabel}>{regAvailability.label}</Text>
+                  </View>
+                ) : anyHeld ? (
+                  <TouchableOpacity
+                    style={[s.registerBtn, s.registerBtnComplete]}
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      const heldSpot = heldSpots[0];
+                      if (!heldSpot) {
+                        router.push({
+                          pathname: `/tournament/${id}/select-division` as never,
+                          params: { intent: 'register' },
+                        } as never);
+                        return;
+                      }
+                      router.push({
+                        pathname: `/tournament/${id}/register` as never,
+                        params: {
+                          tournamentName:   tournament.name,
+                          divisionId:       heldSpot.divisionId,
+                          divisionName:     heldSpot.divisionName,
+                          divisionLevel:    heldSpot.divisionLevel,
+                          holdAmountCents:  String(heldSpot.holdAmountCents),
+                          entryAmountCents: String(heldSpot.entryAmountCents),
+                          date:             tournament.date,
+                          venue:            tournament.venue,
+                          city:             tournament.city,
+                          state:            tournament.state,
+                        },
+                      } as never);
+                    }}
+                  >
+                    <Text style={s.registerBtnLabel}>Complete Registration</Text>
+                    <Text style={s.registerBtnSub}>
+                      {fmt(tournament.entryFeeCents - tournament.holdFeeCents)} Balance
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={s.registerBtn}
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      if (!regAvailability.available) {
+                        Alert.alert('Registration Unavailable', regAvailability.label);
+                        return;
+                      }
+                      router.push({
+                        pathname: `/tournament/${tournament.id}/select-division` as never,
+                        params: { intent: 'register' },
+                      } as never);
+                    }}
+                  >
+                    <Text style={s.registerBtnLabel}>Register Now</Text>
+                    <Text style={s.registerBtnSub}>{fmt(tournament.entryFeeCents)} / {entryUnitLabel}</Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Hold — middle, secondary. Collapsed by default; scroll up to reveal. */}
+                {ctasExpanded && (
+                <TouchableOpacity
+                  style={[s.holdBtn, anyRegistered && s.holdBtnNav, heldGreyedOut && s.holdBtnDisabled]}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    if (anyRegistered) { router.push('/my-tournaments' as never); return; }
+                    if (!regAvailability.available) {
+                      Alert.alert('Registration Unavailable', regAvailability.label);
+                      return;
+                    }
+                    router.push({
+                      pathname: `/tournament/${tournament.id}/select-division` as never,
+                      params: { intent: 'hold' },
+                    } as never);
+                  }}
+                >
+                  <View style={s.holdBtnLabelRow}>
+                    <Text style={[
+                      s.holdBtnLabel,
+                      anyRegistered && s.holdBtnNavLabel,
+                      heldGreyedOut && s.holdBtnDisabledLabel,
+                    ]}>
+                      {anyRegistered ? 'View My Tournaments' : anyHeld ? 'Held ✓' : 'Hold My Spot'}
+                    </Text>
+                    {!anyRegistered && !anyHeld && (
+                      <TouchableOpacity
+                        onPress={() => setHoldTooltip(true)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 4 }}
+                        activeOpacity={0.6}
+                      >
+                        <Ionicons name="information-circle-outline" size={14} color={L.gold} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {!anyRegistered && (
+                    <Text style={[s.holdBtnSub, heldGreyedOut && s.holdBtnDisabledLabel]}>
+                      {fmt(tournament.holdFeeCents)} Deposit
+                    </Text>
+                  )}
+                </TouchableOpacity>
+                )}
+              </>
+            );
+          })()}
+
+          {/* Save, or See Results once the tournament is over — bottom, tertiary. Collapsed by default; scroll up to reveal. */}
+          {ctasExpanded && (
+            getRegistrationAvailability(tournament).reason === 'completed' ? (
+              <TouchableOpacity
+                style={s.saveBtn}
+                activeOpacity={resultsAvailable ? 0.75 : 1}
+                disabled={!resultsAvailable}
+                onPress={() => router.push(`/tournament/${tournament.id}/player-results` as never)}
+              >
+                <Ionicons name="trophy-outline" size={18} color={resultsAvailable ? L.navy : L.textMuted} />
+                <Text style={[s.saveBtnText, !resultsAvailable && { color: L.textMuted }]}>
+                  {resultsAvailable ? 'See Results' : 'Results Not Available Yet'}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={s.saveBtn} onPress={() => toggleBookmark(id)} activeOpacity={0.75}>
+                <Ionicons name={isBookmarked(id) ? 'bookmark' : 'bookmark-outline'} size={18} color={isBookmarked(id) ? L.gold : L.navy} />
+                <Text style={[s.saveBtnText, isBookmarked(id) && { color: L.gold }]}>
+                  {isBookmarked(id) ? 'Saved' : 'Save Tournament'}
+                </Text>
+              </TouchableOpacity>
+            )
+          )}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// ─── Facility card styles ──────────────────────────────────────────────────────
+
+const fc = StyleSheet.create({
+  card:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: 14, padding: 14, marginBottom: 14, gap: 12 },
+  left:        { flex: 1, gap: 6 },
+  nameRow:     { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  name:        { color: L.navy, fontSize: 14, fontWeight: '800', flexShrink: 1 },
+  verBadge:    { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#DBEAFE', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
+  verText:     { fontSize: 9, fontWeight: '800', color: '#2563EB', letterSpacing: 0.2 },
+  meta:        { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  accessBadge: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
+  accessText:  { fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
+  courts:      { color: L.textSub, fontSize: 11, fontWeight: '600' },
+  dot:         { color: L.border, fontSize: 11 },
+  loc:         { color: L.textSub, fontSize: 11, fontWeight: '500' },
+  right:       { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
+  viewText:    { color: L.gold, fontSize: 12, fontWeight: '700' },
+});
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: L.bg },
+
+  // Floating top controls
+  topControls: {
+    position: 'absolute', left: 16, right: 16, zIndex: 20,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  },
+  topCircle: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: 'rgba(0,0,0,0.40)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  topRight: { flexDirection: 'row', gap: 8 },
+
+  // Hero
+  hero: { width: '100%', overflow: 'hidden' },
+  heroContent: {
+    flex: 1, paddingHorizontal: 20, justifyContent: 'flex-end', paddingBottom: 28,
+  },
+  heroLine1: {
+    color: '#FFFFFF', fontSize: 32, fontWeight: '800', letterSpacing: 0.5,
+  },
+  heroLine2: {
+    color: '#FFFFFF', fontSize: 32, fontWeight: '800', letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  heroUnderline: {
+    width: 80, height: 3, backgroundColor: L.gold, borderRadius: 2, marginBottom: 16,
+  },
+  datePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(10,18,40,0.80)',
+    borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6, marginBottom: 12,
+  },
+  datePillText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', letterSpacing: 1 },
+  locationRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  locationName: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  locationCity: { color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '400' },
+  photoCount: {
+    position: 'absolute', bottom: 28, right: 20,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 10,
+    paddingHorizontal: 10, paddingVertical: 5,
+  },
+  photoCountText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+
+  statusRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 14,
+  },
+
+  // White sheet
+  whiteSheet: {
+    backgroundColor: L.bg,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    marginTop: -24, paddingTop: 4,
+    paddingBottom: 8,
+  },
+
+  // Host card
+  hostCard: {
+    marginHorizontal: 16, marginTop: 8, marginBottom: 18,
+    borderRadius: 16, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg,
+    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  hostLeft: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    padding: 16,
+  },
+  hostAvatar: { width: 56, height: 56, borderRadius: 28, flexShrink: 0 },
+  hostInfo:   { flex: 1 },
+  hostedBy:   { color: L.textMuted, fontSize: 11, fontWeight: '500', marginBottom: 1 },
+  hostNameRow:{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
+  hostName:   { color: L.navy, fontSize: 16, fontWeight: '800', textTransform: 'uppercase' },
+  directorPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    alignSelf: 'flex-start',
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 3, marginBottom: 5,
+  },
+  directorText: { color: L.gold, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+
+  hostDivider: { height: 1, backgroundColor: L.border, marginHorizontal: 16, marginTop: 14 },
+
+  hostStats: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 14, gap: 4,
+  },
+  hostStat:     { flex: 1, alignItems: 'center', gap: 4 },
+  hostStatNum:  { color: L.navy, fontSize: 17, fontWeight: '900' },
+  hostStatLabel:{ color: L.textMuted, fontSize: 10, fontWeight: '500', textAlign: 'center', lineHeight: 14 },
+  hostMore:     { paddingLeft: 8 },
+
+  msgDirectorBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginHorizontal: 16, marginTop: 14, marginBottom: 4,
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: 12,
+    paddingVertical: 10, backgroundColor: L.page,
+  },
+  msgDirectorText: { color: L.navy, fontSize: 14, fontWeight: '700' },
+
+  directorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: 16, marginBottom: 8,
+    paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: L.goldLight, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.goldBorder,
+  },
+  directorBannerText: { flex: 1, color: L.navy, fontSize: 13, fontWeight: '700' },
+
+  bracketsBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: 16, marginBottom: 8,
+    paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: L.bg, borderRadius: 10,
+    borderWidth: 1, borderColor: L.border,
+  },
+  bracketsBannerText: { flex: 1, color: L.navy, fontSize: 13, fontWeight: '700' },
+
+  resultsBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: 16, marginBottom: 14,
+    paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: L.goldLight, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.goldBorder,
+  },
+  resultsBannerText: { flex: 1, color: L.navy, fontSize: 13, fontWeight: '700' },
+
+  // Description
+  description: {
+    color: L.text, fontSize: 14, lineHeight: 22, fontWeight: '400',
+    paddingHorizontal: 16, marginBottom: 18,
+  },
+
+  // Amenities
+  amenitiesRow: {
+    flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 24,
+  },
+  amenityCard: {
+    flex: 1, alignItems: 'center', gap: 5,
+    borderWidth: 1, borderColor: L.border, borderRadius: 14,
+    paddingVertical: 12,
+    backgroundColor: L.bg,
+  },
+  amenityTitle: { color: L.navy,    fontSize: 11, fontWeight: '700', textAlign: 'center' },
+  amenitySub:   { color: L.textMuted, fontSize: 10, textAlign: 'center' },
+
+  // Section
+  section:      { marginBottom: 24, paddingHorizontal: 16 },
+  sectionHeader:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.8 },
+  edtRow:       { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  edtText:      { color: L.textMuted, fontSize: 12 },
+
+  // Divisions card
+  divisionsCard: {
+    borderWidth: 1, borderColor: L.border, borderRadius: 16, overflow: 'hidden',
+    backgroundColor: L.bg,
+  },
+  viewAllBtn: {
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6,
+    paddingVertical: 14,
+  },
+  viewAllText: { color: L.navy, fontSize: 14, fontWeight: '700' },
+
+  noDivisionsState: {
+    alignItems: 'center', gap: 6, paddingVertical: 28,
+    backgroundColor: L.bg, borderRadius: 16, borderWidth: 1, borderColor: L.border,
+  },
+  noDivisionsText: { color: L.navy, fontSize: 15, fontWeight: '700' },
+  noDivisionsSub:  { color: L.textSub, fontSize: 13, textAlign: 'center', paddingHorizontal: 24 },
+
+  // Fees card
+  feesCard: {
+    borderWidth: 1, borderColor: L.border, borderRadius: 16, overflow: 'hidden',
+    backgroundColor: L.bg,
+  },
+  feesGrid: {
+    flexDirection: 'column',
+  },
+  feeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: L.border,
+  },
+  feeRowLast: { borderBottomWidth: 0 },
+  feeIcon:    { flexShrink: 0 },
+  feeTextCol: { flex: 1, gap: 3 },
+  feeLabel: { color: L.textMuted, fontSize: 10, fontWeight: '600', lineHeight: 14 },
+  feeValue: { color: L.navy,     fontSize: 14, fontWeight: '900' },
+  feeUnit:  { fontSize: 11, fontWeight: '500', color: L.textMuted },
+  feeSub:   { color: L.textMuted, fontSize: 10 },
+  feeSubRow:{ flexDirection: 'row', alignItems: 'center', gap: 5 },
+
+  feesNote: {
+    flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5,
+    paddingHorizontal: 14, paddingVertical: 12,
+    backgroundColor: L.goldLight,
+  },
+  feesNoteText: { color: L.text, fontSize: 12, fontWeight: '500', flex: 1 },
+  learnMore:    { color: L.gold, fontSize: 12, fontWeight: '700' },
+
+  // Bottom bar — 2-row layout
+  bottomBar: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: L.bg, borderTopWidth: 1, borderTopColor: L.border,
+    paddingHorizontal: 16, paddingTop: 10,
+    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: -3 },
+    elevation: 8,
+  },
+
+  // Three equally-weighted stacked CTAs: Register, Hold, Save
+  ctaStack: { gap: 10 },
+
+  // Bottom — Save Tournament / See Results, same size/weight as the others
+  saveBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: 14,
+    minHeight: 56,
+  },
+  saveBtnText: { color: L.navy, fontSize: 14, fontWeight: '800' },
+
+  // Registration unavailable banner
+  regUnavailableRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 14,
+  },
+  regUnavailableText: { color: L.textSub, fontSize: 14, fontWeight: '600' },
+
+  // Middle — Hold, full width
+  holdBtn: {
+    alignItems: 'center',
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: 14,
+    paddingVertical: 12, paddingHorizontal: 8,
+    minHeight: 56,
+    justifyContent: 'center',
+  },
+  holdBtnNav:      { borderColor: L.navy },
+  holdBtnDisabled: { borderColor: L.border },
+  holdBtnLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  holdBtnLabel:    { color: L.gold,  fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  holdBtnNavLabel: { color: L.navy },
+  holdBtnDisabledLabel: { color: L.textMuted },
+  holdBtnSub:      { color: L.gold,  fontSize: 11, fontWeight: '500', textAlign: 'center', marginTop: 1 },
+
+  registerBtn: {
+    alignItems: 'center',
+    backgroundColor: L.gold, borderRadius: 14,
+    paddingVertical: 12, paddingHorizontal: 8,
+    minHeight: 56,
+    justifyContent: 'center',
+  },
+  registerBtnLabel:    { color: '#FFFFFF', fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  registerBtnSub:      { color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '500', textAlign: 'center', marginTop: 1 },
+  registerBtnComplete: { backgroundColor: L.navy },
+  registerBtnDone:     { backgroundColor: L.green, alignItems: 'center', justifyContent: 'center' },
+  registerBtnDoneLabel:{ color: '#FFFFFF', fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  registerBtnDisabled: { backgroundColor: L.page, borderWidth: 1, borderColor: L.border, alignItems: 'center', justifyContent: 'center' },
+  registerBtnDisabledLabel: { color: L.textMuted, fontSize: 14, fontWeight: '800', textAlign: 'center' },
+});
+
+// ─── Tooltip styles ───────────────────────────────────────────────────────────
+
+const tt = StyleSheet.create({
+  backdrop: {
+    flex: 1, backgroundColor: 'rgba(10,18,40,0.55)',
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  card: {
+    width: '100%', backgroundColor: L.bg,
+    borderRadius: 20, padding: 24,
+    shadowColor: '#000', shadowOpacity: 0.18,
+    shadowRadius: 20, shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+  },
+  iconRow:   { alignItems: 'center', marginBottom: 14 },
+  iconCircle:{
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: L.goldLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  title: {
+    fontSize: 20, fontWeight: '900', color: L.navy,
+    textAlign: 'center', marginBottom: 12,
+  },
+  body: {
+    fontSize: 15, color: L.text, lineHeight: 22,
+    textAlign: 'center', fontWeight: '400',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth, backgroundColor: L.border,
+    marginVertical: 16,
+  },
+  footer: {
+    fontSize: 13, color: L.textSub, lineHeight: 19,
+    textAlign: 'center', fontWeight: '500', marginBottom: 20,
+  },
+  doneBtn: {
+    backgroundColor: L.gold, borderRadius: 14,
+    paddingVertical: 14, alignItems: 'center',
+  },
+  doneBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+});
+
+// ─── Bottom sheet styles (venue map / director profile) ───────────────────────
+
+const sheet = StyleSheet.create({
+  backdrop: {
+    flex: 1, backgroundColor: 'rgba(10,18,40,0.55)',
+    justifyContent: 'flex-end',
+  },
+  card: {
+    backgroundColor: L.bg,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 20, paddingTop: 10,
+    shadowColor: '#000', shadowOpacity: 0.18,
+    shadowRadius: 20, shadowOffset: { width: 0, height: -4 },
+    elevation: 12,
+  },
+  handle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: L.border, alignSelf: 'center', marginBottom: 16,
+  },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  title: { color: L.navy, fontSize: 17, fontWeight: '900' },
+
+  venueName:    { color: L.navy, fontSize: 16, fontWeight: '800', marginBottom: 2 },
+  venueAddress: { color: L.textSub, fontSize: 13, fontWeight: '500', marginBottom: 16 },
+  mapWrap: {
+    height: 220, borderRadius: 16, overflow: 'hidden',
+    borderWidth: 1, borderColor: L.border, marginBottom: 16,
+  },
+  mapEmpty: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    gap: 8, padding: 24, backgroundColor: L.page,
+  },
+  mapEmptyText: { color: L.textSub, fontSize: 13, textAlign: 'center', lineHeight: 19 },
+
+  directorHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
+  directorAvatar: { width: 64, height: 64, borderRadius: 32 },
+  directorName:   { color: L.navy, fontSize: 18, fontWeight: '800', textTransform: 'uppercase' },
+  directorBio:    { color: L.text, fontSize: 13, lineHeight: 20, marginBottom: 14 },
+
+  primaryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: L.navy, borderRadius: 14,
+    paddingVertical: 14, marginTop: 4,
+  },
+  primaryBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+});

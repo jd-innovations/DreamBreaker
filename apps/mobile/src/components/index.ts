@@ -1,0 +1,35 @@
+/**
+ * DreamBreakerPB Design System v1 — shared component barrel.
+ */
+export { AppHeader, APP_HEADER_HEIGHT } from './AppHeader';
+export { PrimaryButton } from './PrimaryButton';
+export { SecondaryButton } from './SecondaryButton';
+export { StatusChip } from './StatusChip';
+export type { StatusVariant } from './StatusChip';
+export { SettingsRow } from './SettingsRow';
+export { SectionCard } from './SectionCard';
+export { PickleballIcon } from './PickleballIcon';
+export type { PickleballIconProps } from './PickleballIcon';
+export { CourtIcon } from './CourtIcon';
+export type { CourtIconProps } from './CourtIcon';
+export { AppIcon } from './AppIcon';
+export type { AppIconName } from './AppIcon';
+export { GlassQuickAction } from './GlassQuickAction';
+export type { GlassQuickActionProps } from './GlassQuickAction';
+export { ProfileCompletionRing } from './ProfileCompletionRing';
+export type { ProfileCompletionRingProps } from './ProfileCompletionRing';
+export { FindGamesFilterModal, DISTANCE_STEPS as FIND_GAMES_DISTANCE_STEPS, SKILL_RANGES as FIND_GAMES_SKILL_RANGES } from './FindGamesFilterModal';
+export type { FindGamesFilterModalProps } from './FindGamesFilterModal';
+export { JoinCelebration } from './JoinCelebration';
+export { ReactionPills } from './ReactionPills';
+export { AttachmentOptionsSheet } from './AttachmentOptionsSheet';
+export { ManageEventSheet } from './ManageEventSheet';
+export { FileAttachmentRow } from './FileAttachmentRow';
+export { Avatar } from './Avatar';
+export type { AvatarProps } from './Avatar';
+export { WalletCard } from './wallet/WalletCard';
+export { WalletSection } from './wallet/WalletSection';
+export { WalletEmptyState } from './wallet/WalletEmptyState';
+export { WalletSkeleton } from './wallet/WalletSkeleton';
+export { WalletActivityRow, WalletActivityEmpty } from './wallet/WalletActivityRow';
+export { WalletRedeemSheet } from './wallet/WalletRedeemSheet';
