@@ -16,7 +16,15 @@ import {
   fetchReservationPlayersWithProfiles, cancelReservation, playersNeeded, parseTstzrange,
   type ReservationPlayerWithProfile, type ReservationStatus,
 } from '@/lib/supabase/reservations';
+import {
+  fetchReservationPayment, reservationPaymentStatusLabel, type ReservationPaymentStatus,
+} from '@/lib/payments/reservationPaymentIntent';
 import { getBookingReservationId, setBookingFacility, setBookingSelection } from '@/lib/bookingStore';
+
+const PAYMENT_STATUS_VARIANT: Record<string, StatusVariant> = {
+  succeeded: 'green', requires_confirmation: 'gold', processing: 'gold',
+  failed: 'red', canceled: 'gray', refunded: 'gray', partially_refunded: 'gray',
+};
 
 const L = {
   bg: colors.bg, page: colors.page, navy: colors.navy, gold: colors.gold,
@@ -58,6 +66,7 @@ export default function GameStatusScreen() {
   const [assetName, setAssetName] = useState<string | null>(null);
   const [assetSubtitle, setAssetSubtitle] = useState<string | null>(null);
   const [roster, setRoster] = useState<ReservationPlayerWithProfile[]>([]);
+  const [payment, setPayment] = useState<ReservationPaymentStatus | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
   // Facility + asset details: authoritative from the reservation row itself
@@ -96,6 +105,17 @@ export default function GameStatusScreen() {
     fetchReservationPlayersWithProfiles(reservationId).then(rows => { if (!cancelled) setRoster(rows); });
     return () => { cancelled = true; };
   }, [reservationId, occupancy?.currentPlayers]);
+
+  // Payment status refetches whenever the reservation's own status changes
+  // (e.g. held -> confirmed via finalizeReservationPayment) -- occupancy's
+  // realtime subscription already re-runs on every reservations UPDATE, so
+  // this rides the same trigger.
+  useEffect(() => {
+    if (!reservationId) return;
+    let cancelled = false;
+    fetchReservationPayment(reservationId).then(row => { if (!cancelled) setPayment(row); });
+    return () => { cancelled = true; };
+  }, [reservationId, occupancy?.status]);
 
   function handleDirections() {
     if (!facility) return;
@@ -264,7 +284,12 @@ export default function GameStatusScreen() {
             <Text style={s.priceLabel}>Amount</Text>
             <Text style={s.priceValue}>{formatCents(reservation.final_price_cents)}</Text>
           </View>
-          <Text style={s.priceNote}>Test mode — no real payment was charged.</Text>
+          <View style={{ marginTop: 8, alignSelf: 'flex-start' }}>
+            <StatusChip
+              label={reservationPaymentStatusLabel(payment)}
+              variant={payment ? (PAYMENT_STATUS_VARIANT[payment.status] ?? 'gray') : 'gray'}
+            />
+          </View>
         </View>
 
         {showFindPlayers && (
@@ -329,7 +354,6 @@ const s = StyleSheet.create({
 
   priceLabel: { color: L.navy, fontSize: 15, fontWeight: '800' },
   priceValue: { color: L.navy, fontSize: 18, fontWeight: '900' },
-  priceNote: { color: L.textSub, fontSize: 11, fontWeight: '500', marginTop: 6 },
 
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,

@@ -13,6 +13,9 @@ import {
   fetchMyReservations, parseTstzrange, playersNeeded, occupancyStatusLabel,
   type Reservation, type ReservationStatus,
 } from '@/lib/supabase/reservations';
+import {
+  fetchReservationPayments, reservationPaymentStatusLabel, type ReservationPaymentStatus,
+} from '@/lib/payments/reservationPaymentIntent';
 import { setBookingFacility, setBookingSelection, setBookingReservationId } from '@/lib/bookingStore';
 
 const L = {
@@ -30,6 +33,7 @@ type EnrichedReservation = Reservation & {
   currentPlayers: number;
   startsAt: string;
   endsAt: string;
+  payment: ReservationPaymentStatus | null;
 };
 
 const STATUS_VARIANT: Record<ReservationStatus, StatusVariant> = {
@@ -57,11 +61,12 @@ async function enrich(reservations: Reservation[]): Promise<EnrichedReservation[
   const machineIds = [...new Set(reservations.filter(r => r.asset_type === 'ball_machine').map(r => r.asset_id))];
   const reservationIds = reservations.map(r => r.id);
 
-  const [{ data: facilities }, { data: courts }, { data: machines }, { data: playerRows }] = await Promise.all([
+  const [{ data: facilities }, { data: courts }, { data: machines }, { data: playerRows }, paymentsByReservation] = await Promise.all([
     facilityIds.length > 0 ? supabase.from('facilities').select('id, name').in('id', facilityIds) : Promise.resolve({ data: [] }),
     courtIds.length > 0 ? supabase.from('courts').select('id, name, indoor_outdoor').in('id', courtIds) : Promise.resolve({ data: [] }),
     machineIds.length > 0 ? supabase.from('ball_machines').select('id, name').in('id', machineIds) : Promise.resolve({ data: [] }),
     supabase.from('reservation_players').select('reservation_id').in('reservation_id', reservationIds),
+    fetchReservationPayments(reservationIds),
   ]);
 
   const facilityById = new Map((facilities ?? []).map(f => [f.id, f.name]));
@@ -83,6 +88,7 @@ async function enrich(reservations: Reservation[]): Promise<EnrichedReservation[
       assetName: court?.name ?? machine?.name ?? 'Reservation',
       assetSubtitle: court ? (court.indoor_outdoor === 'indoor' ? 'Indoor' : 'Outdoor') : null,
       currentPlayers: countByReservation.get(r.id) ?? 0,
+      payment: paymentsByReservation.get(r.id) ?? null,
     };
   });
 }
@@ -113,7 +119,10 @@ function BookingCard({ res, onPress }: { res: EnrichedReservation; onPress: () =
             <Text style={c.playersText}>{occupancyStatusLabel(res.currentPlayers, res.max_players)}{needed === 0 ? '' : ` (${res.currentPlayers}/${res.max_players})`}</Text>
           )}
         </View>
-        <Text style={c.amount}>{formatCents(res.final_price_cents)}</Text>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={c.amount}>{formatCents(res.final_price_cents)}</Text>
+          <Text style={c.paymentStatusText}>{reservationPaymentStatusLabel(res.payment)}</Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -132,6 +141,7 @@ const c = StyleSheet.create({
   footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
   playersText: { color: L.textSub, fontSize: 11, fontWeight: '600' },
   amount: { color: L.navy, fontSize: 15, fontWeight: '800' },
+  paymentStatusText: { color: L.textSub, fontSize: 10, fontWeight: '600', marginTop: 2 },
 });
 
 export default function MyBookingsScreen() {

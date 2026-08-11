@@ -51,11 +51,14 @@ module.exports = {
           'Allow DreamBreaker to use your camera so you can take and send photos in chat.',
       },
     ],
-    // '@stripe/stripe-react-native' plugin removed for now: the native module
-    // doesn't resolve inside Expo Go, and nothing in the app currently uses
-    // StripeProvider (see the comment in app/_layout.tsx). Re-add this plugin
-    // — with a real merchantIdentifier, not a placeholder — once a real
-    // payment integration lands and the app moves to a custom dev client.
+    // '@stripe/stripe-react-native' plugin removed for now: importing it
+    // anywhere under src/app/ breaks both the web target ("Importing
+    // react-native internals is not supported on web", via a transitive
+    // ReactFabric import in its helpers.js) and Expo Go ("Unable to resolve
+    // module @stripe/stripe-react-native") — confirmed 2026-08-11, see
+    // BOOKING_ENGINE_PHASE3_REPORT.md. Re-add this plugin (with a real
+    // merchantIdentifier, not a placeholder) once the app runs via a custom
+    // Expo dev client on a real device/simulator.
     'expo-dev-client',
   ],
 };

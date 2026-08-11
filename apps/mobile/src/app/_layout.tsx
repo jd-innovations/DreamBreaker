@@ -8,14 +8,25 @@ import { C } from '@/constants/Colors';
 import { SupportProvider } from '@/components/support/SupportProvider';
 import '../global.css';
 
-// StripeProvider intentionally removed from the root layout: @stripe/stripe-react-native
-// is a native module and does not resolve inside Expo Go ("Unable to resolve module
-// @stripe/stripe-react-native"), which blocked the whole app from booting. Booking
-// Engine's payment phase is explicitly deferred (see BOOKING_ENGINE_PHASE1_REPORT.md /
-// the Phase 2 plan) and reservationPayment.ts has no real Stripe calls yet, so nothing
-// in the current app needs this provider mounted. Re-add it here (and the
-// '@stripe/stripe-react-native' plugin entry in app.config.js) once a real payment
-// integration lands and the app is run via a custom dev client instead of Expo Go.
+// StripeProvider intentionally NOT mounted in the root layout. Confirmed
+// (Booking Engine Phase 3A, 2026-08-11) that importing @stripe/stripe-react-native
+// anywhere under src/app/ breaks BOTH targets available in this dev
+// environment, not just Expo Go:
+//   - web: "Importing react-native internals is not supported on web" —
+//     @stripe/stripe-react-native/lib/module/helpers.js imports
+//     react-native/Libraries/Components/TextInput/TextInputState, which
+//     transitively pulls in ReactFabric (native-only). This breaks the
+//     Metro web bundle outright (confirmed: home route 500s).
+//   - Expo Go (native): "Unable to resolve module @stripe/stripe-react-native"
+//     (the original, previously-documented failure).
+// See BOOKING_ENGINE_PHASE3_REPORT.md for the full writeup and what's needed
+// to unblock this (a custom Expo dev client build, run on a real device or
+// simulator — neither is available in this environment). The mobile-side
+// payment code (useReservationPayment.ts, stripeConfig.ts) is written and
+// ready; only mounting StripeProvider here + the review.tsx wiring are
+// blocked pending that build. Do not re-attempt mounting this in a shared
+// session without a way to verify + immediately revert — it takes down the
+// dev server for everyone.
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 

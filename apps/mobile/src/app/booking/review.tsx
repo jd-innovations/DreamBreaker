@@ -13,12 +13,13 @@ import {
   type Reservation,
 } from '@/lib/supabase/reservations';
 import { confirmReservation } from '@/lib/supabase/reservationPayment';
+import { createBookingPaymentIntent, reservationPaymentErrorMessage } from '@/lib/payments/reservationPaymentIntent';
 import { getBookingFacility, getBookingSelection, getBookingReservationId } from '@/lib/bookingStore';
 
 const L = {
   bg: colors.bg, page: colors.page, navy: colors.navy, gold: colors.gold,
   goldBg: colors.goldBg, text: colors.text, textSub: colors.textSub, border: colors.border,
-  white: colors.white,
+  white: colors.white, success: colors.success,
 };
 
 const CONFIRM_ERROR_MESSAGES: Record<string, string> = {
@@ -46,12 +47,18 @@ export default function ReviewScreen() {
   const facility = getBookingFacility();
   const selection = getBookingSelection();
   const reservationId = getBookingReservationId();
+  // Stable for the lifetime of this screen visit, so retrying Pay after a
+  // transient failure reuses the same PaymentIntent (create-booking-payment-intent's
+  // idempotency key includes this) instead of creating a new one each tap.
+  const [attemptId] = useState(() => Math.random().toString(36).slice(2));
 
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [currentPlayers, setCurrentPlayers] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [payingIntent, setPayingIntent] = useState(false);
+  const [paymentReady, setPaymentReady] = useState<{ clientSecret: string; amountCents: number } | null>(null);
 
   const load = useCallback(async () => {
     if (!reservationId) { setError('No active reservation. Go back and choose a time.'); setLoading(false); return; }
@@ -74,12 +81,15 @@ export default function ReviewScreen() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function handleConfirm() {
+  // Test-mode fallback: calls confirm_reservation() directly, the same
+  // boundary used before Stripe was wired in. Used for (a) free reservations
+  // (create-booking-payment-intent returns no_payment_required — nothing to
+  // charge), and (b) continuing past the "payment UI unavailable in this
+  // build" state after a real PaymentIntent has already been created (see
+  // handlePay below and BOOKING_ENGINE_PHASE3_REPORT.md).
+  async function handleContinueTestMode() {
     if (!reservation || confirming) return;
 
-    // Already confirmed (e.g. user navigated back to Review after paying) --
-    // never re-call confirm_reservation, which would throw
-    // reservation_not_held. Just move on to Confirmation.
     if (reservation.status === 'confirmed') {
       router.push('/booking/confirmation' as never);
       return;
@@ -87,10 +97,9 @@ export default function ReviewScreen() {
 
     setConfirming(true);
     try {
-      // The payment boundary. No Stripe call exists yet -- confirmReservation()
-      // wraps confirm_reservation(), which only flips held -> confirmed for the
-      // SAME reservation created in Choose Time & Court. Nothing here creates a
-      // new reservation row.
+      // Nothing here creates a new reservation row -- confirm_reservation()
+      // only flips held -> confirmed for the SAME reservation created in
+      // Choose Time & Court.
       await confirmReservation(reservation.id);
       router.push('/booking/confirmation' as never);
     } catch (e) {
@@ -98,6 +107,44 @@ export default function ReviewScreen() {
       Alert.alert('Could Not Confirm', CONFIRM_ERROR_MESSAGES[code] ?? 'Something went wrong. Please try again.');
     } finally {
       setConfirming(false);
+    }
+  }
+
+  // The real payment boundary. Creates (or, on retry, reuses) a real Stripe
+  // PaymentIntent attached to this EXISTING reservation via
+  // create-booking-payment-intent -- the amount charged is always
+  // reservation.final_price_cents, server-snapshotted at Choose Time & Court
+  // (already includes any Flash Deal discount), never recomputed here.
+  //
+  // This does NOT present Stripe's PaymentSheet: @stripe/stripe-react-native
+  // cannot be imported anywhere reachable from src/app/ in this dev
+  // environment without breaking the Metro bundle on every available target
+  // (confirmed 2026-08-11 -- see BOOKING_ENGINE_PHASE3_REPORT.md). The real
+  // PaymentSheet hook (useReservationPayment.ts) is written and ready; it
+  // just isn't wired in here yet. Once a real PaymentIntent exists, this
+  // screen is honest about that gap rather than presenting a fake payment UI
+  // or silently skipping to a false "confirmed" state.
+  async function handlePay() {
+    if (!reservation || payingIntent) return;
+
+    setPayingIntent(true);
+    try {
+      const result = await createBookingPaymentIntent(reservation.id, attemptId);
+      if (!result.ok) {
+        if (result.code === 'already_confirmed') {
+          router.push('/booking/confirmation' as never);
+          return;
+        }
+        if (result.code === 'no_payment_required') {
+          await handleContinueTestMode();
+          return;
+        }
+        Alert.alert('Could Not Start Payment', reservationPaymentErrorMessage(result.code));
+        return;
+      }
+      setPaymentReady({ clientSecret: result.clientSecret, amountCents: result.amountCents });
+    } finally {
+      setPayingIntent(false);
     }
   }
 
@@ -197,22 +244,41 @@ export default function ReviewScreen() {
           <Text style={s.priceNote}>No taxes or service fees are applied yet.</Text>
         </View>
 
-        <View style={s.paymentNotice}>
-          <Ionicons name="construct-outline" size={16} color={L.textSub} />
-          <Text style={s.paymentNoticeText}>
-            Payment is not live yet. Confirming below uses a test-mode boundary that skips real charge capture.
-          </Text>
-        </View>
-
-        <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handleConfirm} disabled={confirming}>
-          {confirming ? (
-            <ActivityIndicator size="small" color={L.white} />
-          ) : (
-            <Text style={s.primaryBtnText}>
-              {alreadyConfirmed ? 'Continue to Confirmation' : 'Confirm Reservation (Test Mode — No Payment)'}
-            </Text>
-          )}
-        </TouchableOpacity>
+        {alreadyConfirmed ? (
+          <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handleContinueTestMode} disabled={confirming}>
+            {confirming ? <ActivityIndicator size="small" color={L.white} /> : (
+              <Text style={s.primaryBtnText}>Continue to Confirmation</Text>
+            )}
+          </TouchableOpacity>
+        ) : paymentReady ? (
+          <>
+            <View style={s.paymentReadyCard}>
+              <Ionicons name="checkmark-circle-outline" size={18} color={L.success} />
+              <Text style={s.paymentReadyText}>
+                Payment created for {formatCents(paymentReady.amountCents)}. The native payment UI isn&apos;t available in this build (see BOOKING_ENGINE_PHASE3_REPORT.md) — continue in test mode to finish verifying the booking flow.
+              </Text>
+            </View>
+            <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handleContinueTestMode} disabled={confirming}>
+              {confirming ? <ActivityIndicator size="small" color={L.white} /> : (
+                <Text style={s.primaryBtnText}>Continue in Test Mode</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <View style={s.paymentNotice}>
+              <Ionicons name="construct-outline" size={16} color={L.textSub} />
+              <Text style={s.paymentNoticeText}>
+                Payment UI is not live in this build yet. Tapping Pay creates a real Stripe PaymentIntent for the amount above.
+              </Text>
+            </View>
+            <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handlePay} disabled={payingIntent}>
+              {payingIntent ? <ActivityIndicator size="small" color={L.white} /> : (
+                <Text style={s.primaryBtnText}>Pay {formatCents(reservation.final_price_cents)}</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -266,6 +332,12 @@ const s = StyleSheet.create({
     backgroundColor: L.page, borderRadius: radius.card, padding: spacing.md, marginTop: spacing.md,
   },
   paymentNoticeText: { flex: 1, color: L.textSub, fontSize: 12, fontWeight: '500', lineHeight: 17 },
+
+  paymentReadyCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: colors.successBg, borderRadius: radius.card, padding: spacing.md, marginTop: spacing.md,
+  },
+  paymentReadyText: { flex: 1, color: L.text, fontSize: 12, fontWeight: '500', lineHeight: 17 },
 
   primaryBtn: { backgroundColor: L.navy, borderRadius: radius.button, paddingVertical: 16, alignItems: 'center', marginTop: spacing.xl },
   primaryBtnText: { color: L.white, fontSize: 15, fontWeight: '800' },

@@ -7,12 +7,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '@/theme';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
+import { StatusChip, type StatusVariant } from '@/components';
 import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilities';
 import {
   fetchReservationById, fetchReservationPlayersWithProfiles, playersNeeded,
   type Reservation,
 } from '@/lib/supabase/reservations';
+import {
+  fetchReservationPayment, reservationPaymentStatusLabel, type ReservationPaymentStatus,
+} from '@/lib/payments/reservationPaymentIntent';
 import { getBookingFacility, getBookingSelection, getBookingReservationId } from '@/lib/bookingStore';
+
+const PAYMENT_STATUS_VARIANT: Record<string, StatusVariant> = {
+  succeeded: 'green', requires_confirmation: 'gold', processing: 'gold',
+  failed: 'red', canceled: 'gray', refunded: 'gray', partially_refunded: 'gray',
+};
 
 const L = {
   bg: colors.bg, page: colors.page, navy: colors.navy, gold: colors.gold,
@@ -42,6 +51,7 @@ export default function ConfirmationScreen() {
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [currentPlayers, setCurrentPlayers] = useState(0);
   const [facility, setFacility] = useState<FacilityDetail | null>(null);
+  const [payment, setPayment] = useState<ReservationPaymentStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,16 +63,18 @@ export default function ConfirmationScreen() {
       setLoading(true);
       setError(null);
       try {
-        const [res, roster, fac] = await Promise.all([
+        const [res, roster, fac, pay] = await Promise.all([
           fetchReservationById(reservationId),
           fetchReservationPlayersWithProfiles(reservationId),
           facilityCtx.facilityId ? fetchFacilityById(facilityCtx.facilityId) : Promise.resolve(null),
+          fetchReservationPayment(reservationId),
         ]);
         if (cancelled) return;
         if (!res) { setError('This reservation no longer exists.'); return; }
         setReservation(res);
         setCurrentPlayers(roster.length);
         setFacility(fac);
+        setPayment(pay);
       } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load your reservation.');
       } finally {
@@ -159,6 +171,12 @@ export default function ConfirmationScreen() {
           <View style={s.priceRow}>
             <Text style={s.priceLabel}>Amount</Text>
             <Text style={s.priceValue}>{formatCents(reservation.final_price_cents)}</Text>
+          </View>
+          <View style={{ marginTop: 8, alignSelf: 'flex-start' }}>
+            <StatusChip
+              label={reservationPaymentStatusLabel(payment)}
+              variant={payment ? (PAYMENT_STATUS_VARIANT[payment.status] ?? 'gray') : 'gray'}
+            />
           </View>
           {hasDeal && (
             <Text style={s.dealSavedText}>
