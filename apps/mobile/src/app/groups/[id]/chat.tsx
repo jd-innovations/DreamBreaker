@@ -27,6 +27,7 @@ import {
 } from '@/lib/attachmentPicker';
 import { ReactionPills, AttachmentOptionsSheet, FileAttachmentRow } from '@/components';
 import { useSupportContext } from '@/lib/support/supportContext';
+import { appLinks } from '@/lib/appLinks';
 import type { Tables } from '@/lib/database.types';
 
 const FALLBACK_EVENT_IMAGE = 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=200&fit=crop&q=80';
@@ -341,7 +342,7 @@ export default function GroupChat() {
 
   function handleShare() {
     if (!id || !group) return;
-    Share.share({ message: `Join "${group.name}" on DreamBreaker: dreambreaker://groups/${id}` });
+    Share.share({ message: `Join "${group.name}" on DreamBreaker: ${appLinks.group(id)}` });
   }
 
   if (loading) {

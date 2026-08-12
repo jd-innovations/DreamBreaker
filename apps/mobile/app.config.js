@@ -7,6 +7,10 @@ module.exports = {
   ...appJson.expo,
   ios: {
     ...appJson.expo.ios,
+    associatedDomains: Array.from(new Set([
+      ...(appJson.expo.ios?.associatedDomains ?? []),
+      'applinks:pickleballapp.app',
+    ])),
     config: {
       ...appJson.expo.ios?.config,
       googleMapsApiKey: iosGoogleMapsApiKey,

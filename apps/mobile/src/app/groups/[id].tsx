@@ -26,6 +26,7 @@ import { setPendingGroupId } from '@/lib/pendingGroupLink';
 import { sendPartnerLike, hasSentPartnerLike, isPartnerMatch } from '@/lib/partnerLikes';
 import { getOrCreateConversation } from '@/lib/conversationService';
 import { useSupportContext } from '@/lib/support/supportContext';
+import { appLinks } from '@/lib/appLinks';
 import {
   acceptGroupInvite,
   fetchGroupInviteCandidates,
@@ -1488,7 +1489,7 @@ export default function GroupDetail() {
 
   function handleShare() {
     if (!groupId || !group) return;
-    Share.share({ message: `Join "${group.name}" on DreamBreaker: dreambreaker://groups/${groupId}` });
+    Share.share({ message: `Join "${group.name}" on DreamBreaker: ${appLinks.group(groupId)}` });
   }
 
   async function openInviteMembers() {

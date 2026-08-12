@@ -6,6 +6,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { C } from '@/constants/Colors';
 import { SupportProvider } from '@/components/support/SupportProvider';
+import { useSession } from '@/hooks/useSession';
+import { useExternalLinks } from '@/hooks/useExternalLinks';
 import '../global.css';
 
 // StripeProvider intentionally NOT mounted in the root layout. Confirmed
@@ -32,6 +34,8 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({ BebasNeue_400Regular });
+  const { loading, isAuthenticated } = useSession();
+  useExternalLinks({ authLoading: loading, isAuthenticated });
 
   useEffect(() => {
     // Fast Refresh can re-run this effect after the native splash screen has

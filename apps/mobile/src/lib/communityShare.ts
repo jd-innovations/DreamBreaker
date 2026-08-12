@@ -1,4 +1,5 @@
 import type { PlayEvent } from '@/lib/supabase/playEvents';
+import { appLinks } from '@/lib/appLinks';
 
 export type CommunityEventType = 'open_play' | 'round_robin' | 'mini_tournament';
 
@@ -52,7 +53,7 @@ export function createCommunityShareMessage(event: PlayEvent): string {
   const date    = fmtEventDate(event.event_date);
   const time    = fmtEventTime(event.start_time);
   const loc     = event.venue_name ?? '';
-  const route   = getCommunityEventRoute(type, event.id);
+  const link    = appLinks.communityEvent(event.id);
 
   const parts: string[] = [
     `Join my ${label} "${name}" on DreamBreaker!`,
@@ -60,7 +61,7 @@ export function createCommunityShareMessage(event: PlayEvent): string {
   if (date && time) parts.push(`${date} at ${time}`);
   else if (date)    parts.push(date);
   if (loc)          parts.push(`📍 ${loc}`);
-  parts.push(`\nOpen in the app: dreambreaker://app${route}`);
+  parts.push(`\nOpen in DreamBreaker: ${link}`);
 
   return parts.join('\n');
 }

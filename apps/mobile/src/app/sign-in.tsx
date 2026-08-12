@@ -48,7 +48,7 @@ export default function SignInScreen() {
     setLoading(true);
     try {
       await signIn(email.trim().toLowerCase(), password);
-      router.replace('/(tabs)/profile');
+      router.replace((returnTo ?? '/(tabs)/profile') as never);
     } catch (e: any) {
       Alert.alert('Sign in failed', e.message ?? 'Please check your credentials and try again.');
     } finally {
@@ -61,7 +61,7 @@ export default function SignInScreen() {
     setGoogleLoading(true);
     try {
       const session = await signInWithGoogle();
-      if (session) router.replace('/(tabs)/profile');
+      if (session) router.replace((returnTo ?? '/(tabs)/profile') as never);
     } catch (e: any) {
       Alert.alert('Sign in failed', e.message ?? 'Something went wrong. Please try again.');
     } finally {

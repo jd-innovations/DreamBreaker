@@ -20,6 +20,7 @@ import { blockUser } from '@/lib/services/blocking';
 import { fetchProfile, type UserProfile } from '@/lib/services/profile';
 import { conditionLabel, formatPriceCents, listingAgeLabel, type MarketplaceBrand } from '@/lib/marketplace/constants';
 import { BRAND_LOGOS } from '@/lib/marketplace/brandLogos';
+import { appLinks } from '@/lib/appLinks';
 
 const L = {
   navy: '#0A1228', gold: '#C9A84C', text: '#0A1228', textMuted: '#9AAABF',
@@ -122,7 +123,7 @@ export default function ListingDetailScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out this ${listing.title} for ${formatPriceCents(listing.asking_price_cents)} on DreamBreaker!`,
+        message: `Check out this ${listing.title} for ${formatPriceCents(listing.asking_price_cents)} on DreamBreaker: ${appLinks.marketplaceListing(listing.id)}`,
       });
     } catch {
       // user cancelled or share unavailable — nothing to do
