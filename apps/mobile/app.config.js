@@ -51,6 +51,7 @@ module.exports = {
           'Allow DreamBreaker to use your camera so you can take and send photos in chat.',
       },
     ],
+    'expo-notifications',
     // '@stripe/stripe-react-native' plugin removed for now: importing it
     // anywhere under src/app/ breaks both the web target ("Importing
     // react-native internals is not supported on web", via a transitive
