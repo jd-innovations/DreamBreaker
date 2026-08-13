@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe";
+import { finalizePaymentSucceeded, type ServiceClient } from "@/lib/payments/finalizePayment";
 import type Stripe from "stripe";
 
 // Next.js must not parse the body — Stripe signature verification needs the raw bytes.
@@ -25,10 +26,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
+  const service = createServiceClient();
+
   if (event.type === "account.updated") {
     const account = event.data.object as Stripe.Account;
-    const service = createServiceClient();
 
+    // Shared across director and coach — this table update is role-neutral;
+    // the coach_status transition below is the only role-specific bit, and
+    // only touches rows where is_coach is true.
     if (account.charges_enabled) {
       // Onboarding complete — set timestamp if not already set
       await service
@@ -36,15 +41,119 @@ export async function POST(request: Request) {
         .update({ stripe_connect_onboarded_at: new Date().toISOString() })
         .eq("stripe_connect_account_id", account.id)
         .is("stripe_connect_onboarded_at", null);
+
+      await service
+        .from("profiles")
+        .update({ coach_status: "active" })
+        .eq("stripe_connect_account_id", account.id)
+        .eq("is_coach", true)
+        .in("coach_status", ["onboarding", "restricted"]);
     } else {
       // Account disabled (e.g. Stripe suspended it) — clear the timestamp
       await service
         .from("profiles")
         .update({ stripe_connect_onboarded_at: null })
         .eq("stripe_connect_account_id", account.id);
+
+      await service
+        .from("profiles")
+        .update({ coach_status: "restricted" })
+        .eq("stripe_connect_account_id", account.id)
+        .eq("is_coach", true)
+        .eq("coach_status", "active");
     }
+
+    return NextResponse.json({ received: true });
+  }
+
+  // ── Shared payment foundation (TODO1.1.md Task C7) ─────────────────────────
+  // This is the ONE place a REAL payments.status transition to 'succeeded'/
+  // 'failed'/'refunded' happens from Stripe — never from a client request.
+  // Actual domain finalization logic lives in
+  // web/src/lib/payments/finalizePayment.ts, shared with the dev-only
+  // simulation route (web/src/app/api/dev/simulate-payment/route.ts) so
+  // there is exactly one implementation of "what happens when a payment
+  // succeeds," regardless of which event source triggered it.
+  const PAYMENT_EVENT_TYPES = new Set([
+    "payment_intent.succeeded",
+    "payment_intent.payment_failed",
+    "payment_intent.canceled",
+    "charge.refunded",
+  ]);
+
+  if (PAYMENT_EVENT_TYPES.has(event.type)) {
+    // Idempotency: record the event id first. A unique-violation means this
+    // event was already processed (Stripe redelivers on timeout) — no-op.
+    const { error: dedupeError } = await service
+      .from("stripe_webhook_events")
+      .insert({ event_id: event.id, type: event.type, payload: JSON.parse(JSON.stringify(event)) });
+
+    if (dedupeError) {
+      // Unique violation (already processed) or any other insert failure —
+      // either way, do not act on this event a second time.
+      return NextResponse.json({ received: true, deduped: true });
+    }
+
+    await handlePaymentEvent(service, event);
+
+    await service
+      .from("stripe_webhook_events")
+      .update({ processed_at: new Date().toISOString() })
+      .eq("event_id", event.id);
   }
 
   // All other event types: acknowledge and ignore
   return NextResponse.json({ received: true });
+}
+
+async function handlePaymentEvent(service: ServiceClient, event: Stripe.Event) {
+  if (event.type === "charge.refunded") {
+    const charge = event.data.object as Stripe.Charge;
+    const intentId = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+    if (!intentId) return;
+
+    const { data: payment } = await service
+      .from("payments")
+      .select("id, amount_cents")
+      .eq("provider_payment_intent_id", intentId)
+      .maybeSingle();
+    if (!payment) return;
+
+    const refundedAmount = charge.amount_refunded;
+    const status = refundedAmount >= payment.amount_cents ? "refunded" : "partially_refunded";
+    await service
+      .from("payments")
+      .update({ refunded_amount_cents: refundedAmount, status })
+      .eq("id", payment.id);
+    return;
+  }
+
+  const intent = event.data.object as Stripe.PaymentIntent;
+  const { data: payment } = await service
+    .from("payments")
+    .select("id, status")
+    .eq("provider_payment_intent_id", intent.id)
+    .maybeSingle();
+
+  if (!payment) {
+    console.error(`[stripe webhook] No payments row for PaymentIntent ${intent.id}`);
+    return;
+  }
+
+  if (event.type === "payment_intent.succeeded") {
+    await finalizePaymentSucceeded(service, payment.id);
+    return;
+  }
+
+  if (event.type === "payment_intent.payment_failed" || event.type === "payment_intent.canceled") {
+    const status = event.type === "payment_intent.canceled" ? "canceled" : "failed";
+    await service
+      .from("payments")
+      .update({
+        status,
+        failed_at: new Date().toISOString(),
+        failure_reason: intent.last_payment_error?.message ?? null,
+      })
+      .eq("id", payment.id);
+  }
 }
