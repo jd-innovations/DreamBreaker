@@ -39,40 +39,34 @@ Goal: make the codebase measurable before changing behavior.
 
 ### Completion Notes - 0.1
 
-- Status: **Implemented in the worktree — NOT COMMITTED. Not present in HEAD.**
-  (implemented 2026-08-17; state re-audited 2026-08-17)
+- Status: **Complete and committed in `811b009`** — *feat(mobile): freeze beta
+  feature scope* (11 files, +382/-44). Implemented 2026-08-17, committed
+  2026-08-17 after a re-audit found it had been left uncommitted.
 
-  Every file below is still dirty or untracked. No part of item 0.1 has been
-  committed, so **HEAD has no beta scope enforcement at all**: no
-  `EXPO_PUBLIC_APP_ENV` resolution, no `FEATURE_VISIBILITY` map, no route guard,
-  and no hidden-module gating. A build cut from HEAD today exposes paid booking,
-  coach marketplace, lesson marketplace, wallet, the AI listing assist, and the
-  dev routes to production users — including the "Continue in Test Mode" button
-  that confirms a priced reservation with no completed charge.
+  Beta scope enforcement is now live in HEAD: `EXPO_PUBLIC_APP_ENV` resolution,
+  the `FEATURE_VISIBILITY` map, the route guard, and every entry-point filter.
+  The "Continue in Test Mode" button that confirmed a priced reservation with no
+  completed charge is no longer reachable in a production build.
 
-  **This item is not done until its code commit lands.** Treat the notes below
-  as a description of the worktree implementation, not of shipped behavior.
+- Partial staging, deliberate — two files were committed with **only their 0.1
+  hunks**, because their worktree versions carry unrelated work that depends on
+  files still untracked:
+  - `apps/mobile/src/app/_layout.tsx` — committed the `useFeatureRouteGuard`
+    import and call (2 lines). Left uncommitted in the worktree: mounting
+    `StripeProvider`, `usePushNotifications`, and `Stack.Screen` registrations
+    for `dev-qr-scan`, `check-in-qr`, `check-in-scan`, and `new-message`. Those
+    depend on untracked `hooks/usePushNotifications.ts` and the QR/check-in
+    route files.
+  - `apps/mobile/src/components/SlideMenu/SlideMenuProvider.tsx` — committed the
+    feature-filtered `MORE_NAV`. Left uncommitted: the `expo-haptics` →
+    `@/lib/haptics` migration, which depends on the untracked `lib/haptics.ts`.
 
-- Blocking files (all uncommitted as of the re-audit):
+  Both committed blobs were built from HEAD plus the 0.1 hunks alone, so the
+  commit has no dangling imports. Both files remain dirty in the worktree.
 
-  | File | Git state |
-  | --- | --- |
-  | `BETA_SCOPE.md` | untracked |
-  | `apps/mobile/src/lib/featureRoutes.ts` | untracked |
-  | `apps/mobile/src/hooks/useFeatureRouteGuard.ts` | untracked |
-  | `apps/mobile/src/lib/featureFlags.ts` | modified |
-  | `apps/mobile/src/app/_layout.tsx` | modified |
-  | `apps/mobile/src/constants/quickActions.ts` | modified |
-  | `apps/mobile/src/components/SlideMenu/SlideMenuProvider.tsx` | modified |
-  | `apps/mobile/src/app/(tabs)/profile.tsx` | modified |
-  | `apps/mobile/src/app/booking/review.tsx` | modified |
-  | `apps/mobile/src/app/booking/results.tsx` | modified |
-  | `apps/mobile/src/app/marketplace/create/index.tsx` | modified |
-
-- Scope document: `BETA_SCOPE.md` at repo root (untracked) — full
-  inclusion/exclusion table, per-feature readiness, production risk, and
-  promotion criteria.
-- Files changed (worktree only):
+- Scope document: `BETA_SCOPE.md` at repo root — full inclusion/exclusion table,
+  per-feature readiness, production risk, and promotion criteria.
+- Files changed:
   - `apps/mobile/src/lib/featureFlags.ts` — added `EXPO_PUBLIC_APP_ENV` resolution
     (`development` / `internal` / `production`, defaulting to `production` in any
     release build) and the `FEATURE_VISIBILITY` map + `isFeatureEnabled()`.
@@ -93,15 +87,13 @@ Goal: make the codebase measurable before changing behavior.
     `handleConfirmWithoutPayment` and its test-mode branch is internal-only.
   - `apps/mobile/src/app/booking/results.tsx` — hid the unimplemented Filters/Sort row.
   - `apps/mobile/src/app/marketplace/create/index.tsx` — hid "Improve Listing".
-- Behavior changed (production builds only) — **in the worktree; none of this is
-  live in HEAD**:
+- Behavior changed (production builds only), live in HEAD as of `811b009`:
   - Hidden: paid court booking, coach marketplace, lesson marketplace, wallet,
     marketplace AI assist. Internal-only: `design-lab`, `dev-qr-scan`,
     `onboarding-preview`. Deferred: booking filters/sort.
   - The "Continue in Test Mode" button that confirmed a **priced** reservation
-    with no completed charge becomes unreachable in production. This was the
-    single highest-risk item found in the audit — and it is **still reachable in
-    HEAD** until this item is committed.
+    with no completed charge is now unreachable in production. This was the
+    single highest-risk item found in the audit.
   - Deep links, push payloads, and direct routes into hidden modules land on the
     root gate (`/`) instead of the module, per the item 1.1 retarget.
   - Internal and development builds are unchanged — all developer access preserved.
@@ -122,11 +114,14 @@ Goal: make the codebase measurable before changing behavior.
   - Not run: on-device verification that a production-mode build cannot reach the
     hidden modules. Static enforcement is in place; physical confirmation is
     pending the next internal build.
-  - **All of the above was run against the dirty worktree, which is the only
-    place this implementation exists.** None of it attests to HEAD.
+  - Re-run at commit time (2026-08-17): `npx tsc --noEmit` **PASS**;
+    `npm run lint` **PASS**, 0 errors / 64 warnings (unchanged from the 0.2
+    baseline); focused ESLint on all 10 mobile source files **PASS**, 0 errors,
+    0 warnings.
+  - **Caveat:** all checks ran against the dirty worktree, not against `811b009`
+    in isolation. The commit's staged blobs were verified to import nothing
+    untracked, but a clean-tree typecheck of the commit alone was not performed.
 - Risks remaining:
-  - **The item is uncommitted (see Status).** This is the top risk: the notes
-    below describe protections that are not in force in HEAD.
   - The route guard is a redirect, not a render block: a blocked screen may mount
     for one frame before `replace` lands. Acceptable for these modules (none of
     them charge or write on mount), but not a substitute for auth guards.
@@ -136,10 +131,10 @@ Goal: make the codebase measurable before changing behavior.
     `BETA_SCOPE.md` and owned by item 6.2.
   - Facility pricing is not audited: if most facilities charge, the booking loop is
     effectively unavailable in beta even though it is listed as included.
-- Follow-up: **commit this item's 11 files** (it also unblocks the
-  `useFeatureRouteGuard.ts` retarget that item 1.1 left pending); wire
-  `EXPO_PUBLIC_APP_ENV` into `eas.json` build profiles; item 6.2 for the
-  remaining dead-end CTAs.
+- Follow-up: wire `EXPO_PUBLIC_APP_ENV` into `eas.json` build profiles; item 6.2
+  for the remaining dead-end CTAs. Item 1.1's pending
+  `useFeatureRouteGuard.ts` retarget landed with this commit and is no longer
+  outstanding.
 
 ### 0.2 Fix Mobile Lint Gate
 
@@ -298,13 +293,10 @@ Goal: make account lifecycle safe before inviting real users.
 - **Pending — in the worktree, not in HEAD.** Both were excluded from `80f50f7`
   because committing them would have produced dangling imports: each depends on
   a file that is itself still uncommitted.
-  - `apps/mobile/src/hooks/useFeatureRouteGuard.ts` — retarget blocked routes to
-    `/` instead of `/(tabs)`, so the gate makes the final call. **This file is
-    untracked and belongs to item 0.1**, whose code (`featureFlags.ts`,
-    `featureRoutes.ts`, and the entry-point filters) is also uncommitted. It
-    ships when 0.1 is committed, not here. Note that 0.1's own completion notes
-    still describe this guard as redirecting to the home tab; that line is
-    superseded by this retarget once both land.
+  - ~~`apps/mobile/src/hooks/useFeatureRouteGuard.ts`~~ — **RESOLVED.** The
+    retarget of blocked routes to `/` (so the gate makes the final call) shipped
+    with item 0.1 in `811b009`. Deep links into hidden modules now reach the
+    root gate, which routes signed-out users to onboarding.
   - `apps/mobile/src/app/onboarding/enable-notifications.tsx` — skip the
     `create-account` step when a session already exists. Blocked because the
     surrounding uncommitted push-notification work in that file supplies the
@@ -340,10 +332,9 @@ Goal: make account lifecycle safe before inviting real users.
     does complete — `finalizeOnboarding()` takes the authenticated-UPDATE branch
     when a session exists — but the step is confusing and should not be shipped
     to beta in this state.
-  - Deep links into hidden beta modules are not redirected at all: item 0.1's
-    feature-route guard is not in HEAD, so no beta feature gating is active
-    there. Earlier notes claiming signed-out deep links "land on onboarding"
-    describe the worktree, not HEAD.
+  - ~~Deep links into hidden beta modules are not redirected.~~ **RESOLVED** by
+    `811b009`: the feature-route guard is in HEAD and routes blocked paths to
+    `/`, where the auth gate sends signed-out users to onboarding.
 - Defense in depth preserved: all 11 `router.replace('/sign-in')` route guards,
   `(tabs)/profile.tsx`'s guest redirect, and the 8 `requireAuth()` call sites
   are unchanged.
