@@ -259,6 +259,8 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
   const [messagingTarget, setMessagingTarget] = useState<{ id: string; name: string } | null>(null);
+  const [joiningWaitlist, setJoiningWaitlist] = useState(false);
+  const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
 
   // Legacy single-format helpers
   const legacyReg = myRegs.get("legacy") ?? null;
@@ -515,9 +517,6 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     setSpotsFilled((n) => Math.max(0, n - 1));
     toast.info("Hold cancelled. Your spot has been released.");
   };
-
-  const [joiningWaitlist, setJoiningWaitlist] = useState(false);
-  const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
 
   const joinWaitlist = async (divisionId: string | null) => {
     const userId = await getUserId();

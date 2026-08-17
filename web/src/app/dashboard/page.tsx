@@ -1163,7 +1163,7 @@ export default function DashboardPage() {
     {/* ── Cancel Registration Lightbox ───────────────────────────────────── */}
     {cancelTarget && (() => {
       const eventDate = new Date(cancelTarget.event_date);
-      const daysUntil = Math.ceil((eventDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      const daysUntil = Math.ceil((eventDate.getTime() - now) / (1000 * 60 * 60 * 24));
       const feeCents = cancelTarget.entry_fee_cents ?? 0;
       const refundTier = daysUntil >= 7 ? "full" : daysUntil >= 3 ? "half" : "none";
       const refundLabel = refundTier === "full"
