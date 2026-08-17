@@ -21,3 +21,21 @@ export function getProfileCompletion(profile: UserProfile | null): number {
   const earned = CHECKS.reduce((sum, c) => sum + (c.test(profile) ? c.weight : 0), 0);
   return Math.round((earned / TOTAL_WEIGHT) * 100);
 }
+
+// The routing gate's definition of "complete enough to enter the app" — a
+// deliberately different question from getProfileCompletion()'s 0-100 ring
+// percentage, which is a progress indicator and must never be used to decide
+// navigation.
+//
+// A `profiles` row always exists for an authenticated user (fn_handle_new_user
+// creates it on signup), so `null` here means the row could not be read, not
+// that the user is new. Callers must distinguish a failed load from an
+// incomplete profile before acting on `false` — see resolveAuthGate().
+export function isProfileCompleteForEntry(profile: UserProfile | null): boolean {
+  if (!profile) return false;
+  const hasName = !!profile.full_name && profile.full_name.trim().length > 0;
+  // Any one rating source is enough: Partner Finder and PAR both fall back
+  // across dupr -> self_rating -> skill_level.
+  const hasRating = !!profile.dupr || !!profile.self_rating || !!profile.skill_level;
+  return hasName && hasRating;
+}

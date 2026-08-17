@@ -9,9 +9,15 @@ import { onProfileUpdated } from '@/lib/profileEvents';
 // particular, logging out and back into the same account can keep the same
 // user id while the session token changes; force a fresh profile read for that.
 
+// `profileState === null` is ambiguous on its own — it means "not loaded yet",
+// "load failed", and "no row" all at once. Routing decisions must not collapse
+// those, so the store also tracks an explicit status. See resolveAuthGate().
+export type ProfileStatus = 'idle' | 'loading' | 'loaded' | 'error';
+
 let currentUserId: string | null = null;
 let currentAccessToken: string | null = null;
 let profileState: UserProfile | null = null;
+let profileStatus: ProfileStatus = 'idle';
 let inFlight: Promise<void> | null = null;
 let latestReq = 0;
 let loadingProfile = false;
@@ -25,6 +31,7 @@ function resetProfileStore() {
   currentUserId = null;
   currentAccessToken = null;
   profileState = null;
+  profileStatus = 'idle';
   inFlight = null;
   loadingProfile = false;
   latestReq += 1;
@@ -35,18 +42,24 @@ function loadProfile(userId: string, force = false): Promise<void> {
   if (inFlight && !force) return inFlight;
   const req = ++latestReq;
   loadingProfile = true;
+  profileStatus = 'loading';
   emit();
 
   const p = (async () => {
     const data = await fetchProfile(userId);
     if (currentUserId === userId && req === latestReq) {
       profileState = data;
+      // fetchProfile() returns null on a query error as well as a genuine
+      // miss, and a row always exists for an authenticated user — so treat a
+      // null here as a failed read, not as an empty profile.
+      profileStatus = data ? 'loaded' : 'error';
       loadingProfile = false;
       emit();
     }
   })().catch(error => {
     if (currentUserId === userId && req === latestReq) {
       profileState = null;
+      profileStatus = 'error';
       loadingProfile = false;
       emit();
     }
@@ -66,9 +79,22 @@ function getSnapshot() {
   return profileState;
 }
 
+// Separate snapshot so useSyncExternalStore compares a primitive — combining
+// profile + status into one object would allocate a new reference per call and
+// loop.
+function getStatusSnapshot(): ProfileStatus {
+  return profileStatus;
+}
+
+/** Force a re-read of the signed-in user's profile (used by retry affordances). */
+export function reloadProfile(): void {
+  if (currentUserId) loadProfile(currentUserId, true);
+}
+
 export function useProfile() {
   const { user, session, loading: sessionLoading } = useSession();
   const profile = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const status = useSyncExternalStore(subscribe, getStatusSnapshot, getStatusSnapshot);
   const accessToken = session?.access_token ?? null;
 
   useEffect(() => {
@@ -109,5 +135,5 @@ export function useProfile() {
     if (currentUserId) loadProfile(currentUserId, true);
   }), []);
 
-  return { profile, user, loading: sessionLoading || loadingProfile };
+  return { profile, user, status, loading: sessionLoading || loadingProfile };
 }
