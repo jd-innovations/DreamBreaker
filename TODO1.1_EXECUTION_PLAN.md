@@ -39,16 +39,48 @@ Goal: make the codebase measurable before changing behavior.
 
 ### Completion Notes - 0.1
 
-- Status: **Complete** (2026-08-17)
-- Scope document: `BETA_SCOPE.md` at repo root — full inclusion/exclusion table,
-  per-feature readiness, production risk, and promotion criteria.
-- Files changed:
+- Status: **Implemented in the worktree — NOT COMMITTED. Not present in HEAD.**
+  (implemented 2026-08-17; state re-audited 2026-08-17)
+
+  Every file below is still dirty or untracked. No part of item 0.1 has been
+  committed, so **HEAD has no beta scope enforcement at all**: no
+  `EXPO_PUBLIC_APP_ENV` resolution, no `FEATURE_VISIBILITY` map, no route guard,
+  and no hidden-module gating. A build cut from HEAD today exposes paid booking,
+  coach marketplace, lesson marketplace, wallet, the AI listing assist, and the
+  dev routes to production users — including the "Continue in Test Mode" button
+  that confirms a priced reservation with no completed charge.
+
+  **This item is not done until its code commit lands.** Treat the notes below
+  as a description of the worktree implementation, not of shipped behavior.
+
+- Blocking files (all uncommitted as of the re-audit):
+
+  | File | Git state |
+  | --- | --- |
+  | `BETA_SCOPE.md` | untracked |
+  | `apps/mobile/src/lib/featureRoutes.ts` | untracked |
+  | `apps/mobile/src/hooks/useFeatureRouteGuard.ts` | untracked |
+  | `apps/mobile/src/lib/featureFlags.ts` | modified |
+  | `apps/mobile/src/app/_layout.tsx` | modified |
+  | `apps/mobile/src/constants/quickActions.ts` | modified |
+  | `apps/mobile/src/components/SlideMenu/SlideMenuProvider.tsx` | modified |
+  | `apps/mobile/src/app/(tabs)/profile.tsx` | modified |
+  | `apps/mobile/src/app/booking/review.tsx` | modified |
+  | `apps/mobile/src/app/booking/results.tsx` | modified |
+  | `apps/mobile/src/app/marketplace/create/index.tsx` | modified |
+
+- Scope document: `BETA_SCOPE.md` at repo root (untracked) — full
+  inclusion/exclusion table, per-feature readiness, production risk, and
+  promotion criteria.
+- Files changed (worktree only):
   - `apps/mobile/src/lib/featureFlags.ts` — added `EXPO_PUBLIC_APP_ENV` resolution
     (`development` / `internal` / `production`, defaulting to `production` in any
     release build) and the `FEATURE_VISIBILITY` map + `isFeatureEnabled()`.
   - `apps/mobile/src/lib/featureRoutes.ts` (new) — route-prefix → feature map.
   - `apps/mobile/src/hooks/useFeatureRouteGuard.ts` (new) — replaces any blocked
-    route with the home tab.
+    route. Originally redirected to the home tab; item 1.1 retargeted it to `/`
+    so the auth gate makes the final call. That retarget is also uncommitted and
+    ships with this item.
   - `apps/mobile/src/app/_layout.tsx` — mounts the route guard once at the root.
   - `apps/mobile/src/constants/quickActions.ts` — `ALL_QUICK_ACTIONS` retains the
     full catalogue; `QUICK_ACTIONS` is the in-scope filter.
@@ -61,15 +93,17 @@ Goal: make the codebase measurable before changing behavior.
     `handleConfirmWithoutPayment` and its test-mode branch is internal-only.
   - `apps/mobile/src/app/booking/results.tsx` — hid the unimplemented Filters/Sort row.
   - `apps/mobile/src/app/marketplace/create/index.tsx` — hid "Improve Listing".
-- Behavior changed (production builds only):
+- Behavior changed (production builds only) — **in the worktree; none of this is
+  live in HEAD**:
   - Hidden: paid court booking, coach marketplace, lesson marketplace, wallet,
     marketplace AI assist. Internal-only: `design-lab`, `dev-qr-scan`,
     `onboarding-preview`. Deferred: booking filters/sort.
   - The "Continue in Test Mode" button that confirmed a **priced** reservation
-    with no completed charge is now unreachable in production. This was the
-    single highest-risk item found in the audit.
+    with no completed charge becomes unreachable in production. This was the
+    single highest-risk item found in the audit — and it is **still reachable in
+    HEAD** until this item is committed.
   - Deep links, push payloads, and direct routes into hidden modules land on the
-    home tab instead of the module.
+    root gate (`/`) instead of the module, per the item 1.1 retarget.
   - Internal and development builds are unchanged — all developer access preserved.
 - Reclassified during the audit: **My Stats / PAR stays `included`.** It is
   read-only over real server data, computes no rating client-side, and is the
@@ -88,7 +122,11 @@ Goal: make the codebase measurable before changing behavior.
   - Not run: on-device verification that a production-mode build cannot reach the
     hidden modules. Static enforcement is in place; physical confirmation is
     pending the next internal build.
+  - **All of the above was run against the dirty worktree, which is the only
+    place this implementation exists.** None of it attests to HEAD.
 - Risks remaining:
+  - **The item is uncommitted (see Status).** This is the top risk: the notes
+    below describe protections that are not in force in HEAD.
   - The route guard is a redirect, not a render block: a blocked screen may mount
     for one frame before `replace` lands. Acceptable for these modules (none of
     them charge or write on mount), but not a substitute for auth guards.
@@ -98,8 +136,10 @@ Goal: make the codebase measurable before changing behavior.
     `BETA_SCOPE.md` and owned by item 6.2.
   - Facility pricing is not audited: if most facilities charge, the booking loop is
     effectively unavailable in beta even though it is listed as included.
-- Follow-up: wire `EXPO_PUBLIC_APP_ENV` into `eas.json` build profiles; item 6.2
-  for the remaining dead-end CTAs.
+- Follow-up: **commit this item's 11 files** (it also unblocks the
+  `useFeatureRouteGuard.ts` retarget that item 1.1 left pending); wire
+  `EXPO_PUBLIC_APP_ENV` into `eas.json` build profiles; item 6.2 for the
+  remaining dead-end CTAs.
 
 ### 0.2 Fix Mobile Lint Gate
 
@@ -162,20 +202,35 @@ Goal: make the codebase measurable before changing behavior.
 
 ### Completion Notes - 0.3
 
-- Status: **Complete** (2026-08-17)
-- Files changed:
+- Status: **Complete and committed in `3aab31e`** — *chore(web): complete lint
+  gate cleanup* (5 files, +1648/-4). Re-audited 2026-08-17: all three lint fixes
+  are present in HEAD.
+- Files changed, all committed in `3aab31e`:
   - `web/src/app/dashboard/page.tsx` - replaced render-time `Date.now()` usage in the cancel-registration modal with the component's existing stable `now` state.
   - `web/src/app/tournaments/[id]/page.tsx` - moved waitlist state declarations above the effect that uses `setWaitlistPosition`, satisfying React compiler hook/state ordering.
   - `web/src/components/support/ticket-panel.tsx` - deferred initial async ticket/thread loads with timers and keyed thread loading/subscription on `selectedConversationId`, avoiding synchronous set-state-in-effect errors.
-  - `TODO1.1.md` - updated current verification state and launch checklist.
+  - `TODO1.1.md` - updated current verification state and launch checklist. (This
+    commit is also where both TODO docs were first added to version control.)
   - `TODO1.1_EXECUTION_PLAN.md` - added these completion notes.
+- Note on `web/src/app/tournaments/[id]/page.tsx`: the file has **since acquired
+  further uncommitted changes** (director messaging wired to `setMessagingTarget`,
+  a registration-opens/closes date gate, typography tweaks). That work is
+  unrelated to 0.3 and belongs to another item — the lint fix itself is committed
+  and unaffected.
 - Behavior changed:
   - No intended product behavior change. Support ticket/thread loading is deferred to the next browser task instead of being invoked directly inside the effect body.
 - Verification run:
   - `cd web && npm run lint` - PASS, 0 errors, 65 warnings.
   - `cd web && npm run build` - PASS after rerunning with network access for `next/font` Google Fonts.
+  - **Caveat:** both were run against a dirty `web/` worktree — roughly a dozen
+    modified files, including the unrelated changes to
+    `tournaments/[id]/page.tsx` noted above. The results attest to the worktree,
+    not to `3aab31e` in isolation. A clean re-run against HEAD has not been done.
 - Risks remaining:
   - 65 web warnings remain, primarily raw `<img>` performance warnings, missing alt text, unused code, and hook dependency warnings.
+  - The lint gate can regress silently: the uncommitted `web/` work has not been
+    re-linted since it was written, so "0 errors" is not a standing guarantee for
+    whatever lands next.
   - Production build currently needs network access to fetch Google Fonts through `next/font`; consider self-hosting fonts or ensuring CI/build environments have reliable network access.
   - Next build warns that it inferred `C:\Users\dhjes` as the workspace root because multiple lockfiles exist. Set `turbopack.root` or clean up lockfile layout in a later config hygiene pass.
 - Follow-up issue created:
