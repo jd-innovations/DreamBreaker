@@ -216,8 +216,12 @@ Goal: make account lifecycle safe before inviting real users.
 
 ### Completion Notes - 1.1
 
-- Status: **Complete** (2026-08-17)
-- Files changed:
+- Status: **Core gate complete and committed** (2026-08-17). Two auxiliary
+  changes are written and verified but **not yet in HEAD** — see "Pending"
+  below. Do not read this section as describing HEAD in full until they land.
+
+- Committed in `80f50f7` — *feat(mobile): add global auth onboarding gate*
+  (4 files, +190/-3):
   - `apps/mobile/src/lib/authGate.ts` (new) — `resolveAuthGate()`, a pure
     function returning `loading` / `error` / `guest` / `incomplete` / `ready`.
     Pure by design: the routing decision is testable without a navigator, and
@@ -235,10 +239,22 @@ Goal: make account lifecycle safe before inviting real users.
     (`idle` / `loading` / `loaded` / `error`) and an exported `reloadProfile()`.
     Previously `profile === null` meant "not loaded", "load failed", and "no
     row" simultaneously.
-  - `apps/mobile/src/hooks/useFeatureRouteGuard.ts` — blocked routes now
-    redirect to `/` instead of `/(tabs)`, so the gate makes the final call.
-  - `apps/mobile/src/app/onboarding/enable-notifications.tsx` — skips the
-    `create-account` step when a session already exists.
+
+- **Pending — in the worktree, not in HEAD.** Both were excluded from `80f50f7`
+  because committing them would have produced dangling imports: each depends on
+  a file that is itself still uncommitted.
+  - `apps/mobile/src/hooks/useFeatureRouteGuard.ts` — retarget blocked routes to
+    `/` instead of `/(tabs)`, so the gate makes the final call. **This file is
+    untracked and belongs to item 0.1**, whose code (`featureFlags.ts`,
+    `featureRoutes.ts`, and the entry-point filters) is also uncommitted. It
+    ships when 0.1 is committed, not here. Note that 0.1's own completion notes
+    still describe this guard as redirecting to the home tab; that line is
+    superseded by this retarget once both land.
+  - `apps/mobile/src/app/onboarding/enable-notifications.tsx` — skip the
+    `create-account` step when a session already exists. Blocked because the
+    surrounding uncommitted push-notification work in that file supplies the
+    `useSession` import this change depends on, and pulls in the untracked
+    `lib/pushNotifications.ts` and `lib/haptics.ts`. Ships with that work.
 - Product decisions taken (confirmed with the product owner before implementing):
   - **Guest browsing is preserved.** The gate governs the root route `/` only.
     Signed-out users can still reach the public tabs by direct route and deep
@@ -250,7 +266,7 @@ Goal: make account lifecycle safe before inviting real users.
     existing users will be routed through onboarding once. No
     `onboarding_completed` column was added, deliberately — item 2.1 freezes
     schema work until migration history is reconciled.
-- Behavior changed:
+- Behavior changed **in HEAD** (as of `80f50f7`):
   - Fresh install now lands on `/onboarding/welcome` instead of the Home tab.
   - Signed-in users with an incomplete profile are routed into onboarding and
     return to `/` when it finishes (`welcome-to-court.tsx` already did
@@ -259,8 +275,20 @@ Goal: make account lifecycle safe before inviting real users.
     branch. Routing such a user into onboarding would let
     `finalizeOnboarding()` overwrite fields they had already set — the failure
     mode this explicitly avoids.
-  - Signed-out deep links into hidden beta modules now land on onboarding
-    rather than inside the app.
+  - Guest browsing of the public tabs is unchanged, and every pre-existing
+    route-level guard still fires.
+
+- Behavior **not yet in HEAD**, pending the two changes above:
+  - A signed-in user with an incomplete profile currently reaches
+    `enable-notifications` and is then sent to `create-account`, i.e. asked to
+    sign up again despite already having a session. The onboarding round trip
+    does complete — `finalizeOnboarding()` takes the authenticated-UPDATE branch
+    when a session exists — but the step is confusing and should not be shipped
+    to beta in this state.
+  - Deep links into hidden beta modules are not redirected at all: item 0.1's
+    feature-route guard is not in HEAD, so no beta feature gating is active
+    there. Earlier notes claiming signed-out deep links "land on onboarding"
+    describe the worktree, not HEAD.
 - Defense in depth preserved: all 11 `router.replace('/sign-in')` route guards,
   `(tabs)/profile.tsx`'s guest redirect, and the 8 `requireAuth()` call sites
   are unchanged.
@@ -269,6 +297,10 @@ Goal: make account lifecycle safe before inviting real users.
   - `npm run lint` — **PASS**, 0 errors / 64 warnings, identical to the 0.2
     baseline (no new warnings introduced).
   - `npx eslint` on all 6 touched files — **PASS**, 0 errors, 0 warnings.
+  - **All three checks were run against the full worktree, which includes the
+    two pending changes — not against `80f50f7` in isolation.** The four
+    committed files import nothing untracked, so the commit is self-consistent,
+    but its typecheck was not re-run standalone.
   - Reasoned through: fresh install, signed-out direct route, signed-in
     complete, signed-in incomplete (full onboarding round trip back to `/`),
     sign-out, `returnTo` after auth, claim link, reset-password, and a hidden
@@ -277,6 +309,11 @@ Goal: make account lifecycle safe before inviting real users.
     feature guard, neither of which can re-enter a blocked state.
   - Not run: on-device verification. All routing findings are static / by inspection.
 - Risks remaining:
+  - **Item 1.1 is not fully landed.** Until the two pending changes are
+    committed, HEAD's behavior is narrower than this section's earlier drafts
+    claimed: no beta feature-route gating, and a redundant create-account step
+    for signed-in users sent back through onboarding. Do not close 1.1 or cut a
+    beta build on the strength of `80f50f7` alone.
   - **`/reset-password` is safe only because the gate lives at `/` alone.** That
     screen establishes a session mid-render via `completePasswordRecovery()`. If
     the gate is ever widened to cover more routes, it must exempt
