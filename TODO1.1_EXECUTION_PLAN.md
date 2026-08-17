@@ -137,7 +137,19 @@ Goal: make the codebase measurable before changing behavior.
   - **Unrecognized `EXPO_PUBLIC_APP_ENV` values fail silently.** The fallback is
     fail-closed (unknown → `production`), which is the safe direction, but it
     gives no signal — that is precisely how the `preview` mismatch above went
-    unnoticed. Consider a dev-time warning when `raw` is set but unrecognized.
+    unnoticed. **Partially mitigated:** `resolveAppEnv()` now `console.warn`s in
+    dev builds when the variable is set but unrecognized, naming the bad value
+    and the accepted set. An unset value stays silent (that is the expected
+    default), and release builds never log.
+
+    **This does not close the hole that caused the original bug.** The warning
+    is `__DEV__`-gated, but the `preview` mismatch manifested in an EAS preview
+    build where `__DEV__` is false. At runtime, "misconfigured preview build"
+    and "correct production build" are indistinguishable — both present an
+    unusable value and must fall back to `production` — so no runtime check can
+    catch the former without logging in the latter. The effective guard is a
+    build-time validation of `eas.json`'s `EXPO_PUBLIC_APP_ENV` values against
+    `APP_ENV_VALUES` (CI lint step or a prebuild script). Not yet implemented.
   - Dead-end "Coming Soon" alerts remain in included screens — inventoried in
     `BETA_SCOPE.md` and owned by item 6.2.
   - Facility pricing is not audited: if most facilities charge, the booking loop is

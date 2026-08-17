@@ -11,12 +11,35 @@ export const USE_SUPABASE = true;
 //   internal    — internal TestFlight / QA builds (set EXPO_PUBLIC_APP_ENV=internal)
 //   production  — public beta and store builds (default for any release build)
 
-export type AppEnv = 'development' | 'internal' | 'production';
+// Single source of truth for the accepted values — the type is derived from the
+// list so the two cannot drift, and the warning below can name them.
+export const APP_ENV_VALUES = ['development', 'internal', 'production'] as const;
+
+export type AppEnv = (typeof APP_ENV_VALUES)[number];
+
+function isAppEnv(value: string | undefined): value is AppEnv {
+  return (APP_ENV_VALUES as readonly string[]).includes(value ?? '');
+}
 
 function resolveAppEnv(): AppEnv {
   const raw = process.env.EXPO_PUBLIC_APP_ENV;
-  if (raw === 'development' || raw === 'internal' || raw === 'production') return raw;
-  return __DEV__ ? 'development' : 'production';
+  if (isAppEnv(raw)) return raw;
+
+  const fallback: AppEnv = __DEV__ ? 'development' : 'production';
+
+  // An *unset* value is the expected default and stays silent. A value that is
+  // set but unrecognized is a build-configuration bug: it looks deliberate and
+  // behaves as production. That is exactly how the `preview` profile shipped
+  // `EXPO_PUBLIC_APP_ENV=preview` and silently ran internal QA builds as
+  // production until 90505d8. Warn in dev only — a release build must not log.
+  if (__DEV__ && raw) {
+    console.warn(
+      `[featureFlags] Unknown EXPO_PUBLIC_APP_ENV "${raw}". Falling back to ` +
+        `"${fallback}". Expected one of: ${APP_ENV_VALUES.join(', ')}.`
+    );
+  }
+
+  return fallback;
 }
 
 export const APP_ENV: AppEnv = resolveAppEnv();
