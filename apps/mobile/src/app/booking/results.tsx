@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -15,6 +15,9 @@ import { fetchCourts } from '@/lib/supabase/courts';
 import { fetchBallMachines } from '@/lib/supabase/ballMachines';
 import { fetchFlashDealsForFacility } from '@/lib/supabase/flashDeals';
 import { getBookingSearch, setBookingFacility } from '@/lib/bookingStore';
+import { isFeatureEnabled } from '@/lib/featureFlags';
+
+const bookingFiltersEnabled = isFeatureEnabled('bookingFilters');
 
 const L = {
   bg:      colors.bg,
@@ -195,24 +198,21 @@ export default function BookingResultsScreen() {
         <Text style={s.contextText} numberOfLines={1}>{contextParts.join('  ·  ')}</Text>
       </View>
 
-      <View style={s.actionRow}>
-        <TouchableOpacity
-          style={s.actionBtn}
-          activeOpacity={0.85}
-          onPress={() => Alert.alert('Coming Soon', 'Filtering by price, time, and Flash Deals is coming soon.')}
-        >
-          <Ionicons name="options-outline" size={16} color={L.navy} />
-          <Text style={s.actionBtnText}>Filters</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={s.actionBtn}
-          activeOpacity={0.85}
-          onPress={() => Alert.alert('Coming Soon', 'Custom sorting is coming soon.')}
-        >
-          <Ionicons name="swap-vertical-outline" size={16} color={L.navy} />
-          <Text style={s.actionBtnText}>Sort</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Filter/Sort are unbuilt (`bookingFilters` is deferred in
+          BETA_SCOPE.md) — rendering them only to answer with a "Coming Soon"
+          alert is a dead-end CTA, so the row is hidden until they work. */}
+      {bookingFiltersEnabled && (
+        <View style={s.actionRow}>
+          <TouchableOpacity style={s.actionBtn} activeOpacity={0.85}>
+            <Ionicons name="options-outline" size={16} color={L.navy} />
+            <Text style={s.actionBtnText}>Filters</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.actionBtn} activeOpacity={0.85}>
+            <Ionicons name="swap-vertical-outline" size={16} color={L.navy} />
+            <Text style={s.actionBtnText}>Sort</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {loading ? (
         <View style={s.center}>

@@ -15,6 +15,7 @@ import { fetchProfile, type UserProfile } from '@/lib/services/profile';
 import { getProfileCompletion } from '@/lib/profileCompletion';
 import { onProfileUpdated } from '@/lib/profileEvents';
 import { requireAuth } from '@/lib/authGuard';
+import { isFeatureEnabled, type FeatureKey } from '@/lib/featureFlags';
 
 // Actions that require a session â€” guard before navigating
 type MenuItem = {
@@ -24,6 +25,9 @@ type MenuItem = {
   route?: string;
   protected?: boolean;
   comingSoon?: boolean;
+  // Rows carrying a feature key only render where that feature is in this
+  // build's beta scope (see BETA_SCOPE.md).
+  feature?: FeatureKey;
 };
 
 function getMenuItems(directorStatus: string | null, coachStatus: string | null): MenuItem[] {
@@ -45,18 +49,20 @@ function getMenuItems(directorStatus: string | null, coachStatus: string | null)
           ? { icon: 'alert-circle-outline', label: 'Director Access', sub: 'Suspended',            route: '/apply-director', protected: true }
           : { icon: 'construct-outline', label: 'Become a Director', sub: 'Apply to run tournaments', route: '/apply-director', protected: true };
 
-  return [
+  const items: MenuItem[] = [
     { icon: 'trophy-outline',        label: 'My Tournaments',  sub: 'View registrations & holds',  route: '/my-tournaments',            protected: true  },
     { icon: 'pricetag-outline',      label: 'My Listings',     sub: 'Manage your Marketplace listings', route: '/marketplace/my-listings', protected: true },
-    { icon: 'wallet-outline',        label: 'Wallet',          sub: 'Credits, memberships & offers', route: '/wallet',                  protected: true  },
-    { icon: 'school-outline',        label: 'Lesson Marketplace', sub: 'Browse coach offers',        route: '/lessons' },
+    { icon: 'wallet-outline',        label: 'Wallet',          sub: 'Credits, memberships & offers', route: '/wallet',                  protected: true, feature: 'wallet' },
+    { icon: 'school-outline',        label: 'Lesson Marketplace', sub: 'Browse coach offers',        route: '/lessons', feature: 'lessonMarketplace' },
     directorRow,
-    coachRow,
+    { ...coachRow, feature: 'coachMarketplace' },
     { icon: 'people-outline',        label: 'My Connections',  sub: 'Partner Finder connections',  route: '/match/connections', protected: true },
     { icon: 'notifications-outline', label: 'Notifications',   sub: 'Manage alerts',               route: '/notifications-settings' },
     { icon: 'card-outline',          label: 'Payment History', sub: 'Holds & entries',             route: '/payments-settings',         protected: true  },
     { icon: 'settings-outline',      label: 'Settings',        sub: 'Account & preferences',       route: '/account-settings' },
   ];
+
+  return items.filter((item) => !item.feature || isFeatureEnabled(item.feature));
 }
 
 // â”€â”€â”€ Rating box â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

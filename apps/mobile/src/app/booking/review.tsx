@@ -15,6 +15,7 @@ import {
 import { confirmReservation } from '@/lib/supabase/reservationPayment';
 import { createBookingPaymentIntent, reservationPaymentErrorMessage } from '@/lib/payments/reservationPaymentIntent';
 import { getBookingFacility, getBookingSelection, getBookingReservationId } from '@/lib/bookingStore';
+import { isFeatureEnabled } from '@/lib/featureFlags';
 
 const L = {
   bg: colors.bg, page: colors.page, navy: colors.navy, gold: colors.gold,
@@ -81,13 +82,17 @@ export default function ReviewScreen() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Test-mode fallback: calls confirm_reservation() directly, the same
-  // boundary used before Stripe was wired in. Used for (a) free reservations
+  // Calls confirm_reservation() directly — the same boundary used before
+  // Stripe was wired in, and still the correct one for (a) free reservations
   // (create-booking-payment-intent returns no_payment_required — nothing to
-  // charge), and (b) continuing past the "payment UI unavailable in this
-  // build" state after a real PaymentIntent has already been created (see
-  // handlePay below and BOOKING_ENGINE_PHASE3_REPORT.md).
-  async function handleContinueTestMode() {
+  // charge), and (b) internal builds continuing past the "payment UI
+  // unavailable in this build" state after a real PaymentIntent has already
+  // been created (see handlePay below and BOOKING_ENGINE_PHASE3_REPORT.md).
+  //
+  // Case (b) is gated behind the `paidBooking` feature flag: confirming a
+  // priced reservation without a completed charge is a test-only affordance
+  // and must never be reachable in a production build.
+  async function handleConfirmWithoutPayment() {
     if (!reservation || confirming) return;
 
     if (reservation.status === 'confirmed') {
@@ -136,7 +141,7 @@ export default function ReviewScreen() {
           return;
         }
         if (result.code === 'no_payment_required') {
-          await handleContinueTestMode();
+          await handleConfirmWithoutPayment();
           return;
         }
         Alert.alert('Could Not Start Payment', reservationPaymentErrorMessage(result.code));
@@ -178,6 +183,12 @@ export default function ReviewScreen() {
   const endsAt = selection.endsAt ?? reservation.created_at;
   const { date, time } = formatDateTimeRange(startsAt, endsAt);
   const alreadyConfirmed = reservation.status === 'confirmed';
+  // Free reservations have no payment boundary to cross, so they stay in beta
+  // scope regardless of the paid-booking flag. Server-side, whether a charge is
+  // required is still decided by create-booking-payment-intent — this only
+  // picks which affordance to render.
+  const requiresPayment = reservation.final_price_cents > 0;
+  const paidBookingEnabled = isFeatureEnabled('paidBooking');
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
@@ -245,11 +256,30 @@ export default function ReviewScreen() {
         </View>
 
         {alreadyConfirmed ? (
-          <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handleContinueTestMode} disabled={confirming}>
+          <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handleConfirmWithoutPayment} disabled={confirming}>
             {confirming ? <ActivityIndicator size="small" color={L.white} /> : (
               <Text style={s.primaryBtnText}>Continue to Confirmation</Text>
             )}
           </TouchableOpacity>
+        ) : !requiresPayment ? (
+          <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handleConfirmWithoutPayment} disabled={confirming}>
+            {confirming ? <ActivityIndicator size="small" color={L.white} /> : (
+              <Text style={s.primaryBtnText}>Confirm Booking</Text>
+            )}
+          </TouchableOpacity>
+        ) : !paidBookingEnabled ? (
+          // Paid booking is out of beta scope until PaymentSheet is wired
+          // (execution plan 3.1). No CTA here: there is no honest way to take
+          // this payment yet, and confirming without one would be a fake
+          // success state.
+          <View style={s.paymentNotice}>
+            <Ionicons name="lock-closed-outline" size={16} color={L.textSub} />
+            <Text style={s.paymentNoticeText}>
+              Paid court bookings aren&apos;t available in this release yet. This court charges{' '}
+              {formatCents(reservation.final_price_cents)} — your hold will expire on its own, and you have not
+              been charged. Free courts can still be booked.
+            </Text>
+          </View>
         ) : paymentReady ? (
           <>
             <View style={s.paymentReadyCard}>
@@ -258,7 +288,7 @@ export default function ReviewScreen() {
                 Payment created for {formatCents(paymentReady.amountCents)}. The native payment UI isn&apos;t available in this build (see BOOKING_ENGINE_PHASE3_REPORT.md) — continue in test mode to finish verifying the booking flow.
               </Text>
             </View>
-            <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handleContinueTestMode} disabled={confirming}>
+            <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handleConfirmWithoutPayment} disabled={confirming}>
               {confirming ? <ActivityIndicator size="small" color={L.white} /> : (
                 <Text style={s.primaryBtnText}>Continue in Test Mode</Text>
               )}

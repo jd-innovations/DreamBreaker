@@ -19,6 +19,7 @@ import { colors, radius, spacing } from '@/theme';
 import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 import { useQuickActionsOrder } from '@/hooks/useQuickActionsOrder';
 import { QUICK_ACTIONS } from '@/constants/quickActions';
+import { isFeatureEnabled, type FeatureKey } from '@/lib/featureFlags';
 import { AppIcon } from '@/components/AppIcon';
 
 const LOGO = require('../../../assets/images/pba-logo-cropped.png');
@@ -28,7 +29,7 @@ const PANEL_WIDTH = Math.min(400, SCREEN_W * 0.94);
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
-type NavItem = { label: string; icon: IconName; href: string };
+type NavItem = { label: string; icon: IconName; href: string; feature?: FeatureKey };
 
 const PRIMARY_NAV: NavItem[] = [
   { label: 'Home', icon: 'home', href: '/(tabs)' },
@@ -38,13 +39,19 @@ const PRIMARY_NAV: NavItem[] = [
   { label: 'Partner Finder', icon: 'person-add', href: '/(tabs)/finder' },
 ];
 
-const MORE_NAV: NavItem[] = [
+// Entries carrying a `feature` key only render where that feature is in this
+// build's beta scope (see BETA_SCOPE.md).
+const ALL_MORE_NAV: NavItem[] = [
   { label: 'Profile', icon: 'person-outline', href: '/(tabs)/profile' },
   { label: 'Marketplace', icon: 'storefront-outline', href: '/(tabs)/marketplace' },
   { label: 'Chat', icon: 'chatbubble-outline', href: '/(tabs)/chat' },
   { label: 'Tournaments', icon: 'trophy-outline', href: '/(tabs)/tournaments' },
-  { label: 'Stats', icon: 'stats-chart-outline', href: '/(tabs)/stats' },
+  { label: 'Stats', icon: 'stats-chart-outline', href: '/(tabs)/stats', feature: 'myStats' },
 ];
+
+const MORE_NAV: NavItem[] = ALL_MORE_NAV.filter(
+  (item) => !item.feature || isFeatureEnabled(item.feature)
+);
 
 type AccordionItem = { label: string; href: string };
 type AccordionSection = { id: string; label: string; icon: IconName; items: AccordionItem[] };

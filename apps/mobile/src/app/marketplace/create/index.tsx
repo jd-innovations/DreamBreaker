@@ -22,6 +22,7 @@ import {
 import { draftListingId, uploadListingPhoto, cleanupAbandonedPhotos } from '@/lib/marketplace/photos';
 import { canCreateListing, publishListing } from '@/lib/marketplace/listingService';
 import { improveListing } from '@/lib/marketplace/improveListing';
+import { isFeatureEnabled } from '@/lib/featureFlags';
 
 const L = {
   navy: '#0A1228', gold: '#C9A84C', text: '#0A1228', textMuted: '#9AAABF',
@@ -414,11 +415,16 @@ function DescriptionStep({ draft, onChange }: { draft: Draft; onChange: (v: stri
       />
       <Text style={s.charCount}>{draft.description.length}/{DESCRIPTION_MAX_LENGTH}</Text>
 
-      <TouchableOpacity style={s.improveBtn} onPress={handleImprove} disabled={improving}>
-        {improving ? <ActivityIndicator color={L.navy} /> : (
-          <Text style={s.improveBtnText}>✨ Improve Listing</Text>
-        )}
-      </TouchableOpacity>
+      {/* AI listing rewrite depends on an Anthropic key whose production
+          provisioning is unverified — out of beta scope (BETA_SCOPE.md), so
+          the button is hidden rather than left to fail at tap time. */}
+      {isFeatureEnabled('marketplaceAiAssist') && (
+        <TouchableOpacity style={s.improveBtn} onPress={handleImprove} disabled={improving}>
+          {improving ? <ActivityIndicator color={L.navy} /> : (
+            <Text style={s.improveBtnText}>✨ Improve Listing</Text>
+          )}
+        </TouchableOpacity>
+      )}
 
       {warnings.map((w, i) => (
         <View key={i} style={s.warningRow}>
