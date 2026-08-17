@@ -125,15 +125,37 @@ Goal: make the codebase measurable before changing behavior.
   - The route guard is a redirect, not a render block: a blocked screen may mount
     for one frame before `replace` lands. Acceptable for these modules (none of
     them charge or write on mount), but not a substitute for auth guards.
-  - `EXPO_PUBLIC_APP_ENV` must be set to `internal` on QA builds or testers lose
-    developer access. It is not yet wired into `eas.json` profiles.
+  - ~~`EXPO_PUBLIC_APP_ENV` must be set to `internal` on QA builds or testers
+    lose developer access. It is not yet wired into `eas.json` profiles.~~
+    **RESOLVED.** The earlier diagnosis was wrong: the variable *was* already
+    wired in all three `eas.json` profiles (since the initial mobile commit).
+    The real defect was a value mismatch — the `preview` profile emitted
+    `EXPO_PUBLIC_APP_ENV=preview`, which `resolveAppEnv()` does not accept, so
+    it fell through to the `production` default and internal QA builds silently
+    behaved as production. Corrected to `internal`; all three profile values now
+    match the accepted `AppEnv` union.
+  - **Unrecognized `EXPO_PUBLIC_APP_ENV` values fail silently.** The fallback is
+    fail-closed (unknown → `production`), which is the safe direction, but it
+    gives no signal — that is precisely how the `preview` mismatch above went
+    unnoticed. Consider a dev-time warning when `raw` is set but unrecognized.
   - Dead-end "Coming Soon" alerts remain in included screens — inventoried in
     `BETA_SCOPE.md` and owned by item 6.2.
   - Facility pricing is not audited: if most facilities charge, the booking loop is
     effectively unavailable in beta even though it is listed as included.
-- Follow-up: wire `EXPO_PUBLIC_APP_ENV` into `eas.json` build profiles; item 6.2
-  for the remaining dead-end CTAs. Item 1.1's pending
-  `useFeatureRouteGuard.ts` retarget landed with this commit and is no longer
+- EAS profile → app env mapping (`apps/mobile/eas.json`, corrected 2026-08-17):
+
+  | Profile | `EXPO_PUBLIC_APP_ENV` | Hidden/internal modules visible |
+  | --- | --- | --- |
+  | `development` (dev client) | `development` | Yes |
+  | `preview` (internal QA) | `internal` | Yes |
+  | `production` (store/beta) | `production` | No |
+
+  Only public `EXPO_PUBLIC_*` values are set in `eas.json`; no secrets are
+  committed. A profile with no `env` entry still resolves safely — release
+  builds default to `production`.
+
+- Follow-up: item 6.2 for the remaining dead-end CTAs. Item 1.1's pending
+  `useFeatureRouteGuard.ts` retarget landed with `811b009` and is no longer
   outstanding.
 
 ### 0.2 Fix Mobile Lint Gate
