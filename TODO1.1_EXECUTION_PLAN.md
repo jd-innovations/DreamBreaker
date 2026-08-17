@@ -142,14 +142,24 @@ Goal: make the codebase measurable before changing behavior.
     and the accepted set. An unset value stays silent (that is the expected
     default), and release builds never log.
 
-    **This does not close the hole that caused the original bug.** The warning
-    is `__DEV__`-gated, but the `preview` mismatch manifested in an EAS preview
+    The runtime warning alone could not have caught the original bug: it is
+    `__DEV__`-gated, and the `preview` mismatch manifested in an EAS preview
     build where `__DEV__` is false. At runtime, "misconfigured preview build"
     and "correct production build" are indistinguishable — both present an
-    unusable value and must fall back to `production` — so no runtime check can
-    catch the former without logging in the latter. The effective guard is a
-    build-time validation of `eas.json`'s `EXPO_PUBLIC_APP_ENV` values against
-    `APP_ENV_VALUES` (CI lint step or a prebuild script). Not yet implemented.
+    unusable value and must fall back to `production`.
+
+    **Closed at build time instead.** `apps/mobile/scripts/validate-eas-env.js`
+    (run via `npm run validate:eas-env`) parses `eas.json` and fails non-zero if
+    any build profile sets `EXPO_PUBLIC_APP_ENV` to an unrecognized value *or*
+    omits it entirely, naming each bad profile and the accepted set. It carries
+    a `--self-test` mode whose fixtures include the exact `preview` shape that
+    caused the bug, and a non-fatal drift check that compares its own accepted
+    list against `APP_ENV_VALUES` in `featureFlags.ts`. This catches the problem
+    in the repo, where the information actually exists.
+
+    Residual: the check is not yet wired into CI or a prebuild hook, so it only
+    protects when someone runs it. Adding it to the release checklist or a CI
+    job is the remaining step.
   - Dead-end "Coming Soon" alerts remain in included screens — inventoried in
     `BETA_SCOPE.md` and owned by item 6.2.
   - Facility pricing is not audited: if most facilities charge, the booking loop is
