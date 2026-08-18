@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getSupabaseUrl, getSupabaseAnonKey } from "@/lib/supabase/env";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -9,9 +10,12 @@ export async function GET(request: Request) {
 
   if (code) {
     const cookieStore = await cookies();
+    // Validated accessors rather than `!` assertions: a missing variable is
+    // inlined by Next as the string "undefined", which would have produced a
+    // client that fails every OAuth exchange with no indication why.
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      getSupabaseUrl(),
+      getSupabaseAnonKey(),
       {
         cookies: {
           getAll() { return cookieStore.getAll(); },

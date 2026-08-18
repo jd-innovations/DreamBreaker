@@ -1,14 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from "./env";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http")
-  ? process.env.NEXT_PUBLIC_SUPABASE_URL
-  : "https://fbzetvkbhneptvfruilw.supabase.co";
+// Service-role client — bypasses RLS entirely. Server-side only; never import
+// this from a client component.
+//
+// Configuration is validated in ./env.ts, which also rejects the anon key being
+// supplied in the service-role slot. That mistake is otherwise invisible: it
+// yields a client that runs every privileged operation as an anonymous user,
+// dropping writes and returning empty reads without raising.
 
 export function createServiceClient() {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
-  return createClient<Database>(SUPABASE_URL, key, {
+  return createClient<Database>(getSupabaseUrl(), getSupabaseServiceRoleKey(), {
     auth: { persistSession: false },
   });
 }

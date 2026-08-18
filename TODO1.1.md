@@ -143,6 +143,16 @@ Interpretation: The app is more capable than the first audit, but not more beta-
 - Recommended implementation: Remove fallbacks, fail loudly on invalid environment variables, fix Vercel/env configuration, and add a startup health check.
 - Dependencies: Hosting environment access.
 - Estimated effort: S
+- Status update (2026-08-18): **Repo side complete; Vercel configuration still
+  unverified.** All hardcoded fallback URLs and anon keys are gone from
+  `web/src`, replaced by validated accessors in `web/src/lib/supabase/env.ts`,
+  plus a `prebuild` gate (`web/scripts/check-env.js`) that fails the build on
+  missing or malformed values — verified by an actually-failing build, not just
+  by inspection. `web/src/app/auth/callback/route.ts` was also using raw `!`
+  assertions and now uses the accessors. **The change is fail-closed: if the
+  Vercel variables are still wrong, the next deploy's build fails.** Fix them
+  before deploying. See the 2.3 completion notes in
+  `TODO1.1_EXECUTION_PLAN.md`.
 
 ### H3 - Complete analytics/event tracking
 

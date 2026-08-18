@@ -1286,6 +1286,145 @@ regardless of when 1.3 ships.**
 - Done when:
   - Environment misconfiguration cannot be silently masked.
 
+### Completion Notes - 2.3
+
+- Status: **Complete in the repo** (2026-08-18). **One external action is
+  required before this deploys — see the deploy hazard below.**
+
+#### What was wrong
+
+All three web Supabase clients carried a hardcoded production URL, and two of
+them also carried the production anon key, used whenever the environment
+variables "looked wrong":
+
+```ts
+const FALLBACK_URL = "https://fbzetvkbhneptvfruilw.supabase.co";
+const FALLBACK_ANON_KEY = "eyJhbGciOiJIUzI1NiIs…";
+const SUPABASE_URL = rawUrl?.startsWith("http") ? rawUrl : FALLBACK_URL;
+```
+
+The in-file comments explain why it was added: Vercel's `NEXT_PUBLIC_SUPABASE_URL`
+held the anon key, and Next inlines a missing variable as the string
+`"undefined"`. The workaround worked — which is the actual defect. **Any preview,
+staging, or local build with no Supabase configuration silently read and wrote
+the production database, and behaved perfectly while doing it.**
+
+Two consumers beyond the three files the plan names were also reading the
+variables raw, and one more turned out to matter:
+
+- `web/src/app/auth/callback/route.ts` built its **own** server client with
+  `process.env…!` assertions — a duplicate of `server.ts` that would have failed
+  every OAuth exchange silently on bad config. Fixed here; leaving it would have
+  made the item incoherent.
+- `web/src/app/layout.tsx:54` injects the URL and anon key into an inline
+  `app-config` JSON script with `?? ""`. **Nothing reads it** — verified by
+  search. Dead code that ships credentials into the HTML. Harmless (the anon key
+  is public by design) but pointless. Left alone; flagged below.
+- `web/src/app/dashboard/page.tsx:309` uses *missing env vars* as the trigger to
+  render **mock tournaments, matches, and stats**. That is item 6.1's territory,
+  not 2.3's, and it is now unreachable in any correctly-built deploy. Left alone;
+  flagged below.
+
+#### What changed
+
+- `web/src/lib/supabase/env.ts` (new) — single source of truth. Validated
+  accessors `getSupabaseUrl()`, `getSupabaseAnonKey()`,
+  `getSupabaseServiceRoleKey()`. No fallbacks. Handles the two Next.js specifics
+  that defeat naive checks: `NEXT_PUBLIC_*` is inlined by literal source-text
+  match (so every read is spelled out in full rather than looked up dynamically),
+  and a missing variable arrives as the **string** `"undefined"`, which `if
+  (!value)` does not catch. JWT-shaped values are redacted in error messages.
+- `web/src/lib/supabase/client.ts`, `server.ts`, `service.ts` — fallbacks
+  deleted; all three now call the accessors.
+- `web/src/app/auth/callback/route.ts` — `!` assertions replaced with the
+  validated accessors.
+- `web/scripts/check-env.js` (new) + `prebuild` and `check:env` scripts in
+  `web/package.json` — build-time gate. See below for why runtime validation
+  alone was not enough.
+
+Two checks worth calling out because they catch mistakes that are otherwise
+invisible:
+
+- **Anon key in the URL slot** — the exact misconfiguration this project shipped
+  with. A JWT does not parse as a URL, so it is rejected with a message naming
+  the likely cause.
+- **Anon key in the service-role slot** — the two keys are interchangeable at the
+  type level, so this produces a working client that runs every privileged
+  operation under RLS as an anonymous user: writes dropped, reads empty, nothing
+  raised.
+
+#### Why a build-time gate was added
+
+Runtime validation alone was verified insufficient. With the accessors in place
+but no `prebuild` check, `NEXT_PUBLIC_SUPABASE_URL="" npm run build` **succeeded**
+— nothing prerenders a Supabase client, so the empty value was simply baked into
+the bundle and would not have failed until a user opened a page. The deploy would
+have looked healthy.
+
+`web/scripts/check-env.js` moves that failure to the build, where CI and Vercel
+surface it before anyone ships. It is dependency-free CommonJS, loads the same
+`.env` files Next does via `@next/env` (without which it would have failed every
+local build, since the values live in `.env.local`), and carries a `--self-test`
+mode whose 11 fixtures include the exact anon-key-in-URL shape that caused the
+original bug. Same pattern and same lesson as
+`apps/mobile/scripts/validate-eas-env.js` from item 0.1 — and unlike that one,
+this is wired into `prebuild`, so it cannot be forgotten.
+
+#### Verification run
+
+- `cd web && npx tsc --noEmit` — **PASS**.
+- `cd web && npm run lint` — **PASS**, 0 errors / 65 warnings (unchanged baseline).
+- `node scripts/check-env.js --self-test` — **PASS**, 11/11 fixtures.
+- `node scripts/check-env.js` against the real `.env.local` — **PASS**.
+- `npm run build` with valid env — **PASS**, prebuild gate reports OK.
+- `NEXT_PUBLIC_SUPABASE_URL="" npm run build` — **FAILS, exit 1**, with
+  `NEXT_PUBLIC_SUPABASE_URL is not set. Expected https://<project-ref>.supabase.co`.
+  This is the check the plan asks for, and it is now a real gate rather than a claim.
+- **Runtime accessors exercised directly** — `env.ts` compiled standalone and run
+  under Node against 11 environment shapes: all valid, URL missing, URL as the
+  literal `"undefined"`, URL holding the anon key, anon key missing, anon key
+  holding the URL, `sb_publishable_…` key, `http://localhost` (allowed),
+  non-local `http` (rejected), service key equal to anon key, service key missing.
+  Every case produced the intended result, and JWT values were redacted in the
+  messages.
+- Static sweep: **no hardcoded project ref or anon key remains anywhere in
+  `web/src`**. The only raw `process.env.NEXT_PUBLIC_SUPABASE*` reads left are
+  inside `env.ts` and the two deliberately-untouched sites named above.
+
+#### Deploy hazard — read before shipping
+
+**This change is fail-closed. If Vercel's Supabase variables are still
+misconfigured, the next deploy's build will fail.** That is the intended
+trade — a failed build instead of a preview environment quietly mutating
+production data — but it means the ordering matters:
+
+1. Fix `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the
+   Vercel project (all environments: Production, Preview, Development), plus
+   `SUPABASE_SERVICE_ROLE_KEY` for server routes.
+2. Then deploy.
+
+The deleted comments asserted the variables were wrong. **That could not be
+verified from here** — the Vercel MCP connection was unavailable this session —
+so treat it as unconfirmed and check the dashboard before deploying.
+
+#### Risks remaining
+
+- **Vercel configuration is unverified.** See above. This is the one thing that
+  can turn a correct change into a broken deploy.
+- **The anon key is still in git history** (and in any prior bundle). It is
+  public by design and RLS-protected, so this is not a credential leak — but if
+  the project ever rotates to the new publishable-key format, the old JWT should
+  be revoked rather than left live.
+- **`layout.tsx`'s `app-config` script is dead code** that still emits the URL and
+  anon key into the HTML with a `?? ""` fallback. No consumer. Safe to delete in a
+  cleanup pass.
+- **`dashboard/page.tsx:309` renders mock data when env vars are absent.** Now
+  unreachable in a correctly-built deploy, but it is still a production code path
+  that fabricates tournaments, matches, and stats. Belongs to item 6.1.
+- The build gate runs on `prebuild`, so it protects `npm run build`. It does not
+  protect `next dev` — a developer with a broken `.env.local` still gets the
+  runtime error instead, which is the correct behavior for dev.
+
 ### 2.4 Create Production Config Inventory
 
 - Issue: Required secrets and public env vars are scattered.

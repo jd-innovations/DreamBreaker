@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev --experimental-https",
+    "prebuild": "node scripts/check-env.js",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:env": "node scripts/check-env.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
