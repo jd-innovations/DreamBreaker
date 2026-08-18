@@ -10,6 +10,7 @@ import { colors, radius } from '@/theme';
 import { PrimaryButton, SecondaryButton } from '@/components';
 import { fetchTournamentById } from '@/lib/supabase/tournaments';
 import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
+import { balanceDueCents, effectiveEntryFeeCents } from '@/lib/tournamentFees';
 import type { Tournament } from '@/lib/tournamentTypes';
 import type { DivisionData } from '@/data/divisions';
 
@@ -73,8 +74,11 @@ export default function HoldSuccessScreen() {
   }
 
   const holdCents    = tournament.holdFeeCents;
-  const entryCents   = tournament.entryFeeCents;
-  const balanceCents = entryCents - holdCents;
+  // Division override wins — see @/lib/tournamentFees. This screen also hands
+  // entryAmountCents to the register screen, so a wrong value here propagates
+  // into the balance quoted at checkout.
+  const entryCents   = effectiveEntryFeeCents(division?.entryFeeCents, tournament.entryFeeCents);
+  const balanceCents = balanceDueCents(entryCents, holdCents);
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>

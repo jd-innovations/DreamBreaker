@@ -15,6 +15,7 @@ import { fetchTournamentById } from '@/lib/supabase/tournaments';
 import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
 import { createHold, isPlayerHeld } from '@/lib/supabase/registrations';
 import { useTournamentEntryPayment } from '@/lib/payments/useTournamentEntryPayment';
+import { balanceDueCents, effectiveEntryFeeCents } from '@/lib/tournamentFees';
 import type { Tournament } from '@/lib/tournamentTypes';
 import type { DivisionData } from '@/data/divisions';
 
@@ -72,8 +73,11 @@ export default function HoldConfirmScreen() {
   }, [id, divisionId]);
 
   const holdCents    = tournament?.holdFeeCents ?? 0;
-  const entryCents   = tournament?.entryFeeCents ?? 0;
-  const balanceCents = entryCents - holdCents;
+  // The division's own fee wins, exactly as the server resolves it — quoting
+  // the tournament base fee here understated the balance on any division with
+  // an override.
+  const entryCents   = effectiveEntryFeeCents(division?.entryFeeCents, tournament?.entryFeeCents);
+  const balanceCents = balanceDueCents(entryCents, holdCents);
   const { payTournamentHold } = useTournamentEntryPayment();
 
   function handleConfirm() {
@@ -106,9 +110,19 @@ export default function HoldConfirmScreen() {
         });
         if (!result.ok) {
           setSaving(false);
-          if (result.reason !== 'canceled') {
-            Alert.alert('Payment Failed', 'We could not complete your deposit. Please try again.');
+          if (result.reason === 'canceled') return;
+          if (result.reason === 'pending_confirmation') {
+            // Charged, but the webhook hadn't landed yet. Never call this a
+            // failure, and send them somewhere they can watch it appear
+            // rather than leaving them on a button that would charge again.
+            Alert.alert(
+              'Payment Received',
+              "We're still confirming your hold. Check My Tournaments in a moment — no need to pay again.",
+              [{ text: 'OK', onPress: () => router.replace('/my-tournaments' as never) }],
+            );
+            return;
           }
+          Alert.alert('Payment Failed', 'We could not complete your deposit. Please try again.');
           return;
         }
         held = true;

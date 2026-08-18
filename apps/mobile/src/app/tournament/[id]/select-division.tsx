@@ -12,6 +12,7 @@ import { getRegistrationAvailability } from '@/lib/registrationGate';
 import { fetchTournamentById } from '@/lib/supabase/tournaments';
 import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
 import { fetchPlayerHolds, fetchPlayerRegistrations, isPlayerHeld, isPlayerRegistered } from '@/lib/supabase/registrations';
+import { effectiveEntryFeeCents } from '@/lib/tournamentFees';
 import type { Tournament } from '@/lib/tournamentTypes';
 import type { DivisionData } from '@/data/divisions';
 
@@ -296,7 +297,9 @@ export default function SelectDivisionScreen() {
         divisionName:     selectedDiv.name,
         divisionLevel:    selectedDiv.level,
         holdAmountCents:  String(tournament?.holdFeeCents ?? 0),
-        entryAmountCents: String(tournament?.entryFeeCents ?? 0),
+        // The chosen division's fee, not the tournament base fee — this is the
+        // number the register screen quotes and the server will charge.
+        entryAmountCents: String(effectiveEntryFeeCents(selectedDiv.entryFeeCents, tournament?.entryFeeCents)),
         date:             tournament?.date ?? '',
         venue:            tournament?.venue ?? '',
         city:             tournament?.city ?? '',

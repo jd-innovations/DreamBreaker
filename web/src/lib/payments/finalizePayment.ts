@@ -36,6 +36,39 @@ export function asStringRecord(value: unknown): Record<string, string> {
 }
 
 /**
+ * Reports a write that failed AFTER the payment was already marked succeeded —
+ * money moved and the domain side did not follow. Returns true when there was
+ * an error, so callers can `if (report(...)) return;`.
+ *
+ * Every one of these lines describes a real person who has been charged and
+ * has nothing to show for it, so they carry a stable, greppable marker
+ * (PAYMENT_RECONCILIATION_REQUIRED) and enough identifiers to reconstruct the
+ * intended outcome by hand: the payment, the Stripe intent, and the target
+ * rows. A production incident where a $10 hold was charged, marked succeeded,
+ * and silently produced no registration took hours to trace precisely because
+ * these writes discarded their errors. Do not add a write to this file
+ * without routing its error through here.
+ */
+function reportFinalizationFailure(
+  scope: string,
+  payment: PaymentRow,
+  context: Record<string, unknown>,
+  error: { message: string } | null,
+): boolean {
+  if (!error) return false;
+  const extra = Object.entries(context)
+    .map(([key, value]) => `${key}=${value ?? "none"}`)
+    .join(" ");
+  console.error(
+    `[${scope}] PAYMENT_RECONCILIATION_REQUIRED payment=${payment.id} ` +
+      `purpose=${payment.purpose_type} amount_cents=${payment.amount_cents} ` +
+      `payer=${payment.payer_user_id} intent=${payment.provider_payment_intent_id ?? "none"} ` +
+      `${extra} :: ${error.message}`,
+  );
+  return true;
+}
+
+/**
  * The single entrypoint for "this payment succeeded." Idempotent — calling
  * it twice for an already-succeeded payment is a no-op. Never call this
  * directly from a client-reachable code path without first having verified
@@ -44,22 +77,33 @@ export function asStringRecord(value: unknown): Record<string, string> {
  * completely.
  */
 export async function finalizePaymentSucceeded(service: ServiceClient, paymentId: string): Promise<void> {
-  const { data: payment } = await service
+  const { data: payment, error: readError } = await service
     .from("payments")
     .select("id, purpose_type, purpose_id, payer_user_id, amount_cents, metadata, status, provider, provider_payment_intent_id")
     .eq("id", paymentId)
     .maybeSingle();
 
+  if (readError) {
+    console.error(`[finalizePaymentSucceeded] Could not read payment ${paymentId} :: ${readError.message}`);
+    return;
+  }
   if (!payment) {
     console.error(`[finalizePaymentSucceeded] No payments row ${paymentId}`);
     return;
   }
   if (payment.status === "succeeded") return; // already finalized
 
-  await service
+  const { error: updateError } = await service
     .from("payments")
     .update({ status: "succeeded", confirmed_at: new Date().toISOString() })
     .eq("id", payment.id);
+
+  // If we can't even record the success, do NOT dispatch: the domain side
+  // would run against a payment still marked unconfirmed, and a webhook
+  // redelivery would re-run it with no idempotency anchor.
+  if (reportFinalizationFailure("finalizePaymentSucceeded", payment as PaymentRow, { step: "mark_succeeded" }, updateError)) {
+    return;
+  }
 
   await dispatchPaymentSucceeded(service, payment as PaymentRow);
 }
@@ -81,6 +125,15 @@ async function dispatchPaymentSucceeded(service: ServiceClient, payment: Payment
     await finalizeCoachOfferPurchase(service, payment);
   } else if (payment.purpose_type === "reservation_payment") {
     await finalizeReservationPayment(service, payment);
+  } else {
+    // An unrecognised purpose means we charged someone and have no idea what
+    // for. This is not hypothetical: a deployed build missing the
+    // "tournament_registration_hold" branch fell through here silently,
+    // banking a real $10 payment and creating nothing. If a purpose is
+    // charged, it must be handled — or at minimum, screamed about.
+    reportFinalizationFailure("dispatchPaymentSucceeded", payment, { step: "dispatch" }, {
+      message: `No finalizer for purpose_type "${payment.purpose_type}" — payment captured with no domain effect. Is this deployment behind the edge function that created it?`,
+    });
   }
 }
 
@@ -96,12 +149,17 @@ async function finalizeTournamentRegistrationHold(service: ServiceClient, paymen
     return;
   }
 
-  const { count } = await service
+  const { count, error: countError } = await service
     .from("registrations")
     .select("id", { count: "exact", head: true })
     .eq("tournament_id", tournamentId)
     .eq("player_id", playerId)
     .in("status", ["held", "registered", "checked_in", "waitlisted", "waitlist_offered"]);
+
+  // Can't confirm whether a duplicate exists — stop rather than risk a second
+  // hold on a player who already has one.
+  if (reportFinalizationFailure("finalizeTournamentRegistrationHold", payment,
+    { step: "duplicate_check", tournamentId, playerId }, countError)) return;
   if ((count ?? 0) > 0) return;
 
   const { data: tournament } = await service
@@ -114,7 +172,7 @@ async function finalizeTournamentRegistrationHold(service: ServiceClient, paymen
   const now = new Date();
   const holdExpiresAt = new Date(now.getTime() + holdHours * 60 * 60 * 1000).toISOString();
 
-  await service.from("registrations").insert({
+  const { error: insertError } = await service.from("registrations").insert({
     tournament_id: tournamentId,
     division_id: divisionId,
     player_id: playerId,
@@ -128,6 +186,9 @@ async function finalizeTournamentRegistrationHold(service: ServiceClient, paymen
     created_at: now.toISOString(),
     updated_at: now.toISOString(),
   });
+
+  reportFinalizationFailure("finalizeTournamentRegistrationHold", payment,
+    { step: "insert_hold", tournamentId, divisionId, playerId }, insertError);
 }
 
 async function finalizeTournamentRegistrationBalance(service: ServiceClient, payment: PaymentRow) {
@@ -141,16 +202,34 @@ async function finalizeTournamentRegistrationBalance(service: ServiceClient, pay
     return;
   }
 
-  const { data: registration } = await service
+  const { data: registration, error: readError } = await service
     .from("registrations")
     .select("id, status, player_id, tournament_id, division_id")
     .eq("id", registrationId)
     .maybeSingle();
 
-  if (!registration || registration.status !== "held") return;
+  if (reportFinalizationFailure("finalizeTournamentRegistrationBalance", payment,
+    { step: "read_registration", registrationId }, readError)) return;
+
+  if (!registration) {
+    reportFinalizationFailure("finalizeTournamentRegistrationBalance", payment,
+      { step: "read_registration", registrationId },
+      { message: "Balance paid against a registration that does not exist." });
+    return;
+  }
+  if (registration.status !== "held") {
+    // Already converted is the benign, idempotent case. Anything else means we
+    // took a balance payment for a spot that is no longer holdable.
+    if (registration.status !== "registered" && registration.status !== "checked_in") {
+      reportFinalizationFailure("finalizeTournamentRegistrationBalance", payment,
+        { step: "status_guard", registrationId, status: registration.status },
+        { message: "Balance paid but registration is not 'held' — needs manual review/refund." });
+    }
+    return;
+  }
 
   const now = new Date().toISOString();
-  await service
+  const { error: updateError } = await service
     .from("registrations")
     .update({
       status: "registered",
@@ -162,6 +241,9 @@ async function finalizeTournamentRegistrationBalance(service: ServiceClient, pay
     })
     .eq("id", registrationId)
     .eq("status", "held");
+
+  if (reportFinalizationFailure("finalizeTournamentRegistrationBalance", payment,
+    { step: "convert_hold", registrationId }, updateError)) return;
 
   // A hold converted with a named partner still owes a SECOND entry fee —
   // this player's balance payment covered only their own. Give the partner
@@ -208,8 +290,10 @@ async function ensureTeamObligation(
   });
 
   const group = Array.isArray(groupRows) ? groupRows[0] : groupRows;
-  if (groupError || !group?.initiator_member_id) {
-    console.error(`[ensureTeamObligation] payment ${payment.id} could not create team obligations:`, groupError?.message);
+  if (!group?.initiator_member_id || groupError) {
+    reportFinalizationFailure("ensureTeamObligation", payment,
+      { step: "ensure_group", tournamentId: input.tournamentId, divisionId: input.divisionId, partnerId: input.partnerId },
+      groupError ?? { message: "ensure_registration_group returned no initiator member id" });
     return;
   }
 
@@ -220,9 +304,8 @@ async function ensureTeamObligation(
     p_stripe_intent_id: payment.provider_payment_intent_id ?? undefined,
   });
 
-  if (error) {
-    console.error(`[ensureTeamObligation] payment ${payment.id} could not settle initiator obligation:`, error.message);
-  }
+  reportFinalizationFailure("ensureTeamObligation", payment,
+    { step: "settle_initiator", memberId: group.initiator_member_id }, error);
 }
 
 async function finalizeTournamentRegistrationEntry(service: ServiceClient, payment: PaymentRow) {
@@ -240,16 +323,19 @@ async function finalizeTournamentRegistrationEntry(service: ServiceClient, payme
 
   // Defense in depth against duplicate finalization beyond the webhook
   // idempotency table (e.g. a manual retry): skip if already registered.
-  const { count } = await service
+  const { count, error: countError } = await service
     .from("registrations")
     .select("id", { count: "exact", head: true })
     .eq("tournament_id", tournamentId)
     .eq("player_id", playerId)
     .in("status", ["registered", "checked_in", "waitlisted", "waitlist_offered"]);
+
+  if (reportFinalizationFailure("finalizeTournamentRegistrationEntry", payment,
+    { step: "duplicate_check", tournamentId, playerId }, countError)) return;
   if ((count ?? 0) > 0) return;
 
   const now = new Date().toISOString();
-  await service.from("registrations").insert({
+  const { error: insertError } = await service.from("registrations").insert({
     tournament_id: tournamentId,
     division_id: divisionId,
     player_id: playerId,
@@ -263,6 +349,9 @@ async function finalizeTournamentRegistrationEntry(service: ServiceClient, payme
     created_at: now,
     updated_at: now,
   });
+
+  if (reportFinalizationFailure("finalizeTournamentRegistrationEntry", payment,
+    { step: "insert_registration", tournamentId, divisionId, playerId }, insertError)) return;
 
   // This endpoint charges one player only. If a partner was named, that
   // partner still owes their own entry fee — record it rather than letting
@@ -293,7 +382,8 @@ async function finalizeTournamentTeamEntry(service: ServiceClient, payment: Paym
   const memberId = meta.memberId;
 
   if (!memberId) {
-    console.error(`[finalizeTournamentTeamEntry] payment ${payment.id} missing memberId metadata`);
+    reportFinalizationFailure("finalizeTournamentTeamEntry", payment, { step: "read_metadata" },
+      { message: "missing memberId metadata — cannot tell whose obligation this settles" });
     return;
   }
 
@@ -304,9 +394,8 @@ async function finalizeTournamentTeamEntry(service: ServiceClient, payment: Paym
     p_stripe_intent_id: payment.provider_payment_intent_id ?? undefined,
   });
 
-  if (error) {
-    console.error(`[finalizeTournamentTeamEntry] payment ${payment.id} member ${memberId} failed:`, error.message);
-  }
+  reportFinalizationFailure("finalizeTournamentTeamEntry", payment,
+    { step: "settle_member", memberId }, error);
 }
 
 // Coach Marketplace V1 Phase 3. The purchase row (coach_offer_purchases)
@@ -328,7 +417,8 @@ async function finalizeCoachOfferPurchase(service: ServiceClient, payment: Payme
     .maybeSingle();
 
   if (!purchase) {
-    console.error(`[finalizeCoachOfferPurchase] No coach_offer_purchases row ${purchaseId} for payment ${payment.id}`);
+    reportFinalizationFailure("finalizeCoachOfferPurchase", payment, { step: "read_purchase", purchaseId },
+      { message: "No coach_offer_purchases row for this payment." });
     return;
   }
   // Idempotency: a purchase can only ever leave 'payment_pending' once (the
@@ -340,17 +430,24 @@ async function finalizeCoachOfferPurchase(service: ServiceClient, payment: Payme
   const processingFeeStatus = payment.provider === "dev_test" ? "not_applicable_dev_test" : "pending_reconciliation";
   const now = new Date().toISOString();
 
-  await service
+  const { error: finalizeError } = await service
     .from("coach_offer_purchases")
     .update({ status: "finalized", paid_at: now, processing_fee_status: processingFeeStatus })
     .eq("id", purchase.id);
 
-  await service.rpc("finalize_coach_offer_purchase_inventory", {
+  // Stop here on failure: the inventory decrement and ledger event below are
+  // both keyed to this purchase having been finalized exactly once.
+  if (reportFinalizationFailure("finalizeCoachOfferPurchase", payment,
+    { step: "finalize_purchase", purchaseId }, finalizeError)) return;
+
+  const { error: inventoryError } = await service.rpc("finalize_coach_offer_purchase_inventory", {
     p_offer_id: purchase.offer_id,
     p_quantity: purchase.participant_quantity,
   });
+  reportFinalizationFailure("finalizeCoachOfferPurchase", payment,
+    { step: "decrement_inventory", purchaseId, offerId: purchase.offer_id }, inventoryError);
 
-  await service.from("coach_offer_purchase_ledger_events").insert({
+  const { error: ledgerError } = await service.from("coach_offer_purchase_ledger_events").insert({
     purchase_id: purchase.id,
     event_type: "purchase",
     amount_cents: purchase.buyer_total_charged_cents,
@@ -363,12 +460,19 @@ async function finalizeCoachOfferPurchase(service: ServiceClient, payment: Payme
       processingFeeStatus,
     },
   });
+  reportFinalizationFailure("finalizeCoachOfferPurchase", payment,
+    { step: "ledger_event", purchaseId }, ledgerError);
 
   // Phase 4: consumes the now-finalized purchase to issue the Wallet
   // voucher + its entitlement row(s). Self-idempotent (unique indexes on
   // both tables), so calling this is safe even though the payment_pending
   // guard above already means it only ever runs once per purchase today.
-  await service.rpc("create_coach_voucher_from_finalized_purchase", { p_purchase_id: purchase.id });
+  const { error: voucherError } = await service.rpc("create_coach_voucher_from_finalized_purchase", {
+    p_purchase_id: purchase.id,
+  });
+  // A buyer who paid and received no voucher has nothing they can redeem.
+  reportFinalizationFailure("finalizeCoachOfferPurchase", payment,
+    { step: "issue_voucher", purchaseId }, voucherError);
 }
 
 // Booking Engine Phase 3A. Unlike tournament registration (which inserts a
@@ -393,7 +497,8 @@ async function finalizeReservationPayment(service: ServiceClient, payment: Payme
     .maybeSingle();
 
   if (!reservation) {
-    console.error(`[finalizeReservationPayment] No reservations row ${reservationId} for payment ${payment.id}`);
+    reportFinalizationFailure("finalizeReservationPayment", payment, { step: "read_reservation", reservationId },
+      { message: "No reservations row for this payment." });
     return;
   }
 
@@ -408,15 +513,18 @@ async function finalizeReservationPayment(service: ServiceClient, payment: Payme
     // for Phase 3A — this is logged so it can be handled manually until a
     // refund foundation exists; it must NOT be silently confirmed, since the
     // slot itself may already be gone.
-    console.error(
-      `[finalizeReservationPayment] Payment ${payment.id} succeeded but reservation ${reservationId} is '${reservation.status}', not 'held' — needs manual review/refund.`,
-    );
+    reportFinalizationFailure("finalizeReservationPayment", payment,
+      { step: "status_guard", reservationId, status: reservation.status },
+      { message: "Reservation is not 'held' — needs manual review/refund." });
     return;
   }
 
-  await service
+  const { error: confirmError } = await service
     .from("reservations")
     .update({ status: "confirmed", confirmed_at: new Date().toISOString(), hold_expires_at: null })
     .eq("id", reservationId)
     .eq("status", "held");
+
+  reportFinalizationFailure("finalizeReservationPayment", payment,
+    { step: "confirm_reservation", reservationId }, confirmError);
 }

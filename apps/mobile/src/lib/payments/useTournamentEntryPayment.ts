@@ -52,6 +52,13 @@ export type PayTournamentEntryFailureReason =
   | 'invite_not_active'
   | 'no_payment_required'
   | 'canceled'
+  // NOT a failure. Stripe captured the payment, but the webhook hadn't
+  // reflected it before we stopped waiting. The money is real and the
+  // registration will appear. Callers MUST NOT show a failure message for
+  // this — telling someone their payment failed seconds after their card was
+  // charged is the worst thing this flow can do, and it invites a duplicate
+  // charge when they retry.
+  | 'pending_confirmation'
   | 'failed';
 
 export type PayTournamentEntryResult =
@@ -75,23 +82,42 @@ async function extractErrorCode(error: unknown): Promise<string> {
   return 'unknown_error';
 }
 
-async function waitForRegistration(tournamentId: string, playerId: string): Promise<boolean> {
-  // The registrations row is created by the webhook handler, asynchronously
-  // relative to presentPaymentSheet() resolving — poll briefly rather than
-  // assuming it already exists.
-  for (let attempt = 0; attempt < 10; attempt++) {
-    if (await isPlayerRegistered(tournamentId, playerId)) return true;
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+// How long to wait for the webhook to reflect a payment before handing the
+// user back a "still confirming" message. Measured production latency from
+// PaymentIntent creation to webhook finalization has been ~22s, and the poll
+// only starts once PaymentSheet closes — a 10s window (the original value)
+// expired on perfectly good payments and told people they had failed.
+const CONFIRMATION_TIMEOUT_MS = 30_000;
+
+/**
+ * Polls until the webhook's effect is visible, with backoff so a slow
+ * confirmation doesn't hammer the API.
+ *
+ * A false return means ONLY "not visible yet" — never "the payment failed".
+ * Stripe has already captured the money by this point; the webhook is
+ * authoritative and will land. Callers must not present this as a failure.
+ */
+async function waitForConfirmation(check: () => Promise<boolean>): Promise<boolean> {
+  const deadline = Date.now() + CONFIRMATION_TIMEOUT_MS;
+  let delay = 750;
+
+  while (Date.now() < deadline) {
+    if (await check()) return true;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    delay = Math.min(Math.round(delay * 1.4), 4000);
   }
-  return false;
+
+  // One last look after the final wait, so we never report "not yet" on a
+  // result that arrived during the sleep.
+  return check();
+}
+
+async function waitForRegistration(tournamentId: string, playerId: string): Promise<boolean> {
+  return waitForConfirmation(() => isPlayerRegistered(tournamentId, playerId));
 }
 
 async function waitForHold(tournamentId: string, divisionId: string, playerId: string): Promise<boolean> {
-  for (let attempt = 0; attempt < 10; attempt++) {
-    if (await isPlayerHeld(tournamentId, divisionId, playerId)) return true;
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
-  return false;
+  return waitForConfirmation(() => isPlayerHeld(tournamentId, divisionId, playerId));
 }
 
 // Team payments confirm ONE player's obligation, so the thing to wait for is
@@ -99,13 +125,11 @@ async function waitForHold(tournamentId: string, divisionId: string, playerId: s
 // 'confirmed', which requires the partner to have paid too and may not happen
 // for days.
 async function waitForOwnObligationPaid(groupId: string, playerId: string): Promise<boolean> {
-  for (let attempt = 0; attempt < 10; attempt++) {
+  return waitForConfirmation(async () => {
     const group = await fetchRegistrationGroup(groupId);
     const me = group ? memberFor(group, playerId) : null;
-    if (me?.paymentState === 'paid') return true;
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
-  return false;
+    return me?.paymentState === 'paid';
+  });
 }
 
 export function useTournamentEntryPayment() {
@@ -158,7 +182,7 @@ export function useTournamentEntryPayment() {
     // NOT itself proof the registration exists — poll for the
     // webhook-confirmed registrations row before reporting success.
     const registered = await waitForRegistration(input.tournamentId, input.playerId);
-    return registered ? { ok: true } : { ok: false, reason: 'failed' };
+    return registered ? { ok: true } : { ok: false, reason: 'pending_confirmation' };
   }
 
   async function payTournamentHold(input: PayTournamentHoldInput): Promise<PayTournamentEntryResult> {
@@ -184,7 +208,7 @@ export function useTournamentEntryPayment() {
     if (!payment.ok) return payment;
 
     const held = await waitForHold(input.tournamentId, input.divisionId, input.playerId);
-    return held ? { ok: true } : { ok: false, reason: 'failed' };
+    return held ? { ok: true } : { ok: false, reason: 'pending_confirmation' };
   }
 
   async function payTournamentBalance(input: PayTournamentBalanceInput): Promise<PayTournamentEntryResult> {
@@ -209,7 +233,7 @@ export function useTournamentEntryPayment() {
     if (!payment.ok) return payment;
 
     const registered = await waitForRegistration(input.tournamentId, input.playerId);
-    return registered ? { ok: true } : { ok: false, reason: 'failed' };
+    return registered ? { ok: true } : { ok: false, reason: 'pending_confirmation' };
   }
 
   // Doubles/mixed, initiating player. Creates the team and BOTH obligations
@@ -243,7 +267,7 @@ export function useTournamentEntryPayment() {
     if (!payment.ok) return payment;
 
     const paid = await waitForOwnObligationPaid(groupId, input.playerId);
-    return paid ? { ok: true, groupId } : { ok: false, reason: 'failed' };
+    return paid ? { ok: true, groupId } : { ok: false, reason: 'pending_confirmation' };
   }
 
   // The invited partner paying their own share of an existing team.
@@ -268,7 +292,7 @@ export function useTournamentEntryPayment() {
     if (!payment.ok) return payment;
 
     const paid = await waitForOwnObligationPaid(input.groupId, input.playerId);
-    return paid ? { ok: true, groupId: input.groupId } : { ok: false, reason: 'failed' };
+    return paid ? { ok: true, groupId: input.groupId } : { ok: false, reason: 'pending_confirmation' };
   }
 
   return {

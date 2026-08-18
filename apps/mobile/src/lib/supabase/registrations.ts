@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { balanceDueCents, effectiveEntryFeeCents } from '@/lib/tournamentFees';
 import type { TournamentRegistration, RegistrationStatus } from '@/lib/registrationStore';
 export type { TournamentRegistration };
 import type { HeldSpot } from '@/lib/tournamentStore';
@@ -43,6 +44,9 @@ export type RegistrationRow = {
     name: string;
     skill_min: number | null;
     skill_max: number | null;
+    // Division-level override of the tournament's base entry fee. This is the
+    // amount the server will actually charge — see @/lib/tournamentFees.
+    entry_fee_cents: number | null;
   } | null;
   player: { full_name: string | null; dupr: number | null } | null;
   partner: { full_name: string | null; dupr: number | null } | null;
@@ -93,7 +97,11 @@ function rowToRegistration(row: RegistrationRow): TournamentRegistration {
     registrationDate: row.created_at,
     status:           dbStatusToAppStatus(row.status),
     amountPaid:       row.entry_fee_paid_cents,
-    balanceDue:       Math.max(0, (t?.entry_fee_cents ?? 0) - row.entry_fee_paid_cents),
+    // Division fee overrides the tournament's, matching what the server charges.
+    balanceDue:       balanceDueCents(
+                        effectiveEntryFeeCents(div?.entry_fee_cents, t?.entry_fee_cents),
+                        row.entry_fee_paid_cents,
+                      ),
     partnerRequired:  row.needs_partner,
     partnerStatus:    row.partner_id ? 'selected' : row.needs_partner ? 'choose_later' : 'none',
     partnerId:        row.partner_id ?? undefined,
@@ -141,7 +149,7 @@ function rowToHeldSpot(row: RegistrationRow): HeldSpot {
     state:            t?.state ?? '',
     date:             t ? formatDate(t.event_date) : '',
     holdAmountCents:  row.hold_fee_paid_cents,
-    entryAmountCents: t?.entry_fee_cents ?? 0,
+    entryAmountCents: effectiveEntryFeeCents(div?.entry_fee_cents, t?.entry_fee_cents),
     status:           'held',
     heldAt:           row.created_at,
   };
@@ -152,7 +160,7 @@ const REG_SELECT = `
   status, hold_fee_paid_cents, entry_fee_paid_cents, needs_partner, created_at,
   registration_group_id,
   tournaments(name, venue_name, city, state, event_date, entry_fee_cents, hold_fee_cents),
-  divisions(name, skill_min, skill_max),
+  divisions(name, skill_min, skill_max, entry_fee_cents),
   player:profiles!registrations_player_id_fkey(full_name,dupr),
   partner:profiles!registrations_partner_id_fkey(full_name,dupr),
   registration_groups(id, status, registration_group_members(user_id, payment_state))

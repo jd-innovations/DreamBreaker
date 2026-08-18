@@ -20,6 +20,7 @@ import { useSlideMenu } from '@/components/SlideMenu';
 import { getUpcomingEvents, getCompletedEvents, type GameCard } from '@/lib/gameEventHelpers';
 import { getHeldSpots, type HeldSpot } from '@/lib/tournamentStore';
 import { getPlayerRegStatusInfo } from '@/lib/tournamentStatus';
+import { balanceDueCents } from '@/lib/tournamentFees';
 import { useSession } from '@/hooks/useSession';
 import { useProfile } from '@/hooks/useProfile';
 import { fetchUnreadPlayEventIds } from '@/lib/conversationService';
@@ -891,7 +892,7 @@ function CompletedContent({ events }: { events: (GameCard | SBGameCard)[] }) {
 
 function HeldTournamentCard({ spot }: { spot: HeldSpot }) {
   const fmt = (cents: number) => `$${Math.round(cents / 100)}`;
-  const balanceCents = spot.entryAmountCents - spot.holdAmountCents;
+  const balanceCents = balanceDueCents(spot.entryAmountCents, spot.holdAmountCents);
 
   return (
     <View style={hs.card}>

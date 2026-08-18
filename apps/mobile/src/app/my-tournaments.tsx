@@ -30,6 +30,7 @@ import {
   type RegistrationGroup,
 } from '@/lib/supabase/registrationGroups';
 import { useTournamentEntryPayment } from '@/lib/payments/useTournamentEntryPayment';
+import { balanceDueCents } from '@/lib/tournamentFees';
 
 const L = {
   bg:        colors.bg,
@@ -200,7 +201,7 @@ function RegistrationCard({ reg, team, userId, onCancel }: {
 // ─── Held Spot Card ───────────────────────────────────────────────────────────
 
 function HeldSpotCard({ spot, onRefresh }: { spot: HeldSpot; onRefresh: () => void }) {
-  const balance = spot.entryAmountCents - spot.holdAmountCents;
+  const balance = balanceDueCents(spot.entryAmountCents, spot.holdAmountCents);
 
   function handleCancel() {
     Alert.alert(
@@ -330,6 +331,12 @@ function TeamObligationCard({ group, userId, onRefresh }: {
         Alert.alert('Already Registered', 'You are already registered for this tournament.');
       } else if (result.reason === 'invite_not_active') {
         Alert.alert('Invite Unavailable', 'This team invite is no longer active.');
+      } else if (result.reason === 'pending_confirmation') {
+        // Charged; the webhook just hasn't caught up. Never call it a failure.
+        Alert.alert(
+          'Payment Received',
+          "We're still confirming your entry fee. This card will update shortly — no need to pay again.",
+        );
       } else {
         Alert.alert('Payment Failed', 'We could not complete your entry fee payment. Please try again.');
       }

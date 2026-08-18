@@ -20,6 +20,8 @@ import {
   createRegistration,
 } from '@/lib/supabase/registrations';
 import { useTournamentEntryPayment } from '@/lib/payments/useTournamentEntryPayment';
+import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
+import { balanceDueCents, effectiveEntryFeeCents } from '@/lib/tournamentFees';
 import type { Tournament } from '@/lib/tournamentTypes';
 
 const L = {
@@ -85,6 +87,18 @@ async function fetchRealConnections(uid: string): Promise<Connection[]> {
 
 function requiresPartner(divisionName: string): boolean {
   return /doubles|mixed/i.test(divisionName);
+}
+
+// Shown when Stripe captured the payment but the webhook hadn't reflected it
+// before we stopped waiting. This is NOT a failure — saying so would tell
+// someone their card payment failed moments after it succeeded, and push them
+// into paying twice. Route them to My Tournaments, where it will appear.
+function alertPendingConfirmation() {
+  Alert.alert(
+    'Payment Received',
+    "We're still confirming your registration. Check My Tournaments in a moment — no need to pay again.",
+    [{ text: 'OK', onPress: () => router.replace('/my-tournaments' as never) }],
+  );
 }
 
 type PartnerChoice = 'choose_later' | 'select_connection' | 'find';
@@ -240,7 +254,7 @@ export default function TournamentRegisterScreen() {
   const divisionName   = p.divisionName    ?? 'Division';
   const divisionLevel  = p.divisionLevel   ?? '';
   const holdCents      = parseInt(p.holdAmountCents  ?? '0', 10);
-  const entryCents     = parseInt(p.entryAmountCents ?? '0', 10);
+  const paramEntryCents = parseInt(p.entryAmountCents ?? '0', 10);
   const date           = p.date  ?? '—';
   const venue          = p.venue ?? '—';
   const city           = p.city  ?? '';
@@ -248,7 +262,15 @@ export default function TournamentRegisterScreen() {
   const location       = city ? `${venue}, ${city} ${state}` : venue;
 
   const partnerRequired = requiresPartner(divisionName);
-  const balanceCents    = entryCents - holdCents;
+
+  // The entry fee arrives as a route param, but this is the last screen before
+  // a card is charged, so it is re-resolved from the division itself rather
+  // than trusted. A param carrying the tournament base fee for a division that
+  // overrides it quoted one price and charged another; a stale 0 would also
+  // send a paid division down the free-registration path below.
+  const [resolvedEntryCents, setResolvedEntryCents] = useState<number | null>(null);
+  const entryCents   = resolvedEntryCents ?? paramEntryCents;
+  const balanceCents = balanceDueCents(entryCents, holdCents);
 
   const [connections,        setConnections]        = useState<Connection[]>([]);
   const [partnerChoice,      setPartnerChoice]      = useState<PartnerChoice>('choose_later');
@@ -264,6 +286,14 @@ export default function TournamentRegisterScreen() {
     } else {
       setConnections([]);
     }
+    fetchDivisionsForTournament(tournamentId).then(divs => {
+      if (!active) return;
+      const div = divs.find(d => d.id === divisionId);
+      // Resolved against the tournament we may not have loaded yet, so read the
+      // base fee from the param as the fallback leg (it is the tournament fee
+      // in every caller that doesn't know the division's override).
+      setResolvedEntryCents(effectiveEntryFeeCents(div?.entryFeeCents, paramEntryCents));
+    }).catch(() => {});
     fetchTournamentById(tournamentId).then(t => {
       if (!active) return;
       if (t) {
@@ -277,7 +307,7 @@ export default function TournamentRegisterScreen() {
       }
     });
     return () => { active = false; };
-  }, [tournamentId, user?.id]));
+  }, [tournamentId, divisionId, paramEntryCents, user?.id]));
 
   function handleChoicePress(choice: PartnerChoice) {
     setPartnerChoice(choice);
@@ -300,6 +330,13 @@ export default function TournamentRegisterScreen() {
       }
     }
     requireAuth(user?.id, async () => {
+      // Never decide "free vs paid" from an unresolved fee — that decision
+      // routes between a direct client insert and a real charge.
+      if (resolvedEntryCents === null) {
+        Alert.alert('One moment', 'Still loading this division’s pricing. Please try again in a second.');
+        return;
+      }
+
       setSubmitting(true);
       const alreadyReg = await isPlayerRegistered(tournamentId, user!.id);
       if (alreadyReg) {
@@ -331,12 +368,17 @@ export default function TournamentRegisterScreen() {
         if (!result.ok) {
           setSubmitting(false);
           if (result.reason === 'canceled') return;
+          if (result.reason === 'pending_confirmation') {
+            alertPendingConfirmation();
+            return;
+          }
           Alert.alert('Payment Failed', 'We could not complete your balance payment. Please try again.');
           return;
         }
         success = true;
-      } else if (entryCents === 0) {
-        // Free entry — no payment involved, nothing to confirm.
+      } else if (resolvedEntryCents === 0) {
+        // Genuinely free entry (confirmed against the division, not inferred
+        // from a route param) — no payment involved, nothing to confirm.
         const reg = await createRegistration({
           tournamentId,
           divisionId,
@@ -373,6 +415,10 @@ export default function TournamentRegisterScreen() {
             );
             return;
           }
+          if (result.reason === 'pending_confirmation') {
+            alertPendingConfirmation();
+            return;
+          }
           Alert.alert('Payment Failed', 'We could not complete your payment. Please try again.');
           return;
         }
@@ -397,6 +443,10 @@ export default function TournamentRegisterScreen() {
           if (result.reason === 'canceled') return;
           if (result.reason === 'already_registered') {
             Alert.alert('Already Registered', 'You are already registered for this tournament.');
+            return;
+          }
+          if (result.reason === 'pending_confirmation') {
+            alertPendingConfirmation();
             return;
           }
           Alert.alert('Payment Failed', 'We could not complete your payment. Please try again.');

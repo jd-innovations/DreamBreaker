@@ -28,6 +28,7 @@ import {
 import { useSession } from '@/hooks/useSession';
 import { useTournamentBookmarks } from '@/hooks/useTournamentBookmarks';
 import { getRegistrationAvailability } from '@/lib/registrationGate';
+import { balanceDueCents, effectiveEntryFeeCents } from '@/lib/tournamentFees';
 import { fetchTournamentById } from '@/lib/supabase/tournaments';
 import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
 import { fetchPlayerHolds, fetchPlayerRegistrations } from '@/lib/supabase/registrations';
@@ -750,7 +751,8 @@ export default function TournamentDetail() {
                               divisionName:     d.name,
                               divisionLevel:    d.level,
                               holdAmountCents:  String(tournament.holdFeeCents),
-                              entryAmountCents: String(tournament.entryFeeCents),
+                              // This division's fee, not the tournament base fee.
+                              entryAmountCents: String(effectiveEntryFeeCents(d.entryFeeCents, tournament.entryFeeCents)),
                               date:             tournament.date,
                               venue:            tournament.venue,
                               city:             tournament.city,
@@ -1064,7 +1066,9 @@ export default function TournamentDetail() {
                   >
                     <Text style={s.registerBtnLabel}>Complete Registration</Text>
                     <Text style={s.registerBtnSub}>
-                      {fmt(tournament.entryFeeCents - tournament.holdFeeCents)} Balance
+                      {fmt(heldSpots[0]
+                        ? balanceDueCents(heldSpots[0].entryAmountCents, heldSpots[0].holdAmountCents)
+                        : balanceDueCents(tournament.entryFeeCents, tournament.holdFeeCents))} Balance
                     </Text>
                   </TouchableOpacity>
                 ) : (
