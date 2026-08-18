@@ -1129,7 +1129,29 @@ Goal: make backend state reproducible and safe.
 
 ### Completion Notes - 2.1
 
-- Status: **Phases 0, 1 and 2 DONE (2026-08-18). PHASE 2 PASSED. Phases 3–4 outstanding.**
+- Status: **RECONCILIATION COMPLETE (2026-08-18).** `supabase migration list --linked`
+  shows **34 migrations, `local` == `remote` on every row** — zero local-only, zero
+  remote-only. Item 2.1's "done when" is met: the database can be recreated from
+  repo state, proven by rebuilding it, not by inspection.
+
+  Sequence: Phase 0 committed the re-baseline; Phase 1 renamed the 15 aliases and
+  quarantined what production lacked; Phase 2 replayed the repo onto an empty
+  preview branch and diffed it against production; Phase 3 recorded the one
+  remaining production-only object (`check_in_registration`) with a metadata-only
+  `migration repair`. Details: `docs/DB_MIGRATION_RECONCILIATION.md` §3.1–§3.4.
+
+  **Still deliberately outside the replay path** (`supabase/migrations_pending/`):
+  PAR v1 ×2, gated on algorithm approval, and account deletion, which is item 1.3's
+  to apply. Both are absent from production by intent, so excluding them is what
+  keeps the repo an accurate mirror.
+
+  **One honest caveat:** the from-scratch replay was run against the 33-migration
+  set, before `20260814000000` was returned to the path. The 34-set has not been
+  replayed end to end. That file is a single `CREATE OR REPLACE FUNCTION` plus
+  grants, depends only on tables created far earlier, and is byte-identical to what
+  production runs — low risk, but untested as a set.
+
+  Superseded status line (kept for history): Phases 0, 1 and 2 DONE, Phase 2 PASSED.
 
   **Item 2.1's core goal is met: the database can be recreated from repo state.**
   Verified empirically, not by inspection — a disposable preview branch was reset

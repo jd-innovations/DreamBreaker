@@ -5,6 +5,12 @@ Project: `fbzetvkbhneptvfruilw` (production)
 Owner item: `TODO1.1_EXECUTION_PLAN.md` **2.1**
 Blocks: `TODO1.1_EXECUTION_PLAN.md` **1.3** (account deletion deployment)
 
+> **Update 2026-08-18 (final) — RECONCILIATION COMPLETE.** `supabase migration
+> list --linked` now shows **34 migrations with `local` == `remote` on every row**:
+> zero local-only, zero remote-only. The last delta was closed by recording
+> `20260814000000` in production history (§3.4). Item 2.1's goal — the database
+> can be recreated from repo state — is met and verified.
+>
 > **Update 2026-08-18 (later) — Phase 2 is DONE and PASSED.** The repo replays
 > cleanly onto an empty database and reproduces production exactly, with one
 > known, deliberate exception. Full results and the parity table: **§3.3**.
@@ -55,10 +61,11 @@ a historical record plus the still-valid recipe for branch verification.
 4. **PAR v1 is not deployed.** Its tables came in via the baseline, but **0 of 10**
    PAR functions and **0 of 5** PAR triggers exist in production. PAR rating
    processing does not run in production today.
-5. **QR check-in is already live in production but absent from migration history.**
-   `check_in_registration()` matches the repo file exactly — see the correction in
-   §2.5. It needs a history repair, not an apply. Phase 2 confirmed this from the
-   other direction: it is the *only* object the repo fails to reproduce (§3.3).
+5. ~~**QR check-in is already live in production but absent from migration history.**~~
+   **RESOLVED 2026-08-18** by a metadata-only history repair — see §3.4.
+   `check_in_registration()` matched the repo file exactly (§2.5), and Phase 2
+   confirmed it from the other direction: it was the *only* object the repo failed
+   to reproduce (§3.3).
 6. **Four hollow rows in production's migration history** (§2.6) mean production
    cannot be rebuilt from its own recorded history. The repo can.
 7. **Phase 2 PASSED** (§3.3): the repo replays cleanly from empty and matches
@@ -471,6 +478,40 @@ preview branches** from 2026-07-25 and 2026-08-06 (`par-*`, `rebaseline-verify`,
 `rebaseline-verify-par`), all still `ACTIVE_HEALTHY` and all but one reporting
 `MIGRATIONS_FAILED` — now explained by §2.6. At $0.01344/hour each that is roughly
 **$4.50/day**. They are the user's to delete.
+
+### 3.4 Closing the last delta — **EXECUTED 2026-08-18**
+
+`20260814000000_tournament_qr_checkin_phase5_1.sql` was returned from
+`supabase/migrations_pending/` to the replay path, then recorded in production:
+
+```
+supabase migration repair --linked --status applied 20260814000000
+→ Repaired migration history: [20260814000000] => applied
+```
+
+**Metadata only — nothing was executed against the schema.** Verified immediately
+after: `check_in_registration()`'s body hash is unchanged
+(`0a7d31cb966ec7e4184ebe89b69c4bc5`, the same value measured before the repair),
+and the public table count is unchanged at 86. The repair recorded the file's real
+5,855 characters of SQL, so this row is **not** hollow like the four in §2.6.
+
+This was safe precisely because §2.5 had already proved the repo file's function
+body is byte-identical to the live one. The repair records reality; it does not
+assert it.
+
+**Result — `supabase migration list --linked`:**
+
+```
+34 migrations, local == remote on every row
+0 local-only     0 remote-only
+```
+
+**Honest caveat:** Phase 2's from-scratch replay was run against the 33-migration
+set, before this file was returned. The 34-migration set has not been replayed
+end-to-end. The added migration is a single `CREATE OR REPLACE FUNCTION` plus
+grants, depending only on tables created much earlier in the chain, and it is
+byte-identical to what production already runs — so the risk is very low, but it
+is untested as a set. A repeat of the §3.3 branch test would close it.
 
 ### Phase 3 — Apply account deletion (see §4)
 
