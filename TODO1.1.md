@@ -153,6 +153,16 @@ Interpretation: The app is more capable than the first audit, but not more beta-
   Vercel variables are still wrong, the next deploy's build fails.** Fix them
   before deploying. See the 2.3 completion notes in
   `TODO1.1_EXECUTION_PLAN.md`.
+- **CONFIRMED 2026-08-18: the Vercel variables ARE still wrong.** Verified from
+  the live production build at `pickleballapp.app` — `layout.tsx` bakes the env
+  values into an inline `app-config` JSON blob, and that blob shows
+  `supabaseUrl` holding the **anon JWT** rather than a URL. The deleted code
+  comments were accurate and the misconfiguration is current. The site works
+  today only because the removed fallback constants were covering for it.
+  **`NEXT_PUBLIC_SUPABASE_URL` must be fixed in the Vercel project (Production,
+  Preview and Development) before the next web deploy, or the `prebuild` gate
+  will fail the build.** This is now the single blocking action on commit
+  `39e8452`.
 
 ### H3 - Complete analytics/event tracking
 

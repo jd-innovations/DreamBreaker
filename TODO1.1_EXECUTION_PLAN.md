@@ -1129,7 +1129,39 @@ Goal: make backend state reproducible and safe.
 
 ### Completion Notes - 2.1
 
-- Status: **ACTIVE — Phases 0 and 1 DONE (2026-08-18), Phases 2–4 outstanding.**
+- Status: **Phases 0, 1 and 2 DONE (2026-08-18). PHASE 2 PASSED. Phases 3–4 outstanding.**
+
+  **Item 2.1's core goal is met: the database can be recreated from repo state.**
+  Verified empirically, not by inspection — a disposable preview branch was reset
+  to empty, the repo's 33 migrations replayed onto it cleanly (exit 0), and its
+  catalog was compared against production. Tables, columns, constraints, indexes,
+  triggers, policies and all 2604 grants match by hash. The four deltas are all
+  explained and none is repo drift; the only missing object is
+  `check_in_registration`, from the QR migration deliberately held out of the
+  replay path. Full parity table and method: `docs/DB_MIGRATION_RECONCILIATION.md` §3.3.
+  Production was never written to; the branch was deleted afterwards.
+
+  **Two discoveries that correct earlier notes:**
+  - **Four hollow rows in production's migration history** (§2.6) —
+    `support_tickets`, `transactional_email`, `waitlist_sweeper_templates`,
+    `schedule_waitlist_sweeper` are recorded with a version and name but **zero
+    executable SQL** (72 chars of comment). The original audit put all four in
+    "Bucket A, no action needed" on the strength of a matching version number.
+    **Production cannot be rebuilt from its own history because of them** — that is
+    why every preview branch on this project reports `MIGRATIONS_FAILED`. The repo
+    holds the real DDL, so the repo is unaffected.
+  - **`20260817010000_registration_team_payment_groups` was applied to production**
+    between the last session and this one (33rd history row). It has been returned
+    from `migrations_pending/` to `supabase/migrations/` after verifying all its
+    objects exist in production.
+
+  **Recommended next step for 2.1:** return
+  `20260814000000_tournament_qr_checkin_phase5_1.sql` to the replay path and
+  `supabase migration repair --status applied 20260814000000`. That closes the last
+  delta and gets the repo to exact parity. Safe — §2.5 proved the repo's function
+  body is byte-identical to production's.
+
+  Superseded status line (kept for history): Phases 0 and 1 DONE, Phases 2–4 outstanding.
   Audit completed 2026-08-17; the two local-only phases were executed 2026-08-18 in
   `chore(db): normalize local migration history`. **2.1 remains the gate for item
   1.3's deployment** — account deletion cannot reach production until Phase 2

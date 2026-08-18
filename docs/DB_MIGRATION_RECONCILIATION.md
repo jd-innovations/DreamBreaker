@@ -5,6 +5,13 @@ Project: `fbzetvkbhneptvfruilw` (production)
 Owner item: `TODO1.1_EXECUTION_PLAN.md` **2.1**
 Blocks: `TODO1.1_EXECUTION_PLAN.md` **1.3** (account deletion deployment)
 
+> **Update 2026-08-18 (later) — Phase 2 is DONE and PASSED.** The repo replays
+> cleanly onto an empty database and reproduces production exactly, with one
+> known, deliberate exception. Full results and the parity table: **§3.3**.
+> That work also uncovered **four hollow rows** in production's migration history
+> (§2.6) — the reason every preview branch ever created for this project reports
+> `MIGRATIONS_FAILED`.
+>
 > **Update 2026-08-18 — Phases 0 and 1 are DONE.** Both are local-only and touched
 > nothing in production. `supabase/migrations/` now contains exactly the 32
 > migrations recorded in production's history — nothing more, after the 2026-08-18
@@ -13,9 +20,11 @@ Blocks: `TODO1.1_EXECUTION_PLAN.md` **1.3** (account deletion deployment)
 > §2.5 carries a **correction** to a 2026-08-17 finding about QR check-in.
 > Phases 2–4 remain outstanding.
 
-**Status of production: UNCHANGED. Nothing in this document has been applied.**
-No migration was applied, no `db push` or `migration repair` was run, no edge
-function was deployed, and no production data was modified. Every finding below
+**Status of production: UNCHANGED.** No migration was applied to production, no
+`db push --linked`, no `migration repair`, no edge function deployed, no
+production data modified. Phase 2 created a **disposable preview branch**
+(`reconcile-verify`, ref `uhhsovbrwyifojawvgah`), reset and replayed the repo onto
+it, compared it against production read-only, and deleted it. Every finding below
 came from read-only queries against `supabase_migrations.schema_migrations`,
 `information_schema`, and `pg_catalog`.
 
@@ -48,7 +57,13 @@ a historical record plus the still-valid recipe for branch verification.
    processing does not run in production today.
 5. **QR check-in is already live in production but absent from migration history.**
    `check_in_registration()` matches the repo file exactly — see the correction in
-   §2.5. It needs a history repair, not an apply.
+   §2.5. It needs a history repair, not an apply. Phase 2 confirmed this from the
+   other direction: it is the *only* object the repo fails to reproduce (§3.3).
+6. **Four hollow rows in production's migration history** (§2.6) mean production
+   cannot be rebuilt from its own recorded history. The repo can.
+7. **Phase 2 PASSED** (§3.3): the repo replays cleanly from empty and matches
+   production on tables, columns, constraints, indexes, triggers, policies, grants,
+   and enum content.
 
 ---
 
@@ -59,7 +74,9 @@ Repo worktree: **36 files**.
 
 ### 2.1 Bucket A — present in both, identical version (17)
 
-No action needed.
+No action needed **for 13 of them**. ⚠️ **Four are hollow in production** — the
+version matches but production's recorded SQL is empty. See §2.6. This corrects
+the original "no action needed" verdict.
 
 ```
 20260725000000 baseline_from_prod          20260807000000 transactional_email
@@ -132,7 +149,44 @@ Verified object-by-object against production.
 | `20260725010000` | par_v1_organized_events | **Not applied.** `par_game_processing` table exists (came via baseline), but **0 of 10** named PAR functions and **0 of 5** PAR triggers exist. | PAR algorithm approval + replay validation. `AGENTS.md` forbids implementing PAR before the spec marks it approved. |
 | `20260725011000` | par_v1_replay_engine | **Not applied.** `par_replay_jobs` table absent. | Same as above; depends on `20260725010000`. |
 | `20260814000000` | tournament_qr_checkin_phase5_1 | **Already live in production, unrecorded in history.** Applied directly via `CREATE OR REPLACE`; the function body is byte-identical to this file once comments are stripped. See the correction in §2.5. | A history repair under a chosen version number — not an apply. |
+| ~~`20260817010000`~~ | ~~registration_team_payment_groups~~ | **APPLIED to production 2026-08-18** (33rd history row, `created_by` null = CLI push). All objects verified present: 8/8 indexes, 2/2 RLS, 7/7 functions, 6 policies, 3/3 enums. Returned to `supabase/migrations/`. | **Resolved.** |
 | `20260817000000` | account_deletion | **Not applied.** `profiles_id_fkey` present, `profiles.deleted_at` absent, index absent. No prior version of this migration exists in production. | This document (2.1). |
+
+### 2.6 Hollow rows in production history — **discovered 2026-08-18**
+
+Four rows in `supabase_migrations.schema_migrations` carry a version and a name
+but **no executable SQL**. Each is 72 characters, entirely a comment:
+
+```
+-- applied via MCP apply_migration, backfilled version to match filename;
+```
+
+| Version | Name | Recorded length | Executable SQL |
+| --- | --- | --- | --- |
+| `20260806000000` | support_tickets | 72 | **0 bytes** |
+| `20260807000000` | transactional_email | 72 | **0 bytes** |
+| `20260807010000` | waitlist_sweeper_templates | 72 | **0 bytes** |
+| `20260807020000` | schedule_waitlist_sweeper | 72 | **0 bytes** |
+
+The real DDL was applied out of band and never recorded; these rows were
+backfilled purely to make the version numbers line up with filenames. The repo
+holds the genuine SQL for all four — `20260806000000_support_tickets.sql` alone
+is 11,782 bytes and creates two enums, the `support_tickets` table, RLS, and
+three policies.
+
+**Consequence: production's own migration history cannot rebuild production.**
+A branch replaying it applies 12 migrations, records `support_tickets` as done
+while creating nothing, then dies on `20260807203530_support_ticket_context`,
+which does `ALTER TABLE support_tickets`. Verified directly on the throwaway
+branch: `support_tickets` absent, yet `20260806000000` present in its history.
+
+This is why **every** preview branch on this project reports `MIGRATIONS_FAILED`,
+including `rebaseline-verify` from 2026-07-25 — the failure `DB_REBASELINE_PLAN.md`
+attributed to the `uq_conversation` expression bug was, at least latterly, this.
+
+**The repo is unaffected and is strictly better than production's history.** No
+action is needed in `supabase/migrations/`; the hollow rows matter only if anyone
+tries to rebuild from production's recorded history rather than from the repo.
 
 ### 2.4 Bucket D — production-only, missing from repo (15)
 
@@ -343,6 +397,80 @@ spot-check `conversations.uq_conversation_pair`, `profiles` column list,
 `coach_offer_purchases` columns, and `check_in_registration`'s body hash. Delete
 the branch immediately after (`supabase branches delete reconcile-verify`) — it
 bills while alive.
+
+### 3.3 Phase 2 — **EXECUTED 2026-08-18. PASSED.**
+
+Method: created preview branch `reconcile-verify` (ref `uhhsovbrwyifojawvgah`),
+reset it to empty and replayed the repo with
+`supabase db reset --db-url "<branch session pooler>" --no-seed --yes`
+(**never `--linked`**), then compared the branch against production with a
+read-only catalog fingerprint. Branch deleted afterwards.
+
+Two environment notes for whoever repeats this:
+- The direct host `db.<ref>.supabase.co` is **IPv6-only** and fails to resolve on
+  this network. Use the **session pooler on port 5432** — the env output gives the
+  pooler on 6543 (transaction mode, wrong for migrations); change the port.
+- Docker Desktop is now installed and running (daemon 29.6.2), so the CLI can
+  containerise `pg_dump`/`psql`. `DB_REBASELINE_PLAN.md`'s prerequisite section is
+  stale on this point.
+
+**Replay result: all 33 migrations applied cleanly from an empty database, exit 0**
+— including `20260806000000_support_tickets`, which production's own history
+cannot produce (§2.6).
+
+**Parity fingerprint — branch vs production:**
+
+| Category | Production | Branch | Verdict |
+| --- | --- | --- | --- |
+| tables | 93 | 93 | ✅ identical hash |
+| columns | 1075 | 1075 | ✅ identical hash |
+| constraints | 472 | 472 | ✅ identical hash |
+| indexes | 316 | 316 | ✅ identical hash |
+| triggers | 72 | 72 | ✅ identical hash |
+| policies | 257 | 257 | ✅ identical hash |
+| grants | 2604 | 2604 | ✅ identical hash |
+| sequences | 0 | 0 | ✅ |
+| **functions** | **895** | **894** | ⚠️ one missing — explained below |
+| enums | 154 | 154 | ✅ semantically identical — explained below |
+| extensions | 11 | 11 | ✅ explained below |
+| publications | 14 | 7 | ✅ explained below |
+
+**All four deltas explained; none is repo drift:**
+
+1. **functions 895 vs 894 — `check_in_registration` only.** Narrowed by
+   first-letter grouping (only `C` differed, 21 vs 20) then listed. This is the
+   function created by `20260814000000_tournament_qr_checkin_phase5_1.sql`, which
+   is deliberately held in `supabase/migrations_pending/`. Production has it
+   because it was applied directly. **Expected, and precisely what §2.5 predicted.**
+2. **enums — labels identical.** All 31 types match label-for-label and in order on
+   both sides. The fingerprint differed only on `enumsortorder`, which is a float:
+   production carries fractional ordering from `ALTER TYPE … ADD VALUE`, a fresh
+   build numbers them 1..n. No semantic difference.
+3. **extensions — `pg_net@0.20.3` (prod) vs `0.20.4` (branch).** Every other
+   extension and version matches. Platform patch level on a newer branch image.
+4. **publications — `supabase_realtime` membership is identical** (same 7 public
+   tables). Production's extra 7 rows are
+   `supabase_realtime_messages_publication` over `realtime.messages_2026_08_15..21`,
+   auto-created daily partitions in the platform-managed `realtime` schema. A fresh
+   branch has none yet.
+
+**Conclusion: `supabase/migrations/` reproduces production exactly, with the single
+deliberate exception of the held-back QR migration.** Item 2.1's core goal — "the
+database can be recreated from repo state" — is met.
+
+**Recommended follow-up to reach 100%:** return
+`20260814000000_tournament_qr_checkin_phase5_1.sql` to `supabase/migrations/` and
+`supabase migration repair --status applied 20260814000000`. Safe because §2.5
+already proved the repo file's function body is byte-identical to production's
+(`0a7d31cb…`, 1827 chars comment-stripped), so the repair records reality rather
+than asserting it. Deferred here because it touches production history and was
+outside the Phase 2 brief.
+
+**Housekeeping flagged, not actioned:** `list_branches` shows **14 abandoned
+preview branches** from 2026-07-25 and 2026-08-06 (`par-*`, `rebaseline-verify`,
+`rebaseline-verify-par`), all still `ACTIVE_HEALTHY` and all but one reporting
+`MIGRATIONS_FAILED` — now explained by §2.6. At $0.01344/hour each that is roughly
+**$4.50/day**. They are the user's to delete.
 
 ### Phase 3 — Apply account deletion (see §4)
 
