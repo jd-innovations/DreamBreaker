@@ -17,7 +17,6 @@ import { fetchTournamentById } from '@/lib/supabase/tournaments';
 import {
   isPlayerRegistered,
   fetchPlayerHolds,
-  convertHoldToRegistration,
   createRegistration,
 } from '@/lib/supabase/registrations';
 import { useTournamentEntryPayment } from '@/lib/payments/useTournamentEntryPayment';
@@ -220,7 +219,7 @@ const oc = StyleSheet.create({
 export default function TournamentRegisterScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useSession();
-  const { payTournamentEntry } = useTournamentEntryPayment();
+  const { payTournamentEntry, payTournamentBalance, payTournamentTeamEntry } = useTournamentEntryPayment();
   const p = useLocalSearchParams<{
     id: string;
     tournamentName: string;
@@ -320,12 +319,22 @@ export default function TournamentRegisterScreen() {
       const existingHold = holds.find(h => h.tournamentId === tournamentId && h.divisionId === divisionId);
 
       let success = false;
+      let teamGroupId = '';
       if (existingHold) {
-        // Existing hold conversion still writes the paid amount directly —
-        // not yet migrated onto the shared payment foundation. Tracked
-        // separately; out of scope for this pass.
-        const reg = await convertHoldToRegistration(existingHold.id, entryCents);
-        success = reg != null;
+        const result = await payTournamentBalance({
+          registrationId: existingHold.id,
+          tournamentId,
+          playerId: user!.id,
+          partnerId: partner?.player.id,
+        });
+
+        if (!result.ok) {
+          setSubmitting(false);
+          if (result.reason === 'canceled') return;
+          Alert.alert('Payment Failed', 'We could not complete your balance payment. Please try again.');
+          return;
+        }
+        success = true;
       } else if (entryCents === 0) {
         // Free entry — no payment involved, nothing to confirm.
         const reg = await createRegistration({
@@ -337,6 +346,38 @@ export default function TournamentRegisterScreen() {
           partnerId:         partner?.player.id,
         });
         success = reg != null;
+      } else if (partnerRequired && partner) {
+        // Doubles/mixed with a named partner: each player owes their OWN
+        // entry fee. This charges the initiating player for their share
+        // only and leaves the partner an invite they pay separately — the
+        // team is not confirmed until both have paid (see
+        // supabase/functions/create-tournament-team-entry-payment-intent).
+        const result = await payTournamentTeamEntry({
+          tournamentId,
+          divisionId,
+          playerId:  user!.id,
+          partnerId: partner.player.id,
+        });
+
+        if (!result.ok) {
+          setSubmitting(false);
+          if (result.reason === 'canceled') return;
+          if (result.reason === 'already_registered') {
+            Alert.alert('Already Registered', 'You are already registered for this tournament.');
+            return;
+          }
+          if (result.reason === 'partner_already_registered') {
+            Alert.alert(
+              'Partner Unavailable',
+              `${partner.player.name} is already registered for this tournament. Choose a different partner.`,
+            );
+            return;
+          }
+          Alert.alert('Payment Failed', 'We could not complete your payment. Please try again.');
+          return;
+        }
+        teamGroupId = result.groupId;
+        success = true;
       } else {
         // Paid entry: the client never declares payment success itself. It
         // only presents Stripe's PaymentSheet; the registration row is
@@ -385,6 +426,19 @@ export default function TournamentRegisterScreen() {
         state,
         partnerName:   partner?.player.name ?? '',
         partnerStatus,
+        // Set only on the per-player team path. The success screen uses it to
+        // say "you're paid, your partner still owes" instead of implying the
+        // whole team is in.
+        teamGroupId,
+        // Add to Calendar needs the raw event date (not the pre-formatted
+        // `date` display string above) plus street address -- both already
+        // loaded on fetchedTournament, so no extra fetch is needed. Omitted
+        // if the tournament somehow hasn't loaded by submit time; the
+        // registration-success screen treats a missing eventDate as "no
+        // calendar CTA" rather than guessing.
+        eventDate:    fetchedTournament?.eventDate ?? '',
+        venueAddress: fetchedTournament?.venueAddress ?? '',
+        zipCode:      fetchedTournament?.zipCode ?? '',
       },
     } as never);
     });

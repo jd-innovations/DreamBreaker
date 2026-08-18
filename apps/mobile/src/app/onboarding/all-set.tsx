@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Easing, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +7,7 @@ import { colors, radius, spacing } from '@/theme';
 import { AppIcon, type AppIconName } from '@/components';
 import { useOnboarding } from '@/lib/onboarding/state';
 import { finalizeOnboarding } from '@/lib/onboarding/finalize';
+import { haptics } from '@/lib/haptics';
 
 const L = colors;
 const PAGE_BG = '#F8F5EF';
@@ -83,10 +83,10 @@ export default function AllSetScreen() {
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined); }, 70),
-      setTimeout(() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined); }, 260),
-      setTimeout(() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined); }, 560),
-      setTimeout(() => { Haptics.selectionAsync().catch(() => undefined); }, 1020),
+      setTimeout(() => { haptics.success(); }, 70),
+      setTimeout(() => { haptics.light(); }, 260),
+      setTimeout(() => { haptics.medium(); }, 560),
+      setTimeout(() => { haptics.selection(); }, 1020),
     ];
 
     const shadeAnimation = Animated.sequence([
@@ -232,11 +232,12 @@ function FinalCTA() {
     setSubmitting(false);
 
     if (!result.ok) {
+      haptics.error();
       Alert.alert('Could not finish setup', result.error);
       return;
     }
 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+    haptics.success();
 
     if (result.needsEmailConfirmation) {
       Alert.alert(

@@ -27,6 +27,7 @@ export type PaymentRow = {
   metadata: unknown;
   status: string;
   provider: string;
+  provider_payment_intent_id: string | null;
 };
 
 export function asStringRecord(value: unknown): Record<string, string> {
@@ -45,7 +46,7 @@ export function asStringRecord(value: unknown): Record<string, string> {
 export async function finalizePaymentSucceeded(service: ServiceClient, paymentId: string): Promise<void> {
   const { data: payment } = await service
     .from("payments")
-    .select("id, purpose_type, purpose_id, payer_user_id, amount_cents, metadata, status, provider")
+    .select("id, purpose_type, purpose_id, payer_user_id, amount_cents, metadata, status, provider, provider_payment_intent_id")
     .eq("id", paymentId)
     .maybeSingle();
 
@@ -70,10 +71,157 @@ export async function finalizePaymentSucceeded(service: ServiceClient, paymentId
 async function dispatchPaymentSucceeded(service: ServiceClient, payment: PaymentRow) {
   if (payment.purpose_type === "tournament_registration_entry") {
     await finalizeTournamentRegistrationEntry(service, payment);
+  } else if (payment.purpose_type === "tournament_registration_hold") {
+    await finalizeTournamentRegistrationHold(service, payment);
+  } else if (payment.purpose_type === "tournament_registration_balance") {
+    await finalizeTournamentRegistrationBalance(service, payment);
+  } else if (payment.purpose_type === "tournament_team_entry") {
+    await finalizeTournamentTeamEntry(service, payment);
   } else if (payment.purpose_type === "coach_offer_purchase") {
     await finalizeCoachOfferPurchase(service, payment);
   } else if (payment.purpose_type === "reservation_payment") {
     await finalizeReservationPayment(service, payment);
+  }
+}
+
+async function finalizeTournamentRegistrationHold(service: ServiceClient, payment: PaymentRow) {
+  const meta = asStringRecord(payment.metadata);
+  const tournamentId = meta.tournamentId ?? payment.purpose_id;
+  const divisionId = meta.divisionId;
+  const playerId = meta.playerId ?? payment.payer_user_id;
+  const needsPartner = meta.needsPartner === "true";
+
+  if (!divisionId) {
+    console.error(`[finalizeTournamentRegistrationHold] payment ${payment.id} missing divisionId metadata`);
+    return;
+  }
+
+  const { count } = await service
+    .from("registrations")
+    .select("id", { count: "exact", head: true })
+    .eq("tournament_id", tournamentId)
+    .eq("player_id", playerId)
+    .in("status", ["held", "registered", "checked_in", "waitlisted", "waitlist_offered"]);
+  if ((count ?? 0) > 0) return;
+
+  const { data: tournament } = await service
+    .from("tournaments")
+    .select("hold_duration_hours")
+    .eq("id", tournamentId)
+    .maybeSingle();
+
+  const holdHours = Number(tournament?.hold_duration_hours ?? 72);
+  const now = new Date();
+  const holdExpiresAt = new Date(now.getTime() + holdHours * 60 * 60 * 1000).toISOString();
+
+  await service.from("registrations").insert({
+    tournament_id: tournamentId,
+    division_id: divisionId,
+    player_id: playerId,
+    status: "held",
+    hold_fee_paid_cents: payment.amount_cents,
+    entry_fee_paid_cents: 0,
+    hold_expires_at: holdExpiresAt,
+    stripe_hold_intent_id: payment.provider_payment_intent_id,
+    needs_partner: needsPartner,
+    director_added: false,
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  });
+}
+
+async function finalizeTournamentRegistrationBalance(service: ServiceClient, payment: PaymentRow) {
+  const meta = asStringRecord(payment.metadata);
+  const registrationId = meta.registrationId;
+  const partnerId = meta.partnerId || null;
+  const entryFeeCents = Number.parseInt(meta.entryFeeCents ?? "", 10);
+
+  if (!registrationId || !Number.isFinite(entryFeeCents) || entryFeeCents <= 0) {
+    console.error(`[finalizeTournamentRegistrationBalance] payment ${payment.id} missing registration metadata`);
+    return;
+  }
+
+  const { data: registration } = await service
+    .from("registrations")
+    .select("id, status, player_id, tournament_id, division_id")
+    .eq("id", registrationId)
+    .maybeSingle();
+
+  if (!registration || registration.status !== "held") return;
+
+  const now = new Date().toISOString();
+  await service
+    .from("registrations")
+    .update({
+      status: "registered",
+      partner_id: partnerId,
+      entry_fee_paid_cents: entryFeeCents,
+      converted_at: now,
+      updated_at: now,
+      stripe_entry_intent_id: payment.provider_payment_intent_id,
+    })
+    .eq("id", registrationId)
+    .eq("status", "held");
+
+  // A hold converted with a named partner still owes a SECOND entry fee —
+  // this player's balance payment covered only their own. Give the partner
+  // their own obligation so the team can't look complete on one payment.
+  await ensureTeamObligation(service, payment, {
+    tournamentId: meta.tournamentId || registration.tournament_id || "",
+    divisionId: meta.divisionId || registration.division_id || "",
+    playerId: registration.player_id,
+    partnerId,
+    amountCents: entryFeeCents,
+  });
+}
+
+// Shared bridge from the single-payer registration paths (direct entry, and
+// hold -> balance conversion) into the per-player team model. It creates the
+// team + both obligations, then settles ONLY the paying player's own share.
+// The partner is left 'invited' and pays through
+// create-tournament-team-member-payment-intent.
+//
+// No-op for singles and for any registration without a named partner, which
+// is why the existing flows are otherwise unchanged.
+async function ensureTeamObligation(
+  service: ServiceClient,
+  payment: PaymentRow,
+  input: { tournamentId: string; divisionId: string; playerId: string; partnerId: string | null; amountCents: number },
+) {
+  if (!input.partnerId || !input.tournamentId || !input.divisionId) return;
+  if (input.partnerId === input.playerId) return;
+  if (!Number.isFinite(input.amountCents) || input.amountCents <= 0) return;
+
+  const { data: tournament } = await service
+    .from("tournaments")
+    .select("registration_closes_at")
+    .eq("id", input.tournamentId)
+    .maybeSingle();
+
+  const { data: groupRows, error: groupError } = await service.rpc("ensure_registration_group", {
+    p_tournament_id: input.tournamentId,
+    p_division_id: input.divisionId,
+    p_initiator_id: input.playerId,
+    p_partner_id: input.partnerId,
+    p_amount_due_cents: input.amountCents,
+    p_expires_at: tournament?.registration_closes_at ?? undefined,
+  });
+
+  const group = Array.isArray(groupRows) ? groupRows[0] : groupRows;
+  if (groupError || !group?.initiator_member_id) {
+    console.error(`[ensureTeamObligation] payment ${payment.id} could not create team obligations:`, groupError?.message);
+    return;
+  }
+
+  const { error } = await service.rpc("mark_registration_group_member_paid", {
+    p_member_id: group.initiator_member_id,
+    p_payment_id: payment.id,
+    p_amount_cents: input.amountCents,
+    p_stripe_intent_id: payment.provider_payment_intent_id ?? undefined,
+  });
+
+  if (error) {
+    console.error(`[ensureTeamObligation] payment ${payment.id} could not settle initiator obligation:`, error.message);
   }
 }
 
@@ -109,11 +257,56 @@ async function finalizeTournamentRegistrationEntry(service: ServiceClient, payme
     status: "registered",
     hold_fee_paid_cents: 0,
     entry_fee_paid_cents: payment.amount_cents,
+    stripe_entry_intent_id: payment.provider_payment_intent_id,
     needs_partner: needsPartner,
     director_added: false,
     created_at: now,
     updated_at: now,
   });
+
+  // This endpoint charges one player only. If a partner was named, that
+  // partner still owes their own entry fee — record it rather than letting
+  // the team look complete. (The mobile client routes doubles-with-partner
+  // through create-tournament-team-entry-payment-intent instead; this covers
+  // any caller that still comes through here.)
+  await ensureTeamObligation(service, payment, {
+    tournamentId,
+    divisionId,
+    playerId,
+    partnerId,
+    amountCents: payment.amount_cents,
+  });
+}
+
+// Per-player team obligation (supabase/migrations/20260817010000_registration_
+// team_payment_groups.sql). This settles exactly ONE player's share of a
+// doubles/mixed team — the payer's own registrations row is created here, and
+// their teammate's obligation is untouched. The team only becomes 'confirmed'
+// when the last outstanding member's payment lands here too; that transition
+// is derived by trg_sync_registration_group_status from the member rows, so
+// nothing in this function can declare a team confirmed on its own.
+//
+// Idempotent via mark_registration_group_member_paid(), which returns the
+// existing registration id unchanged for an already-paid member.
+async function finalizeTournamentTeamEntry(service: ServiceClient, payment: PaymentRow) {
+  const meta = asStringRecord(payment.metadata);
+  const memberId = meta.memberId;
+
+  if (!memberId) {
+    console.error(`[finalizeTournamentTeamEntry] payment ${payment.id} missing memberId metadata`);
+    return;
+  }
+
+  const { error } = await service.rpc("mark_registration_group_member_paid", {
+    p_member_id: memberId,
+    p_payment_id: payment.id,
+    p_amount_cents: payment.amount_cents,
+    p_stripe_intent_id: payment.provider_payment_intent_id ?? undefined,
+  });
+
+  if (error) {
+    console.error(`[finalizeTournamentTeamEntry] payment ${payment.id} member ${memberId} failed:`, error.message);
+  }
 }
 
 // Coach Marketplace V1 Phase 3. The purchase row (coach_offer_purchases)

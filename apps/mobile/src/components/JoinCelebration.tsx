@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
 import { Dimensions, Modal, StyleSheet, Text, View } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, withDelay, withSpring,
   withSequence, withRepeat, Easing, runOnJS,
@@ -8,6 +7,7 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
 import { PickleballIcon } from './PickleballIcon';
+import { haptics } from '@/lib/haptics';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const BALL_COLORS = [colors.gold, colors.navy, '#FFFFFF'];
@@ -75,7 +75,7 @@ export function JoinCelebration({
 
   useEffect(() => {
     if (!visible) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    haptics.success();
     badgeScale.value = withSequence(
       withSpring(1.15, { damping: 6, stiffness: 180 }),
       withSpring(1, { damping: 8 }),

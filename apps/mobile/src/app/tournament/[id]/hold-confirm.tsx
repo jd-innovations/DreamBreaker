@@ -14,6 +14,7 @@ import { getRegistrationAvailability } from '@/lib/registrationGate';
 import { fetchTournamentById } from '@/lib/supabase/tournaments';
 import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
 import { createHold, isPlayerHeld } from '@/lib/supabase/registrations';
+import { useTournamentEntryPayment } from '@/lib/payments/useTournamentEntryPayment';
 import type { Tournament } from '@/lib/tournamentTypes';
 import type { DivisionData } from '@/data/divisions';
 
@@ -73,6 +74,7 @@ export default function HoldConfirmScreen() {
   const holdCents    = tournament?.holdFeeCents ?? 0;
   const entryCents   = tournament?.entryFeeCents ?? 0;
   const balanceCents = entryCents - holdCents;
+  const { payTournamentHold } = useTournamentEntryPayment();
 
   function handleConfirm() {
     if (!tournament || !division) {
@@ -93,16 +95,35 @@ export default function HoldConfirmScreen() {
       }
 
       setSaving(true);
-      const hold = await createHold({
-        tournamentId:     tournament.id,
-        divisionId:       division.id,
-        playerId:         user!.id,
-        holdFeePaidCents: holdCents,
-        needsPartner:     /doubles|mixed/i.test(division.name),
-      });
+      const needsPartner = /doubles|mixed/i.test(division.name);
+      let held = false;
+      if (holdCents > 0) {
+        const result = await payTournamentHold({
+          tournamentId: tournament.id,
+          divisionId:   division.id,
+          playerId:     user!.id,
+          needsPartner,
+        });
+        if (!result.ok) {
+          setSaving(false);
+          if (result.reason !== 'canceled') {
+            Alert.alert('Payment Failed', 'We could not complete your deposit. Please try again.');
+          }
+          return;
+        }
+        held = true;
+      } else {
+        held = await createHold({
+          tournamentId:     tournament.id,
+          divisionId:       division.id,
+          playerId:         user!.id,
+          holdFeePaidCents: 0,
+          needsPartner,
+        }).then(Boolean);
+      }
       setSaving(false);
 
-      if (!hold) {
+      if (!held) {
         Alert.alert('Error', 'Failed to hold your spot. Please try again.');
         return;
       }
@@ -197,7 +218,7 @@ export default function HoldConfirmScreen() {
         </View>
 
         <PrimaryButton
-          label={saving ? 'Saving…' : `Confirm ${fmt(holdCents)} Deposit`}
+          label={saving ? 'Processing...' : holdCents > 0 ? `Pay ${fmt(holdCents)} Deposit` : 'Confirm Hold'}
           onPress={handleConfirm}
           style={{ marginBottom: 12 }}
         />

@@ -12,7 +12,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { BlurView } from 'expo-blur';
-import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors, radius, spacing } from '@/theme';
@@ -21,6 +20,7 @@ import { useQuickActionsOrder } from '@/hooks/useQuickActionsOrder';
 import { QUICK_ACTIONS } from '@/constants/quickActions';
 import { isFeatureEnabled, type FeatureKey } from '@/lib/featureFlags';
 import { AppIcon } from '@/components/AppIcon';
+import { haptics } from '@/lib/haptics';
 
 const LOGO = require('../../../assets/images/pba-logo-cropped.png');
 
@@ -128,7 +128,7 @@ export function SlideMenuProvider({ children }: { children: React.ReactNode }) {
   const progress = useSharedValue(0); // 0 = closed, 1 = open
 
   const open = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    haptics.light();
     setIsOpen(true);
     progress.value = withSpring(1, { damping: 22, stiffness: 210 });
   }, [progress]);
@@ -531,5 +531,4 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
-
 

@@ -582,7 +582,9 @@ export default function CommandCenterScreen() {
                 key={item.label}
                 style={[rh.row, i === arr.length - 1 && rh.rowLast]}
               >
-                <StatusChip label={item.label} variant={item.variant} />
+                <View style={rh.statusCol}>
+                  <StatusChip label={item.label} variant={item.variant} />
+                </View>
                 <Text style={rh.count}>{item.count}</Text>
                 <View style={rh.barBg}>
                   <View style={[
@@ -786,15 +788,16 @@ const ci4 = StyleSheet.create({
 
 const rh = StyleSheet.create({
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   rowLast: { borderBottomWidth: 0 },
-  count:  { color: L.navy, fontSize: 15, fontWeight: '800', width: 28, textAlign: 'right' },
-  barBg:  { flex: 1, height: 6, backgroundColor: L.page, borderRadius: 3, overflow: 'hidden' },
+  statusCol: { width: 112, flexShrink: 0, alignItems: 'flex-start' },
+  count:  { color: L.navy, fontSize: 15, fontWeight: '800', width: 24, textAlign: 'right', flexShrink: 0 },
+  barBg:  { flex: 1, minWidth: 72, height: 6, backgroundColor: L.page, borderRadius: 3, overflow: 'hidden' },
   barFill:{ height: 6, borderRadius: 3 },
-  pct:    { color: L.textSub, fontSize: 11, fontWeight: '600', width: 32, textAlign: 'right' },
+  pct:    { color: L.textSub, fontSize: 11, fontWeight: '600', width: 34, textAlign: 'right', flexShrink: 0 },
 });
 
 // ─── Screen styles ────────────────────────────────────────────────────────────

@@ -4055,6 +4055,160 @@ export type Database = {
           },
         ]
       }
+      registration_group_members: {
+        Row: {
+          amount_due_cents: number
+          amount_paid_cents: number
+          created_at: string
+          declined_at: string | null
+          expires_at: string | null
+          group_id: string
+          id: string
+          invited_at: string
+          paid_at: string | null
+          payment_id: string | null
+          payment_state: Database["public"]["Enums"]["registration_group_member_state"]
+          registration_id: string | null
+          role: Database["public"]["Enums"]["registration_group_member_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_due_cents: number
+          amount_paid_cents?: number
+          created_at?: string
+          declined_at?: string | null
+          expires_at?: string | null
+          group_id: string
+          id?: string
+          invited_at?: string
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_state?: Database["public"]["Enums"]["registration_group_member_state"]
+          registration_id?: string | null
+          role: Database["public"]["Enums"]["registration_group_member_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_due_cents?: number
+          amount_paid_cents?: number
+          created_at?: string
+          declined_at?: string | null
+          expires_at?: string | null
+          group_id?: string
+          id?: string
+          invited_at?: string
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_state?: Database["public"]["Enums"]["registration_group_member_state"]
+          registration_id?: string | null
+          role?: Database["public"]["Enums"]["registration_group_member_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registration_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "registration_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registration_group_members_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registration_group_members_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "registrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registration_group_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      registration_groups: {
+        Row: {
+          cancelled_at: string | null
+          confirmed_at: string | null
+          created_at: string
+          created_by: string
+          division_id: string
+          expires_at: string | null
+          id: string
+          required_member_count: number
+          status: Database["public"]["Enums"]["registration_group_status"]
+          tournament_id: string
+          updated_at: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          created_by: string
+          division_id: string
+          expires_at?: string | null
+          id?: string
+          required_member_count?: number
+          status?: Database["public"]["Enums"]["registration_group_status"]
+          tournament_id: string
+          updated_at?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          created_by?: string
+          division_id?: string
+          expires_at?: string | null
+          id?: string
+          required_member_count?: number
+          status?: Database["public"]["Enums"]["registration_group_status"]
+          tournament_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registration_groups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registration_groups_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "divisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registration_groups_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registration_groups_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "v_tournament_listing"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       registrations: {
         Row: {
           added_by_director_id: string | null
@@ -4072,6 +4226,7 @@ export type Database = {
           needs_partner: boolean
           partner_id: string | null
           player_id: string
+          registration_group_id: string | null
           replaces_registration_id: string | null
           status: Database["public"]["Enums"]["registration_status"]
           stripe_entry_intent_id: string | null
@@ -4098,6 +4253,7 @@ export type Database = {
           needs_partner?: boolean
           partner_id?: string | null
           player_id: string
+          registration_group_id?: string | null
           replaces_registration_id?: string | null
           status?: Database["public"]["Enums"]["registration_status"]
           stripe_entry_intent_id?: string | null
@@ -4124,6 +4280,7 @@ export type Database = {
           needs_partner?: boolean
           partner_id?: string | null
           player_id?: string
+          registration_group_id?: string | null
           replaces_registration_id?: string | null
           status?: Database["public"]["Enums"]["registration_status"]
           stripe_entry_intent_id?: string | null
@@ -4168,6 +4325,13 @@ export type Database = {
             columns: ["player_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registrations_registration_group_id_fkey"
+            columns: ["registration_group_id"]
+            isOneToOne: false
+            referencedRelation: "registration_groups"
             referencedColumns: ["id"]
           },
           {
@@ -5677,6 +5841,50 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      check_in_registration: {
+        Args: { p_registration_id: string; p_tournament_id: string }
+        Returns: {
+          checked_in_at: string
+          division_name: string
+          player_name: string
+          reason: string
+          registration_id: string
+          result: string
+          tournament_name: string
+        }[]
+      }
+      decline_registration_group_invite: {
+        Args: { p_group_id: string }
+        Returns: boolean
+      }
+      ensure_registration_group: {
+        Args: {
+          p_amount_due_cents: number
+          p_division_id: string
+          p_expires_at?: string
+          p_initiator_id: string
+          p_partner_id: string
+          p_tournament_id: string
+        }
+        Returns: {
+          group_id: string
+          initiator_member_id: string
+          partner_member_id: string
+        }[]
+      }
+      expire_registration_group_invites: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      mark_registration_group_member_paid: {
+        Args: {
+          p_amount_cents: number
+          p_member_id: string
+          p_payment_id: string
+          p_stripe_intent_id?: string
+        }
+        Returns: string
       }
       claim_personal_match: {
         Args: { p_token: string }
@@ -7311,6 +7519,19 @@ export type Database = {
         | "kings_court"
         | "mini_tournament"
         | "clinic"
+      registration_group_member_role: "initiator" | "partner"
+      registration_group_member_state:
+        | "invited"
+        | "pending_payment"
+        | "paid"
+        | "declined"
+        | "expired"
+      registration_group_status:
+        | "forming"
+        | "pending_payment"
+        | "confirmed"
+        | "cancelled"
+        | "expired"
       registration_status:
         | "held"
         | "registered"
@@ -7384,6 +7605,456 @@ export type Database = {
         reason: string | null
         location: unknown
       }
+    }
+  }
+  storage: {
+    Tables: {
+      buckets: {
+        Row: {
+          allowed_mime_types: string[] | null
+          avif_autodetection: boolean | null
+          created_at: string | null
+          file_size_limit: number | null
+          id: string
+          name: string
+          owner: string | null
+          owner_id: string | null
+          public: boolean | null
+          type: Database["storage"]["Enums"]["buckettype"]
+          updated_at: string | null
+        }
+        Insert: {
+          allowed_mime_types?: string[] | null
+          avif_autodetection?: boolean | null
+          created_at?: string | null
+          file_size_limit?: number | null
+          id: string
+          name: string
+          owner?: string | null
+          owner_id?: string | null
+          public?: boolean | null
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string | null
+        }
+        Update: {
+          allowed_mime_types?: string[] | null
+          avif_autodetection?: boolean | null
+          created_at?: string | null
+          file_size_limit?: number | null
+          id?: string
+          name?: string
+          owner?: string | null
+          owner_id?: string | null
+          public?: boolean | null
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      buckets_analytics: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          format: string
+          id: string
+          name: string
+          type: Database["storage"]["Enums"]["buckettype"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          format?: string
+          id?: string
+          name: string
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          format?: string
+          id?: string
+          name?: string
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      buckets_vectors: {
+        Row: {
+          created_at: string
+          id: string
+          type: Database["storage"]["Enums"]["buckettype"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      migrations: {
+        Row: {
+          executed_at: string | null
+          hash: string
+          id: number
+          name: string
+        }
+        Insert: {
+          executed_at?: string | null
+          hash: string
+          id: number
+          name: string
+        }
+        Update: {
+          executed_at?: string | null
+          hash?: string
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      objects: {
+        Row: {
+          bucket_id: string | null
+          created_at: string | null
+          id: string
+          last_accessed_at: string | null
+          metadata: Json | null
+          name: string | null
+          owner: string | null
+          owner_id: string | null
+          path_tokens: string[] | null
+          updated_at: string | null
+          user_metadata: Json | null
+          version: string | null
+        }
+        Insert: {
+          bucket_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_accessed_at?: string | null
+          metadata?: Json | null
+          name?: string | null
+          owner?: string | null
+          owner_id?: string | null
+          path_tokens?: string[] | null
+          updated_at?: string | null
+          user_metadata?: Json | null
+          version?: string | null
+        }
+        Update: {
+          bucket_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_accessed_at?: string | null
+          metadata?: Json | null
+          name?: string | null
+          owner?: string | null
+          owner_id?: string | null
+          path_tokens?: string[] | null
+          updated_at?: string | null
+          user_metadata?: Json | null
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "objects_bucketId_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      s3_multipart_uploads: {
+        Row: {
+          bucket_id: string
+          created_at: string
+          id: string
+          in_progress_size: number
+          key: string
+          metadata: Json | null
+          owner_id: string | null
+          upload_signature: string
+          user_metadata: Json | null
+          version: string
+        }
+        Insert: {
+          bucket_id: string
+          created_at?: string
+          id: string
+          in_progress_size?: number
+          key: string
+          metadata?: Json | null
+          owner_id?: string | null
+          upload_signature: string
+          user_metadata?: Json | null
+          version: string
+        }
+        Update: {
+          bucket_id?: string
+          created_at?: string
+          id?: string
+          in_progress_size?: number
+          key?: string
+          metadata?: Json | null
+          owner_id?: string | null
+          upload_signature?: string
+          user_metadata?: Json | null
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "s3_multipart_uploads_bucket_id_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      s3_multipart_uploads_parts: {
+        Row: {
+          bucket_id: string
+          created_at: string
+          etag: string
+          id: string
+          key: string
+          owner_id: string | null
+          part_number: number
+          size: number
+          upload_id: string
+          version: string
+        }
+        Insert: {
+          bucket_id: string
+          created_at?: string
+          etag: string
+          id?: string
+          key: string
+          owner_id?: string | null
+          part_number: number
+          size?: number
+          upload_id: string
+          version: string
+        }
+        Update: {
+          bucket_id?: string
+          created_at?: string
+          etag?: string
+          id?: string
+          key?: string
+          owner_id?: string | null
+          part_number?: number
+          size?: number
+          upload_id?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "s3_multipart_uploads_parts_bucket_id_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "s3_multipart_uploads_parts_upload_id_fkey"
+            columns: ["upload_id"]
+            isOneToOne: false
+            referencedRelation: "s3_multipart_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vector_indexes: {
+        Row: {
+          bucket_id: string
+          created_at: string
+          data_type: string
+          dimension: number
+          distance_metric: string
+          id: string
+          metadata_configuration: Json | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          bucket_id: string
+          created_at?: string
+          data_type: string
+          dimension: number
+          distance_metric: string
+          id?: string
+          metadata_configuration?: Json | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          bucket_id?: string
+          created_at?: string
+          data_type?: string
+          dimension?: number
+          distance_metric?: string
+          id?: string
+          metadata_configuration?: Json | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vector_indexes_bucket_id_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets_vectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      allow_any_operation: {
+        Args: { expected_operations: string[] }
+        Returns: boolean
+      }
+      allow_only_operation: {
+        Args: { expected_operation: string }
+        Returns: boolean
+      }
+      can_insert_object: {
+        Args: { bucketid: string; metadata: Json; name: string; owner: string }
+        Returns: undefined
+      }
+      extension: { Args: { name: string }; Returns: string }
+      filename: { Args: { name: string }; Returns: string }
+      foldername: { Args: { name: string }; Returns: string[] }
+      get_common_prefix: {
+        Args: { p_delimiter: string; p_key: string; p_prefix: string }
+        Returns: string
+      }
+      get_size_by_bucket: {
+        Args: never
+        Returns: {
+          bucket_id: string
+          size: number
+        }[]
+      }
+      list_multipart_uploads_with_delimiter: {
+        Args: {
+          bucket_id: string
+          delimiter_param: string
+          max_keys?: number
+          next_key_token?: string
+          next_upload_token?: string
+          prefix_param: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          key: string
+        }[]
+      }
+      list_objects_with_delimiter: {
+        Args: {
+          _bucket_id: string
+          delimiter_param: string
+          max_keys?: number
+          next_token?: string
+          prefix_param: string
+          sort_order?: string
+          start_after?: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+      operation: { Args: never; Returns: string }
+      search: {
+        Args: {
+          bucketname: string
+          levels?: number
+          limits?: number
+          offsets?: number
+          prefix: string
+          search?: string
+          sortcolumn?: string
+          sortorder?: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+      search_by_timestamp: {
+        Args: {
+          p_bucket_id: string
+          p_level: number
+          p_limit: number
+          p_prefix: string
+          p_sort_column: string
+          p_sort_column_after: string
+          p_sort_order: string
+          p_start_after: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          key: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+      search_v2: {
+        Args: {
+          bucket_name: string
+          levels?: number
+          limits?: number
+          prefix: string
+          sort_column?: string
+          sort_column_after?: string
+          sort_order?: string
+          start_after?: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          key: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+    }
+    Enums: {
+      buckettype: "STANDARD" | "ANALYTICS" | "VECTOR"
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }
@@ -7573,6 +8244,21 @@ export const Constants = {
         "mini_tournament",
         "clinic",
       ],
+      registration_group_member_role: ["initiator", "partner"],
+      registration_group_member_state: [
+        "invited",
+        "pending_payment",
+        "paid",
+        "declined",
+        "expired",
+      ],
+      registration_group_status: [
+        "forming",
+        "pending_payment",
+        "confirmed",
+        "cancelled",
+        "expired",
+      ],
       registration_status: [
         "held",
         "registered",
@@ -7632,6 +8318,11 @@ export const Constants = {
         "platform_fee",
       ],
       user_role: ["player", "director", "player_director", "admin"],
+    },
+  },
+  storage: {
+    Enums: {
+      buckettype: ["STANDARD", "ANALYTICS", "VECTOR"],
     },
   },
 } as const

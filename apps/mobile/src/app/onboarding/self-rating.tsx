@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, gradients, spacing, radius } from '@/theme';
-import { OnboardingCTA, OnboardingProgressBar } from '@/lib/onboarding/components';
+import { OnboardingCTA, OnboardingProgressBar, selectWithHaptic } from '@/lib/onboarding/components';
 import { useOnboarding, validators } from '@/lib/onboarding/state';
 import { SELF_RATING_OPTIONS } from '@/lib/onboarding/mockData';
 import { DateOfBirthField } from '@/lib/onboarding/DateOfBirthField';
@@ -73,7 +73,7 @@ function SetupChip({ label, selected, onPress }: { label: string; selected: bool
   return (
     <TouchableOpacity
       style={[s.chip, selected && s.chipSelected]}
-      onPress={onPress}
+      onPress={() => selectWithHaptic(selected, onPress)}
       activeOpacity={0.75}
     >
       <Text style={[s.chipText, selected && s.chipTextSelected]}>{label}</Text>

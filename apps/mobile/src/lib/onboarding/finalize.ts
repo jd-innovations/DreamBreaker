@@ -87,7 +87,8 @@ export type FinalizeOnboardingResult =
 
 // Called once, at the true end of onboarding (all-set.tsx's CTA). Writes
 // every collected draft field to Supabase:
-//  - OAuth (Google/Apple) already has a live session from create-account.tsx
+//  - OAuth (Google/Apple) already has a live session from create-account.tsx,
+//    where both providers authenticate for real before onboarding continues
 //    -> authenticated UPDATE via updateProfile().
 //  - Email/password has no session yet (confirmation required, see
 //    supabase/config.toml) -> the fields ride into signUp()'s metadata and
@@ -105,11 +106,15 @@ export async function finalizeOnboarding(draft: OnboardingDraft): Promise<Finali
     }
 
     if (!draft.profileEmail || !draft.emailPassword) {
-      // Apple Sign-In's button is currently a no-op stub (see
-      // TASK_GOOGLE_SIGNIN.md open question #2) — a user who picks it never
-      // gets a session or fills in email/password, so they land here.
-      if (draft.authMethod === 'apple') {
-        return { ok: false, error: "Apple Sign-In isn't available yet. Please go back and choose Google or Email to finish creating your account." };
+      // Reaching here with an OAuth method means the provider session was lost
+      // between create-account.tsx and this screen (signed out, token expired,
+      // app reinstalled mid-onboarding). Apple used to land here by design --
+      // its button was a no-op stub -- but it now authenticates for real up
+      // front alongside Google, so this is a genuine session-loss case for
+      // both providers rather than an unimplemented feature.
+      if (draft.authMethod === 'apple' || draft.authMethod === 'google') {
+        const providerLabel = draft.authMethod === 'apple' ? 'Apple' : 'Google';
+        return { ok: false, error: `Your ${providerLabel} sign-in didn't carry through. Please go back and sign in again to finish creating your account.` };
       }
       return { ok: false, error: 'Missing account details. Please go back and enter your email and password.' };
     }

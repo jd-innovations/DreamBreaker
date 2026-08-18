@@ -33,3 +33,7 @@ export { WalletEmptyState } from './wallet/WalletEmptyState';
 export { WalletSkeleton } from './wallet/WalletSkeleton';
 export { WalletActivityRow, WalletActivityEmpty } from './wallet/WalletActivityRow';
 export { WalletRedeemSheet } from './wallet/WalletRedeemSheet';
+export { QRScanner } from './QRScanner';
+export type { QRScannerHandle, QRScannerProps } from './QRScanner.types';
+export { AddToCalendarButton } from './AddToCalendarButton';
+export type { AddToCalendarButtonProps } from './AddToCalendarButton';

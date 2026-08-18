@@ -308,10 +308,17 @@ function FacilityBottomSheet({
           </View>
 
           {/* CTA */}
+          {/* Deliberately does NOT dismiss the sheet first. onDismiss() clears
+              selectedId, which re-renders every custom <Marker> on the live
+              MKMapView at the same instant router.push() covers this screen --
+              tearing down a marker view mid-update hard-crashes MapKit on iOS.
+              PinSheet's equivalent CTA below already navigates without
+              dismissing; this now matches it. The sheet stays open behind the
+              pushed screen, which also preserves context on the way back. */}
           <TouchableOpacity
             style={bs.cta}
             activeOpacity={0.85}
-            onPress={() => { onDismiss(); router.push(`/facility/${facility.id}` as never); }}
+            onPress={() => router.push(`/facility/${facility.id}` as never)}
           >
             <Text style={bs.ctaText}>View Details</Text>
           </TouchableOpacity>

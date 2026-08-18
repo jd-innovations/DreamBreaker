@@ -14,7 +14,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { colors } from '@/theme';
 import { useSession } from '@/hooks/useSession';
@@ -398,6 +398,7 @@ export default function ChatScreen() {
   const router = useRouter();
   const { user, loading: authLoading } = useSession();
   const [search, setSearch]         = useState('');
+  const searchInputRef = useRef<TextInput>(null);
   const [tab, setTab]               = useState<FilterTab>('Primary');
   const [convos, setConvos]         = useState<ConversationSummary[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -472,10 +473,10 @@ export default function ChatScreen() {
       <View style={s.header}>
         <Text style={s.title}>Chats</Text>
         <View style={s.headerRight}>
-          <TouchableOpacity style={s.iconBtn}>
+          <TouchableOpacity style={s.iconBtn} onPress={() => searchInputRef.current?.focus()}>
             <Ionicons name="search" size={24} color={L.navy} />
           </TouchableOpacity>
-          <TouchableOpacity style={s.iconBtn}>
+          <TouchableOpacity style={s.iconBtn} onPress={() => router.push('/new-message' as never)}>
             <Ionicons name="create-outline" size={24} color={L.navy} />
           </TouchableOpacity>
         </View>
@@ -486,6 +487,7 @@ export default function ChatScreen() {
         <View style={s.searchBar}>
           <Ionicons name="search-outline" size={16} color={L.textMuted} />
           <TextInput
+            ref={searchInputRef}
             style={s.searchInput}
             placeholder="Search messages or players..."
             placeholderTextColor={L.textMuted}

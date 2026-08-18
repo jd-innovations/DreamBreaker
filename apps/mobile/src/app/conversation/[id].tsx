@@ -504,331 +504,6 @@ const eg = StyleSheet.create({
   quickLabel: { color: L.textSub, fontSize: 13, fontWeight: '600' },
 });
 
-// ─── DM conversation data (Sarah M.) ─────────────────────────────────────────
-
-const SARAH_PHOTO = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&q=80';
-
-type Message =
-  | { id: string; type: 'received'; text: string; time: string; showAvatar?: boolean }
-  | { id: string; type: 'sent';     text: string; time: string; read: boolean }
-  | { id: string; type: 'tournament_card'; time: string }
-  | { id: string; type: 'date_sep'; label: string };
-
-const MESSAGES: Message[] = [
-  { id: 'd1', type: 'date_sep', label: 'Today' },
-  { id: '1',  type: 'received', text: "Hey! I saw you're interested in Summer Slam 👋",                          time: '10:21 AM', showAvatar: true },
-  { id: '2',  type: 'sent',     text: "Yes! I'm looking for a Mixed 4.0 partner for that one.",                 time: '10:22 AM', read: true },
-  { id: '3',  type: 'received', text: "Awesome! I'm in the same division. Want to play a game this weekend and see if we mesh well?", time: '10:23 AM', showAvatar: true },
-  { id: '4',  type: 'tournament_card', time: '10:24 AM' },
-  { id: '5',  type: 'sent',     text: "Sounds great! How about Saturday morning? I'm free around 9am.",         time: '10:25 AM', read: true },
-  { id: '6',  type: 'received', text: "Perfect! Let's do 9am at Lakewood Ranch courts. 🥒",                    time: '10:26 AM', showAvatar: true },
-  { id: '7',  type: 'received', text: "I'll create the community play.",                                        time: '10:26 AM', showAvatar: false },
-];
-
-const DM_QUICK_ACTIONS = [
-  { id: 'tournament', icon: 'trophy-outline',    label: 'Summer Slam'    },
-  { id: 'schedule',   icon: 'calendar-outline',  label: 'Schedule Play'  },
-  { id: 'halfway',    icon: 'location-outline',  label: 'Meet Halfway'   },
-  { id: 'community',  icon: 'link-outline',      label: 'Community Play' },
-];
-
-// ─── Tournament card (DM) ─────────────────────────────────────────────────────
-
-function TournamentCard() {
-  return (
-    <View style={tc.card}>
-      <View style={tc.headerRow}>
-        <View style={tc.logo}>
-          <View style={tc.logoStar}>
-            <Ionicons name="star" size={10} color="#F5A623" />
-          </View>
-          <Text style={tc.logoLine1}>SUMMER</Text>
-          <Text style={tc.logoLine2}>SLAM</Text>
-        </View>
-
-        <View style={tc.titleBlock}>
-          <Text style={tc.tournamentName}>Summer Slam</Text>
-          <Text style={tc.tournamentMeta}>Jul 12 – 14, 2025 · Sarasota, FL</Text>
-        </View>
-
-        <View style={tc.bothBadge}>
-          <Ionicons name="people" size={13} color={L.online} />
-          <Text style={tc.bothText}>Both Interested</Text>
-        </View>
-      </View>
-
-      <View style={tc.divider} />
-
-      <View style={tc.statsRow}>
-        <View style={tc.statCol}>
-          <Text style={tc.statLabel}>Event</Text>
-          <Text style={tc.statValue}>Mixed Doubles</Text>
-        </View>
-        <View style={tc.statCol}>
-          <Text style={tc.statLabel}>Division</Text>
-          <Text style={tc.statValue}>4.0</Text>
-        </View>
-        <View style={tc.statCol}>
-          <Text style={tc.statLabel}>Registration Opens</Text>
-          <Text style={tc.statValue}>Jul 1, 2025</Text>
-        </View>
-      </View>
-
-      <View style={tc.btnRow}>
-        <TouchableOpacity style={tc.viewBtn} activeOpacity={0.75}>
-          <Text style={tc.viewBtnText}>View Tournament</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={tc.holdBtn} activeOpacity={0.85}>
-          <Text style={tc.holdBtnText}>Hold My Spot</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
-
-const tc = StyleSheet.create({
-  card: {
-    backgroundColor: L.bg,
-    borderRadius: 16, borderWidth: 1, borderColor: L.border,
-    overflow: 'hidden', marginHorizontal: 2,
-  },
-  headerRow:  { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, paddingBottom: 12 },
-  logo: {
-    width: 52, height: 52, borderRadius: 10,
-    backgroundColor: '#1A1A2E', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-  },
-  logoStar:   { marginBottom: 1 },
-  logoLine1:  { color: '#F5A623', fontSize: 9,  fontWeight: '900', letterSpacing: 0.5 },
-  logoLine2:  { color: '#FFFFFF', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
-  titleBlock: { flex: 1 },
-  tournamentName: { color: L.navy, fontSize: 15, fontWeight: '800', marginBottom: 2 },
-  tournamentMeta: { color: L.textMuted, fontSize: 12 },
-  bothBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#EBF9F0', borderRadius: 20,
-    paddingHorizontal: 10, paddingVertical: 5,
-    borderWidth: 1, borderColor: '#C3EDD5', flexShrink: 0,
-  },
-  bothText:   { color: L.online, fontSize: 11, fontWeight: '700' },
-  divider:    { height: 1, backgroundColor: L.border, marginHorizontal: 14 },
-  statsRow:   { flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
-  statCol:    { flex: 1 },
-  statLabel:  { color: L.textMuted, fontSize: 11, fontWeight: '500', marginBottom: 3 },
-  statValue:  { color: L.navy,      fontSize: 13, fontWeight: '800' },
-  btnRow:     { flexDirection: 'row', gap: 10, paddingHorizontal: 14, paddingBottom: 14 },
-  viewBtn:    { flex: 1, borderRadius: 10, borderWidth: 1.5, borderColor: L.navy, paddingVertical: 12, alignItems: 'center' },
-  viewBtnText:{ color: L.navy, fontSize: 14, fontWeight: '700' },
-  holdBtn:    { flex: 1, borderRadius: 10, backgroundColor: L.gold, paddingVertical: 12, alignItems: 'center' },
-  holdBtnText:{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
-});
-
-// ─── Match banner (DM) ───────────────────────────────────────────────────────
-
-function MatchBanner() {
-  return (
-    <View style={mb.wrap}>
-      <View style={[mb.confetti, { top: 10, left: 60,  backgroundColor: '#C9A84C', width: 6, height: 6 }]} />
-      <View style={[mb.confetti, { top: 20, left: 110, backgroundColor: '#9B59B6', width: 4, height: 4 }]} />
-      <View style={[mb.confetti, { top: 8,  left: 160, backgroundColor: '#3498DB', width: 5, height: 5 }]} />
-      <View style={[mb.confetti, { top: 24, right: 80, backgroundColor: '#E74C3C', width: 4, height: 8, borderRadius: 2 }]} />
-      <View style={[mb.confetti, { top: 10, right: 40, backgroundColor: '#2ECC71', width: 6, height: 6 }]} />
-      <View style={[mb.confetti, { bottom: 12, left: 80, backgroundColor: '#9B59B6', width: 5, height: 5 }]} />
-      <View style={[mb.confetti, { bottom: 8, right: 60, backgroundColor: '#C9A84C', width: 4, height: 4 }]} />
-      <View style={mb.iconCircle}>
-        <Ionicons name={"handshake" as never} size={26} color="#FFFFFF" />
-      </View>
-      <View style={mb.textBlock}>
-        <Text style={mb.title}>It's a Match!</Text>
-        <Text style={mb.sub}>You and Sarah want to partner up.</Text>
-      </View>
-      <TouchableOpacity style={mb.btn} activeOpacity={0.8}>
-        <Text style={mb.btnText}>Create Team</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-const mb = StyleSheet.create({
-  wrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    marginHorizontal: 16, marginBottom: 14,
-    borderRadius: 16, borderWidth: 1, borderColor: '#E8D9B0',
-    backgroundColor: '#FFFBF0',
-    paddingHorizontal: 14, paddingVertical: 14,
-    overflow: 'hidden',
-  },
-  confetti:   { position: 'absolute', borderRadius: 2 },
-  iconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: L.gold, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  textBlock:  { flex: 1 },
-  title:      { color: L.navy, fontSize: 16, fontWeight: '900', marginBottom: 2 },
-  sub:        { color: L.textSub, fontSize: 13, fontWeight: '400' },
-  btn:        { borderWidth: 1.5, borderColor: L.gold, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, flexShrink: 0 },
-  btnText:    { color: L.gold, fontSize: 13, fontWeight: '700' },
-});
-
-// ─── DM conversation screen ───────────────────────────────────────────────────
-
-function DMConversation() {
-  const router        = useRouter();
-  const insets        = useSafeAreaInsets();
-  const scrollRef     = useRef<ScrollView>(null);
-  const [message, setMessage] = useState('');
-
-  return (
-    <ChatKeyboardAvoidingView style={[s.root, { paddingTop: insets.top }]}>
-      <StatusBar style="dark" />
-
-      {/* Header */}
-      <View style={s.header}>
-        <TouchableOpacity style={s.backBtn} onPress={() => goBack()} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={26} color={L.navy} />
-        </TouchableOpacity>
-
-        <View style={s.avatarWrap}>
-          <Image source={{ uri: SARAH_PHOTO }} style={s.avatar} />
-          <View style={s.onlineDot} />
-        </View>
-
-        <View style={s.headerInfo}>
-          <View style={s.nameRow}>
-            <Text style={s.hdrName}>Sarah M.</Text>
-            <Ionicons name="checkmark-circle" size={17} color="#3B82F6" style={{ marginLeft: 4 }} />
-          </View>
-          <View style={s.hdrMeta}>
-            <Ionicons name="star" size={13} color={L.gold} />
-            <Text style={s.hdrMetaText}>4.0 DUPR</Text>
-            <View style={s.hdrDot} />
-            <View style={s.onlinePip} />
-            <Text style={s.hdrOnline}>Online</Text>
-          </View>
-          <View style={s.partnerScorePill}>
-            <View style={s.partnerScoreBar} />
-            <Text style={s.partnerScoreText}>Partner Score</Text>
-            <Text style={s.partnerScoreNum}>78</Text>
-            <Ionicons name="sync-outline" size={12} color={L.gold} />
-          </View>
-        </View>
-
-        <View style={s.hdrActions}>
-          <TouchableOpacity
-            style={s.hdrAction}
-            activeOpacity={0.7}
-            onPress={() => router.push('/players/sarah-m' as never)}
-          >
-            <View style={s.hdrActionCircle}>
-              <Ionicons name="person-outline" size={18} color={L.textSub} />
-            </View>
-            <Text style={s.hdrActionLabel}>View Profile</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.hdrAction} activeOpacity={0.7}>
-            <View style={s.hdrActionCircle}>
-              <Ionicons name="ellipsis-horizontal" size={18} color={L.textSub} />
-            </View>
-            <Text style={s.hdrActionLabel}>More</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={s.headerBorder} />
-
-      {/* Messages */}
-      <ScrollView
-        ref={scrollRef}
-        style={s.messageList}
-        contentContainerStyle={[s.messageContent, { paddingBottom: 16 }]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
-        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
-      >
-        <MatchBanner />
-
-        {MESSAGES.map((msg) => {
-          if (msg.type === 'date_sep') {
-            return (
-              <View key={msg.id} style={s.dateSep}>
-                <Text style={s.dateSepText}>{msg.label}</Text>
-              </View>
-            );
-          }
-          if (msg.type === 'tournament_card') {
-            return (
-              <View key={msg.id} style={s.tournamentWrap}>
-                <TournamentCard />
-                <Text style={s.msgTime}>{msg.time}</Text>
-              </View>
-            );
-          }
-          if (msg.type === 'received') {
-            return (
-              <View key={msg.id} style={s.receivedRow}>
-                <View style={s.receivedAvatarSlot}>
-                  {msg.showAvatar && <Image source={{ uri: SARAH_PHOTO }} style={s.msgAvatar} />}
-                </View>
-                <View style={s.receivedGroup}>
-                  <View style={s.receivedBubble}>
-                    <Text style={s.receivedText}>{msg.text}</Text>
-                  </View>
-                  <Text style={s.msgTime}>{msg.time}</Text>
-                </View>
-              </View>
-            );
-          }
-          if (msg.type === 'sent') {
-            return (
-              <View key={msg.id} style={s.sentRow}>
-                <View style={s.sentGroup}>
-                  <View style={s.sentBubble}>
-                    <Text style={s.sentText}>{msg.text}</Text>
-                  </View>
-                  <View style={s.sentMeta}>
-                    <Text style={s.msgTime}>{msg.time}</Text>
-                    {msg.read && <Ionicons name="checkmark-done" size={15} color={L.navy} style={{ marginLeft: 4 }} />}
-                  </View>
-                </View>
-              </View>
-            );
-          }
-          return null;
-        })}
-      </ScrollView>
-
-      {/* Input bar */}
-      <View style={[s.inputArea, { paddingBottom: insets.bottom + 6 }]}>
-        <View style={s.inputRow}>
-          <TouchableOpacity style={s.inputIcon}>
-            <Ionicons name="camera-outline" size={24} color={L.textMuted} />
-          </TouchableOpacity>
-          <View style={s.inputBox}>
-            <TextInput
-              style={s.inputText}
-              placeholder="Message Sarah..."
-              placeholderTextColor={L.textMuted}
-              value={message}
-              onChangeText={setMessage}
-              multiline
-            />
-          </View>
-          <TouchableOpacity style={s.inputIcon}>
-            <Ionicons name="happy-outline" size={24} color={L.textMuted} />
-          </TouchableOpacity>
-          <TouchableOpacity style={s.inputIcon}>
-            <Ionicons name="mic-outline" size={24} color={L.textMuted} />
-          </TouchableOpacity>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.quickRow}>
-          {DM_QUICK_ACTIONS.map((a) => (
-            <TouchableOpacity key={a.id} style={s.quickPill} activeOpacity={0.75}>
-              <Ionicons name={a.icon as never} size={14} color={L.textSub} />
-              <Text style={s.quickLabel}>{a.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-    </ChatKeyboardAvoidingView>
-  );
-}
-
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.bg },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 8, backgroundColor: L.bg },
@@ -1158,6 +833,13 @@ function RealDMScreen({ conversationId }: { conversationId: string }) {
   const [messages, setMessages] = useState<DbMessage[]>([]);
   const [loading, setLoading]   = useState(true);
   const [msgError, setMsgError] = useState<string | null>(null);
+  // True when the conversation row can't be found — either it genuinely
+  // doesn't exist, or RLS is filtering it out because this user isn't a
+  // participant. Both cases render the same generic not-found state
+  // deliberately, so an unauthorized user can't distinguish "doesn't exist"
+  // from "you don't have access" (that distinction would itself leak
+  // conversation existence, which RLS is designed to hide).
+  const [notFound, setNotFound] = useState(false);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
   const [reactingTo, setReactingTo] = useState<string | null>(null);
   const messageIdsRef = useRef<Set<string>>(new Set());
@@ -1168,15 +850,24 @@ function RealDMScreen({ conversationId }: { conversationId: string }) {
     if (!user?.id) return;
     let cancelled = false;
     (async () => {
-      const { data: conv } = await supabase
+      const { data: conv, error } = await supabase
         .from('conversations')
         .select('participant_a, participant_b')
         .eq('id', conversationId)
         .maybeSingle();
 
-      if (!conv || cancelled) return;
+      if (cancelled) return;
+
+      if (error || !conv) {
+        setNotFound(true);
+        return;
+      }
+
       const partnerId = conv.participant_a === user.id ? conv.participant_b : conv.participant_a;
-      if (!partnerId) return;
+      if (!partnerId) {
+        setNotFound(true);
+        return;
+      }
 
       const { data: p } = await supabase
         .from('profiles')
@@ -1319,6 +1010,10 @@ function RealDMScreen({ conversationId }: { conversationId: string }) {
   }, [sendAttachment]);
 
   const name = partner?.name ?? '…';
+
+  if (notFound) {
+    return <ConversationUnavailable insetsTop={insets.top} />;
+  }
 
   return (
     <ChatKeyboardAvoidingView style={[s.root, { paddingTop: insets.top }]}>
@@ -1903,6 +1598,24 @@ function RealTournamentGroupChat({ tournamentId }: { tournamentId: string }) {
   );
 }
 
+// ─── Not-found / no-access state for conversation deep links ─────────────────
+// Shown for malformed conversation ids and, from RealDMScreen, for a
+// syntactically valid id that doesn't resolve to an accessible conversation.
+// Renders no conversation data — real or fabricated.
+
+function ConversationUnavailable({ insetsTop = 0 }: { insetsTop?: number }) {
+  return (
+    <View style={[rd.centered, { flex: 1, backgroundColor: L.bg, paddingTop: insetsTop }]}>
+      <StatusBar style="dark" />
+      <Ionicons name="alert-circle-outline" size={36} color={L.textMuted} />
+      <Text style={rd.stateText}>This conversation isn&apos;t available.</Text>
+      <TouchableOpacity onPress={() => goBack()} style={{ marginTop: 8 }}>
+        <Text style={{ color: L.gold, fontWeight: '600' }}>Go Back</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ─── Root router ──────────────────────────────────────────────────────────────
 
 export default function ConversationScreen() {
@@ -1934,5 +1647,5 @@ export default function ConversationScreen() {
     return <RealDMScreen conversationId={chatId} />;
   }
 
-  return <DMConversation />;
+  return <ConversationUnavailable />;
 }

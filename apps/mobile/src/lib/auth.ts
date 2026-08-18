@@ -1,7 +1,11 @@
 import { makeRedirectUri } from 'expo-auth-session';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as WebBrowser from 'expo-web-browser';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import { supabase } from './supabase';
+import { deleteCurrentDevicePushToken } from './pushNotifications';
+import { updateProfile } from './services/profile';
 
 // No-op on native; required once for the OAuth browser session to resolve on web.
 WebBrowser.maybeCompleteAuthSession();
@@ -61,6 +65,109 @@ export async function signInWithGoogle() {
   return sessionData.session;
 }
 
+// Native Sign in with Apple (expo-apple-authentication) -> Supabase's
+// signInWithIdToken(), which validates Apple's identity token server-side.
+// Reuses the exact same session/profile architecture as signInWithGoogle()
+// above and email/password signIn() -- there is no separate Apple session
+// system. Mirrors signInWithGoogle()'s contract: returns the Session on
+// success, null if the user cancelled or Apple auth isn't available on this
+// device (neither is an error), and throws for genuine failures.
+export async function signInWithApple() {
+  const available = await AppleAuthentication.isAvailableAsync();
+  if (!available) return null;
+
+  // Apple's documented nonce pattern: the SHA256 hash goes to Apple (embedded
+  // verbatim in the identity token's `nonce` claim); the original raw value
+  // goes to Supabase, which hashes it again and compares against that claim.
+  // This is Supabase's own documented native-Apple pattern, not a custom
+  // token-validation scheme.
+  const rawNonce = Crypto.randomUUID();
+  const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
+
+  let credential: AppleAuthentication.AppleAuthenticationCredential;
+  try {
+    if (__DEV__) console.log('[auth] apple auth started');
+    credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+      nonce: hashedNonce,
+    });
+  } catch (e: unknown) {
+    // The user tapped Cancel -- not an authentication failure.
+    if (e && typeof e === 'object' && 'code' in e && e.code === 'ERR_REQUEST_CANCELED') {
+      if (__DEV__) console.log('[auth] apple auth cancelled');
+      return null;
+    }
+    throw e;
+  }
+
+  if (!credential.identityToken) {
+    throw new Error('Apple did not return an identity token.');
+  }
+
+  const { data, error } = await supabase.auth.signInWithIdToken({
+    provider: 'apple',
+    token: credential.identityToken,
+    nonce: rawNonce,
+  });
+  if (error) {
+    if (__DEV__) console.log('[auth] supabase auth failed');
+    throw error;
+  }
+  if (__DEV__) console.log('[auth] supabase auth success');
+
+  // Apple returns the user's name only on the FIRST authorization ever for
+  // this Apple ID + app pair -- every later sign-in gets `fullName: null`.
+  // Only write it when present; a null/missing name here is never written,
+  // so an existing profile name is never overwritten with blank (Step 9).
+  if (credential.fullName) {
+    const displayName = AppleAuthentication.formatFullName(credential.fullName).trim();
+    const givenName = credential.fullName.givenName?.trim() ?? '';
+    const familyName = credential.fullName.familyName?.trim() ?? '';
+
+    if (displayName) {
+      try {
+        await updateProfile(data.user.id, { full_name: displayName });
+      } catch (e) {
+        // Non-fatal: the session is already established. The profile keeps
+        // fn_handle_new_user()'s fallback name (email local-part) if this
+        // one-time backfill fails.
+        if (__DEV__) console.warn('[auth] failed to backfill Apple full name', e);
+      }
+
+      // Also mirror the name into auth.users.user_metadata, which is where
+      // Google's OAuth flow already deposits full_name/given_name/family_name.
+      // Apple's identity token carries only `email` -- the name lives solely on
+      // this one-time credential -- so without this, anything reading
+      // user_metadata (onboarding's create-account.tsx prefill) would see a
+      // name for Google users but never for Apple ones. Writing it here keeps
+      // those consumers provider-agnostic instead of special-casing Apple, and
+      // makes the name durable in auth.users, since Apple will never hand it
+      // over again on subsequent sign-ins.
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            full_name: displayName,
+            ...(givenName ? { given_name: givenName } : {}),
+            ...(familyName ? { family_name: familyName } : {}),
+          },
+        });
+      } catch (e) {
+        if (__DEV__) console.warn('[auth] failed to mirror Apple name into user metadata', e);
+      }
+    }
+  }
+
+  // Apple's private relay email (Hide My Email) arrives as a normal email
+  // string in credential.email / the identity token's `email` claim -- it
+  // needs no special handling. fn_handle_new_user() already reads
+  // auth.users.email as-is for new accounts, same as any other provider.
+
+  return data.session;
+}
+
 // Sends a password-reset email. redirectTo points at the reset-password screen,
 // which expo-router opens automatically via the app's custom scheme when the
 // user taps the emailed link (path matching works regardless of whatever
@@ -109,6 +216,15 @@ export async function updatePassword(newPassword: string) {
 }
 
 export async function signOut() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user?.id) {
+    try {
+      await deleteCurrentDevicePushToken(user.id);
+    } catch (err) {
+      if (__DEV__) console.warn('[auth] push token cleanup failed before sign-out', err);
+    }
+  }
+
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }

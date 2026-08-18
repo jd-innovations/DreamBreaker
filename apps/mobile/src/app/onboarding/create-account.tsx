@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { colors, radius, spacing } from '@/theme';
-import { getUser, signInWithGoogle } from '@/lib/auth';
+import { getUser, signInWithGoogle, signInWithApple } from '@/lib/auth';
+import { haptics } from '@/lib/haptics';
 import { useOnboarding } from '@/lib/onboarding/state';
 
 const L = colors;
@@ -16,25 +18,40 @@ export default function CreateAccountScreen() {
   const insets = useSafeAreaInsets();
   const { draft, update } = useOnboarding();
   const [loadingMethod, setLoadingMethod] = useState<AuthMethod | null>(null);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+
+  // Hide the Apple button where Sign in with Apple can't run (Android, web,
+  // simulators without an Apple ID) rather than showing a button that would
+  // silently do nothing -- same gate as sign-in.tsx/sign-up.tsx.
+  useEffect(() => {
+    AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => setAppleAvailable(false));
+  }, []);
 
   async function chooseProvider(method: Exclude<AuthMethod, 'email'>) {
     update('authMethod', method);
     setLoadingMethod(method);
 
-    if (method === 'google') {
-      try {
-        const session = await signInWithGoogle();
-        if (!session) {
-          // User cancelled/dismissed the browser sheet — stay on this screen.
-          setLoadingMethod(null);
-          return;
-        }
-      } catch (e) {
+    // Both providers must produce a real Supabase session HERE, before
+    // onboarding continues. finalizeOnboarding() later branches on that
+    // session existing (see lib/onboarding/finalize.ts) -- previously the
+    // Apple button set authMethod and walked on without authenticating, so
+    // the user only discovered the failure at the very end of onboarding.
+    try {
+      const session = method === 'apple' ? await signInWithApple() : await signInWithGoogle();
+      if (!session) {
+        // Cancelled the Apple sheet / dismissed the Google browser tab (or
+        // Apple auth unavailable). Not an error -- stay on this screen.
         setLoadingMethod(null);
-        Alert.alert('Sign-in failed', e instanceof Error ? e.message : 'Something went wrong. Please try again.');
         return;
       }
+    } catch (e) {
+      setLoadingMethod(null);
+      haptics.error();
+      Alert.alert('Sign-in failed', e instanceof Error ? e.message : 'Something went wrong. Please try again.');
+      return;
     }
+
+    haptics.success();
 
     try {
       const user = await getUser();
@@ -57,6 +74,7 @@ export default function CreateAccountScreen() {
   }
 
   function chooseEmail() {
+    haptics.light();
     update('authMethod', 'email');
     router.push('/onboarding/email-account');
   }
@@ -81,13 +99,15 @@ export default function CreateAccountScreen() {
         </View>
 
         <View style={s.buttonStack}>
-          <AccountButton
-            icon="logo-apple"
-            label="Continue with Apple"
-            loading={loadingMethod === 'apple'}
-            disabled={loadingMethod !== null}
-            onPress={() => chooseProvider('apple')}
-          />
+          {appleAvailable && (
+            <AccountButton
+              icon="logo-apple"
+              label="Continue with Apple"
+              loading={loadingMethod === 'apple'}
+              disabled={loadingMethod !== null}
+              onPress={() => chooseProvider('apple')}
+            />
+          )}
           <AccountButton
             icon="logo-google"
             label="Continue with Google"

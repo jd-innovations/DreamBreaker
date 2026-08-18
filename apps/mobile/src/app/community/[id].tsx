@@ -14,7 +14,9 @@ import { goBack } from '@/lib/navigation';
 import { supabase } from '@/lib/supabase';
 import { platformAlert } from '@/lib/platformAlert';
 import { eventCoverUri } from '@/lib/eventCover';
-import { AppIcon, PickleballIcon, JoinCelebration, Avatar, ManageEventSheet, type AppIconName } from '@/components';
+import { AppIcon, PickleballIcon, JoinCelebration, Avatar, ManageEventSheet, AddToCalendarButton, type AppIconName } from '@/components';
+import { appLinks } from '@/lib/appLinks';
+import { withLink, type CalendarEventInput } from '@/lib/calendarEvents';
 import {
   getOrCreateConversation,
   getOrCreatePlayEventConversation,
@@ -421,6 +423,9 @@ export default function CommunityEventScreen() {
   const [pageError,    setPageError]    = useState<string | null>(null);
   const [weather,      setWeather]      = useState<EventWeatherResult | 'loading' | null>(null);
   const [facilityDetail, setFacilityDetail] = useState<FacilityDetail | null>(null);
+  // Add to Calendar needs the raw event_date/start_time/duration_minutes —
+  // the mapped EventShape above only carries pre-formatted display strings.
+  const [rawPlayEvent, setRawPlayEvent] = useState<PlayEventWithOrganizer | null>(null);
 
   useSupportContext({
     feature: 'community_play_event',
@@ -446,6 +451,7 @@ export default function CommunityEventScreen() {
         if (cancelled) return;
         if (!eventData) { setPageError('Event not found.'); setPageLoading(false); return; }
         setLiveEvent(mapPlayEvent(eventData, countResult.count ?? 0));
+        setRawPlayEvent(eventData);
 
         const lat = eventData.facility?.latitude != null ? Number(eventData.facility.latitude) : null;
         const lng = eventData.facility?.longitude != null ? Number(eventData.facility.longitude) : null;
@@ -476,6 +482,37 @@ export default function CommunityEventScreen() {
 
   const event = liveEvent ?? (EVENTS[id as string] ?? FALLBACK);
   const isPastEvent = event.badge === 'COMPLETED' || event.badge === 'CANCELLED';
+
+  // Add to Calendar: only for a real fetched event (not the mock fallback)
+  // that isn't cancelled/completed (Step 21). event_date/start_time have no
+  // stored timezone anywhere in play_events (see CALENDAR_INTEGRATION_PHASE6.md
+  // audit) -- treated as the venue's local wall-clock time, the same
+  // assumption this screen's own fmtLongDate/fmtTime helpers already make.
+  let communityCalendarEvent: CalendarEventInput | null = null;
+  if (rawPlayEvent && !isPastEvent) {
+    const [h, min] = (rawPlayEvent.start_time ?? '').split(':').map(Number);
+    const [y, mo, d] = rawPlayEvent.event_date.split('-').map(Number);
+    const hasTime = rawPlayEvent.start_time != null && !Number.isNaN(h);
+    const startDate = hasTime
+      ? new Date(y, mo - 1, d, h, min || 0)
+      : new Date(y, mo - 1, d);
+    const endDate = hasTime && rawPlayEvent.duration_minutes
+      ? new Date(startDate.getTime() + rawPlayEvent.duration_minutes * 60_000)
+      : undefined;
+    const facilityLines = facilityDetail
+      ? [facilityDetail.address, facilityDetail.address_line_2, [facilityDetail.city, facilityDetail.state, facilityDetail.postal_code].filter(Boolean).join(', ')]
+        .filter((p): p is string => !!p)
+      : [];
+    const locationName = rawPlayEvent.venue_name ?? rawPlayEvent.location ?? '';
+    communityCalendarEvent = {
+      title: `Pickleball — ${eventTypeLabel(rawPlayEvent.event_type)}${locationName ? ` at ${locationName}` : ''}`,
+      startDate,
+      endDate,
+      allDay: !hasTime,
+      location: [locationName, ...facilityLines].join('\n'),
+      notes: withLink(eventTypeLabel(rawPlayEvent.event_type), appLinks.communityEvent(rawPlayEvent.id)),
+    };
+  }
 
   const [saved,        setSaved]        = useState(false);
   const [activeTab,    setActiveTab]    = useState<Tab>(
@@ -731,6 +768,7 @@ export default function CommunityEventScreen() {
       if (eventData) {
         const updated = mapPlayEvent(eventData, countResult.count ?? 0);
         setLiveEvent(updated);
+        setRawPlayEvent(eventData);
         setJoinedCount(updated.players);
         setSpotsLeft(updated.spots);
       }
@@ -1598,6 +1636,14 @@ export default function CommunityEventScreen() {
               <TouchableOpacity style={s.circleBtn} onPress={() => setSaved(v => !v)} activeOpacity={0.85}>
                 <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? L.gold : colors.white} />
               </TouchableOpacity>
+              {communityCalendarEvent && (
+                <AddToCalendarButton
+                  event={communityCalendarEvent}
+                  variant="icon"
+                  style={s.circleBtn}
+                  iconColor={colors.white}
+                />
+              )}
               {IS_ORGANIZER && (
                 <TouchableOpacity style={s.circleBtn} onPress={() => setShowManageSheet(true)} activeOpacity={0.85} disabled={cancelling}>
                   {cancelling

@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { colors, spacing } from '@/theme';
-import { OnboardingCTA, OnboardingProgressBar } from '@/lib/onboarding/components';
+import { OnboardingCTA, OnboardingProgressBar, onboardingSelectionHaptic } from '@/lib/onboarding/components';
 import { useOnboarding } from '@/lib/onboarding/state';
 import Svg, { G, Path } from 'react-native-svg';
 
@@ -28,6 +28,10 @@ export default function SearchRadiusScreen() {
   const pulseOne = usePulseAnimation(840);
   const pulseTwo = usePulseAnimation(1120);
   function setRadius(value: RadiusOption) {
+    // Only tick when the radius actually moves -- tapping the tick that's
+    // already active, or stepping past either end of the range, changes
+    // nothing and shouldn't buzz.
+    if (value !== radiusMiles) onboardingSelectionHaptic();
     update('searchRadiusMiles', value);
   }
 

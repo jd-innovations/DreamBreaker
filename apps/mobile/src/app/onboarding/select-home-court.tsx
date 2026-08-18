@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { colors, spacing, radius } from '@/theme';
-import { OnboardingCTA, OnboardingProgressBar } from '@/lib/onboarding/components';
+import { OnboardingCTA, OnboardingProgressBar, selectWithHaptic } from '@/lib/onboarding/components';
 import { useOnboarding } from '@/lib/onboarding/state';
 import { useCurrentLocation } from '@/lib/location';
 import { fetchFacilities, type FacilityWithPrimaryPhoto } from '@/lib/supabase/facilities';
@@ -72,9 +72,11 @@ export default function SelectHomeCourtScreen() {
   const selectedCourt = results.find(f => f.id === selectedId) ?? draft.homeCourt;
 
   function selectCourt(f: FacilityWithPrimaryPhoto) {
-    setSelectedId(f.id);
-    update('homeCourt', f);
-    update('addCourtLater', false);
+    selectWithHaptic(selectedId === f.id, () => {
+      setSelectedId(f.id);
+      update('homeCourt', f);
+      update('addCourtLater', false);
+    });
   }
 
   // Onboarding otherwise keeps everything in local draft state, but the home

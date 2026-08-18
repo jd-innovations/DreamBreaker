@@ -41,6 +41,8 @@ function dbRowToTournament(row: Record<string, unknown>): Tournament {
     venue:          String(row.venue_name ?? ''),
     city:           String(row.city ?? ''),
     state:          String(row.state ?? ''),
+    venueAddress:   row.venue_address != null ? String(row.venue_address) : null,
+    zipCode:        row.zip_code != null ? String(row.zip_code) : null,
     date:           formatDate(String(row.event_date ?? '')),
     eventDate:      String(row.event_date ?? ''),
     entryFeeCents:  Number(row.entry_fee_cents ?? 0),
@@ -75,7 +77,7 @@ export async function fetchTournaments(): Promise<Tournament[]> {
 export async function fetchTournamentById(id: string): Promise<Tournament | null> {
   const { data, error } = await supabase
     .from('tournaments')
-    .select('id,name,venue_name,city,state,event_date,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id')
+    .select('id,name,venue_name,venue_address,zip_code,city,state,event_date,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id')
     .eq('id', id)
     .single();
 

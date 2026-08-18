@@ -9,12 +9,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 import { goBack } from '@/lib/navigation';
 import { isTournamentCompleted, getAllBrackets } from '@/lib/directorBracketStore';
 import { isTournamentCompleted as fetchHasPublishedResults } from '@/lib/supabase/brackets';
-import { StatusChip } from '@/components';
+import { StatusChip, AddToCalendarButton } from '@/components';
 import { VenueMapCard } from '@/components/VenueMapCard';
+import type { CalendarEventInput } from '@/lib/calendarEvents';
+import { withLink } from '@/lib/calendarEvents';
 import {
   getTournamentStatus,
   getPlayerRegistrationStatus,
@@ -70,11 +72,14 @@ const DIRECTOR_PHOTO = 'https://images.unsplash.com/photo-1472099645785-5658abf4
 // DIVISIONS imported from @/data/divisions — kept here as a shaped alias so
 // DivisionRow props remain unchanged.
 
+// Labels are deliberately short enough to stay on one line each at this width —
+// the compact single-row strip below depends on it. Longer copy ("USAP
+// Approved", "For All Players") wraps to two lines and makes the row ragged.
 const AMENITIES = [
-  { icon: 'trophy-outline',   title: 'Sanctioned',    sub: 'USAP Approved'    },
-  { icon: 'car-outline',      title: 'Free Parking',  sub: 'On Site'          },
-  { icon: 'gift-outline',     title: 'Player Gifts',  sub: 'For All Players'  },
-  { icon: 'restaurant-outline',title: 'Food & Drinks',sub: 'On Site'          },
+  { icon: 'trophy-outline',    title: 'Sanctioned',    sub: 'USAP'     },
+  { icon: 'car-outline',       title: 'Parking',       sub: 'Free'     },
+  { icon: 'gift-outline',      title: 'Player Gifts',  sub: 'Included' },
+  { icon: 'restaurant-outline', title: 'Food & Drinks', sub: 'On Site'  },
 ];
 
 function splitHeroName(name: string): [string, string] {
@@ -84,6 +89,20 @@ function splitHeroName(name: string): [string, string] {
 }
 
 function fmt(cents: number) { return `$${Math.round(cents / 100)}`; }
+
+function fmtHeroDate(dateStr: string): string {
+  try {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    if (!y || !m || !d) return dateStr;
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
+}
 
 // registrationOpensAt/registrationClosesAt come back as full timestamptz
 // strings — format both the date and local time (with zone abbreviation)
@@ -387,6 +406,31 @@ export default function TournamentDetail() {
     );
   }
 
+  // Add to Calendar: tournaments only ever store a plain calendar date
+  // (event_date) with no time-of-day and no timezone anywhere in the schema
+  // (see CALENDAR_INTEGRATION_PHASE6.md audit) -- represented as an all-day
+  // event rather than guessing a start time. Not offered for draft/pending
+  // (not yet public), cancelled, or completed/past tournaments (Step 21).
+  const canAddToCalendar = ['open', 'filling_fast', 'full'].includes(tournament.status);
+  let tournamentCalendarEvent: CalendarEventInput | null = null;
+  if (canAddToCalendar) {
+    const [y, m, d] = tournament.eventDate.split('-').map(Number);
+    const locationLines = [
+      tournament.venue,
+      tournament.venueAddress ?? undefined,
+      [tournament.city, tournament.state, tournament.zipCode].filter(Boolean).join(', '),
+    ].filter((p): p is string => !!p);
+    const eventDay = new Date(y, (m ?? 1) - 1, d ?? 1);
+    tournamentCalendarEvent = {
+      title: tournament.name,
+      startDate: eventDay,
+      endDate: eventDay,
+      allDay: true,
+      location: locationLines.join('\n'),
+      notes: withLink(undefined, appLinks.tournament(tournament.id)),
+    };
+  }
+
   return (
     <View style={s.root}>
       <StatusBar style="light" />
@@ -407,6 +451,14 @@ export default function TournamentDetail() {
           <TouchableOpacity style={s.topCircle} onPress={() => toggleBookmark(id)} activeOpacity={0.8}>
             <Ionicons name={isBookmarked(id) ? 'heart' : 'heart-outline'} size={20} color={isBookmarked(id) ? '#FF6B6B' : '#FFFFFF'} />
           </TouchableOpacity>
+          {tournamentCalendarEvent && (
+            <AddToCalendarButton
+              event={tournamentCalendarEvent}
+              variant="icon"
+              style={s.topCircle}
+              iconColor="#FFFFFF"
+            />
+          )}
         </View>
       </View>
 
@@ -434,7 +486,7 @@ export default function TournamentDetail() {
 
             {/* Date pill */}
             <View style={s.datePill}>
-              <Text style={s.datePillText}>{tournament.date.toUpperCase()}</Text>
+              <Text style={s.datePillText}>{fmtHeroDate(tournament.eventDate)}</Text>
             </View>
 
             {/* Location */}
@@ -451,11 +503,6 @@ export default function TournamentDetail() {
               <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.6)" style={{ marginLeft: 2, marginTop: 2 }} />
             </TouchableOpacity>
 
-            {/* Photo count */}
-            <View style={s.photoCount}>
-              <Ionicons name="images-outline" size={14} color="#FFFFFF" />
-              <Text style={s.photoCountText}>24</Text>
-            </View>
           </View>
         </View>
 
@@ -641,12 +688,15 @@ export default function TournamentDetail() {
 
           {/* AMENITIES */}
           <View style={s.amenitiesRow}>
-            {AMENITIES.map((a) => (
-              <View key={a.title} style={s.amenityCard}>
-                <Ionicons name={a.icon as never} size={22} color={L.gold} />
-                <Text style={s.amenityTitle}>{a.title}</Text>
-                <Text style={s.amenitySub}>{a.sub}</Text>
-              </View>
+            {AMENITIES.map((a, i) => (
+              <React.Fragment key={a.title}>
+                {i > 0 && <View style={s.amenityDivider} />}
+                <View style={s.amenityItem}>
+                  <Ionicons name={a.icon as never} size={22} color={L.gold} />
+                  <Text style={s.amenityTitle} numberOfLines={1}>{a.title}</Text>
+                  <Text style={s.amenitySub} numberOfLines={1}>{a.sub}</Text>
+                </View>
+              </React.Fragment>
             ))}
           </View>
 
@@ -1151,7 +1201,10 @@ const s = StyleSheet.create({
   // Hero
   hero: { width: '100%', overflow: 'hidden' },
   heroContent: {
-    flex: 1, paddingHorizontal: 20, justifyContent: 'flex-end', paddingBottom: 28,
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    justifyContent: 'flex-end',
+    paddingBottom: spacing.xxxl + spacing.lg,
   },
   heroLine1: {
     color: '#FFFFFF', fontSize: 32, fontWeight: '800', letterSpacing: 0.5,
@@ -1165,21 +1218,15 @@ const s = StyleSheet.create({
   },
   datePill: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(10,18,40,0.80)',
-    borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6, marginBottom: 12,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 8, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, marginBottom: spacing.md,
   },
-  datePillText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', letterSpacing: 1 },
-  locationRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  datePillText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  locationRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   locationName: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
   locationCity: { color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '400' },
-  photoCount: {
-    position: 'absolute', bottom: 28, right: 20,
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 10,
-    paddingHorizontal: 10, paddingVertical: 5,
-  },
-  photoCountText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-
   statusRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 14,
@@ -1270,15 +1317,26 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, marginBottom: 18,
   },
 
-  // Amenities
+  // Amenities — one tinted strip with hairline dividers, rather than four
+  // separate bordered cards. `alignItems: 'stretch'` is what lets the dividers
+  // take their height from the row instead of needing a hardcoded one.
   amenitiesRow: {
-    flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 24,
+    flexDirection: 'row', alignItems: 'stretch',
+    marginHorizontal: 16, marginBottom: 24,
+    borderRadius: 18,
+    backgroundColor: L.page,
+    paddingVertical: 14,
   },
-  amenityCard: {
-    flex: 1, alignItems: 'center', gap: 5,
-    borderWidth: 1, borderColor: L.border, borderRadius: 14,
-    paddingVertical: 12,
-    backgroundColor: L.bg,
+  amenityItem: {
+    flex: 1, alignItems: 'center', justifyContent: 'flex-start',
+    gap: 5, paddingHorizontal: 4,
+  },
+  amenityDivider: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: L.border,
+    // Inset so the rule stops short of the strip's padding, matching the
+    // reference where dividers span the content rather than the full height.
+    marginVertical: 2,
   },
   amenityTitle: { color: L.navy,    fontSize: 11, fontWeight: '700', textAlign: 'center' },
   amenitySub:   { color: L.textMuted, fontSize: 10, textAlign: 'center' },

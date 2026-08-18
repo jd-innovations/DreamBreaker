@@ -556,10 +556,13 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       description: `You're in for ${tournament?.name ?? "this tournament"}. Bracket releases 48h before play.`,
     });
 
-  const contactDirector = () =>
-    toast.info(`Message sent to ${tournament?.director?.full_name ?? "the director"}`, {
-      description: "They'll reply in the app within 24 hours.",
-    });
+  const contactDirector = () => {
+    if (!tournament?.director) {
+      toast.error("This tournament has no assigned director yet.");
+      return;
+    }
+    setMessagingTarget({ id: tournament.director.id, name: tournament.director.full_name });
+  };
 
   // Loading skeleton
   if (!tournament) {
@@ -582,6 +585,13 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const holdCutoffDate = new Date(t.event_date);
   holdCutoffDate.setDate(holdCutoffDate.getDate() - (t.hold_cutoff_days ?? 7));
   const holdWindowClosed = new Date() >= holdCutoffDate;
+  // Registration open date gate
+  const now = new Date();
+  const regNotOpenYet = t.registration_opens_at != null && now < new Date(t.registration_opens_at);
+  const regClosed = t.registration_closes_at != null && now > new Date(t.registration_closes_at);
+  const regOpensLabel = t.registration_opens_at
+    ? new Date(t.registration_opens_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : "";
   const prizeDisplay = t.prize_pool_cents
     ? `$${(t.prize_pool_cents / 100).toLocaleString()}`
     : "—";
@@ -644,7 +654,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               {formatDisplay.toUpperCase()}
             </span>
           </div>
-          <h1 className="font-display text-5xl sm:text-7xl lg:text-8xl tracking-wide leading-[0.9] max-w-4xl">
+          <h1 className="font-display text-5xl sm:text-7xl lg:text-8xl tracking-tight leading-[0.85] max-w-4xl">
             {t.name.toUpperCase()}
           </h1>
           <div className="flex flex-wrap gap-6 mt-6 text-sm">
@@ -702,7 +712,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                   { label: "ENTRY FEE", value: `$${entryFee}`, onClick: undefined },
                   { label: "FORMAT", value: formatDisplay, onClick: undefined },
                   { label: "DRAW SIZE", value: String(t.draw_size), onClick: undefined },
-                  { label: "DIRECTOR", value: t.director?.full_name?.split(" ")[0] ?? "—", onClick: contactDirector },
+                  { label: "DIRECTOR", value: t.director?.full_name?.split(" ")[0]?.toUpperCase() ?? "—", onClick: contactDirector },
                 ].map((s) =>
                   s.onClick ? (
                     <button
@@ -903,6 +913,15 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
             {/* CTAs — per-division if divisions exist, legacy single-format otherwise */}
             <div className="space-y-3">
+              {/* Registration opens date gate — shown above all CTAs when applicable */}
+              {(regNotOpenYet || regClosed) && (
+                <div className="rounded-xl border border-border bg-secondary/30 px-4 py-3 flex items-center gap-2">
+                  <Clock size={14} weight="fill" className="text-muted-foreground flex-shrink-0" />
+                  <span className="font-mono text-[11px] text-muted-foreground">
+                    {regNotOpenYet ? `REGISTRATION OPENS ${regOpensLabel.toUpperCase()}` : "REGISTRATION CLOSED"}
+                  </span>
+                </div>
+              )}
               {divisions.length > 0 ? (
                 <>
                   <div className="font-mono text-[9px] tracking-[0.3em] text-muted-foreground">EVENTS</div>
@@ -927,7 +946,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                         completing={completing === key}
                         cancelling={cancelling === key}
                         isFull={isFull}
-                        holdWindowClosed={holdWindowClosed}
+                        holdWindowClosed={holdWindowClosed || regNotOpenYet || regClosed}
                         onHold={() => { setActiveDivision(div); setHoldOpen(true); }}
                         onComplete={() => completeRegistration(div.id)}
                         onCancel={() => cancelHold(div.id)}
@@ -992,7 +1011,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                   >
                     <Clock size={17} weight="fill" /> {joiningWaitlist ? "JOINING…" : "JOIN WAITLIST"}
                   </button>
-                ) : (
+                ) : regNotOpenYet || regClosed ? null : (
                   <>
                     {!holdWindowClosed && (
                       <button onClick={() => { setActiveDivision(null); setHoldOpen(true); }} className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors" data-testid="hold-spot-trigger-btn">

@@ -7,16 +7,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '@/theme';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
-import { StatusChip, type StatusVariant } from '@/components';
+import { StatusChip, AddToCalendarButton, type StatusVariant } from '@/components';
 import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilities';
 import {
-  fetchReservationById, fetchReservationPlayersWithProfiles, playersNeeded,
+  fetchReservationById, fetchReservationPlayersWithProfiles, playersNeeded, parseTstzrange,
   type Reservation,
 } from '@/lib/supabase/reservations';
 import {
   fetchReservationPayment, reservationPaymentStatusLabel, type ReservationPaymentStatus,
 } from '@/lib/payments/reservationPaymentIntent';
 import { getBookingFacility, getBookingSelection, getBookingReservationId } from '@/lib/bookingStore';
+import type { CalendarEventInput } from '@/lib/calendarEvents';
 
 const PAYMENT_STATUS_VARIANT: Record<string, StatusVariant> = {
   succeeded: 'green', requires_confirmation: 'gold', processing: 'gold',
@@ -130,6 +131,30 @@ export default function ConfirmationScreen() {
   const isOrganizer = user?.id === reservation.organizer_id;
   const showFindPlayers = isOrganizer && !isBallMachine && needed > 0;
 
+  // Add to Calendar uses the reservation's own time_range (a real tstzrange
+  // -- an absolute UTC instant, not just a locally-formatted display string)
+  // rather than the session-local `selection` used above, since bookingStore
+  // may be empty if the user returns to this screen later. Only offered for
+  // an active booking -- not cancelled/expired (Phase 6 Step 21).
+  const canAddToCalendar = reservation.status === 'held' || reservation.status === 'confirmed';
+  let calendarEvent: CalendarEventInput | null = null;
+  if (canAddToCalendar) {
+    const range = parseTstzrange(reservation.time_range as string);
+    const assetLabel = isBallMachine ? 'Ball Machine' : (selection.assetName ?? 'Court');
+    const facilityName = facility?.name ?? facilityCtx.facilityName ?? 'Facility';
+    const locationParts = facility
+      ? [facility.address, facility.address_line_2, [facility.city, facility.state, facility.postal_code].filter(Boolean).join(', ')]
+        .filter((p): p is string => !!p)
+      : [];
+    calendarEvent = {
+      title: `Pickleball ${isBallMachine ? '' : 'Court'} — ${facilityName}`.replace(/\s+/g, ' ').trim(),
+      startDate: new Date(range.startsAt),
+      endDate: new Date(range.endsAt),
+      location: [facilityName, ...locationParts].join('\n'),
+      notes: `${assetLabel}. Booking details available in pickleballapp.`,
+    };
+  }
+
   const playerStatus = needed === 0
     ? `${currentPlayers} of ${max} · Game Complete`
     : `${currentPlayers} of ${max} · Looking for ${needed}`;
@@ -196,6 +221,10 @@ export default function ConfirmationScreen() {
           <Ionicons name="stats-chart-outline" size={18} color={L.navy} />
           <Text style={s.secondaryBtnText}>View Game Status</Text>
         </TouchableOpacity>
+
+        {calendarEvent && (
+          <AddToCalendarButton event={calendarEvent} style={{ marginTop: spacing.sm }} />
+        )}
 
         {facility && (
           <TouchableOpacity style={s.secondaryBtn} activeOpacity={0.85} onPress={handleDirections}>

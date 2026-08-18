@@ -1,16 +1,19 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Image, ActivityIndicator, Linking, Alert,
+  ScrollView, Image, ActivityIndicator, Linking, Alert, Modal, Pressable, Share,
 } from 'react-native';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, radius, displayText } from '@/theme';
 import { goBack } from '@/lib/navigation';
 import { useSupportContext } from '@/lib/support/supportContext';
-import { AppIcon, PickleballIcon, StatusChip, type AppIconName } from '@/components';
+import { appLinks } from '@/lib/appLinks';
+import { AppIcon, PickleballIcon, StatusChip } from '@/components';
+import { VenueMapCard } from '@/components/VenueMapCard';
 import {
   fetchFacilityById,
   fetchFacilityPlayEvents,
@@ -25,7 +28,7 @@ import { fetchBallMachines, type BallMachine } from '@/lib/supabase/ballMachines
 import { fetchActiveFlashDeal } from '@/lib/supabase/flashDeals';
 import { fetchAssetAvailability, type AssetAvailabilitySlot, type ReservableAssetType } from '@/lib/supabase/reservations';
 import { fetchEventWeather, type EventWeatherResult } from '@/lib/supabase/weather';
-import { getBookingSearch, setBookingFacility, setBookingSelection } from '@/lib/bookingStore';
+import { getBookingSearch, setBookingSearch, setBookingFacility, setBookingSelection } from '@/lib/bookingStore';
 
 const L = {
   bg:       colors.bg,
@@ -110,26 +113,54 @@ function todayIsoDate(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function addDaysIso(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function formatSummaryDateLabel(dateStr: string): string {
+  const today = todayIsoDate();
+  if (dateStr === today) return 'Today';
+  if (dateStr === addDaysIso(today, 1)) return 'Tomorrow';
+  const d = new Date(`${dateStr}T00:00:00`);
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
 function formatHourLabel(hour: number): string {
   const period = hour >= 12 ? 'PM' : 'AM';
   const h12 = hour % 12 === 0 ? 12 : hour % 12;
   return `${h12} ${period}`;
 }
 
-function isAssetBusyAtHour(slots: AssetAvailabilitySlot[], dateStr: string, hour: number): boolean {
+// An asset at a given hour is either fully 'open' (no reservation), 'joinable'
+// (reserved but currentPlayers < maxPlayers -- e.g. a single player's doubles
+// game still short a partner), or 'full'. Surfacing 'joinable' separately is
+// the whole point: a plain busy/open summary would hide these as unavailable,
+// exactly when a solo player most wants to see them.
+type AssetHourState = 'open' | 'joinable' | 'full';
+
+function assetStateAtHour(slots: AssetAvailabilitySlot[], dateStr: string, hour: number): AssetHourState {
   const hourStart = new Date(`${dateStr}T${String(hour).padStart(2, '0')}:00:00`);
   const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000);
-  return slots.some(slot => new Date(slot.startsAt) < hourEnd && new Date(slot.endsAt) > hourStart);
+  const slot = slots.find(s => new Date(s.startsAt) < hourEnd && new Date(s.endsAt) > hourStart);
+  if (!slot) return 'open';
+  return slot.currentPlayers < slot.maxPlayers ? 'joinable' : 'full';
 }
 
 function computeHourlyOpenCounts(
   slotsByAsset: AssetAvailabilitySlot[][],
   dateStr: string,
-): { hour: number; open: number }[] {
-  return SUMMARY_HOURS.map(hour => ({
-    hour,
-    open: slotsByAsset.filter(slots => !isAssetBusyAtHour(slots, dateStr, hour)).length,
-  }));
+): { hour: number; open: number; joinable: number }[] {
+  return SUMMARY_HOURS.map(hour => {
+    let open = 0, joinable = 0;
+    for (const slots of slotsByAsset) {
+      const state = assetStateAtHour(slots, dateStr, hour);
+      if (state === 'open') open++;
+      else if (state === 'joinable') joinable++;
+    }
+    return { hour, open, joinable };
+  });
 }
 
 // ─── Weather row (compact) ─────────────────────────────────────────────────────
@@ -217,49 +248,125 @@ const ic = StyleSheet.create({
   priceUnavailable: { color: L.textMuted, fontSize: 11, fontWeight: '500' },
 });
 
-// ─── Hero photo with fallback ──────────────────────────────────────────────────
+// ─── Hero photo backdrop (image or initials fallback) ──────────────────────────
 
 function HeroPhoto({ uri, name }: { uri: string | null; name: string }) {
-  if (uri) return <Image source={{ uri }} style={s.hero} resizeMode="cover" />;
+  if (uri) return <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />;
   const initials = name.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('');
   return (
-    <View style={[s.hero, s.heroFallback]}>
+    <View style={[StyleSheet.absoluteFill, s.heroFallback]}>
       <PickleballIcon size={44} color={L.gold} />
       <Text style={s.heroInitials}>{initials}</Text>
     </View>
   );
 }
 
-// ─── Amenity row ──────────────────────────────────────────────────────────────
+// ─── Amenity chip (compact, horizontal) ────────────────────────────────────────
 
-function AmenityRow({ icon, label, active }: { icon: keyof typeof Ionicons.glyphMap; label: string; active: boolean }) {
+function AmenityChip({ icon, label, active }: { icon: keyof typeof Ionicons.glyphMap; label: string; active: boolean }) {
   return (
-    <View style={[a.row, !active && a.inactive]}>
-      <Ionicons name={icon} size={18} color={active ? L.navy : L.border} />
+    <View style={[a.chip, !active && a.chipInactive]}>
+      <Ionicons name={icon} size={15} color={active ? L.navy : L.border} />
       <Text style={[a.label, !active && a.labelInactive]}>{label}</Text>
-      <Ionicons name={active ? 'checkmark-circle' : 'close-circle-outline'} size={16}
-        color={active ? '#16A34A' : L.border} style={{ marginLeft: 'auto' }} />
     </View>
   );
 }
 const a = StyleSheet.create({
-  row:          { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: L.border },
-  inactive:     { opacity: 0.45 },
-  label:        { color: L.text, fontSize: 14, fontWeight: '600', flex: 1 },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderWidth: 1, borderColor: L.border, borderRadius: radius.chip,
+    paddingHorizontal: 10, paddingVertical: 7,
+  },
+  chipInactive: { opacity: 0.4 },
+  label:        { color: L.text, fontSize: 12, fontWeight: '600' },
   labelInactive:{ color: L.textMuted },
 });
 
-// ─── Info row ─────────────────────────────────────────────────────────────────
+// ─── Map bottom sheet ───────────────────────────────────────────────────────────
 
-function InfoRow({ icon, children }: { icon: AppIconName; children: React.ReactNode }) {
+function MapSheet({
+  visible, onClose, facility, onGetDirections,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  facility: FacilityDetail;
+  onGetDirections: () => void;
+}) {
+  const latNum = Number(facility.latitude);
+  const lngNum = Number(facility.longitude);
+  const lat = Number.isFinite(latNum) ? latNum : null;
+  const lng = Number.isFinite(lngNum) ? lngNum : null;
+
   return (
-    <View style={ir.row}>
-      <AppIcon name={icon} size={16} color={L.gold} />
-      <View style={{ flex: 1 }}>{children}</View>
-    </View>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Pressable style={ms.backdrop} onPress={onClose}>
+        <Pressable style={ms.sheet} onPress={(e) => e.stopPropagation()}>
+          <View style={ms.header}>
+            <View style={ms.headerTitleRow}>
+              <Ionicons name="location" size={16} color={L.navy} />
+              <Text style={ms.headerTitle}>Map</Text>
+            </View>
+            <TouchableOpacity style={ms.closeBtn} onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={18} color={L.white} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={ms.mapWrap}>
+            {visible && lat != null && lng != null ? (
+              <VenueMapCard latitude={lat} longitude={lng} name={facility.name} />
+            ) : (
+              <View style={ms.mapUnavailable}>
+                <Ionicons name="map-outline" size={28} color={L.border} />
+                <Text style={ms.mapUnavailableText}>Map preview unavailable</Text>
+              </View>
+            )}
+          </View>
+
+          <Text style={ms.name}>{facility.name}</Text>
+          <Text style={ms.address}>
+            {facility.address}, {facility.city}, {facility.state}{facility.postal_code ? ` ${facility.postal_code}` : ''}
+          </Text>
+
+          <TouchableOpacity style={ms.directionsBtn} activeOpacity={0.88} onPress={onGetDirections}>
+            <Ionicons name="navigate-outline" size={18} color={L.white} />
+            <Text style={ms.directionsText}>Get Directions</Text>
+          </TouchableOpacity>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
-const ir = StyleSheet.create({ row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 6 } });
+const ms = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(10,18,40,0.45)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: L.bg,
+    borderTopLeftRadius: radius.card + 8,
+    borderTopRightRadius: radius.card + 8,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxl,
+  },
+  header:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  headerTitle:    { color: L.navy, fontSize: 16, fontWeight: '800' },
+  closeBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: L.navy, alignItems: 'center', justifyContent: 'center',
+  },
+  mapWrap: {
+    height: 220, borderRadius: radius.md, overflow: 'hidden',
+    backgroundColor: L.page, marginBottom: spacing.md,
+  },
+  mapUnavailable: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  mapUnavailableText: { color: L.textMuted, fontSize: 13, fontWeight: '500' },
+  name:    { color: L.navy, fontSize: 15, fontWeight: '800', marginBottom: 2 },
+  address: { color: L.textMuted, fontSize: 13, fontWeight: '500', lineHeight: 18, marginBottom: spacing.md },
+  directionsBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: L.navy, borderRadius: 30, paddingVertical: 14,
+  },
+  directionsText: { color: L.white, fontSize: 15, fontWeight: '800' },
+});
 
 // ─── Play event card ──────────────────────────────────────────────────────────
 
@@ -373,11 +480,18 @@ export default function FacilityDetailScreen() {
   const [ballMachines,     setBallMachines]     = useState<BallMachine[]>([]);
   const [inventoryLoading, setInventoryLoading] = useState(true);
   const [dealsByAssetId,   setDealsByAssetId]   = useState<Record<string, number>>({});
-  const [hourlyOpenCounts, setHourlyOpenCounts] = useState<{ hour: number; open: number }[] | null>(null);
+  const [hourlyOpenCounts, setHourlyOpenCounts] = useState<{ hour: number; open: number; joinable: number }[] | null>(null);
   const [summaryLoading,   setSummaryLoading]   = useState(true);
   const [weather,          setWeather]          = useState<EventWeatherResult | 'loading' | null>(null);
+  const [mapSheetOpen,     setMapSheetOpen]     = useState(false);
+  const [summaryDate,      setSummaryDate]      = useState(getBookingSearch().date ?? todayIsoDate());
+  const [dealsOnly,        setDealsOnly]        = useState(false);
+  const [priceSortAsc,     setPriceSortAsc]     = useState(false);
 
-  const summaryDate = getBookingSearch().date ?? todayIsoDate();
+  function changeSummaryDate(next: string) {
+    setSummaryDate(next);
+    setBookingSearch({ date: next });
+  }
 
   useSupportContext({
     feature: 'facility',
@@ -504,6 +618,25 @@ export default function FacilityDetailScreen() {
   const access = facilityAccessType(facility);
   const badge  = ACCESS_BADGE[access];
 
+  const courtsSummary = [
+    `${facility.court_count} ${facility.court_count === 1 ? 'Court' : 'Courts'}`,
+    facility.surface_type ? facility.surface_type.charAt(0).toUpperCase() + facility.surface_type.slice(1) : null,
+    facility.indoor_courts > 0 && facility.outdoor_courts > 0
+      ? `${facility.indoor_courts} indoor, ${facility.outdoor_courts} outdoor`
+      : facility.indoor_courts > 0 ? 'Indoor' : facility.outdoor_courts > 0 ? 'Outdoor' : null,
+  ].filter(Boolean).join('  ·  ');
+
+  const rawAssets: (Court | BallMachine)[] = inventoryTab === 'court' ? courts : ballMachines;
+  const visibleAssets = rawAssets
+    .filter(a => !dealsOnly || dealsByAssetId[a.id] != null)
+    .slice()
+    .sort((a, b) => {
+      if (!priceSortAsc) return 0;
+      const pa = a.hourly_rate_cents ?? Number.POSITIVE_INFINITY;
+      const pb = b.hourly_rate_cents ?? Number.POSITIVE_INFINITY;
+      return pa - pb;
+    });
+
   function handleDirections() {
     const q = encodeURIComponent(`${facility!.address}, ${facility!.city}, ${facility!.state}`);
     Linking.openURL(`https://maps.apple.com/?q=${q}`).catch(() =>
@@ -511,31 +644,43 @@ export default function FacilityDetailScreen() {
     );
   }
 
+  async function handleShare() {
+    try {
+      await Share.share({
+        message: `Check out ${facility!.name} on DreamBreaker: ${appLinks.facility(facility!.id)}`,
+      });
+    } catch {
+      // user cancelled or share unavailable — nothing to do
+    }
+  }
+
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
       <StatusBar style="light" />
-
-      {/* Floating back */}
-      <TouchableOpacity
-        style={[s.floatingBack, { top: insets.top + 12 }]}
-        onPress={() => goBack()}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <Ionicons name="chevron-back" size={20} color={L.white} />
-      </TouchableOpacity>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
       >
         {/* ── HERO ── */}
-        <HeroPhoto uri={facility.primaryPhotoUrl} name={facility.name} />
+        <View style={s.hero}>
+          <HeroPhoto uri={facility.primaryPhotoUrl} name={facility.name} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.35)' }]} />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.75)']}
+            style={StyleSheet.absoluteFill}
+          />
 
-        <View style={s.body}>
+          <View style={[s.topControls, { marginTop: insets.top + 8 }]}>
+            <TouchableOpacity style={s.circleBtn} onPress={() => goBack()} activeOpacity={0.85}>
+              <Ionicons name="chevron-back" size={20} color={L.white} />
+            </TouchableOpacity>
+            <TouchableOpacity style={s.circleBtn} onPress={handleShare} activeOpacity={0.85}>
+              <Ionicons name="share-outline" size={20} color={L.white} />
+            </TouchableOpacity>
+          </View>
 
-          {/* Name + badges */}
-          <View style={s.titleRow}>
-            <Text style={s.name}>{facility.name}</Text>
+          <View style={s.heroContent}>
             <View style={s.badgeRow}>
               <View style={[s.badge, { backgroundColor: badge.bg }]}>
                 <Text style={[s.badgeText, { color: badge.color }]}>{badge.label}</Text>
@@ -547,65 +692,24 @@ export default function FacilityDetailScreen() {
                 </View>
               )}
             </View>
+            <Text style={s.heroTitle}>{facility.name}</Text>
+            <TouchableOpacity style={s.heroMetaRow} onPress={() => setMapSheetOpen(true)} activeOpacity={0.75}>
+              <Ionicons name="location-outline" size={13} color="rgba(255,255,255,0.85)" />
+              <Text style={s.heroMetaText}>{facility.city}, {facility.state}</Text>
+              <View style={s.mapPill}>
+                <Ionicons name="map-outline" size={12} color={L.navy} />
+                <Text style={s.mapPillText}>Map</Text>
+              </View>
+            </TouchableOpacity>
+            {!!courtsSummary && <Text style={s.heroFacts}>{courtsSummary}</Text>}
           </View>
+        </View>
 
-          {/* ── INFO ── */}
-          <View style={s.section}>
-            <InfoRow icon="location-outline">
-              <Text style={s.infoText}>{facility.address}</Text>
-              <Text style={s.infoSub}>{facility.city}, {facility.state}{facility.postal_code ? ` ${facility.postal_code}` : ''}</Text>
-            </InfoRow>
-            <InfoRow icon="pickleball">
-              <Text style={s.infoText}>
-                {facility.court_count} {facility.court_count === 1 ? 'Court' : 'Courts'}
-                {facility.surface_type ? ` · ${facility.surface_type.charAt(0).toUpperCase() + facility.surface_type.slice(1)}` : ''}
-              </Text>
-              {(facility.indoor_courts > 0 || facility.outdoor_courts > 0) && (
-                <Text style={s.infoSub}>
-                  {[
-                    facility.indoor_courts  > 0 ? `${facility.indoor_courts} indoor`   : null,
-                    facility.outdoor_courts > 0 ? `${facility.outdoor_courts} outdoor` : null,
-                  ].filter(Boolean).join('  ·  ')}
-                </Text>
-              )}
-            </InfoRow>
-            {facility.phone ? (
-              <TouchableOpacity onPress={() => Linking.openURL(`tel:${facility!.phone}`)}>
-                <InfoRow icon="call-outline">
-                  <Text style={[s.infoText, s.link]}>{facility.phone}</Text>
-                </InfoRow>
-              </TouchableOpacity>
-            ) : null}
-            {facility.website ? (
-              <TouchableOpacity onPress={() => Linking.openURL(facility!.website!)}>
-                <InfoRow icon="globe-outline">
-                  <Text style={[s.infoText, s.link]} numberOfLines={1}>{facility.website}</Text>
-                </InfoRow>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          {/* ── DESCRIPTION ── */}
-          {!!facility.description && (
-            <View style={s.section}>
-              <Text style={s.sectionTitle}>About</Text>
-              <Text style={s.description}>{facility.description}</Text>
-            </View>
-          )}
-
-          {/* ── AMENITIES ── */}
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>Amenities</Text>
-            <AmenityRow icon="bulb-outline"  label="Lighting"  active={facility.lighting}  />
-            <AmenityRow icon="man-outline"   label="Restrooms" active={facility.restrooms} />
-            <AmenityRow icon="water-outline" label="Water"     active={facility.water}     />
-            <AmenityRow icon="car-outline"   label="Parking"   active={facility.parking}   />
-          </View>
+        <View style={s.body}>
 
           {/* ── WEATHER ── */}
           {weather != null && (
-            <View style={s.section}>
-              <Text style={s.sectionTitle}>Weather</Text>
+            <View style={s.weatherStrip}>
               <WeatherRow w={weather} />
             </View>
           )}
@@ -614,6 +718,45 @@ export default function FacilityDetailScreen() {
           {(courts.length > 0 || ballMachines.length > 0 || inventoryLoading) && (
             <View style={s.section}>
               <SectionHeader title="Book a Court" loading={inventoryLoading} />
+
+              {/* Date navigation */}
+              <View style={s.dateNavRow}>
+                <TouchableOpacity
+                  style={[s.dateNavBtn, summaryDate <= todayIsoDate() && s.dateNavBtnDisabled]}
+                  activeOpacity={0.75}
+                  disabled={summaryDate <= todayIsoDate()}
+                  onPress={() => changeSummaryDate(addDaysIso(summaryDate, -1))}
+                >
+                  <Ionicons name="chevron-back" size={18} color={summaryDate <= todayIsoDate() ? L.border : L.navy} />
+                </TouchableOpacity>
+                <View style={s.dateNavLabel}>
+                  <Ionicons name="calendar-outline" size={14} color={L.navy} />
+                  <Text style={s.dateNavText}>{formatSummaryDateLabel(summaryDate)}</Text>
+                </View>
+                <TouchableOpacity style={s.dateNavBtn} activeOpacity={0.75} onPress={() => changeSummaryDate(addDaysIso(summaryDate, 1))}>
+                  <Ionicons name="chevron-forward" size={18} color={L.navy} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Filters */}
+              <View style={s.filterRow}>
+                <TouchableOpacity
+                  style={[s.filterChip, dealsOnly && s.filterChipActive]}
+                  activeOpacity={0.75}
+                  onPress={() => setDealsOnly(v => !v)}
+                >
+                  <Ionicons name="flash" size={13} color={dealsOnly ? L.navy : L.textMuted} />
+                  <Text style={[s.filterChipText, dealsOnly && s.filterChipTextActive]}>Flash Deals</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[s.filterChip, priceSortAsc && s.filterChipActive]}
+                  activeOpacity={0.75}
+                  onPress={() => setPriceSortAsc(v => !v)}
+                >
+                  <Ionicons name="swap-vertical" size={13} color={priceSortAsc ? L.navy : L.textMuted} />
+                  <Text style={[s.filterChipText, priceSortAsc && s.filterChipTextActive]}>Price: Low to High</Text>
+                </TouchableOpacity>
+              </View>
 
               {ballMachines.length > 0 && (
                 <View style={s.invTabRow}>
@@ -634,7 +777,7 @@ export default function FacilityDetailScreen() {
                 </View>
               )}
 
-              {(inventoryTab === 'court' ? courts : ballMachines).map(asset => (
+              {visibleAssets.map(asset => (
                 <InventoryCard
                   key={asset.id}
                   name={asset.name}
@@ -644,11 +787,13 @@ export default function FacilityDetailScreen() {
                 />
               ))}
 
-              {!inventoryLoading && (inventoryTab === 'court' ? courts : ballMachines).length === 0 && (
+              {!inventoryLoading && visibleAssets.length === 0 && (
                 <View style={s.emptyState}>
                   <Ionicons name="pricetag-outline" size={24} color={L.border} />
                   <Text style={s.emptyText}>
-                    {inventoryTab === 'court' ? 'No courts listed yet.' : 'No ball machines listed yet.'}
+                    {rawAssets.length > 0
+                      ? 'No courts match these filters.'
+                      : inventoryTab === 'court' ? 'No courts listed yet.' : 'No ball machines listed yet.'}
                   </Text>
                 </View>
               )}
@@ -657,18 +802,22 @@ export default function FacilityDetailScreen() {
               {(hourlyOpenCounts && hourlyOpenCounts.length > 0) || summaryLoading ? (
                 <>
                   <Text style={[s.sectionTitle, { marginTop: 18 }]}>
-                    {summaryDate === todayIsoDate() ? "Today's" : ''} Availability Summary
+                    {formatSummaryDateLabel(summaryDate)} Availability
                   </Text>
                   {summaryLoading ? (
                     <ActivityIndicator size="small" color={L.gold} style={{ marginTop: 8 }} />
                   ) : (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
-                      {hourlyOpenCounts!.map(({ hour, open }) => (
-                        <View key={hour} style={s.hourChip}>
+                      {hourlyOpenCounts!.map(({ hour, open, joinable }) => (
+                        <View key={hour} style={[s.hourChip, open === 0 && joinable > 0 && s.hourChipJoinable]}>
                           <Text style={s.hourChipTime}>{formatHourLabel(hour)}</Text>
-                          <Text style={[s.hourChipCount, open === 0 && s.hourChipCountFull]}>
-                            {open} {inventoryTab === 'court' ? 'open' : 'free'}
-                          </Text>
+                          {open > 0 ? (
+                            <Text style={s.hourChipCount}>{open} {inventoryTab === 'court' ? 'open' : 'free'}</Text>
+                          ) : joinable > 0 ? (
+                            <Text style={s.hourChipJoinableText}>{joinable} joinable</Text>
+                          ) : (
+                            <Text style={[s.hourChipCount, s.hourChipCountFull]}>Full</Text>
+                          )}
                         </View>
                       ))}
                     </ScrollView>
@@ -692,6 +841,48 @@ export default function FacilityDetailScreen() {
               )}
             </View>
           )}
+
+          {/* ── DETAILS (compact) ── */}
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Details</Text>
+
+            <TouchableOpacity style={s.detailRow} onPress={() => setMapSheetOpen(true)} activeOpacity={0.75}>
+              <AppIcon name="location-outline" size={16} color={L.gold} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.infoText}>{facility.address}</Text>
+                <Text style={s.infoSub}>{facility.city}, {facility.state}{facility.postal_code ? ` ${facility.postal_code}` : ''}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={L.border} />
+            </TouchableOpacity>
+
+            {(facility.phone || facility.website) && (
+              <View style={s.contactRow}>
+                {facility.phone && (
+                  <TouchableOpacity style={s.contactChip} onPress={() => Linking.openURL(`tel:${facility!.phone}`)} activeOpacity={0.75}>
+                    <Ionicons name="call-outline" size={14} color={L.navy} />
+                    <Text style={s.contactChipText}>Call</Text>
+                  </TouchableOpacity>
+                )}
+                {facility.website && (
+                  <TouchableOpacity style={s.contactChip} onPress={() => Linking.openURL(facility!.website!)} activeOpacity={0.75}>
+                    <Ionicons name="globe-outline" size={14} color={L.navy} />
+                    <Text style={s.contactChipText}>Website</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            <View style={s.amenityWrap}>
+              <AmenityChip icon="bulb-outline"  label="Lighting"  active={facility.lighting}  />
+              <AmenityChip icon="man-outline"   label="Restrooms" active={facility.restrooms} />
+              <AmenityChip icon="water-outline" label="Water"     active={facility.water}     />
+              <AmenityChip icon="car-outline"   label="Parking"   active={facility.parking}   />
+            </View>
+
+            {!!facility.description && (
+              <Text style={s.description}>{facility.description}</Text>
+            )}
+          </View>
 
           {/* ── COMMUNITY PLAY ── */}
           <View style={s.section}>
@@ -756,48 +947,97 @@ export default function FacilityDetailScreen() {
 
         </View>
       </ScrollView>
+
+      <MapSheet
+        visible={mapSheetOpen}
+        onClose={() => setMapSheetOpen(false)}
+        facility={facility}
+        onGetDirections={() => { setMapSheetOpen(false); handleDirections(); }}
+      />
     </View>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const HERO_H = 240;
+const HERO_H = 300;
 
 const s = StyleSheet.create({
   root:   { flex: 1, backgroundColor: L.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: L.bg },
 
-  hero:         { width: '100%', height: HERO_H },
+  hero:         { width: '100%', height: HERO_H, position: 'relative' },
   heroFallback: { backgroundColor: L.navy, alignItems: 'center', justifyContent: 'center', gap: 8 },
   heroInitials: { color: L.gold, fontSize: 28, fontWeight: '900', letterSpacing: 1 },
 
-  floatingBack: {
-    position: 'absolute', left: 16, zIndex: 20,
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+  topControls: {
+    position: 'absolute', left: spacing.screenH, right: spacing.screenH,
+    flexDirection: 'row', justifyContent: 'space-between', zIndex: 10,
+  },
+  circleBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: 'rgba(0,0,0,0.38)',
     alignItems: 'center', justifyContent: 'center',
   },
+  heroContent: { position: 'absolute', bottom: 0, left: spacing.screenH, right: spacing.screenH, paddingBottom: spacing.lg },
+  heroTitle:   { color: L.white, fontSize: 26, fontWeight: '800', lineHeight: 30, marginBottom: 6 },
+  heroMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  heroMetaText:{ color: 'rgba(255,255,255,0.88)', fontSize: 13, fontWeight: '500' },
+  heroFacts:   { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '500' },
+  mapPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 4,
+    backgroundColor: L.white, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3,
+  },
+  mapPillText: { color: L.navy, fontSize: 11, fontWeight: '800' },
 
   body:      { padding: spacing.screenH },
-  titleRow:  { gap: 8, marginTop: 6, marginBottom: 4 },
-  name:      { color: L.navy, fontSize: 22, fontWeight: '900', lineHeight: 28 },
   badgeRow:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
   badge:     { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   badgeText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.4 },
   verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#DBEAFE', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4 },
   verifiedText:  { fontSize: 10, fontWeight: '800', color: '#2563EB', letterSpacing: 0.3 },
 
+  weatherStrip: { marginTop: 4 },
+
   section:      { marginTop: 20 },
   sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '800', letterSpacing: 0.8, marginBottom: 10, textTransform: 'uppercase' },
 
   infoText: { color: L.text,    fontSize: 14, fontWeight: '600' },
   infoSub:  { color: L.textMuted, fontSize: 12, fontWeight: '500', marginTop: 1 },
-  link:     { color: L.navy, textDecorationLine: 'underline' },
-  description: { color: L.textSub, fontSize: 14, fontWeight: '400', lineHeight: 21 },
+  description: { color: L.textSub, fontSize: 14, fontWeight: '400', lineHeight: 21, marginTop: 14 },
+
+  detailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 6 },
+  contactRow:  { flexDirection: 'row', gap: 8, marginTop: 10 },
+  contactChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderWidth: 1, borderColor: L.border, borderRadius: radius.chip,
+    paddingHorizontal: 12, paddingVertical: 7,
+  },
+  contactChipText: { color: L.navy, fontSize: 12, fontWeight: '700' },
+
+  amenityWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
 
   emptyState: { alignItems: 'center', paddingVertical: 20, gap: 8 },
   emptyText:  { color: L.textMuted, fontSize: 13, fontWeight: '500' },
+
+  dateNavRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  dateNavBtn: {
+    width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: L.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  dateNavBtnDisabled: { opacity: 0.4 },
+  dateNavLabel: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dateNavText:  { color: L.navy, fontSize: 15, fontWeight: '800' },
+
+  filterRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  filterChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderWidth: 1, borderColor: L.border, borderRadius: radius.chip,
+    paddingHorizontal: 10, paddingVertical: 7,
+  },
+  filterChipActive:     { borderColor: L.gold, backgroundColor: L.goldBg },
+  filterChipText:       { color: L.textMuted, fontSize: 12, fontWeight: '700' },
+  filterChipTextActive: { color: L.navy },
 
   invTabRow:  { flexDirection: 'row', gap: spacing.sm, marginBottom: 8 },
   invTab:     { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: radius.chip, borderWidth: 1, borderColor: L.border },
@@ -809,9 +1049,11 @@ const s = StyleSheet.create({
     alignItems: 'center', gap: 2, borderWidth: 1, borderColor: L.border, borderRadius: radius.md,
     paddingVertical: 8, paddingHorizontal: 12, marginRight: 8,
   },
+  hourChipJoinable: { borderColor: L.gold, backgroundColor: L.goldBg },
   hourChipTime:  { color: L.navy, fontSize: 12, fontWeight: '800' },
   hourChipCount: { color: '#16A34A', fontSize: 11, fontWeight: '700' },
   hourChipCountFull: { color: L.textMuted },
+  hourChipJoinableText: { color: L.navy, fontSize: 11, fontWeight: '800' },
 
   ctaStack:        { marginTop: 28, gap: 10 },
   ctaPrimary:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: L.navy, borderRadius: 30, paddingVertical: 14 },

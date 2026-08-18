@@ -26,6 +26,7 @@ interface Tournament {
   venue_address: string;
   zip_code: string;
   event_date: string;
+  registration_closes_at: string | null;
   format: string;
   formats: string[] | null;
   tournament_format: string | null;
@@ -408,7 +409,7 @@ export default function DirectorTournamentPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: t, error } = await (supabase as any)
         .from("tournaments")
-        .select("id,name,city,state,venue_name,venue_address,zip_code,event_date,format,formats,tournament_format,pool_count,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,hold_duration_hours,hold_cutoff_days,prize_pool_cents,description,rules,cover_img_url,status,created_at")
+        .select("id,name,city,state,venue_name,venue_address,zip_code,event_date,registration_closes_at,format,formats,tournament_format,pool_count,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,hold_duration_hours,hold_cutoff_days,prize_pool_cents,description,rules,cover_img_url,status,created_at")
         .eq("id", id)
         .eq("director_id", userId)
         .single();
@@ -640,6 +641,7 @@ export default function DirectorTournamentPage() {
       state: fd.get("state") as string,
       zip_code: fd.get("zip_code") as string,
       event_date: fd.get("event_date") as string,
+      registration_closes_at: fd.get("registration_closes_at") as string,
       description: (fd.get("description") as string) || null,
       rules: (fd.get("rules") as string) || null,
       prize_pool_cents: fd.get("prize_pool") ? Math.round(parseFloat(fd.get("prize_pool") as string) * 100) : null,
@@ -859,6 +861,10 @@ export default function DirectorTournamentPage() {
                   </div>
                 </div>
                 <div>
+                  <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">REGISTRATION CLOSES</label>
+                  <input name="registration_closes_at" type="date" defaultValue={tournament.registration_closes_at ? tournament.registration_closes_at.slice(0, 10) : ""} required className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+                <div>
                   <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">VENUE ADDRESS</label>
                   <input name="venue_address" defaultValue={tournament.venue_address ?? ""} className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
                 </div>
@@ -916,6 +922,14 @@ export default function DirectorTournamentPage() {
                     <div className="flex items-start gap-3">
                       <Calendar size={16} className="text-primary mt-0.5 flex-shrink-0" />
                       <div><div className="text-sm font-semibold">{fmtDate(tournament.event_date)}</div></div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Clock size={16} className="text-primary mt-0.5 flex-shrink-0" />
+                      <div>
+                        <div className="text-sm font-semibold">
+                          {tournament.registration_closes_at ? `Registration closes ${fmtDate(tournament.registration_closes_at)}` : "Registration close date not set"}
+                        </div>
+                      </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <MapPin size={16} className="text-primary mt-0.5 flex-shrink-0" />

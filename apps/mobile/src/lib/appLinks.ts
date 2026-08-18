@@ -18,6 +18,7 @@ export const appRoutes = {
   booking: (id: string) => `/booking/${segment(id)}`,
   coachOffer: (id: string) => `/coach/offers/${segment(id)}`,
   claim: (token: string) => `/claim/${segment(token)}`,
+  facility: (id: string) => `/facility/${segment(id)}`,
 };
 
 export const appLinks = {
@@ -29,4 +30,5 @@ export const appLinks = {
   booking: (id: string) => absolute(appRoutes.booking(id)),
   coachOffer: (id: string) => absolute(appRoutes.coachOffer(id)),
   claim: (token: string) => absolute(appRoutes.claim(token)),
+  facility: (id: string) => absolute(appRoutes.facility(id)),
 };

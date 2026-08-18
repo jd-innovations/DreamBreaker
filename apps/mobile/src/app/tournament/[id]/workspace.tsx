@@ -15,6 +15,8 @@ import { hasBracket } from '@/lib/directorBracketStore';
 import {
   statusLabel,
   statusVariant,
+  partnerPaymentLabel,
+  partnerPaymentVariant,
   type DirectorRegistration,
   type TournamentMetrics,
   type DivisionMetrics,
@@ -47,6 +49,8 @@ function toDirector(r: TournamentRegistration): DirectorRegistration {
     partnerId:           r.partnerId,
     partnerName:         r.partnerName,
     partnerDupr:         r.partnerDupr,
+    teamStatus:          r.teamStatus,
+    teamPartnerPaymentState: r.teamPartnerPaymentState,
     divisionId:          r.divisionId,
     divisionName:        r.divisionName,
     divisionLevel:       r.divisionLevel,
@@ -185,6 +189,13 @@ function RegRow({ reg, onPress }: { reg: DirectorRegistration; onPress: () => vo
               ? 'Partner: Choose Later'
               : 'Singles'}
         </Text>
+        {/* Each player on a doubles/mixed team pays separately — this row's
+            "Paid" figure is only this player's own entry fee. */}
+        {!!partnerPaymentLabel(reg) && (
+          <Text style={[rr.sub, { color: partnerPaymentVariant(reg) === 'green' ? L.success : L.gold }]}>
+            {partnerPaymentLabel(reg)}
+          </Text>
+        )}
       </View>
       <View style={rr.right}>
         <Text style={rr.div}>{reg.divisionName}  {reg.divisionLevel}</Text>
@@ -322,6 +333,7 @@ const dc = StyleSheet.create({
 
 function DetailModal({
   reg,
+  tournamentId,
   onClose,
   onAction,
   bottomInset,
@@ -330,6 +342,7 @@ function DetailModal({
   messagingPlayer,
 }: {
   reg: DirectorRegistration;
+  tournamentId: string;
   onClose: () => void;
   onAction: () => void;
   bottomInset: number;
@@ -375,6 +388,16 @@ function DetailModal({
               ) : reg.partnerStatus === 'choose_later' ? (
                 <Text style={[dm.partnerLine, { color: L.textSub }]}>Partner: Choose Later</Text>
               ) : null}
+              {!!partnerPaymentLabel(reg) && (
+                <Text
+                  style={[
+                    dm.partnerLine,
+                    { color: partnerPaymentVariant(reg) === 'green' ? L.success : L.gold },
+                  ]}
+                >
+                  {partnerPaymentLabel(reg)}
+                </Text>
+              )}
               <Text style={dm.divLine}>{reg.divisionName}  •  {reg.divisionLevel}</Text>
             </View>
             <StatusChip label={statusLabel(reg.status)} variant={statusVariant(reg.status)} />
@@ -409,7 +432,7 @@ function DetailModal({
             <TouchableOpacity
               style={[dm.actionBtn, dm.actionBtnGreen, !canCheckIn && dm.actionBtnDisabled]}
               activeOpacity={canCheckIn ? 0.8 : 1}
-              onPress={canCheckIn ? () => doAction(() => checkInPlayer(reg.id)) : undefined}
+              onPress={canCheckIn ? () => doAction(() => checkInPlayer(reg.id, tournamentId)) : undefined}
             >
               <Ionicons name="checkmark-circle-outline" size={18} color={canCheckIn ? L.success : L.textSub} />
               <Text style={[dm.actionLabel, { color: canCheckIn ? L.success : L.textSub }]}>Check In</Text>
@@ -854,6 +877,7 @@ export default function DirectorWorkspaceScreen() {
       {selected && (
         <DetailModal
           reg={selected}
+          tournamentId={id}
           onClose={() => setSelected(null)}
           onAction={refresh}
           bottomInset={insets.bottom}

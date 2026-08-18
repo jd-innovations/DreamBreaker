@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tabBarClearance } from '@/constants/tabBar';
@@ -10,6 +10,16 @@ import { AppIcon, type AppIconName } from './AppIcon';
 import type { ExploreMapProps, MapPinLike } from './ExploreMap.types';
 
 const L = { gold: colors.gold, navy: colors.navy, white: colors.white };
+
+// Google Maps on iOS needs its own native SDK pod (GoogleMaps) linked into
+// the Xcode project ("AirGoogleMaps dir must be added to your xcode
+// project") -- not wired into this app's current native build. Apple's own
+// MapKit provider needs no extra native SDK/config and just works, so iOS
+// uses it instead; Android keeps Google Maps (already configured via
+// android.config.googleMaps.apiKey in app.config.js). Google Places/facility
+// search data is unaffected either way -- this only changes which map
+// renderer draws the tiles/markers.
+const MAP_PROVIDER = Platform.OS === 'ios' ? PROVIDER_DEFAULT : PROVIDER_GOOGLE;
 
 // Halo (selected-state glow) rgba equivalents for each pin color — kept as a
 // flat lookup rather than deriving from hex since there are only ever 4 colors.
@@ -42,6 +52,44 @@ function MapPin({ pin, selected }: { pin: MapPinLike; selected: boolean }) {
   );
 }
 
+// How long a marker keeps re-rasterizing after its visual state changes: long
+// enough for the custom view to draw, short enough that no marker is ever left
+// tracking indefinitely.
+const MARKER_TRACK_WINDOW_MS = 600;
+
+function MapMarker({ pin, selected, onPress }: {
+  pin: MapPinLike;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  // Custom marker views default to tracksViewChanges=true, which re-rasterizes
+  // every marker on every frame -- with many pins that's a visible fade/flicker
+  // as they load. The previous approach (tracksViewChanges={selected}) fixed
+  // the flicker but left the *selected* marker tracking permanently, so a live,
+  // continuously-updating native marker view could be torn down mid-update when
+  // this screen was covered by a navigation push -- which hard-crashes MapKit
+  // on iOS. Instead, track only for a short window after the pin's visual state
+  // actually changes, then stop.
+  const [tracking, setTracking] = React.useState(true);
+
+  React.useEffect(() => {
+    setTracking(true);
+    const timer = setTimeout(() => setTracking(false), MARKER_TRACK_WINDOW_MS);
+    return () => clearTimeout(timer);
+  }, [selected]);
+
+  return (
+    <Marker
+      coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
+      onPress={onPress}
+      anchor={{ x: 0.5, y: 1 }}
+      tracksViewChanges={tracking}
+    >
+      <MapPin pin={pin} selected={selected} />
+    </Marker>
+  );
+}
+
 export function ExploreMap({
   pins, selectedId, onSelectPin, region, onRegionChangeComplete, onLocate,
 }: ExploreMapProps) {
@@ -63,7 +111,7 @@ export function ExploreMap({
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFill}
-        provider={PROVIDER_GOOGLE}
+        provider={MAP_PROVIDER}
         initialRegion={initialRegion}
         onRegionChangeComplete={onRegionChangeComplete}
         showsUserLocation
@@ -72,19 +120,12 @@ export function ExploreMap({
         mapPadding={{ top: 16, right: 16, bottom: barClearance + 110, left: 16 }}
       >
         {pins.map(pin => (
-          <Marker
+          <MapMarker
             key={pin.id}
-            coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
+            pin={pin}
+            selected={selectedId === pin.id}
             onPress={() => onSelectPin(pin.id)}
-            anchor={{ x: 0.5, y: 1 }}
-            // Custom marker views default to tracksViewChanges=true, which
-            // keeps re-rasterizing every marker on every frame — with many
-            // pins this shows up as a visible fade/flicker as they load.
-            // Only the selected pin needs live re-rendering (for its halo).
-            tracksViewChanges={selectedId === pin.id}
-          >
-            <MapPin pin={pin} selected={selectedId === pin.id} />
-          </Marker>
+          />
         ))}
       </MapView>
 

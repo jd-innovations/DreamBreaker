@@ -8,7 +8,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { ProgressiveImageViewer } from '@/components/media/ProgressiveImageViewer';
 import { DraggableSheet, type SheetSnap } from '@/components/sheets/DraggableSheet';
 import { useSession } from '@/hooks/useSession';
@@ -20,6 +19,7 @@ import { blockUser } from '@/lib/services/blocking';
 import { fetchProfile, type UserProfile } from '@/lib/services/profile';
 import { conditionLabel, formatPriceCents, listingAgeLabel, type MarketplaceBrand } from '@/lib/marketplace/constants';
 import { BRAND_LOGOS } from '@/lib/marketplace/brandLogos';
+import { haptics } from '@/lib/haptics';
 import { appLinks } from '@/lib/appLinks';
 
 const L = {
@@ -112,10 +112,11 @@ export default function ListingDetailScreen() {
     if (!user) return;
     try {
       await reportListing({ reporterId: user.id, sellerId: listing.seller_id, listingId: listing.id, reason });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
       Alert.alert('Report submitted', 'Our team will review this listing within 24 hours.');
       setReportOpen(false);
     } catch (err) {
+      haptics.error();
       Alert.alert('Could not submit report', err instanceof Error ? err.message : 'Please try again.');
     }
   };

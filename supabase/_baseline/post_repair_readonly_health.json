@@ -1,0 +1,50 @@
+[
+    {
+        "Check":  "Auth settings",
+        "Status":  200,
+        "Result":  "OK",
+        "Detail":  ""
+    },
+    {
+        "Check":  "Profiles read",
+        "Status":  206,
+        "Result":  "OK",
+        "Detail":  "0-0/9"
+    },
+    {
+        "Check":  "Tournament reads",
+        "Status":  206,
+        "Result":  "OK",
+        "Detail":  "0-0/4"
+    },
+    {
+        "Check":  "Community Play reads",
+        "Status":  206,
+        "Result":  "OK",
+        "Detail":  "0-0/31"
+    },
+    {
+        "Check":  "Personal match reads",
+        "Status":  200,
+        "Result":  "OK",
+        "Detail":  "*/0"
+    },
+    {
+        "Check":  "Notifications reads",
+        "Status":  200,
+        "Result":  "OK",
+        "Detail":  "*/0"
+    },
+    {
+        "Check":  "Wallet reads",
+        "Status":  200,
+        "Result":  "OK",
+        "Detail":  "*/0"
+    },
+    {
+        "Check":  "Existing PAR reads",
+        "Status":  200,
+        "Result":  "OK",
+        "Detail":  "*/0"
+    }
+]

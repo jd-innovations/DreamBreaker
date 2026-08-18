@@ -10,7 +10,7 @@ import type { Tables } from "@/lib/supabase/database.types";
 
 type Profile = Pick<
   Tables<"profiles">,
-  | "id" | "full_name" | "handle" | "dupr" | "skill_level"
+  | "id" | "full_name" | "handle" | "dupr" | "skill_level" | "self_rating"
   | "location_city" | "location_state" | "avatar_url" | "bio"
   | "play_style" | "availability" | "hand"
 >;
@@ -37,6 +37,7 @@ export function ProfileSettings({ userId }: { userId: string }) {
   const [state, setState] = useState("");
   const [bio, setBio] = useState("");
   const [skill, setSkill] = useState("");
+  const [selfRating, setSelfRating] = useState("");
   const [hand, setHand] = useState("");
   const [playStyle, setPlayStyle] = useState<string[]>([]);
   const [availability, setAvailability] = useState<string[]>([]);
@@ -46,7 +47,7 @@ export function ProfileSettings({ userId }: { userId: string }) {
     async function load() {
       const { data: prof } = await supabase
         .from("profiles")
-        .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,hand")
+        .select("id,full_name,handle,dupr,skill_level,self_rating,location_city,location_state,avatar_url,bio,play_style,availability,hand")
         .eq("id", userId)
         .single();
       if (prof) {
@@ -56,6 +57,7 @@ export function ProfileSettings({ userId }: { userId: string }) {
         setState(prof.location_state ?? "");
         setBio(prof.bio ?? "");
         setSkill(prof.skill_level ?? "");
+        setSelfRating(prof.self_rating ?? "");
         setHand(prof.hand ?? "");
         setPlayStyle(prof.play_style ? prof.play_style.split(",").map((s) => s.trim()).filter(Boolean) : []);
         setAvailability(prof.availability ? prof.availability.split(",").map((s) => s.trim()).filter(Boolean) : []);
@@ -127,6 +129,7 @@ export function ProfileSettings({ userId }: { userId: string }) {
         bio: bio.trim() || null,
         skill_level: skill || null,
         hand: (hand as "right" | "left" | "ambidextrous") || null,
+        self_rating: selfRating.trim() || null,
         play_style: playStyle.length > 0 ? playStyle.join(", ") : null,
         availability: availability.length > 0 ? availability.join(", ") : null,
       })
@@ -255,6 +258,18 @@ export function ProfileSettings({ userId }: { userId: string }) {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Self rating */}
+      <div>
+        <label className={labelCls}>SELF RATING <span className="text-muted-foreground/60">(numeric, e.g. 4.0)</span></label>
+        <input
+          type="text"
+          value={selfRating}
+          onChange={(e) => setSelfRating(e.target.value)}
+          placeholder="e.g. 4.0"
+          className={`${inputCls} w-full sm:w-48`}
+        />
       </div>
 
       {/* Hand */}

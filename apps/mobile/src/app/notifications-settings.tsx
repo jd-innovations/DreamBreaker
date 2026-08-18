@@ -1,14 +1,16 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/theme';
+import { useSession } from '@/hooks/useSession';
+import { registerPushTokenForUser, type PushRegistrationResult } from '@/lib/pushNotifications';
+import { haptics } from '@/lib/haptics';
 
 // Theme-backed alias â€” all brand values resolve from @/theme.
 // `blue` is the iOS system color retained for back actions (not a brand token).
@@ -122,11 +124,14 @@ function TimeRow({ label, value, last }: { label: string; value: string; last?: 
 
 export default function NotificationsSettingsScreen() {
   const insets = useSafeAreaInsets();
+  const { user } = useSession();
 
   // Delivery methods
-  const [pushNotifs,  setPushNotifs]  = useState(true);
+  const [pushNotifs,  setPushNotifs]  = useState(false);
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [smsNotifs,   setSmsNotifs]   = useState(false);
+  const [registeringPush, setRegisteringPush] = useState(false);
+  const [pushResult, setPushResult] = useState<PushRegistrationResult | null>(null);
 
   // Quiet hours
   const [quietHours, setQuietHours] = useState(true);
@@ -135,6 +140,31 @@ export default function NotificationsSettingsScreen() {
   const [appBadge,    setAppBadge]    = useState(true);
   const [eventsBadge, setEventsBadge] = useState(true);
   const [chatsBadge,  setChatsBadge]  = useState(true);
+
+  async function handlePushToggle(next: boolean) {
+    if (!next) {
+      setPushNotifs(false);
+      setPushResult(null);
+      return;
+    }
+
+    if (!user?.id) {
+      setPushNotifs(false);
+      setPushResult({
+        ok: false,
+        status: 'failed',
+        reason: 'Sign in before enabling push notifications on this device.',
+      });
+      return;
+    }
+
+    setRegisteringPush(true);
+    const result = await registerPushTokenForUser(user.id, { requestPermission: true });
+    if (result.ok) haptics.success();
+    setPushResult(result);
+    setPushNotifs(result.ok);
+    setRegisteringPush(false);
+  }
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
@@ -155,7 +185,7 @@ export default function NotificationsSettingsScreen() {
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 40 }]}
       >
         {/* Subtitle */}
-        <Text style={s.intro}>Choose what you'd like to be notified about.</Text>
+        <Text style={s.intro}>{"Choose what you'd like to be notified about."}</Text>
 
         {/* â”€â”€ Notification Categories â”€â”€ */}
         <SectionHeader label="NOTIFICATION CATEGORIES" />
@@ -194,10 +224,10 @@ export default function NotificationsSettingsScreen() {
         <Group>
           <ToggleRow
             icon="phone-portrait-outline"
-            label="Push Notifications"
+            label={registeringPush ? 'Enabling Push...' : 'Push Notifications'}
             sub="Receive notifications on this device"
             value={pushNotifs}
-            onChange={setPushNotifs}
+            onChange={(next) => { void handlePushToggle(next); }}
           />
           <ToggleRow
             icon="mail-outline"
@@ -215,6 +245,11 @@ export default function NotificationsSettingsScreen() {
             last
           />
         </Group>
+        {pushResult && (
+          <Text style={s.groupNote}>
+            {pushResult.ok ? 'Push notifications are enabled on this device.' : pushResult.reason}
+          </Text>
+        )}
 
         {/* â”€â”€ Quiet Hours â”€â”€ */}
         <SectionHeader label="QUIET HOURS" />

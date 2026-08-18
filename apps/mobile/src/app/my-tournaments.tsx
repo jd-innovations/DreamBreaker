@@ -21,6 +21,15 @@ import {
   cancelHold as cancelHoldSB,
 } from '@/lib/supabase/registrations';
 import { fetchBookmarkedTournaments, type BookmarkedTournament } from '@/lib/supabase/tournamentBookmarks';
+import {
+  fetchRegistrationGroupsForUser,
+  declineTeamInvite,
+  memberFor,
+  teammatesOf,
+  teamStatusLabel,
+  type RegistrationGroup,
+} from '@/lib/supabase/registrationGroups';
+import { useTournamentEntryPayment } from '@/lib/payments/useTournamentEntryPayment';
 
 const L = {
   bg:        colors.bg,
@@ -52,7 +61,14 @@ function relativeDate(iso: string): string {
 
 // ─── Registered Card ──────────────────────────────────────────────────────────
 
-function RegistrationCard({ reg, onCancel }: { reg: TournamentRegistration; onCancel: () => void }) {
+function RegistrationCard({ reg, team, userId, onCancel }: {
+  reg: TournamentRegistration;
+  // Doubles/mixed only. Present when this registration belongs to a team
+  // whose players each owe their own entry fee.
+  team?: RegistrationGroup | null;
+  userId: string;
+  onCancel: () => void;
+}) {
   function handleCancel() {
     Alert.alert(
       'Cancel Registration',
@@ -74,7 +90,23 @@ function RegistrationCard({ reg, onCancel }: { reg: TournamentRegistration; onCa
         <View style={{ flex: 1 }}>
           <Text style={c.tournamentName} numberOfLines={1}>{reg.tournamentName}</Text>
           <Text style={c.divisionLine}>{reg.divisionName}  •  {reg.divisionLevel}</Text>
-          {reg.partnerStatus === 'selected' && reg.partnerName ? (
+          {team ? (
+            // Per-player team payments: say exactly who has paid rather than
+            // letting "w/ Partner" imply the team is set.
+            <View style={c.partnerRow}>
+              <Ionicons
+                name={team.status === 'confirmed' ? 'people' : 'hourglass-outline'}
+                size={11}
+                color={team.status === 'confirmed' ? L.success : L.gold}
+              />
+              <Text
+                style={[c.partnerText, { color: team.status === 'confirmed' ? L.success : L.gold }]}
+                numberOfLines={2}
+              >
+                {teamStatusLabel(team, userId)}
+              </Text>
+            </View>
+          ) : reg.partnerStatus === 'selected' && reg.partnerName ? (
             <View style={c.partnerRow}>
               <Ionicons name="person-outline" size={11} color={L.textSub} />
               <Text style={c.partnerText} numberOfLines={1}>w/ {reg.partnerName}</Text>
@@ -138,6 +170,20 @@ function RegistrationCard({ reg, onCancel }: { reg: TournamentRegistration; onCa
           <Ionicons name="eye-outline" size={15} color={L.navy} />
           <Text style={c.viewBtnText}>View</Text>
         </TouchableOpacity>
+
+        {(reg.status === 'registered' || reg.status === 'checked_in') && (
+          <TouchableOpacity
+            style={c.qrBtn}
+            activeOpacity={0.85}
+            onPress={() => router.push({
+              pathname: `/tournament/${reg.tournamentId}/check-in-qr` as never,
+              params: { registrationId: reg.id },
+            } as never)}
+          >
+            <Ionicons name="qr-code-outline" size={15} color={L.bg} />
+            <Text style={c.qrBtnText}>Check-In QR</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={c.cancelBtn}
@@ -255,6 +301,122 @@ function HeldSpotCard({ spot, onRefresh }: { spot: HeldSpot; onRefresh: () => vo
   );
 }
 
+// ─── Team Entry Fee Due Card ──────────────────────────────────────────────────
+// Where an invited partner settles THEIR OWN obligation. The teammate who
+// created the team has already paid their share; this card is only ever about
+// the amount this player owes.
+
+function TeamObligationCard({ group, userId, onRefresh }: {
+  group: RegistrationGroup;
+  userId: string;
+  onRefresh: () => void;
+}) {
+  const { payTournamentTeamShare } = useTournamentEntryPayment();
+  const [busy, setBusy] = useState(false);
+
+  const me = memberFor(group, userId);
+  const others = teammatesOf(group, userId);
+  const invitedBy = others.find(m => m.role === 'initiator') ?? others[0];
+  const amountCents = me?.amountDueCents ?? 0;
+
+  async function handlePay() {
+    setBusy(true);
+    const result = await payTournamentTeamShare({ groupId: group.id, playerId: userId });
+    setBusy(false);
+
+    if (!result.ok) {
+      if (result.reason === 'canceled') return;
+      if (result.reason === 'already_registered') {
+        Alert.alert('Already Registered', 'You are already registered for this tournament.');
+      } else if (result.reason === 'invite_not_active') {
+        Alert.alert('Invite Unavailable', 'This team invite is no longer active.');
+      } else {
+        Alert.alert('Payment Failed', 'We could not complete your entry fee payment. Please try again.');
+      }
+      onRefresh();
+      return;
+    }
+    onRefresh();
+  }
+
+  function handleDecline() {
+    Alert.alert(
+      'Decline Invite',
+      `Decline playing ${group.divisionName} with ${invitedBy?.name || 'your partner'} at ${group.tournamentName}?`,
+      [
+        { text: 'Keep Invite', style: 'cancel' },
+        {
+          text: 'Decline',
+          style: 'destructive',
+          onPress: () => { declineTeamInvite(group.id).then(() => onRefresh()); },
+        },
+      ],
+    );
+  }
+
+  return (
+    <View style={c.card}>
+      <View style={c.cardHeader}>
+        <View style={c.logoBox}>
+          <Ionicons name="people-outline" size={20} color={L.gold} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={c.tournamentName} numberOfLines={1}>{group.tournamentName}</Text>
+          <Text style={c.divisionLine}>{group.divisionName}  •  {group.divisionLevel}</Text>
+          <View style={c.partnerRow}>
+            <Ionicons name="person-outline" size={11} color={L.textSub} />
+            <Text style={c.partnerText} numberOfLines={1}>
+              {invitedBy?.name ? `${invitedBy.name} added you as their partner` : 'You were added as a partner'}
+            </Text>
+          </View>
+        </View>
+        <StatusChip label="Fee Due" variant="gold" />
+      </View>
+
+      <View style={c.metaRow}>
+        <Ionicons name="location-outline" size={13} color={L.textSub} />
+        <Text style={c.metaText} numberOfLines={1}>
+          {group.city ? `${group.venue}, ${group.city}` : group.venue}
+        </Text>
+      </View>
+
+      <View style={c.feesRow}>
+        <View style={c.feeCell}>
+          <Text style={c.feeCellLabel}>You Owe</Text>
+          <Text style={c.feeCellValue}>{fmt(amountCents)}</Text>
+        </View>
+        <View style={c.feeDivider} />
+        <View style={c.feeCell}>
+          <Text style={c.feeCellLabel}>Partner</Text>
+          <Text style={[c.feeCellValue, { color: invitedBy?.paymentState === 'paid' ? L.success : L.navy }]}>
+            {invitedBy?.paymentState === 'paid' ? 'Paid' : 'Unpaid'}
+          </Text>
+        </View>
+      </View>
+
+      <View style={c.actions}>
+        <TouchableOpacity
+          style={c.viewBtn}
+          activeOpacity={0.75}
+          onPress={() => router.push(`/tournament/${group.tournamentId}` as never)}
+        >
+          <Ionicons name="eye-outline" size={15} color={L.navy} />
+          <Text style={c.viewBtnText}>View</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={c.registerBtn} activeOpacity={0.85} disabled={busy} onPress={handlePay}>
+          <Text style={c.registerBtnText}>{busy ? 'Processing…' : `Pay ${fmt(amountCents)} Entry Fee`}</Text>
+          {!busy && <Ionicons name="arrow-forward" size={14} color={L.bg} />}
+        </TouchableOpacity>
+
+        <TouchableOpacity style={c.cancelBtn} activeOpacity={0.75} onPress={handleDecline}>
+          <Ionicons name="close-outline" size={16} color={L.danger} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 // ─── Saved Tournament Card ────────────────────────────────────────────────────
 
 function SavedTournamentCard({ tournament, onUnsave }: { tournament: BookmarkedTournament; onUnsave: () => void }) {
@@ -360,6 +522,12 @@ const c = StyleSheet.create({
   },
   viewBtnText: { color: L.navy, fontSize: 13, fontWeight: '700' },
 
+  qrBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: L.navy, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 12,
+  },
+  qrBtnText: { color: L.bg, fontSize: 13, fontWeight: '700' },
+
   registerBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: L.navy, borderRadius: 10, paddingVertical: 10,
@@ -381,6 +549,7 @@ export default function MyTournamentsScreen() {
   const [held, setHeld]             = useState<HeldSpot[]>([]);
   const [registered, setRegistered] = useState<TournamentRegistration[]>([]);
   const [saved, setSaved]           = useState<BookmarkedTournament[]>([]);
+  const [teams, setTeams]           = useState<RegistrationGroup[]>([]);
   const [loading, setLoading]       = useState(true);
   const { toggleBookmark } = useTournamentBookmarks();
 
@@ -391,14 +560,16 @@ export default function MyTournamentsScreen() {
   const refresh = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
-    const [holds, regs, savedTournaments] = await Promise.all([
+    const [holds, regs, savedTournaments, groups] = await Promise.all([
       fetchPlayerHolds(user.id),
       fetchPlayerRegistrations(user.id),
       fetchBookmarkedTournaments(user.id),
+      fetchRegistrationGroupsForUser(user.id),
     ]);
     setHeld(holds);
     setRegistered(regs.filter(r => r.status !== 'cancelled'));
     setSaved(savedTournaments);
+    setTeams(groups);
     setLoading(false);
   }, [user?.id]);
 
@@ -412,7 +583,25 @@ export default function MyTournamentsScreen() {
     );
   }
 
-  const isEmpty = held.length === 0 && registered.length === 0 && saved.length === 0;
+  // Teams where THIS player still owes their own entry fee — the partner-side
+  // half of the per-player payment model.
+  const owedTeams = user?.id
+    ? teams.filter(g => {
+        const me = memberFor(g, user.id);
+        return me != null && (me.paymentState === 'invited' || me.paymentState === 'pending_payment');
+      })
+    : [];
+
+  const teamByRegistrationId = new Map<string, RegistrationGroup>();
+  if (user?.id) {
+    for (const g of teams) {
+      const regId = memberFor(g, user.id)?.registrationId;
+      if (regId) teamByRegistrationId.set(regId, g);
+    }
+  }
+
+  const isEmpty =
+    held.length === 0 && registered.length === 0 && saved.length === 0 && owedTeams.length === 0;
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
@@ -448,13 +637,26 @@ export default function MyTournamentsScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[s.list, { paddingBottom: insets.bottom + 24 }]}
         >
+          {owedTeams.length > 0 && (
+            <>
+              <Text style={s.sectionLabel}>ENTRY FEE DUE  •  {owedTeams.length}</Text>
+              {owedTeams.map(g => (
+                <TeamObligationCard key={g.id} group={g} userId={user!.id} onRefresh={refresh} />
+              ))}
+            </>
+          )}
+
           {registered.length > 0 && (
             <>
-              <Text style={s.sectionLabel}>REGISTERED  •  {registered.length}</Text>
+              <Text style={[s.sectionLabel, owedTeams.length > 0 && { marginTop: 8 }]}>
+                REGISTERED  •  {registered.length}
+              </Text>
               {registered.map(reg => (
                 <RegistrationCard
                   key={reg.id}
                   reg={reg}
+                  team={teamByRegistrationId.get(reg.id) ?? null}
+                  userId={user?.id ?? ''}
                   onCancel={() => { cancelRegistrationSB(reg.id).then(() => refresh()); }}
                 />
               ))}

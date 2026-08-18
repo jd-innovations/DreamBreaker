@@ -5,6 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { colors, spacing, radius } from '@/theme';
 import { OnboardingCTA, OnboardingProgressBar } from '@/lib/onboarding/components';
+import { useSession } from '@/hooks/useSession';
+import { registerPushTokenForUser, type PushRegistrationResult } from '@/lib/pushNotifications';
+import { haptics } from '@/lib/haptics';
 
 const L = colors;
 const SCREEN_BG = '#F8F5EF';
@@ -20,17 +23,63 @@ type NotificationPrefs = Record<NotificationKey, boolean>;
 
 export default function EnableNotificationsScreen() {
   const insets = useSafeAreaInsets();
+  const { user } = useSession();
   const [prefs, setPrefs] = useState<NotificationPrefs>({
     newGames: true,
     partners: true,
     tournaments: true,
   });
+  const [registering, setRegistering] = useState(false);
+  const [registrationResult, setRegistrationResult] = useState<PushRegistrationResult | null>(null);
 
   function next() {
-    router.push('/onboarding/create-account');
+    // The root gate routes signed-in users with an incomplete profile back
+    // through onboarding to fill the gaps. They already have an account, so
+    // skip the create-account step rather than asking them to sign up again —
+    // skipping here (at the source) instead of redirecting out of
+    // create-account keeps the back button from bouncing between the two.
+    router.push(user?.id ? '/onboarding/your-name' : '/onboarding/create-account');
+  }
+
+  async function enableNotifications() {
+    if (!user?.id) {
+      setRegistrationResult({
+        ok: false,
+        status: 'failed',
+        reason: 'Create an account first, then enable notifications from Settings.',
+      });
+      return;
+    }
+
+    setRegistering(true);
+    const result = await registerPushTokenForUser(user.id, { requestPermission: true });
+    setRegistrationResult(result);
+    setRegistering(false);
+
+    // Advance as soon as registration succeeds. Previously this only swapped
+    // the CTA label to "Continue" and waited for a *second* tap -- and when
+    // permission was already granted at the OS level (no system dialog to
+    // show), that first tap looked like it did nothing at all. Only the
+    // denied/failed paths now hold the user here, where the helper text
+    // explaining what happened is the point.
+    if (result.ok) {
+      haptics.success();
+      next();
+    }
+  }
+
+  function handleCta() {
+    if (registrationResult?.ok || registrationResult?.status === 'permission_denied' || !user?.id) {
+      next();
+      return;
+    }
+    void enableNotifications();
   }
 
   function toggle(key: NotificationKey) {
+    // Every flip changes the value away from what was shown, so both
+    // directions buzz -- matching OptionChip's multi-select behaviour.
+    haptics.selection();
     setPrefs(prev => ({ ...prev, [key]: !prev[key] }));
   }
 
@@ -72,12 +121,22 @@ export default function EnableNotificationsScreen() {
           ))}
         </View>
 
-        <Text style={s.helperText}>You can update these anytime in Settings.</Text>
+        <Text style={s.helperText}>
+          {registrationResult?.ok
+            ? 'Notifications are enabled on this device.'
+            : registrationResult
+              ? registrationResult.reason
+              : 'You can update these anytime in Settings.'}
+        </Text>
       </View>
 
       <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}> 
         <OnboardingProgressBar progress={63} />
-        <OnboardingCTA label="Continue" onPress={next} />
+        <OnboardingCTA
+          label={registrationResult ? 'Continue' : registering ? 'Enabling...' : 'Enable Notifications'}
+          onPress={handleCta}
+          disabled={registering}
+        />
       </View>
     </View>
   );

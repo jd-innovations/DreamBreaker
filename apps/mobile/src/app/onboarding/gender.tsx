@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Svg, { G, Path } from 'react-native-svg';
 import { colors, spacing, radius } from '@/theme';
-import { OnboardingCTA, OnboardingProgressBar } from '@/lib/onboarding/components';
+import { OnboardingCTA, OnboardingProgressBar, selectWithHaptic } from '@/lib/onboarding/components';
 import { useOnboarding } from '@/lib/onboarding/state';
 
 const L = colors;
@@ -57,7 +57,7 @@ export default function GenderScreen() {
               key={opt.key}
               style={[s.optionCard, draft.gender === opt.key && s.optionCardSelected]}
               activeOpacity={0.78}
-              onPress={() => update('gender', opt.key)}
+              onPress={() => selectWithHaptic(draft.gender === opt.key, () => update('gender', opt.key))}
             >
               <View style={s.optionLeft}>
                 <GenderOptionIcon option={opt.key} />
@@ -78,7 +78,7 @@ export default function GenderScreen() {
                 key={opt.key}
                 style={[s.optionCard, draft.handedness === opt.key && s.optionCardSelected]}
                 activeOpacity={0.78}
-                onPress={() => update('handedness', opt.key)}
+                onPress={() => selectWithHaptic(draft.handedness === opt.key, () => update('handedness', opt.key))}
               >
                 <View style={s.optionLeft}>
                   <Ionicons name={opt.icon} size={28} color={L.gold} />

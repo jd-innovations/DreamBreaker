@@ -165,7 +165,7 @@ export default function TournamentsPage() {
                       <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur text-white text-[10px] font-mono tracking-widest">{lvlDisplay}</span>
                     </div>
                     <div className="absolute bottom-3 left-3 right-3">
-                      <div className="font-display text-2xl text-white tracking-wide leading-tight">{t.name}</div>
+                      <div className="font-display text-2xl text-white tracking-tight leading-[0.85]">{t.name}</div>
                       <div className="text-xs text-white/70 font-mono mt-1">{fmtDisplay}</div>
                     </div>
                   </Link>

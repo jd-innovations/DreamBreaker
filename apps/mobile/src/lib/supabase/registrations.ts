@@ -46,6 +46,15 @@ export type RegistrationRow = {
   } | null;
   player: { full_name: string | null; dupr: number | null } | null;
   partner: { full_name: string | null; dupr: number | null } | null;
+  // Doubles/mixed teams where each player owes their own entry fee
+  // (supabase/migrations/20260817010000_registration_team_payment_groups.sql).
+  // NULL for singles and for every registration predating that migration.
+  registration_group_id: string | null;
+  registration_groups: {
+    id: string;
+    status: string;
+    registration_group_members: { user_id: string; payment_state: string }[] | null;
+  } | null;
 };
 
 function formatDate(dateStr: string): string {
@@ -90,6 +99,24 @@ function rowToRegistration(row: RegistrationRow): TournamentRegistration {
     partnerId:        row.partner_id ?? undefined,
     partnerName:      row.partner?.full_name ?? undefined,
     partnerDupr:      row.partner?.dupr != null ? String(Number(row.partner.dupr).toFixed(2)) : undefined,
+    ...teamFieldsFor(row),
+  };
+}
+
+// Per-player team payment state, when this registration belongs to one.
+// `entry_fee_paid_cents` on this row is only ever THIS player's own payment,
+// so the partner's state has to come from their own member row — that is the
+// difference between "you paid" and "the team is in".
+function teamFieldsFor(row: RegistrationRow): Partial<TournamentRegistration> {
+  const group = row.registration_groups;
+  if (!group) return {};
+
+  const partnerMember = (group.registration_group_members ?? []).find(m => m.user_id !== row.player_id);
+
+  return {
+    teamGroupId: group.id,
+    teamStatus:  group.status as TournamentRegistration['teamStatus'],
+    teamPartnerPaymentState: partnerMember?.payment_state as TournamentRegistration['teamPartnerPaymentState'],
   };
 }
 
@@ -123,10 +150,12 @@ function rowToHeldSpot(row: RegistrationRow): HeldSpot {
 const REG_SELECT = `
   id, tournament_id, division_id, player_id, partner_id,
   status, hold_fee_paid_cents, entry_fee_paid_cents, needs_partner, created_at,
+  registration_group_id,
   tournaments(name, venue_name, city, state, event_date, entry_fee_cents, hold_fee_cents),
   divisions(name, skill_min, skill_max),
   player:profiles!registrations_player_id_fkey(full_name,dupr),
-  partner:profiles!registrations_partner_id_fkey(full_name,dupr)
+  partner:profiles!registrations_partner_id_fkey(full_name,dupr),
+  registration_groups(id, status, registration_group_members(user_id, payment_state))
 `.trim();
 
 // ─── Player queries ───────────────────────────────────────────────────────────
@@ -162,6 +191,20 @@ export async function fetchTournamentRegistrations(tournamentId: string): Promis
 
   if (error || !data) return [];
   return (data as unknown as RegistrationRow[]).map(rowToRegistration);
+}
+
+// Single-registration lookup for the player's own Check-In QR screen. RLS
+// ("registrations: player read own") already scopes this to registrations
+// the caller owns, so this is safe to expose to any authenticated player.
+export async function fetchRegistrationById(id: string): Promise<TournamentRegistration | null> {
+  const { data, error } = await supabase
+    .from('registrations')
+    .select(REG_SELECT)
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return rowToRegistration(data as unknown as RegistrationRow);
 }
 
 // ─── Player state checks ──────────────────────────────────────────────────────
@@ -254,11 +297,58 @@ export async function cancelHold(id: string): Promise<void> {
     .eq('id', id);
 }
 
-export async function checkInPlayer(id: string): Promise<void> {
-  await supabase
-    .from('registrations')
-    .update({ status: 'checked_in', checked_in_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-    .eq('id', id);
+// Phase 5.1: result shape of the check_in_registration() RPC
+// (supabase/migrations/20260814000000_tournament_qr_checkin_phase5_1.sql).
+// Both the manual "Check In" button and the QR scanner call this same RPC —
+// see that migration's header comment for why a raw client UPDATE was no
+// longer sufficient (duplicate check-in, cross-tournament protection,
+// confirmation data all need to be server-authoritative and atomic).
+export type CheckInResult = {
+  result: 'success' | 'already_checked_in' | 'wrong_tournament' | 'unauthorized' | 'ineligible' | 'not_found';
+  reason: string | null;
+  registrationId: string | null;
+  playerName: string | null;
+  divisionName: string | null;
+  tournamentName: string | null;
+  checkedInAt: string | null;
+};
+
+export async function checkInRegistration(registrationId: string, tournamentId: string): Promise<CheckInResult> {
+  const { data, error } = await supabase.rpc('check_in_registration', {
+    p_registration_id: registrationId,
+    p_tournament_id: tournamentId,
+  });
+  if (error) throw new Error(error.message);
+
+  const row = data?.[0];
+  if (!row) throw new Error('No response from check-in');
+
+  return {
+    result: row.result as CheckInResult['result'],
+    reason: row.reason ?? null,
+    registrationId: row.registration_id ?? null,
+    playerName: row.player_name ?? null,
+    divisionName: row.division_name ?? null,
+    tournamentName: row.tournament_name ?? null,
+    checkedInAt: row.checked_in_at ?? null,
+  };
+}
+
+// Manual check-in button wrapper. Throws if the RPC didn't report a fresh
+// success -- callers that need to distinguish already-checked-in/
+// wrong-tournament/etc. from a hard failure should call
+// checkInRegistration() directly instead (as the QR scan flow does).
+export async function checkInPlayer(id: string, tournamentId: string): Promise<void> {
+  const outcome = await checkInRegistration(id, tournamentId);
+  if (outcome.result !== 'success') {
+    throw new Error(
+      outcome.result === 'already_checked_in' ? 'This player is already checked in.'
+      : outcome.result === 'unauthorized'     ? 'You are not authorized to check players into this tournament.'
+      : outcome.result === 'wrong_tournament' ? 'This registration belongs to a different tournament.'
+      : outcome.result === 'ineligible'       ? 'This registration is not eligible for check-in.'
+      : 'Registration not found.',
+    );
+  }
 }
 
 export async function undoCheckIn(id: string): Promise<void> {

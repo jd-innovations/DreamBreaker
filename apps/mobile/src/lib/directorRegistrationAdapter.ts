@@ -10,6 +10,10 @@ import {
   type PlayerRegStatusKey,
 } from '@/lib/tournamentStatus';
 import type { StatusVariant } from '@/components/StatusChip';
+import type {
+  RegistrationGroupStatus,
+  RegistrationMemberState,
+} from '@/lib/supabase/registrationGroups';
 import { getDivisionsForTournament } from '@/data/divisions';
 
 export type { RegistrationStatus, PartnerStatus };
@@ -22,6 +26,10 @@ export type DirectorRegistration = {
   partnerId?: string;
   partnerName?: string;
   partnerDupr?: string;
+  // Doubles/mixed per-player payment state. Present only for registrations
+  // that belong to a registration_groups team.
+  teamStatus?: RegistrationGroupStatus;
+  teamPartnerPaymentState?: RegistrationMemberState;
   divisionId: string;
   divisionName: string;
   divisionLevel: string;
@@ -148,6 +156,28 @@ export function getDivisionMetrics(tournamentId: string): DivisionMetrics[] {
         .reduce((s, r) => s + r.balanceDue, 0),
     };
   });
+}
+
+// What a director needs to see on a doubles/mixed entry: whose money has
+// actually arrived. A registration whose partner hasn't paid is a real, paid
+// registration for THIS player — it is not a complete team, and this label is
+// what keeps those two things from looking the same on the roster.
+export function partnerPaymentLabel(reg: DirectorRegistration): string | null {
+  if (!reg.teamStatus) return null;
+  switch (reg.teamPartnerPaymentState) {
+    case 'paid':            return 'Partner paid';
+    case 'declined':        return 'Partner declined';
+    case 'expired':         return 'Partner invite expired';
+    case 'invited':
+    case 'pending_payment': return 'Partner payment pending';
+    default:                return reg.teamStatus === 'confirmed' ? 'Partner paid' : 'Partner payment pending';
+  }
+}
+
+export function partnerPaymentVariant(reg: DirectorRegistration): StatusVariant {
+  if (reg.teamPartnerPaymentState === 'paid' || reg.teamStatus === 'confirmed') return 'green';
+  if (reg.teamPartnerPaymentState === 'declined' || reg.teamPartnerPaymentState === 'expired') return 'red';
+  return 'gold';
 }
 
 export function statusLabel(s: RegistrationStatus): string {

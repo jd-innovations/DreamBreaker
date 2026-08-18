@@ -22,7 +22,7 @@ import type { Tables } from "@/lib/supabase/database.types";
 
 type Profile = Pick<
   Tables<"profiles">,
-  | "id" | "full_name" | "handle" | "dupr" | "skill_level"
+  | "id" | "full_name" | "handle" | "dupr" | "skill_level" | "self_rating"
   | "location_city" | "location_state" | "avatar_url" | "cover_url" | "bio"
   | "play_style" | "availability" | "hand" | "created_at" | "role" | "director_status"
 >;
@@ -33,6 +33,7 @@ type EditFields = {
   availability: string[];
   hand: string;
   skill_level: string;
+  self_rating: string;
   location_city: string;
   location_state: string;
 };
@@ -236,7 +237,7 @@ function TournamentsTab({ entries, bookmarks, loading }: { entries: TournamentEn
 export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [fields, setFields] = useState<EditFields>({ bio: "", play_style: [], availability: [], hand: "", skill_level: "", location_city: "", location_state: "" });
+  const [fields, setFields] = useState<EditFields>({ bio: "", play_style: [], availability: [], hand: "", skill_level: "", self_rating: "", location_city: "", location_state: "" });
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
@@ -279,7 +280,7 @@ export default function ProfilePage() {
 
       const { data: prof } = await supabase
         .from("profiles")
-        .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,cover_url,bio,play_style,availability,hand,created_at,role,director_status")
+        .select("id,full_name,handle,dupr,skill_level,self_rating,location_city,location_state,avatar_url,cover_url,bio,play_style,availability,hand,created_at,role,director_status")
         .eq("id", user.id)
         .single();
       if (prof) {
@@ -290,6 +291,7 @@ export default function ProfilePage() {
           availability: prof.availability ? prof.availability.split(",").map((s) => s.trim()).filter(Boolean) : [],
           hand: prof.hand ?? "",
           skill_level: prof.skill_level ?? "",
+          self_rating: prof.self_rating ?? "",
           location_city: prof.location_city ?? "",
           location_state: prof.location_state ?? "",
         });
@@ -542,6 +544,7 @@ export default function ProfilePage() {
       availability: fields.availability.length > 0 ? fields.availability.join(", ") : null,
       hand: (fields.hand as "right" | "left" | "ambidextrous") || null,
       skill_level: fields.skill_level || null,
+      self_rating: fields.self_rating || null,
       location_city: fields.location_city || null,
       location_state: fields.location_state || null,
     }).eq("id", profile.id).select("id");
@@ -551,7 +554,7 @@ export default function ProfilePage() {
       toast.error("Couldn't save — your session may have expired. Please sign out and back in.");
       return;
     }
-    setProfile((p) => p ? { ...p, bio: fields.bio || null, skill_level: fields.skill_level || null, hand: (fields.hand as "right" | "left" | "ambidextrous") || null, play_style: fields.play_style.join(", ") || null, availability: fields.availability.join(", ") || null, location_city: fields.location_city || null, location_state: fields.location_state || null } : p);
+    setProfile((p) => p ? { ...p, bio: fields.bio || null, skill_level: fields.skill_level || null, self_rating: fields.self_rating || null, hand: (fields.hand as "right" | "left" | "ambidextrous") || null, play_style: fields.play_style.join(", ") || null, availability: fields.availability.join(", ") || null, location_city: fields.location_city || null, location_state: fields.location_state || null } : p);
     setEditing(false);
     toast.success("Profile saved.");
   };
@@ -563,6 +566,7 @@ export default function ProfilePage() {
       availability: profile.availability ? profile.availability.split(",").map((s) => s.trim()).filter(Boolean) : [],
       hand: profile.hand ?? "",
       skill_level: profile.skill_level ?? "",
+      self_rating: profile.self_rating ?? "",
       location_city: profile.location_city ?? "",
       location_state: profile.location_state ?? "",
     });
@@ -749,7 +753,11 @@ export default function ProfilePage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-6 border-b border-border">
           {[
             { label: "WIN RATE", value: winRate > 0 ? `${winRate}%` : "—", icon: Trophy },
-            { label: profile?.dupr ? "DUPR" : "SELF-RATED", value: profile?.dupr ?? profile?.skill_level?.replace("-", " – ") ?? "—", icon: Star },
+            {
+              label: profile?.dupr ? "DUPR" : profile?.self_rating ? "SELF RATED" : profile?.skill_level ? "SKILL LEVEL" : "NOT RATED",
+              value: profile?.dupr ? `${profile.dupr}` : profile?.self_rating ?? profile?.skill_level?.replace("-", " – ") ?? "—",
+              icon: Star,
+            },
             { label: "TOURNAMENTS", value: stats.tournaments > 0 ? stats.tournaments : "—", icon: Medal },
             { label: "W – L", value: stats.wins + stats.losses > 0 ? `${stats.wins} – ${stats.losses}` : "—", icon: Users },
           ].map((s) => (
@@ -956,6 +964,18 @@ export default function ProfilePage() {
                       </div>
                     </div>
 
+                    {/* Self rating */}
+                    <div>
+                      <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">SELF RATING <span className="text-muted-foreground/60">(numeric, e.g. 4.0)</span></label>
+                      <input
+                        type="text"
+                        value={fields.self_rating}
+                        onChange={(e) => setFields((f) => ({ ...f, self_rating: e.target.value }))}
+                        placeholder="e.g. 4.0"
+                        className="w-full sm:w-48 h-10 bg-secondary border border-border rounded-xl px-4 text-sm outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+
                     {/* Hand */}
                     <div>
                       <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-2">DOMINANT HAND</label>
@@ -1009,7 +1029,8 @@ export default function ProfilePage() {
                     </p>
                     <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border">
                       {[
-                        { label: "SELF-RATED LEVEL", value: profile?.skill_level?.replace("-", " – ") || "—" },
+                        { label: "SKILL LEVEL", value: profile?.skill_level?.replace("-", " – ") || "—" },
+                        { label: "SELF RATING", value: profile?.self_rating || "—" },
                         { label: "DUPR", value: profile?.dupr ? `${profile.dupr}` : "Not set" },
                         { label: "PLAY STYLE", value: fields.play_style.length > 0 ? fields.play_style.join(", ") : profile?.play_style || "—" },
                         { label: "AVAILABILITY", value: fields.availability.length > 0 ? fields.availability.join(", ") : profile?.availability || "—" },

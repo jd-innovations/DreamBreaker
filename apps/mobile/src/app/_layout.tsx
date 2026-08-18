@@ -4,38 +4,28 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts, BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { StripeProvider } from '@stripe/stripe-react-native';
 import { C } from '@/constants/Colors';
 import { SupportProvider } from '@/components/support/SupportProvider';
 import { useSession } from '@/hooks/useSession';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useExternalLinks } from '@/hooks/useExternalLinks';
 import { useFeatureRouteGuard } from '@/hooks/useFeatureRouteGuard';
+import { STRIPE_PUBLISHABLE_KEY } from '@/lib/payments/stripeConfig';
 import '../global.css';
 
-// StripeProvider intentionally NOT mounted in the root layout. Confirmed
-// (Booking Engine Phase 3A, 2026-08-11) that importing @stripe/stripe-react-native
-// anywhere under src/app/ breaks BOTH targets available in this dev
-// environment, not just Expo Go:
-//   - web: "Importing react-native internals is not supported on web" —
-//     @stripe/stripe-react-native/lib/module/helpers.js imports
-//     react-native/Libraries/Components/TextInput/TextInputState, which
-//     transitively pulls in ReactFabric (native-only). This breaks the
-//     Metro web bundle outright (confirmed: home route 500s).
-//   - Expo Go (native): "Unable to resolve module @stripe/stripe-react-native"
-//     (the original, previously-documented failure).
-// See BOOKING_ENGINE_PHASE3_REPORT.md for the full writeup and what's needed
-// to unblock this (a custom Expo dev client build, run on a real device or
-// simulator — neither is available in this environment). The mobile-side
-// payment code (useReservationPayment.ts, stripeConfig.ts) is written and
-// ready; only mounting StripeProvider here + the review.tsx wiring are
-// blocked pending that build. Do not re-attempt mounting this in a shared
-// session without a way to verify + immediately revert — it takes down the
-// dev server for everyone.
+// StripeProvider requires a custom Expo dev client build — @stripe/stripe-react-native
+// is a native module unavailable in Expo Go and unsupported on the web target
+// (see BOOKING_ENGINE_PHASE3_REPORT.md for the prior failure modes). Only
+// mount this app via `eas build --profile development` / a dev client, not
+// `expo start` alone for Expo Go or web.
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({ BebasNeue_400Regular });
-  const { loading, isAuthenticated } = useSession();
+  const { user, loading, isAuthenticated } = useSession();
+  usePushNotifications(user?.id ?? null);
   useExternalLinks({ authLoading: loading, isAuthenticated });
   useFeatureRouteGuard();
 
@@ -51,6 +41,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="light" />
+      <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
       <SupportProvider>
       <Stack
         screenOptions={{
@@ -77,12 +68,25 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding-preview" options={{ headerShown: false }} />
         <Stack.Screen name="design-lab" options={{ headerShown: false }} />
+        <Stack.Screen name="dev-qr-scan" options={{ headerShown: false }} />
         <Stack.Screen
           name="tournament/[id]"
           options={{ headerShown: false }}
         />
         <Stack.Screen
           name="conversation/[id]"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="tournament/[id]/check-in-qr"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="tournament/[id]/check-in-scan"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="new-message"
           options={{ headerShown: false }}
         />
         <Stack.Screen
@@ -224,6 +228,7 @@ export default function RootLayout() {
         <Stack.Screen name="match/profile/[id]" options={{ headerShown: false }} />
       </Stack>
       </SupportProvider>
+      </StripeProvider>
     </GestureHandlerRootView>
   );
 }

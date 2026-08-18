@@ -4,14 +4,15 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform,
   ScrollView, ActivityIndicator, Alert, Animated, Easing,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { signInWithGoogle, signUp } from '@/lib/auth';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { signInWithGoogle, signInWithApple, signUp } from '@/lib/auth';
 import { colors, gradients, radius } from '@/theme';
 import { isPasswordLongEnough, PASSWORD_PLACEHOLDER, PASSWORD_TOO_SHORT_MESSAGE } from '@/lib/authPolicy';
+import { haptics } from '@/lib/haptics';
 
 const INPUT_BG = '#EAF1FF';
 const MUTED_BLUE = '#8297C3';
@@ -26,8 +27,14 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
   const ctaScale = useRef(new Animated.Value(1)).current;
   const ctaGlow = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => setAppleAvailable(false));
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -43,24 +50,28 @@ export default function SignUpScreen() {
 
   async function handleSignUp() {
     if (!fullName.trim() || !email.trim() || !password) {
+      haptics.error();
       Alert.alert('Missing fields', 'Please enter your full name, email, and password.');
       return;
     }
     if (!isPasswordLongEnough(password)) {
+      haptics.error();
       Alert.alert('Weak password', PASSWORD_TOO_SHORT_MESSAGE);
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    haptics.medium();
     setLoading(true);
     try {
       await signUp(email.trim().toLowerCase(), password, fullName.trim());
+      haptics.success();
       Alert.alert(
         'Check your email',
         'We sent you a confirmation link. Open it, then come back to sign in.',
         [{ text: 'Go to Sign In', onPress: () => router.replace({ pathname: '/sign-in', params: returnTo ? { returnTo } : {} }) }],
       );
     } catch (e: any) {
+      haptics.error();
       Alert.alert('Sign up failed', e.message ?? 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
@@ -68,19 +79,43 @@ export default function SignUpScreen() {
   }
 
   async function handleGoogleSignUp() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    haptics.medium();
     setGoogleLoading(true);
     try {
       const session = await signInWithGoogle();
-      // A brand-new OAuth account has an incomplete profile. Route through the
-      // root gate (item 1.1) rather than hard-landing in the tabs, so it decides
-      // between onboarding and the app. An explicit returnTo from a deep link
-      // still wins.
-      if (session) router.replace((returnTo ?? '/') as never);
+      if (session) {
+        haptics.success();
+        // A brand-new OAuth account has an incomplete profile. Route through
+        // the root gate (item 1.1) rather than hard-landing in the tabs, so it
+        // decides between onboarding and the app. An explicit returnTo from a
+        // deep link still wins.
+        router.replace((returnTo ?? '/') as never);
+      }
     } catch (e: any) {
+      haptics.error();
       Alert.alert('Sign up failed', e.message ?? 'Something went wrong. Please try again.');
     } finally {
       setGoogleLoading(false);
+    }
+  }
+
+  async function handleAppleSignUp() {
+    haptics.medium();
+    setAppleLoading(true);
+    try {
+      const session = await signInWithApple();
+      if (session) {
+        haptics.success();
+        // Same reasoning as the Google path above — let the root gate decide.
+        router.replace((returnTo ?? '/') as never);
+      }
+      // session === null means the user cancelled -- no haptic, no alert,
+      // stay on this screen (Phase 7 Step 15).
+    } catch (e: any) {
+      haptics.error();
+      Alert.alert('Sign up failed', e.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      setAppleLoading(false);
     }
   }
 
@@ -189,6 +224,22 @@ export default function SignUpScreen() {
               <Text style={s.dividerText}>or</Text>
               <View style={s.dividerLine} />
             </View>
+
+            {appleAvailable && (
+              appleLoading ? (
+                <View style={[s.googleBtn, s.btnLoading]}>
+                  <ActivityIndicator color={colors.navy} />
+                </View>
+              ) : (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                  cornerRadius={radius.card}
+                  style={s.appleBtn}
+                  onPress={handleAppleSignUp}
+                />
+              )
+            )}
 
             <TouchableOpacity
               style={[s.googleBtn, googleLoading && s.btnLoading]}
@@ -331,6 +382,11 @@ const s = StyleSheet.create({
   dividerLine: { flex: 1, height: 1, backgroundColor: '#E4E9F4' },
   dividerText: { color: MUTED_BLUE, fontSize: 13, fontWeight: '700' },
 
+  appleBtn: {
+    height: 54,
+    width: '100%',
+    marginBottom: 14,
+  },
   googleBtn: {
     minHeight: 54,
     flexDirection: 'row',

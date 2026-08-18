@@ -10,10 +10,9 @@ import { SettingsRow, ProfileCompletionRing } from '@/components';
 import { useSlideMenu } from '@/components/SlideMenu';
 import { fetchPlayerRegistrations } from '@/lib/supabase/registrations';
 import { signOut } from '@/lib/auth';
-import { useSession } from '@/hooks/useSession';
-import { fetchProfile, type UserProfile } from '@/lib/services/profile';
+import { useProfile } from '@/hooks/useProfile';
+import type { UserProfile } from '@/lib/services/profile';
 import { getProfileCompletion } from '@/lib/profileCompletion';
-import { onProfileUpdated } from '@/lib/profileEvents';
 import { requireAuth } from '@/lib/authGuard';
 import { isFeatureEnabled, type FeatureKey } from '@/lib/featureFlags';
 
@@ -68,13 +67,6 @@ function getMenuItems(directorStatus: string | null, coachStatus: string | null)
 // â”€â”€â”€ Rating box â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type RatingInfo = { value: string; label: string; sublabel: string | null };
-
-function readAuthAvatarUrl(metadata: unknown): string | null {
-  if (!metadata || typeof metadata !== 'object') return null;
-  const record = metadata as Record<string, unknown>;
-  const value = record.avatar_url ?? record.picture;
-  return typeof value === 'string' && value.length > 0 ? value : null;
-}
 
 function getRatingInfo(profile: UserProfile | null): RatingInfo {
   if (!profile) return { value: 'NR', label: 'NOT RATED', sublabel: null };
@@ -164,14 +156,12 @@ const g = StyleSheet.create({
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { user, loading } = useSession();
+  const { user, loading, profile, status: profileStatus } = useProfile();
 
   useEffect(() => {
     if (!loading && !user) router.replace('/onboarding/welcome' as never);
   }, [user, loading]);
 
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [profileError, setProfileError] = useState<string | null>(null);
   const [tournamentCount, setTournamentCount] = useState(0);
   const { setTriggerVisible } = useSlideMenu();
 
@@ -185,44 +175,40 @@ export default function ProfileScreen() {
     }, [setTriggerVisible]),
   );
 
-  const loadProfile = useCallback(async () => {
-    if (!user?.id) return;
-    setProfileError(null);
-    const [p, regs] = await Promise.all([
-      fetchProfile(user.id),
-      fetchPlayerRegistrations(user.id),
-    ]);
-    if (!p) setProfileError(`userId: ${user.id} â€” fetchProfile returned null`);
-    setProfile(p);
-    setTournamentCount(regs.length);
+  useEffect(() => {
+    let active = true;
+
+    if (!user?.id) {
+      setTournamentCount(0);
+      return () => {
+        active = false;
+      };
+    }
+
+    fetchPlayerRegistrations(user.id)
+      .then((regs) => {
+        if (active) setTournamentCount(regs.length);
+      })
+      .catch((error) => {
+        if (active) setTournamentCount(0);
+        console.error('[ProfileScreen] registrations load failed:', error);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [user?.id]);
-
-  // Reload on focus (e.g. return from edit-profile)
-  useFocusEffect(useCallback(() => { loadProfile(); }, [loadProfile]));
-
-  // Also reload when user changes (e.g. right after sign-in while tab is already focused)
-  useEffect(() => { loadProfile(); }, [loadProfile]);
-
-  // Reload when edit-profile saves (modal dismissal doesn't trigger useFocusEffect)
-  useEffect(() => onProfileUpdated(loadProfile), [loadProfile]);
-
-  // Clear profile state when user signs out so it doesn't flash on next open
-  useFocusEffect(
-    useCallback(() => {
-      if (!loading && !user) {
-        setProfile(null);
-        setTournamentCount(0);
-      }
-    }, [user, loading]),
-  );
 
   const initials = profile?.full_name
     ? profile.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     : '?';
   const locationLine = [profile?.location_city, profile?.location_state].filter(Boolean).join(', ');
   const rating = getRatingInfo(profile);
-  const displayAvatarUrl = profile?.avatar_url ?? readAuthAvatarUrl(user?.user_metadata) ?? null;
+  const displayAvatarUrl = profile?.avatar_url ?? null;
   const completion = getProfileCompletion(profile);
+  const profileError = profileStatus === 'error' && user?.id
+    ? `userId: ${user.id} - profile could not be loaded`
+    : null;
   const menuItems = getMenuItems(
     profile?.is_director ? (profile.director_status ?? null) : null,
     profile?.is_coach ? (profile.coach_status ?? null) : null,

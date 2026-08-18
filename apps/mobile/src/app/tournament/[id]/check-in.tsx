@@ -188,6 +188,20 @@ export default function CheckInScreen() {
         <View style={[s.progressBarFill, { width: `${Math.round(progress * 100)}%` as `${number}%` }]} />
       </View>
 
+      {/* ── Scan entry ── */}
+      <View style={s.scanBar}>
+        <TouchableOpacity
+          style={s.scanBtn}
+          activeOpacity={0.85}
+          onPress={() => router.push(`/tournament/${id}/check-in-scan` as never)}
+          accessibilityRole="button"
+          accessibilityLabel="Scan Player QR"
+        >
+          <Ionicons name="qr-code-outline" size={18} color={L.bg} />
+          <Text style={s.scanBtnText}>Scan Player QR</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* ── Filter tabs ── */}
       <View style={s.filterRow}>
         {FILTERS.map(f => (
@@ -223,7 +237,13 @@ export default function CheckInScreen() {
             <CheckInRow
               key={reg.id}
               reg={reg}
-              onCheckIn={() => requireAuth(user?.id, () => checkInPlayer(reg.id).then(() => refresh()))}
+              onCheckIn={() => requireAuth(user?.id, () =>
+                checkInPlayer(reg.id, id)
+                  .then(() => refresh())
+                  .catch((e: unknown) => {
+                    Alert.alert('Could not check in', e instanceof Error ? e.message : 'Please try again.');
+                    refresh();
+                  }))}
               onUndo={() => {
                 Alert.alert(
                   'Undo Check-In',
@@ -270,6 +290,13 @@ const s = StyleSheet.create({
   progressBarFill: {
     height: 4, backgroundColor: L.success,
   },
+
+  scanBar: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4, backgroundColor: L.bg },
+  scanBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: L.navy, borderRadius: 12, paddingVertical: 13,
+  },
+  scanBtnText: { color: L.bg, fontSize: 14, fontWeight: '800' },
 
   filterRow: {
     flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 8, gap: 8,

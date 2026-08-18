@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
 } from 'react-native';
@@ -7,7 +7,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors, radius } from '@/theme';
-import { PrimaryButton, SecondaryButton } from '@/components';
+import { PrimaryButton, SecondaryButton, AddToCalendarButton } from '@/components';
+import { appLinks } from '@/lib/appLinks';
+import { withLink, type CalendarEventInput } from '@/lib/calendarEvents';
+import { useSession } from '@/hooks/useSession';
+import {
+  fetchRegistrationGroup,
+  teammatesOf,
+  type RegistrationGroup,
+} from '@/lib/supabase/registrationGroups';
 
 const L = {
   bg:        colors.bg,
@@ -57,6 +65,10 @@ export default function RegistrationSuccessScreen() {
     state: string;
     partnerName?: string;
     partnerStatus?: string;
+    teamGroupId?: string;
+    eventDate?: string;
+    venueAddress?: string;
+    zipCode?: string;
   }>();
 
   const tournamentName = p.tournamentName ?? 'Tournament';
@@ -73,6 +85,50 @@ export default function RegistrationSuccessScreen() {
   const balanceCents   = entryCents - holdCents;
   const location       = city ? `${venue}, ${city} ${state}` : venue;
 
+  // Doubles/mixed per-player payments: what just succeeded is THIS player's
+  // own entry fee, not the team's. Read the real obligation states rather
+  // than assuming the partner is pending — they may already have paid.
+  const { user } = useSession();
+  const teamGroupId = p.teamGroupId ?? '';
+  const [team, setTeam] = useState<RegistrationGroup | null>(null);
+
+  useEffect(() => {
+    if (!teamGroupId) return;
+    let active = true;
+    fetchRegistrationGroup(teamGroupId)
+      .then(g => { if (active) setTeam(g); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [teamGroupId]);
+
+  const unpaidTeammates = team && user?.id
+    ? teammatesOf(team, user.id).filter(m => m.paymentState !== 'paid')
+    : [];
+  const teamConfirmed = !!team && team.status === 'confirmed';
+
+  // Add to Calendar: same all-day-event design as the tournament detail
+  // screen (apps/mobile/src/app/tournament/[id].tsx) -- tournaments only
+  // store a calendar date (no time-of-day, no timezone anywhere in the
+  // schema), so this is represented as a single-day all-day event rather
+  // than guessing a start time. Registration just succeeded, so the CTA is
+  // always offered here (no cancelled/past-event gate needed -- you can't
+  // be on this screen for a tournament that wasn't open for registration).
+  let calendarEvent: CalendarEventInput | null = null;
+  if (p.eventDate) {
+    const [y, m, d] = p.eventDate.split('-').map(Number);
+    const eventDay = new Date(y, (m ?? 1) - 1, d ?? 1);
+    const locationLines = [venue, p.venueAddress || undefined, [city, state, p.zipCode].filter(Boolean).join(', ')]
+      .filter((part): part is string => !!part);
+    calendarEvent = {
+      title: tournamentName,
+      startDate: eventDay,
+      endDate: eventDay,
+      allDay: true,
+      location: locationLines.join('\n'),
+      notes: withLink(`Division: ${divisionName}`, appLinks.tournament(p.id)),
+    };
+  }
+
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
@@ -86,17 +142,41 @@ export default function RegistrationSuccessScreen() {
           <View style={s.iconCircle}>
             <Ionicons name="checkmark" size={48} color={L.gold} />
           </View>
-          <Text style={s.title}>Registration{'\n'}Complete!</Text>
+          <Text style={s.title}>
+            {teamGroupId && !teamConfirmed ? 'Your Payment\nConfirmed' : 'Registration\nComplete!'}
+          </Text>
           <Text style={s.subtitle}>
-            You're registered for{'\n'}
+            {teamGroupId && !teamConfirmed ? "Your entry fee is paid for\n" : "You're registered for\n"}
             <Text style={s.subtitleBold}>{tournamentName}</Text>
           </Text>
 
           <View style={s.statusPill}>
             <Ionicons name="shield-checkmark" size={14} color={L.success} />
-            <Text style={s.statusText}>Registered</Text>
+            <Text style={s.statusText}>
+              {teamGroupId && !teamConfirmed ? 'You’re Paid' : 'Registered'}
+            </Text>
           </View>
         </View>
+
+        {/* ── Team payment state ──
+            Each player on a doubles/mixed team pays their own entry fee, so
+            this never claims the team is set while a partner still owes. */}
+        {!!teamGroupId && unpaidTeammates.length > 0 && (
+          <View style={s.reminder}>
+            <Ionicons name="hourglass-outline" size={16} color={L.gold} style={{ flexShrink: 0, marginTop: 1 }} />
+            <Text style={s.reminderText}>
+              {`${unpaidTeammates.map(m => m.name || 'Your partner').join(' and ')} still ${
+                unpaidTeammates.length > 1 ? 'owe' : 'owes'
+              } ${fmt(unpaidTeammates[0].amountDueCents)}. Your team isn't confirmed until every player has paid — we've sent them a reminder.`}
+            </Text>
+          </View>
+        )}
+        {!!teamGroupId && teamConfirmed && (
+          <View style={s.reminder}>
+            <Ionicons name="people-outline" size={16} color={L.success} style={{ flexShrink: 0, marginTop: 1 }} />
+            <Text style={s.reminderText}>Both players have paid — your team is confirmed.</Text>
+          </View>
+        )}
 
         {/* ── Registration summary ── */}
         <View style={s.card}>
@@ -146,6 +226,9 @@ export default function RegistrationSuccessScreen() {
           onPress={() => router.replace('/my-tournaments' as never)}
           style={{ marginBottom: 12 }}
         />
+        {calendarEvent && (
+          <AddToCalendarButton event={calendarEvent} style={{ marginBottom: 12 }} />
+        )}
         <SecondaryButton
           label="Back to Tournament"
           onPress={() => router.replace(`/tournament/${p.id}` as never)}

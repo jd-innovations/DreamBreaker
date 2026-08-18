@@ -1,20 +1,48 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Easing, type StyleProp, type ViewStyle } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { colors, spacing, radius, typography } from '@/theme';
 import { AppIcon, type AppIconName } from '@/components';
+import { haptics } from '@/lib/haptics';
 
 const L = colors;
 
-function fireOnboardingImpact() {
-  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+function fireOnboardingSelection() {
+  haptics.selection();
 }
 
-function fireOnboardingSelection() {
-  Haptics.selectionAsync().catch(() => undefined);
+// The primary onboarding CTA gets a slightly weightier tap than the selection
+// tick used for options/back/skip -- haptics.light() is the centralized
+// equivalent of the ImpactFeedbackStyle.Light this used before the Phase 3
+// haptics migration.
+function fireOnboardingImpact() {
+  haptics.light();
+}
+
+/**
+ * The onboarding selection tick, for screens that build their own option rows
+ * instead of using OptionRow/OptionChip (gender.tsx's radio cards,
+ * self-rating.tsx's chips, select-home-court.tsx's court cards). Use this
+ * rather than calling `haptics` directly so every onboarding selection feels
+ * identical.
+ *
+ * `alreadySelected` encodes the same rule the shared components follow: tapping
+ * the option that's already chosen changes nothing, so it stays silent -- only
+ * a move to a *different* option buzzes.
+ */
+export function selectWithHaptic(alreadySelected: boolean, apply: () => void) {
+  if (!alreadySelected) fireOnboardingSelection();
+  apply();
+}
+
+/**
+ * The same tick, for controls where "already selected" doesn't apply because
+ * every interaction changes the value (search-radius.tsx's +/- stepper).
+ */
+export function onboardingSelectionHaptic() {
+  fireOnboardingSelection();
 }
 
 // Total numbered steps shown as progress dots — screens 2 (Create Account)
@@ -167,7 +195,10 @@ export function OptionRow({
   onPress: () => void;
 }) {
   function handlePress() {
-    fireOnboardingSelection();
+    // Single-select: re-tapping the row that's already chosen changes nothing,
+    // so it shouldn't buzz. Only a move to a *different* option is feedback
+    // worth giving.
+    if (!selected) fireOnboardingSelection();
     onPress();
   }
 
@@ -204,6 +235,8 @@ export function OptionChip({
 }) {
   function handlePress() {
     if (disabled && !selected) return;
+    // Multi-select: both directions genuinely change the selection (adding a
+    // tag and removing one), so both buzz -- unlike the single-select row above.
     fireOnboardingSelection();
     onPress();
   }
@@ -338,7 +371,10 @@ export function OnboardingPressableCard({
 
   function handlePress() {
     if (disabled) return;
-    fireOnboardingSelection();
+    // `selected` is optional here: undefined means this card isn't part of a
+    // selection group (a plain pressable), so it still buzzes. When it *is* a
+    // selection and already chosen, re-tapping is a no-op -- stay silent.
+    if (!selected) fireOnboardingSelection();
     onPress();
   }
 

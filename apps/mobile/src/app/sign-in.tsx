@@ -4,13 +4,14 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform,
   ScrollView, ActivityIndicator, Alert, Animated, Easing,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { signIn, signInWithGoogle } from '@/lib/auth';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { signIn, signInWithGoogle, signInWithApple } from '@/lib/auth';
 import { colors, gradients, radius } from '@/theme';
+import { haptics } from '@/lib/haptics';
 
 const INPUT_BG = '#EAF1FF';
 const MUTED_BLUE = '#8297C3';
@@ -24,8 +25,14 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
   const ctaScale = useRef(new Animated.Value(1)).current;
   const ctaGlow = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => setAppleAvailable(false));
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -41,13 +48,15 @@ export default function SignInScreen() {
 
   async function handleSignIn() {
     if (!email.trim() || !password) {
+      haptics.error();
       Alert.alert('Missing fields', 'Please enter your email and password.');
       return;
     }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    haptics.medium();
     setLoading(true);
     try {
       await signIn(email.trim().toLowerCase(), password);
+      haptics.success();
       // No returnTo -> hand off to the root gate (item 1.1) rather than picking
       // a destination here, so a signed-in user with an incomplete profile is
       // routed to onboarding immediately instead of on their next cold start.
@@ -55,6 +64,7 @@ export default function SignInScreen() {
       // action, so it still wins.
       router.replace((returnTo ?? '/') as never);
     } catch (e: any) {
+      haptics.error();
       Alert.alert('Sign in failed', e.message ?? 'Please check your credentials and try again.');
     } finally {
       setLoading(false);
@@ -62,16 +72,40 @@ export default function SignInScreen() {
   }
 
   async function handleGoogleSignIn() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    haptics.medium();
     setGoogleLoading(true);
     try {
       const session = await signInWithGoogle();
-      // Same reasoning as the email path above — let the root gate decide.
-      if (session) router.replace((returnTo ?? '/') as never);
+      if (session) {
+        haptics.success();
+        // Same reasoning as the email path above — let the root gate decide.
+        router.replace((returnTo ?? '/') as never);
+      }
     } catch (e: any) {
+      haptics.error();
       Alert.alert('Sign in failed', e.message ?? 'Something went wrong. Please try again.');
     } finally {
       setGoogleLoading(false);
+    }
+  }
+
+  async function handleAppleSignIn() {
+    haptics.medium();
+    setAppleLoading(true);
+    try {
+      const session = await signInWithApple();
+      if (session) {
+        haptics.success();
+        // Same reasoning as the email path above — let the root gate decide.
+        router.replace((returnTo ?? '/') as never);
+      }
+      // session === null means the user cancelled -- no haptic, no alert,
+      // stay on this screen (Phase 7 Step 15).
+    } catch (e: any) {
+      haptics.error();
+      Alert.alert('Sign in failed', e.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      setAppleLoading(false);
     }
   }
 
@@ -171,6 +205,22 @@ export default function SignInScreen() {
             <Text style={s.dividerText}>or</Text>
             <View style={s.dividerLine} />
           </View>
+
+          {appleAvailable && (
+            appleLoading ? (
+              <View style={[s.googleBtn, s.btnLoading]}>
+                <ActivityIndicator color={colors.navy} />
+              </View>
+            ) : (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={radius.card}
+                style={s.appleBtn}
+                onPress={handleAppleSignIn}
+              />
+            )
+          )}
 
           <TouchableOpacity
             style={[s.googleBtn, googleLoading && s.btnLoading]}
@@ -312,6 +362,11 @@ const s = StyleSheet.create({
   dividerLine: { flex: 1, height: 1, backgroundColor: '#E4E9F4' },
   dividerText: { color: MUTED_BLUE, fontSize: 13, fontWeight: '700' },
 
+  appleBtn: {
+    height: 54,
+    width: '100%',
+    marginBottom: 14,
+  },
   googleBtn: {
     minHeight: 54,
     flexDirection: 'row',

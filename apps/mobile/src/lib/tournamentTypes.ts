@@ -16,6 +16,8 @@ export interface Tournament {
   venue: string;
   city: string;
   state: string;
+  venueAddress?: string | null;
+  zipCode?: string | null;
   date: string;       // display-formatted, e.g. "Jul 16, 2026"
   eventDate: string;  // raw ISO date (YYYY-MM-DD), for date comparisons
   entryFeeCents: number;

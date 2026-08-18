@@ -287,6 +287,8 @@ function validateStep(step: StepKey, form: FormState, stripeOnboarded: boolean):
 
     if (!form.holdFee.trim() || isNaN(hold) || hold < 0)
       e.holdFee = 'Deposit must be $0 or more';
+    else if (!isNaN(entry) && entry === 0 && hold > 0)
+      e.holdFee = 'Deposit must be $0 for a free tournament';
     else if (!isNaN(entry) && entry > 0 && hold >= entry)
       e.holdFee = 'Deposit must be less than the entry fee';
 

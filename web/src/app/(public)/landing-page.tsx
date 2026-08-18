@@ -90,6 +90,7 @@ export default async function LandingPage() {
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0">
           <img src={HERO_IMG} alt="" className="h-full w-full object-cover object-center opacity-50 dark:opacity-60" />
+          <div className="absolute inset-0 bg-black/50" />
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/20 dark:from-background dark:via-background/70 dark:to-transparent" />
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
@@ -180,7 +181,7 @@ export default async function LandingPage() {
                     <span className="px-2.5 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-mono tracking-widest font-bold">{(t.status === "filling_fast" ? "Filling Fast" : t.status).toUpperCase()}</span>
                     {t.featured && <span className="px-2.5 py-1 rounded-full bg-amber-400 text-black text-[10px] font-mono tracking-widest font-bold flex items-center gap-1"><Trophy size={9} weight="fill" /> FEATURED</span>}
                   </div>
-                  <div className="absolute bottom-3 left-3 right-3"><div className="font-display text-2xl text-white tracking-wide">{t.name}</div></div>
+                  <div className="absolute bottom-3 left-3 right-3"><div className="font-display text-2xl text-white tracking-tight leading-[0.85]">{t.name}</div></div>
                 </div>
                 <div className="p-5 space-y-2">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground"><MapPin size={14} weight="bold" /><span>{t.location}</span></div>

@@ -1,3 +1,8 @@
+import type {
+  RegistrationGroupStatus,
+  RegistrationMemberState,
+} from '@/lib/supabase/registrationGroups';
+
 export type RegistrationStatus =
   | 'registered'
   | 'waitlisted'
@@ -29,6 +34,13 @@ export type TournamentRegistration = {
   partnerId?: string;
   partnerName?: string;
   partnerDupr?: string;
+  // ── Per-player team payment state (doubles/mixed) ───────────────────────────
+  // Present only when this registration belongs to a registration_groups team,
+  // where every player owes their own entry fee. `amountPaid` above is this
+  // player's OWN payment — it never means the team is fully paid.
+  teamGroupId?: string;
+  teamStatus?: RegistrationGroupStatus;
+  teamPartnerPaymentState?: RegistrationMemberState;
 };
 
 let _registrations: TournamentRegistration[] = [];

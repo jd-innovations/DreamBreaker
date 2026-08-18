@@ -10,7 +10,7 @@ import {
   ArrowSquareOut, Envelope, Megaphone,
   CheckFat, WarningCircle, Broadcast, ChatCircleDots,
   Star, PencilSimple, Trash, Prohibit, DotsThree,
-  Flag,
+  Flag, Ticket,
 } from "@phosphor-icons/react";
 import { Logo } from "@/components/layout/logo";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import { getUserId } from "@/lib/dev-user";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
 import { NotificationBell } from "@/components/notifications/bell";
+import { TicketPanel } from "@/components/support/ticket-panel";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -120,8 +121,6 @@ function renderEmailPreview(html: string, vars: string[], sponsors: EmailSponsor
 const STATUS_DOT: Record<string, string> = {
   draft: "bg-muted-foreground",
   pending_approval: "bg-amber-400",
-  approved: "bg-blue-400",
-  published: "bg-primary",
   open: "bg-primary",
   filling_fast: "bg-orange-400",
   registration_closed: "bg-slate-400",
@@ -130,8 +129,8 @@ const STATUS_DOT: Record<string, string> = {
   cancelled: "bg-red-400",
 };
 const STATUS_LABEL: Record<string, string> = {
-  draft: "Draft", pending_approval: "Pending", approved: "Approved",
-  published: "Live", open: "Open", filling_fast: "Filling Fast",
+  draft: "Draft", pending_approval: "Pending",
+  open: "Open", filling_fast: "Filling Fast",
   registration_closed: "Reg. Closed", in_progress: "In Progress",
   completed: "Completed", cancelled: "Cancelled",
 };
@@ -193,7 +192,7 @@ function RejectModal({ tournamentName, onConfirm, onClose }: { tournamentName: s
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type NavSection = "dashboard" | "approvals" | "directors" | "users" | "tournaments" | "finance" | "comms" | "messages" | "email_templates" | "settings" | "reports";
+type NavSection = "dashboard" | "approvals" | "directors" | "users" | "tournaments" | "finance" | "comms" | "messages" | "email_templates" | "settings" | "reports" | "support_tickets";
 
 interface UserReport {
   id: string;
@@ -206,6 +205,11 @@ interface UserReport {
   created_at: string;
   reporter_name?: string;
   reported_name?: string;
+  // Present only for group Feed reports (source table: group_post_reports).
+  source?: "user" | "group_post" | "group_comment";
+  group_id?: string;
+  group_name?: string;
+  target_id?: string;
 }
 
 export default function AdminPage() {
@@ -251,6 +255,7 @@ export default function AdminPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [reports, setReports] = useState<UserReport[]>([]);
   const [actioningReport, setActioningReport] = useState<string | null>(null);
+  const [openTicketCount, setOpenTicketCount] = useState(0);
 
   // Comms
   const [messages, setMessages] = useState<Message[]>([]);
@@ -259,6 +264,7 @@ export default function AdminPage() {
   const [composeSubject, setComposeSubject] = useState("");
   const [composeBody, setComposeBody] = useState("");
   const [showEmailList, setShowEmailList] = useState(false);
+  const [sendingComms, setSendingComms] = useState(false);
 
   const load = useCallback(async () => {
     // `loading` initializes to true; the spinner shows until this resolves.
@@ -319,24 +325,90 @@ export default function AdminPage() {
         .select("id,name,logo_url,link,active,sort_order").order("sort_order");
       setEmailSponsors((spons ?? []) as EmailSponsor[]);
 
-      // Load user reports
+      // Load user reports (person-to-person) + group Feed reports (posts/comments),
+      // merged into one review queue.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: rpts } = await (supabase as any).from("user_reports")
         .select("id,reporter_id,reported_id,conversation_id,reason,notes,status,created_at")
         .order("created_at", { ascending: false });
-      if (rpts && rpts.length > 0) {
-        const allIds = [...new Set([...(rpts as UserReport[]).map((r) => r.reporter_id), ...(rpts as UserReport[]).map((r) => r.reported_id)])];
-        const { data: rptProfs } = await supabase.from("profiles").select("id,full_name").in("id", allIds);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: groupRpts } = await (supabase as any).from("group_post_reports")
+        .select("id,reporter_id,reported_user_id,group_id,target_type,target_id,reason,notes,status,created_at")
+        .order("created_at", { ascending: false });
+
+      const userReportRows = (rpts ?? []) as UserReport[];
+      const groupReportRows = ((groupRpts ?? []) as {
+        id: string; reporter_id: string; reported_user_id: string; group_id: string;
+        target_type: "group_post" | "group_comment"; target_id: string;
+        reason: string; notes: string | null; status: string; created_at: string;
+      }[]).map((r): UserReport => ({
+        id: r.id,
+        reporter_id: r.reporter_id,
+        reported_id: r.reported_user_id,
+        conversation_id: null,
+        reason: r.reason,
+        notes: r.notes,
+        status: r.status,
+        created_at: r.created_at,
+        source: r.target_type,
+        group_id: r.group_id,
+        target_id: r.target_id,
+      }));
+
+      const allReports = [...userReportRows, ...groupReportRows]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      if (allReports.length > 0) {
+        const allIds = [...new Set([...allReports.map((r) => r.reporter_id), ...allReports.map((r) => r.reported_id)])];
+        const groupIds = [...new Set(groupReportRows.map((r) => r.group_id).filter((id): id is string => !!id))];
+        const [{ data: rptProfs }, { data: groupRows }] = await Promise.all([
+          supabase.from("profiles").select("id,full_name").in("id", allIds),
+          groupIds.length > 0
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ? (supabase as any).from("groups").select("id,name").in("id", groupIds)
+            : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+        ]);
         const nameMap: Record<string, string> = {};
         for (const p of rptProfs ?? []) nameMap[p.id] = p.full_name ?? "Unknown";
-        setReports((rpts as UserReport[]).map((r) => ({ ...r, reporter_name: nameMap[r.reporter_id], reported_name: nameMap[r.reported_id] })));
+        const groupNameMap: Record<string, string> = {};
+        for (const g of (groupRows ?? []) as { id: string; name: string }[]) groupNameMap[g.id] = g.name;
+        setReports(allReports.map((r) => ({
+          ...r,
+          reporter_name: nameMap[r.reporter_id],
+          reported_name: nameMap[r.reported_id],
+          group_name: r.group_id ? groupNameMap[r.group_id] : undefined,
+        })));
       }
+
+      const { count: ticketCount } = await supabase
+        .from("support_tickets")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["open", "in_progress"]);
+      setOpenTicketCount(ticketCount ?? 0);
     } finally {
       setLoading(false);
     }
   }, [router]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Live sidebar badge — TicketPanel maintains its own list/thread state
+  // while mounted, but the badge needs to stay current even when a different
+  // nav section is active, so it gets its own lightweight subscription.
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("admin-open-ticket-count")
+      .on("postgres_changes", { event: "*", schema: "public", table: "support_tickets" }, async () => {
+        const { count } = await supabase
+          .from("support_tickets")
+          .select("id", { count: "exact", head: true })
+          .in("status", ["open", "in_progress"]);
+        setOpenTicketCount(count ?? 0);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   // ── Approvals ───────────────────────────────────────────────────────────────
 
@@ -543,13 +615,41 @@ export default function AdminPage() {
     return target ? [target.email] : [];
   };
 
-  const handleSendMessage = () => {
-    const emails = getRecipientEmails();
+  const handleSendMessage = async () => {
+    const emails = getRecipientEmails() as string[];
     if (!composeSubject.trim() || !composeBody.trim()) { toast.error("Subject and body are required."); return; }
     if (emails.length === 0) { toast.error("No recipients found."); return; }
 
+    setSendingComms(true);
+    const supabase = createClient();
+    // Resend caps recipients per send — chunk into batches of 50. Recipients
+    // in the same `to` array see each other's addresses, which is acceptable
+    // for this internal admin tool (targeted at "all directors" or a single
+    // person, not public marketing); a true bulk/marketing send should use
+    // Resend's dedicated Broadcasts API instead of this endpoint.
+    const chunkSize = 50;
+    const chunks: string[][] = [];
+    for (let i = 0; i < emails.length; i += chunkSize) chunks.push(emails.slice(i, i + chunkSize));
+
+    const sendId = Date.now().toString();
+    let failed = false;
+    for (let i = 0; i < chunks.length; i++) {
+      const { error } = await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          to: chunks[i],
+          subject: composeSubject,
+          html: `<div style="font-family:sans-serif;white-space:pre-wrap">${composeBody.replace(/</g, "&lt;")}</div>`,
+          idempotencyKey: `admin-comms/${sendId}/${i}`,
+        },
+      });
+      if (error) failed = true;
+    }
+    setSendingComms(false);
+
+    if (failed) { toast.error("Some recipients may not have received the email."); return; }
+
     const newMsg: Message = {
-      id: Date.now().toString(),
+      id: sendId,
       to: emails.join(", "),
       toLabel: composeRecipientType === "all" ? "All Users" : composeRecipientType === "directors" ? "All Directors" : (profiles.find((p) => p.id === composeRecipientId)?.full_name ?? "Individual"),
       subject: composeSubject,
@@ -560,7 +660,7 @@ export default function AdminPage() {
     setMessages((prev) => [newMsg, ...prev]);
     setComposeSubject("");
     setComposeBody("");
-    toast.success("Message queued!", { description: `To: ${newMsg.toLabel} · ${emails.length} recipient${emails.length > 1 ? "s" : ""}` });
+    toast.success("Message sent!", { description: `To: ${newMsg.toLabel} · ${emails.length} recipient${emails.length > 1 ? "s" : ""}` });
   };
 
   // ── Derived data ─────────────────────────────────────────────────────────────
@@ -570,7 +670,7 @@ export default function AdminPage() {
   const directors = profiles.filter((p) => ["director", "player_director"].includes(p.role));
   const totalRevenue = tournaments.reduce((s, t) => s + (t.spots_filled * t.entry_fee_cents), 0);
   const platformRevenue = Math.round(totalRevenue * 0.05);
-  const liveTournaments = tournaments.filter((t) => ["published", "open", "filling_fast", "in_progress"].includes(t.status));
+  const liveTournaments = tournaments.filter((t) => ["open", "filling_fast", "registration_closed", "in_progress"].includes(t.status));
 
   const filteredProfiles = profiles.filter((p) => {
     const matchesSearch = !userSearch || (p.full_name ?? "").toLowerCase().includes(userSearch.toLowerCase()) || (p.email ?? "").toLowerCase().includes(userSearch.toLowerCase());
@@ -632,6 +732,17 @@ export default function AdminPage() {
           {reports.filter((r) => r.status === "pending").length > 0 && (
             <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === "reports" ? "bg-white/20 text-white" : "bg-destructive/20 text-destructive"}`}>
               {reports.filter((r) => r.status === "pending").length}
+            </span>
+          )}
+        </button>
+
+        <button onClick={() => { setNavSection("support_tickets"); setMobileSidebarOpen(false); }}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "support_tickets" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+          <Ticket size={16} weight={navSection === "support_tickets" ? "fill" : "regular"} />
+          Support Tickets
+          {openTicketCount > 0 && (
+            <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === "support_tickets" ? "bg-white/20 text-white" : "bg-amber-400/20 text-amber-400"}`}>
+              {openTicketCount}
             </span>
           )}
         </button>
@@ -753,6 +864,7 @@ export default function AdminPage() {
                 {navSection === "email_templates" && "Email Templates"}
                 {navSection === "settings" && "Platform Settings"}
                 {navSection === "reports" && "User Reports"}
+                {navSection === "support_tickets" && "Support Tickets"}
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
                 {pendingTournaments.length > 0 && `${pendingTournaments.length} tournament${pendingTournaments.length > 1 ? "s" : ""} pending approval`}
@@ -770,7 +882,7 @@ export default function AdminPage() {
           </div>
         </header>
 
-        <div className={navSection === "messages" ? "flex-1 flex flex-col overflow-hidden" : "flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 pb-24 lg:pb-8"}>
+        <div className={navSection === "messages" || navSection === "support_tickets" ? "flex-1 flex flex-col overflow-hidden" : "flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 pb-24 lg:pb-8"}>
 
           {/* ── Dashboard ── */}
           {navSection === "dashboard" && (
@@ -1125,10 +1237,11 @@ export default function AdminPage() {
                   className="h-10 rounded-xl bg-secondary border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-ring">
                   <option value="all">All Statuses</option>
                   <option value="pending_approval">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="published">Live</option>
-                  <option value="open">Open</option>
                   <option value="draft">Draft</option>
+                  <option value="open">Open</option>
+                  <option value="filling_fast">Filling Fast</option>
+                  <option value="registration_closed">Reg. Closed</option>
+                  <option value="in_progress">In Progress</option>
                   <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
@@ -1369,8 +1482,8 @@ export default function AdminPage() {
                     }} className="flex-1 h-11 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors flex items-center justify-center gap-2">
                       <Envelope size={14} /> OPEN IN EMAIL CLIENT
                     </button>
-                    <button onClick={handleSendMessage} className="flex-1 h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors flex items-center justify-center gap-2">
-                      <Broadcast size={14} /> QUEUE &amp; SEND
+                    <button onClick={handleSendMessage} disabled={sendingComms} className="flex-1 h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-sm font-display tracking-wider transition-colors flex items-center justify-center gap-2">
+                      <Broadcast size={14} /> {sendingComms ? "SENDING…" : "SEND"}
                     </button>
                   </div>
                 </div>
@@ -1643,6 +1756,12 @@ export default function AdminPage() {
                         <div className="flex-1 min-w-0 space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-sm">{r.reported_name ?? r.reported_id}</span>
+                            {r.source && r.source !== "user" && (
+                              <span className="font-mono text-[10px] px-2 py-0.5 rounded-full border border-primary/30 text-primary bg-primary/10">
+                                {r.source === "group_post" ? "GROUP POST" : "GROUP COMMENT"}
+                                {r.group_name ? ` · ${r.group_name}` : ""}
+                              </span>
+                            )}
                             <span className="font-mono text-[10px] px-2 py-0.5 rounded-full border border-destructive/30 text-destructive bg-destructive/10">
                               {reasonLabel[r.reason] ?? r.reason}
                             </span>
@@ -1667,8 +1786,9 @@ export default function AdminPage() {
                               disabled={actioningReport === r.id}
                               onClick={async () => {
                                 setActioningReport(r.id);
+                                const table = r.source && r.source !== "user" ? "group_post_reports" : "user_reports";
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                await (createClient() as any).from("user_reports").update({ status: "actioned", reviewed_at: new Date().toISOString() }).eq("id", r.id);
+                                await (createClient() as any).from(table).update({ status: "actioned", reviewed_at: new Date().toISOString() }).eq("id", r.id);
                                 setReports((prev) => prev.map((x) => x.id === r.id ? { ...x, status: "actioned" } : x));
                                 setActioningReport(null);
                                 toast.success("Report actioned.");
@@ -1681,8 +1801,9 @@ export default function AdminPage() {
                               disabled={actioningReport === r.id}
                               onClick={async () => {
                                 setActioningReport(r.id);
+                                const table = r.source && r.source !== "user" ? "group_post_reports" : "user_reports";
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                await (createClient() as any).from("user_reports").update({ status: "dismissed", reviewed_at: new Date().toISOString() }).eq("id", r.id);
+                                await (createClient() as any).from(table).update({ status: "dismissed", reviewed_at: new Date().toISOString() }).eq("id", r.id);
                                 setReports((prev) => prev.map((x) => x.id === r.id ? { ...x, status: "dismissed" } : x));
                                 setActioningReport(null);
                                 toast("Report dismissed.");
@@ -1710,6 +1831,12 @@ export default function AdminPage() {
                 initialRecipientId={dmRecipientId ?? undefined}
                 onUnreadChange={setMessagingUnread}
               />
+            </div>
+          )}
+
+          {navSection === "support_tickets" && currentUserId && (
+            <div className="flex-1 flex flex-col overflow-hidden p-4 sm:p-6">
+              <TicketPanel currentUserId={currentUserId} />
             </div>
           )}
 
