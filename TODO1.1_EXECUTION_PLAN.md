@@ -686,23 +686,36 @@ deletions belonging to the 2.1 re-baseline) and are untouched by this item.
   `20260810005547`, `20260810211105`, `20260810222017`, `20260810222246`,
   `20260810224032`, `20260810224346`.
 
-The 18 non-account-deletion entries in the first list describe schema that
-**already exists in production** — marketplace, coach marketplace phases 1-4,
-wallet vouchers, the shared payment foundation, and QR check-in are all live
-tables — so they were applied out of band under different version stamps. That is
-exactly the divergence `docs/DB_REBASELINE_PLAN.md` documents.
+**Resolved by the 2.1 audit (2026-08-17) — see `docs/DB_MIGRATION_RECONCILIATION.md`
+for the full inventory and evidence.** The 19-vs-15 divergence breaks down as:
 
-Consequence: a plain `supabase db push` would try to replay all 19, fail or
-double-apply on the first 18, and never reach `20260817000000`. Choose one of:
+- **15 of the 19 are duplicate-timestamp aliases** of migrations already applied
+  to production. Proven SQL-identical by content hash (8 exact, 7 once SQL
+  comments are stripped). Nothing is missing on either side — they are the same
+  migrations filed under two version numbers, because the MCP `apply_migration`
+  tool stamps its own version while a local file was written with a hand-chosen
+  one.
+- **3 are a genuine unapplied backlog** unrelated to account deletion: PAR ×2
+  (`20260725010000`, `20260725011000` — 0 of 10 PAR functions and 0 of 5 PAR
+  triggers exist in production) and QR check-in (`20260814000000`, where
+  production runs an older `check_in_registration()` body).
+- **1 is this migration.**
 
-- **Preferred — after 2.1 lands.** Reconcile history per
-  `docs/DB_REBASELINE_PLAN.md`, then push normally.
+Consequence: a plain `supabase db push --linked` would replay all 19, fail or
+double-apply on the 15 aliases, and never reach `20260817000000` — and if it did
+get past them it would drag PAR and QR into production as a side effect. **Do not
+run `db push --linked` in the current state.** Choose one of:
+
+- **Preferred — after 2.1's Phases 0-2.** Commit the (currently untracked)
+  re-baseline, rename the 15 aliases to production's versions, move PAR and QR out
+  of the replay path, verify on a disposable branch, then push normally with
+  `20260817000000` as the single pending migration.
 - **If 1.3 must ship before 2.1.** Apply `20260817000000_account_deletion.sql`
   as a single explicit statement batch, then
   `supabase migration repair --status applied 20260817000000` so history records
   it. This adds one more out-of-band application to the pile 2.1 has to clean up
-  — take it only as a deliberate, logged exception, and note it in the
-  rebaseline plan.
+  — take it only as a deliberate, logged exception, and note it in
+  `docs/DB_MIGRATION_RECONCILIATION.md`.
 
 Either way the migration file itself is unchanged: it is forward-only, idempotent
 (`drop constraint if exists`, `add column if not exists`,
@@ -1112,6 +1125,88 @@ Goal: make backend state reproducible and safe.
   - No direct production-only function exists outside source.
 - Done when:
   - The database can be recreated from repo state.
+
+### Completion Notes - 2.1
+
+- Status: **ACTIVE — audit complete, plan written, nothing executed** (2026-08-17).
+  **2.1 is now the gate for item 1.3's deployment.** Account deletion cannot reach
+  production until at least Phases 0–2 of the reconciliation plan are done.
+- Deliverable: **`docs/DB_MIGRATION_RECONCILIATION.md`** — full inventory,
+  bucket-by-bucket classification, evidence, exact commands, and risk table.
+  `docs/DB_REBASELINE_PLAN.md` got a status banner: its steps 1–5 were largely
+  executed on 2026-07-25, so it is now a historical record plus the still-valid
+  branch-verification recipe.
+- Nothing was applied. No `db push`, no `migration repair`, no function deploy, no
+  data change. All findings come from read-only catalog and migration-metadata
+  queries.
+
+#### What the audit found
+
+1. **The divergence is a timestamp-collision problem, not schema drift.** All 15
+   "production-only" migrations are the *same SQL* as 15 "repo-only" migrations
+   under different version numbers. Proven by content hash: 8 matched byte-for-byte
+   after whitespace normalization, and the remaining 7 matched exactly once SQL
+   comments were stripped — the repo copies carry documentation added after the
+   migration was applied. All 15 came through the MCP `apply_migration` tool, which
+   assigns its own version; a local file was written separately with a hand-chosen
+   timestamp.
+2. **Bucket D is empty in substance.** No production migration contains SQL that is
+   absent from the repo.
+3. **Only 4 repo migrations are genuinely unapplied:** PAR ×2, QR check-in, and
+   account deletion.
+4. **The re-baseline was never committed.** `git ls-tree HEAD supabase/migrations/`
+   returns 20 pre-baseline legacy files (all deleted in the worktree) plus
+   `20260817000000_account_deletion.sql`. The baseline and all 34 post-baseline
+   migrations, and the 86-file `supabase/migrations_legacy/` archive, exist **only
+   as untracked worktree files.** A `git clean` would destroy production's only
+   reproducible definition. This is the most urgent problem in 2.1 and needs no
+   production access to fix.
+5. **PAR v1 is not deployed.** Its tables arrived via the baseline, but **0 of 10**
+   PAR functions and **0 of 5** PAR triggers exist in production. PAR rating
+   processing does not run in production. Treat PAR as not deployed in any
+   readiness accounting — item L4 and the My Stats docs should reflect this.
+6. **Production runs an older `check_in_registration()` than the repo.** Identical
+   signature and return type — so the mobile RPC in
+   `apps/mobile/src/lib/supabase/registrations.ts:288` is wire-compatible and QR
+   check-in is not broken — but the body is 2251 chars in production vs 3308 in
+   `20260814000000`. The "physically verified" QR check-in in item 5.3 was verified
+   against production's body, not the repo's. Needs its own diff review and re-test.
+
+#### Recommended path (details in the reconciliation doc)
+
+Guiding rule: **anything not in production must not be in the replay path.** A
+migrations folder that builds a database *unlike* production is runnable, not
+reproducible.
+
+- **Phase 0 — commit the re-baseline.** No production contact. Do this first.
+- **Phase 1 — rename the 15 alias files to production's versions**, and move PAR ×2
+  and QR into `supabase/migrations_pending/`. No production contact. Renaming is
+  preferred over `migration repair`: repair would append 15 more rows to production
+  history (30 rows describing 15 migrations, plus a permanent remote-only set),
+  whereas renaming makes repo history *equal* production history and touches
+  production not at all.
+- **Phase 2 — rebuild a disposable preview branch from the repo and parity-diff it
+  against production.** No production contact.
+- **Phase 3 — apply `20260817000000` alone**, then deploy `delete-account`.
+- **Phase 4 — retire PAR and QR separately**, each on its own merits.
+
+**Phases 0–2 carry most of the value, need no production access, and should happen
+regardless of when 1.3 ships.**
+
+- Fallback if 1.3 cannot wait: apply the account-deletion SQL directly and
+  `supabase migration repair --status applied 20260817000000`. Survivable — the
+  migration is idempotent and was validated inside a self-aborting transaction —
+  but it adds a 16th out-of-band application to the pile 2.1 exists to clean up.
+  Logged exception only.
+- **Do not run `supabase db push --linked` in the current state.** It would replay
+  18 migrations whose objects already exist and fail before reaching account
+  deletion.
+- Verification run: not applicable — documentation only. The repo has no markdown
+  linter or formatter (no `.markdownlint*`, no prettier docs target, no docs script
+  in any `package.json`).
+- Risks remaining: the untracked migration set (Phase 0 closes it), the
+  `check_in_registration` drift, PAR being absent from production while docs imply
+  otherwise, and the standing danger of a `--linked` push before Phase 1.
 
 ### 2.2 Add RLS and RPC Security Tests
 
