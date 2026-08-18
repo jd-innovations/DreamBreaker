@@ -1145,6 +1145,25 @@ Goal: make backend state reproducible and safe.
   | Archived as legacy (`supabase/migrations_legacy/`) | **86** — git recorded the 20 previously-tracked files as `R100` renames, so provenance is preserved |
   | Intentionally untouched | 1 unrelated in-flight migration + the rest of the dirty tree |
 
+  **Cleanup, 2026-08-18** (`chore(db): move in-flight registration migration to
+  pending`): the one untouched migration,
+  `20260817010000_registration_team_payment_groups.sql`, was moved into
+  `supabase/migrations_pending/`. It had since been **committed** as part of
+  `3318b05` — *feat(payments): per-player entry fees for doubles/mixed teams* — so
+  it was tracked in git, but it still had **no row in production's
+  `schema_migrations`**, which is the property that mattered: it was the last file
+  a `supabase db push --linked` would have executed as a side effect of deploying
+  something else. Moved with `git mv`; no production contact.
+
+  **`supabase/migrations/` now contains exactly the 32 production-history
+  migrations and nothing else** — verified as an exact set-match against
+  production's 32 versions, with no duplicate SQL across the 32 files.
+  `supabase/migrations_pending/` holds five files plus its README: PAR ×2, the QR
+  history-repair item, account deletion, and registration team payment groups.
+
+  Bonus: `3318b05` also closed the related finding that `supabase/functions/` was
+  untracked. Production is no longer running edge-function code that git lacks.
+
   Local verification, no database needed: the replay path's version list diffed
   against production's 32 versions (zero missing); comment-stripped content hash of
   every file in `supabase/migrations/` (zero duplicates, so every alias pair

@@ -7,9 +7,9 @@ Blocks: `TODO1.1_EXECUTION_PLAN.md` **1.3** (account deletion deployment)
 
 > **Update 2026-08-18 — Phases 0 and 1 are DONE.** Both are local-only and touched
 > nothing in production. `supabase/migrations/` now contains exactly the 32
-> migrations recorded in production's history (plus one unrelated in-flight file,
-> see §3.1). The re-baseline and the 86-file legacy archive are committed. The 15
-> aliases are renamed. Four migrations are held in `supabase/migrations_pending/`.
+> migrations recorded in production's history — nothing more, after the 2026-08-18
+> cleanup in §3.2. The re-baseline and the 86-file legacy archive are committed. The 15
+> aliases are renamed. Five migrations are held in `supabase/migrations_pending/`.
 > §2.5 carries a **correction** to a 2026-08-17 finding about QR check-in.
 > Phases 2–4 remain outstanding.
 
@@ -41,7 +41,8 @@ a historical record plus the still-valid recipe for branch verification.
    34 post-baseline migrations, and the 86-file `supabase/migrations_legacy/`
    archive existed **only as untracked worktree files** — a `git clean` would have
    destroyed production's only reproducible definition. All are now committed.
-   **The same condition still holds for `supabase/functions/` — see §3.1.**
+   The same condition held for `supabase/functions/` until `3318b05` brought the
+   deployed edge functions under version control too — see §3.2.
 4. **PAR v1 is not deployed.** Its tables came in via the baseline, but **0 of 10**
    PAR functions and **0 of 5** PAR triggers exist in production. PAR rating
    processing does not run in production today.
@@ -263,19 +264,18 @@ of any kind was run, and production was not contacted.
 | **Committed as production-history migrations** (`supabase/migrations/`) | **32** | Exactly the 32 rows in `supabase_migrations.schema_migrations`. 17 already matched (Bucket A); 15 were renamed to production's version numbers (Bucket B). |
 | **Moved to `supabase/migrations_pending/`** | **4** | `20260725010000_par_v1_organized_events`, `20260725011000_par_v1_replay_engine`, `20260814000000_tournament_qr_checkin_phase5_1`, `20260817000000_account_deletion` + a `README.md` documenting the hold reason and unblock condition for each. |
 | **Archived as legacy** (`supabase/migrations_legacy/`) | **86** | Pre-baseline chain, now committed. Git recorded all 20 previously-tracked files as `R100` renames, so provenance is preserved rather than shown as deletions. A `README.md` was already present. |
-| **Intentionally untouched** | **1 migration + the rest of the dirty tree** | See below. |
+| **Intentionally untouched** | **1 migration + the rest of the dirty tree** | See below. The migration was subsequently moved to pending — §3.2. |
 
 **Intentionally untouched:**
 
 - `supabase/migrations/20260817010000_registration_team_payment_groups.sql` —
-  untracked, substantial in-flight work (per-player doubles/mixed entry fees:
+  at the time, untracked in-flight work (per-player doubles/mixed entry fees:
   `registration_groups`, `registration_group_members`, RLS, helper functions),
-  landing alongside the uncommitted `[functions.create-tournament-team-*]` entries
-  in `supabase/config.toml`. It is **not** in production history, so it sits in the
-  replay path and would be applied by a `db push`. It was left alone because it
-  belongs to another task and was not audited here. **Its owner must decide whether
-  it moves to `migrations_pending/` or is committed as intended work.** Until then
-  the replay path is not strictly clean.
+  landing alongside the then-uncommitted `[functions.create-tournament-team-*]`
+  entries in `supabase/config.toml`. It is **not** in production history, so it sat
+  in the replay path and would have been applied by a `db push`. It was left alone
+  because it belonged to another task and was not audited here.
+  **Resolved 2026-08-18 — see §3.2.**
 - Every other dirty worktree path: `supabase/config.toml`,
   `supabase/functions/**`, `supabase/seed.sql`, `supabase/seed/`,
   `supabase/_baseline/`, `supabase/_par_validation/`, `supabase/.temp/`, and all
@@ -294,11 +294,40 @@ does not have. This deserves its own item.
 - `supabase/migrations/` version list diffed against the 32 known production
   versions: **zero** production migrations missing, and the only extra is
   `20260817010000` above.
-- Comment-stripped content hash of all 33 files in `supabase/migrations/`:
+- Comment-stripped content hash of all files then in `supabase/migrations/`:
   **no duplicate SQL**, confirming every alias pair collapsed to one file.
 - All 20 previously-tracked pre-baseline files confirmed present in
   `supabase/migrations_legacy/` before staging, so the deletions are moves.
 - Staged paths confirmed to be entirely under `supabase/`.
+
+### 3.2 Replay-path cleanup — **EXECUTED 2026-08-18** (`chore(db): move in-flight registration migration to pending`)
+
+The one loose end from §3.1 is closed. `20260817010000_registration_team_payment_groups.sql`
+was moved into `supabase/migrations_pending/`.
+
+Between §3.1 and this cleanup the file changed status: it was **committed** as part
+of `3318b05` — *feat(payments): per-player entry fees for doubles/mixed teams*, a
+211-file sweep that also brought the previously-untracked edge functions under
+version control. So it is now tracked in git — but tracked in git and applied to
+production are different things, and it still has **no row** in production's
+`schema_migrations`. That is the property that mattered: it was the last file in
+the replay path that `supabase db push --linked` would have executed as a side
+effect of deploying something else.
+
+Moved with `git mv`, so history follows the file. No production contact.
+
+**Result — `supabase/migrations/` now contains exactly the 32 production-history
+migrations and nothing else.** Verified locally: the version list is an exact
+set-match against production's 32 (zero extra, zero missing), and a
+comment-stripped content hash across all 32 files shows no duplicate SQL.
+
+`supabase/migrations_pending/` now holds five files plus its README: the two PAR
+migrations, the QR history-repair item, account deletion, and this one. Each has a
+row in that README naming the owning feature and the condition for moving back.
+
+**Side effect worth recording:** `3318b05` also resolved the §3.1 note about
+`supabase/functions/`. The nine deployed edge functions are no longer untracked —
+production is no longer running code that git does not have.
 
 ### Phase 2 — Prove the repo rebuilds production (disposable branch, no prod contact)
 
@@ -336,9 +365,9 @@ the last step, not the first.
       `supabase/migrations_pending/20260817000000_account_deletion.sql`, deliberately
       outside the replay path so it cannot be pushed by accident (2026-08-18).
 - [ ] Phase 2 complete — a fresh branch built from the repo matches production.
-- [ ] `supabase/migrations/20260817010000_registration_team_payment_groups.sql`
-      resolved by its owner — it is currently the one file in the replay path with
-      no production history row, so a `db push --linked` would apply it too (§3.1).
+- [x] `20260817010000_registration_team_payment_groups.sql` resolved — moved to
+      `supabase/migrations_pending/` on 2026-08-18 (§3.2), so it can no longer ride
+      along with an unrelated push.
 - [ ] Explicit approval to touch production schema.
 
 ### The migration is low-risk on its own merits
