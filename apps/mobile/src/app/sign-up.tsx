@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { signInWithGoogle, signUp } from '@/lib/auth';
 import { colors, gradients, radius } from '@/theme';
+import { isPasswordLongEnough, PASSWORD_PLACEHOLDER, PASSWORD_TOO_SHORT_MESSAGE } from '@/lib/authPolicy';
 
 const INPUT_BG = '#EAF1FF';
 const MUTED_BLUE = '#8297C3';
@@ -45,8 +46,8 @@ export default function SignUpScreen() {
       Alert.alert('Missing fields', 'Please enter your full name, email, and password.');
       return;
     }
-    if (password.length < 6) {
-      Alert.alert('Weak password', 'Password must be at least 6 characters.');
+    if (!isPasswordLongEnough(password)) {
+      Alert.alert('Weak password', PASSWORD_TOO_SHORT_MESSAGE);
       return;
     }
 
@@ -71,7 +72,11 @@ export default function SignUpScreen() {
     setGoogleLoading(true);
     try {
       const session = await signInWithGoogle();
-      if (session) router.replace('/(tabs)/profile');
+      // A brand-new OAuth account has an incomplete profile. Route through the
+      // root gate (item 1.1) rather than hard-landing in the tabs, so it decides
+      // between onboarding and the app. An explicit returnTo from a deep link
+      // still wins.
+      if (session) router.replace((returnTo ?? '/') as never);
     } catch (e: any) {
       Alert.alert('Sign up failed', e.message ?? 'Something went wrong. Please try again.');
     } finally {
@@ -144,7 +149,7 @@ export default function SignUpScreen() {
                     style={[s.input, s.inputFlex]}
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="Min. 6 characters"
+                    placeholder={PASSWORD_PLACEHOLDER}
                     placeholderTextColor={MUTED_BLUE}
                     secureTextEntry={!showPassword}
                     autoComplete="new-password"

@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, spacing } from '@/theme';
 import { OnboardingCTA } from '@/lib/onboarding/components';
 import { useOnboarding, validators } from '@/lib/onboarding/state';
+import { PASSWORD_PLACEHOLDER } from '@/lib/authPolicy';
 
 const L = colors;
 const PAGE_BG = '#F8F5EF';
@@ -81,7 +82,7 @@ export default function EmailAccountScreen() {
                   style={s.input}
                   value={draft.emailPassword}
                   onChangeText={value => update('emailPassword', value)}
-                  placeholder="Min. 6 characters"
+                  placeholder={PASSWORD_PLACEHOLDER}
                   placeholderTextColor={L.textSub}
                   secureTextEntry={!showPassword}
                   autoComplete="new-password"

@@ -9,6 +9,7 @@ import * as Linking from 'expo-linking';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { completePasswordRecovery, updatePassword } from '@/lib/auth';
+import { isPasswordLongEnough, PASSWORD_PLACEHOLDER, PASSWORD_TOO_SHORT_MESSAGE } from '@/lib/authPolicy';
 import { colors, typography, radius } from '@/theme';
 
 type Status = 'verifying' | 'ready' | 'invalid';
@@ -36,8 +37,8 @@ export default function ResetPasswordScreen() {
   }, [url]);
 
   async function handleSave() {
-    if (password.length < 6) {
-      Alert.alert('Weak password', 'Password must be at least 6 characters.');
+    if (!isPasswordLongEnough(password)) {
+      Alert.alert('Weak password', PASSWORD_TOO_SHORT_MESSAGE);
       return;
     }
     setSaving(true);
@@ -95,7 +96,7 @@ export default function ResetPasswordScreen() {
                   style={[s.input, s.inputFlex]}
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="Min. 6 characters"
+                  placeholder={PASSWORD_PLACEHOLDER}
                   placeholderTextColor={colors.textSub}
                   secureTextEntry={!showPassword}
                   autoComplete="new-password"

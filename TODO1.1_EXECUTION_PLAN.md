@@ -451,6 +451,114 @@ Goal: make account lifecycle safe before inviting real users.
   - Redirect config is documented and verified.
   - Client validation matches server policy.
 
+### Completion Notes - 1.2
+
+- Status: **Code and documentation complete** (2026-08-17). The repo-side work is
+  done; **external Dashboard verification is still outstanding** — see the
+  checklist below. Do not treat 1.2 as closed until that is signed off.
+
+#### Current-state findings
+
+1. **Redirect URLs in `supabase/config.toml`:** `site_url = "http://localhost:3000"`,
+   `additional_redirect_urls = ["http://localhost:3000/auth/callback"]`. These are
+   **correct as-is** — the file configures the local `supabase start` stack only.
+   Hosted projects read from the Dashboard, so replacing these with production
+   URLs would break local dev and change nothing in production. The mobile app's
+   deep-link redirect never appears in this file at all.
+2. **`makeRedirectUri()` usage:** two call sites, both in `lib/auth.ts` —
+   `signInWithGoogle()` (bare, resolves to the app scheme root) and
+   `requestPasswordReset()` (`{ path: 'reset-password' }`). Apple uses native
+   `signInWithIdToken()` and involves no redirect URL.
+3. **Password reset routes:** `/forgot-password` requests the email;
+   `/reset-password` completes it. `completePasswordRecovery()` handles both
+   GoTrue link shapes (`access_token`+`refresh_token`, and
+   `token_hash`+`type=recovery`).
+4. **After mobile sign-up (email):** alert → `router.replace('/sign-in')`,
+   preserving `returnTo`. Correct — confirmations are enabled, so there is no
+   session yet.
+5. **After onboarding email account creation:** `email-account.tsx` only collects
+   credentials into the draft. The account is created much later at
+   `all-set.tsx` → `finalizeOnboarding()` → `signUp()`, which routes to
+   `/sign-in`.
+6. **After Google sign-in:** `sign-in.tsx` → `returnTo ?? '/(tabs)/profile'`;
+   `sign-up.tsx` → hard `/(tabs)/profile'`, **ignoring `returnTo`**;
+   `onboarding/create-account.tsx` → `/onboarding/your-name`.
+7. **After Apple sign-in:** same three call sites, same behavior as Google.
+8. **Password length validated in:** `sign-up.tsx`, `reset-password.tsx`, and
+   `validators.emailAccount` in `lib/onboarding/state.tsx`, plus three
+   "Min. 6 characters" placeholders.
+9. **Did client validation match the server? No.** Server requires 8
+   (`minimum_password_length = 8`); all three clients enforced 6. A 6–7 character
+   password passed client validation and failed at the network with a raw GoTrue
+   error.
+10. **Not provable from the repo** — see the Dashboard checklist below.
+
+#### What changed
+
+- `apps/mobile/src/lib/authPolicy.ts` (new) — `MIN_PASSWORD_LENGTH = 8` plus
+  `isPasswordLongEnough()`, `PASSWORD_PLACEHOLDER`, and
+  `PASSWORD_TOO_SHORT_MESSAGE`. A single source so the three call sites cannot
+  drift from each other or from the server again.
+- `apps/mobile/src/app/sign-up.tsx` — password check and placeholder now use the
+  constant; Google (and, in the worktree, Apple) success routes to
+  `returnTo ?? '/'` instead of hard-landing on `/(tabs)/profile`, so the item 1.1
+  root gate decides between onboarding and the app for a brand-new account.
+- `apps/mobile/src/app/reset-password.tsx` — check and placeholder use the constant.
+- `apps/mobile/src/lib/onboarding/state.tsx` — `validators.emailAccount` uses
+  `isPasswordLongEnough()`.
+- `apps/mobile/src/app/onboarding/email-account.tsx` — placeholder uses the constant.
+- `supabase/config.toml` — comment-only. Documents that the `[auth]` block governs
+  the local stack, warns against substituting production URLs, and lists the
+  redirect allow-list entries that must exist in the Dashboard.
+
+Deliberately unchanged: `lib/auth.ts` (both `makeRedirectUri()` call sites are
+correct — password recovery still targets `/reset-password`), and the
+`/reset-password` route's exemption from the gate (the gate still lives at `/`
+alone, so the mid-render session it establishes is unaffected).
+
+#### Requires Supabase Dashboard verification (cannot be proven from this repo)
+
+- [ ] Site URL set to the deployed web origin (per environment).
+- [ ] Redirect allow-list contains: `<web origin>/auth/callback`,
+      `dreambreaker://`, `dreambreaker://reset-password`,
+      `https://pickleballapp.app/**`, and `exp://**` if Expo Go/dev-client is used.
+- [ ] Password Requirements → minimum length is **8**, matching
+      `MIN_PASSWORD_LENGTH`. If the hosted value differs, the client is now wrong.
+- [ ] Google provider: client ID/secret populated; authorized redirect URI
+      includes the Supabase callback.
+- [ ] Apple provider: Services ID, Team ID, Key ID, and signing key populated;
+      bundle identifier matches the app.
+- [ ] Email templates point at the production origin, not localhost.
+
+#### Verification run
+
+- `npx tsc --noEmit` — **PASS**.
+- `npm run lint` — **PASS**, 0 errors / 64 warnings (unchanged 0.2 baseline).
+- Focused ESLint on all 5 touched mobile files — **PASS**, 0 errors, 0 warnings.
+- `supabase/config.toml` parsed with Python `tomllib` — **VALID**; confirmed
+  `minimum_password_length = 8` matches the new client constant.
+- Static sweep: no `length < 6` / `>= 6` / "Min. 6" password logic remains in
+  `apps/mobile/src`.
+- Not run: on-device auth. Every provider/redirect claim below the repo boundary
+  is unverified.
+
+#### Risks remaining
+
+- **Dashboard settings are unverified.** If the hosted minimum password length is
+  not 8, the client is now mismatched in the other direction. The checklist above
+  is the gate.
+- **`sign-in.tsx` still routes to `returnTo ?? '/(tabs)/profile'`.** An existing
+  user with an incomplete profile therefore lands in the tabs rather than
+  onboarding. Left deliberately: item 1.1 scoped the gate to `/` only, and this
+  is the documented consequence, not a regression. Revisit if beta shows users
+  stuck with half-built profiles.
+- **The Apple sign-up redirect fix is worktree-only.** HEAD's `sign-up.tsx` has no
+  Apple handler — that arrives with the uncommitted Apple Sign-In work — so only
+  the Google path could be committed here. The Apple path carries the same fix in
+  the worktree and lands with that work.
+- Password *strength* beyond length is unenforced client-side; GoTrue's own
+  complexity rules (if enabled in the Dashboard) would still surface as raw errors.
+
 ### 1.3 Implement Account Deletion
 
 - Issue: No complete in-app account deletion path.

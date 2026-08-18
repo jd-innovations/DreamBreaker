@@ -26,6 +26,23 @@ enabled = true
 file_size_limit = "5MiB"
 
 [auth]
+# NOTE: this file configures the LOCAL stack (`supabase start`) only. The hosted
+# projects read their auth settings from the Supabase Dashboard, so the
+# localhost URLs below are correct here and must NOT be replaced with production
+# URLs — doing so breaks local development without changing production at all.
+#
+# Production/staging equivalents must be set in Dashboard → Authentication →
+# URL Configuration, and are NOT provable from this repo:
+#   Site URL:        the deployed web origin
+#   Redirect allow-list must include, at minimum:
+#     - <web origin>/auth/callback        (web OAuth, see web/src/app/auth/callback/route.ts)
+#     - dreambreaker://                   (mobile OAuth return, makeRedirectUri() in lib/auth.ts)
+#     - dreambreaker://reset-password     (password recovery deep link)
+#     - https://pickleballapp.app/**      (universal links, see lib/appLinks.ts)
+#     - exp://** for Expo Go / dev-client testing, if used
+# Google/Apple provider client IDs and secrets are also Dashboard-side for hosted
+# projects; the env() references below only resolve for the local stack.
+# See TODO1.1_EXECUTION_PLAN.md item 1.2 for the full verification checklist.
 enabled = true
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["http://localhost:3000/auth/callback"]
