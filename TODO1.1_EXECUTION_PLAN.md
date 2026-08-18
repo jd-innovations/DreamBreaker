@@ -619,6 +619,268 @@ alone, so the mid-render session it establishes is unaffected).
   - Account deletion is self-service enough for store review.
   - Data retention behavior is documented.
 
+### Completion Notes - 1.3
+
+- Status: **Code complete, NOT deployed** (2026-08-17). The migration, edge
+  function, and mobile flow are written and verified, but **the migration has not
+  been applied and the edge function has not been deployed**. Until both happen,
+  the Delete Account button reaches a screen whose backend does not exist. Do not
+  close 1.3 or cut a beta build until the deployment checklist below is signed off.
+
+#### Current-state findings (audit)
+
+Answers to the ten audit questions, all established against the live production
+project `fbzetvkbhneptvfruilw` unless noted.
+
+1. **Existing deletion UI? No.** Nothing in `apps/mobile/src/app` referenced
+   account deletion. `web/src/app/settings/page.tsx:71` had a DELETE ACCOUNT
+   button whose entire handler was
+   `toast.error("Contact support to delete your account.")` — and that whole page
+   is a static mock (`save = () => toast.success("Settings saved.")`, no auth
+   wiring, no Supabase calls at all).
+2. **Existing backend deletion path? No.** Ten edge functions exist
+   (`create-*-payment-intent`, `event-weather`, `facility-photo`,
+   `marketplace-improve-listing`, `send-message-push`, `send-transactional-email`,
+   `waitlist-sweeper`); none touch `auth.users`. No `auth.admin.deleteUser` call
+   existed anywhere in the repo.
+3. **Tables referencing user IDs: 60 foreign keys across ~55 public tables**, all
+   pointing at `profiles.id` (nothing in `public` references `auth.users`
+   directly except `profiles.id` itself). Full constraint dump taken from
+   `pg_constraint`.
+4. **Deleted** — strictly private, no counterparty, no integrity role: push
+   tokens, precise location settings, partner preferences, outbound partner
+   likes, outbound matchmaking swipes, hidden matches, story views, tournament
+   bookmarks, saved play events, notifications, per-conversation settings.
+5. **Anonymized** — the `profiles` row itself, stripped to a tombstone.
+6. **Retained** — payments, transactions, registrations, brackets, reservations,
+   coach purchases, wallet vouchers, messages, support tickets, and abuse
+   reports. See the policy table below for the reason attached to each.
+7. **Storage buckets, all seven public:** `avatars`, `marketplace`, and
+   `message-attachments` hold user-owned files. Confirmed by inspecting
+   `storage.objects`: `avatars` and `marketplace` are keyed
+   `<user_id>/<file>`, so they are enumerable per user;
+   `message-attachments` is keyed `<conversation_id>/<sender_id>-<ts>` and is
+   not. `group-photos`, `facility-assets`, `tournament-covers`, and
+   `coach-offers` hold entity-owned files. (`imageStandards.ts` also declares a
+   `stories` bucket that **does not exist** in the project — unrelated
+   pre-existing defect, not touched here.)
+8. **Deletion-request / support tables? Partially.** `support_tickets` exists
+   (threaded through `conversations`/`messages`). There is **no** deletion
+   request, deletion audit, or account-status table.
+9. **Safest path: a service-role edge function.** It is the only place that can
+   call `auth.admin.deleteUser`, it matches the existing
+   `create-tournament-entry-payment-intent` pattern (anon client verifies the
+   JWT, service client does the work), and it means no new RLS policy has to
+   grant a client the ability to delete anything.
+10. **Not provable from the repo:** whether the deployed project has the
+    `SUPABASE_SERVICE_ROLE_KEY` secret bound to a new function, and whether
+    Apple/Google review will accept the director precondition below. Everything
+    else in this audit was verified directly against the database.
+
+#### The finding that determined the design
+
+**Hard-deleting `auth.users` was impossible before this change.** Proven
+empirically with a self-aborting `DO` block against production (nothing
+committed), on a real user with 3 registrations and 17 payments:
+
+```
+DELETE FROM auth.users WHERE id = 'ab26e73e-…'
+→ ERROR: update or delete on table "profiles" violates foreign key
+  constraint "registrations_player_id_fkey" on table "registrations"
+```
+
+`profiles.id REFERENCES auth.users(id) ON DELETE CASCADE`, and `profiles` has
+**4 `ON DELETE RESTRICT` children** (`registrations.player_id`,
+`transactions.player_id`, `tournaments.director_id`,
+`personal_session_participants.profile_id`) and **~19 `NO ACTION` children**
+(`payments.payer_user_id`, `reservations.organizer_id`,
+`reservation_players.profile_id`, `coach_offer_purchases.buyer_id`/`coach_id`,
+`coach_offers.coach_id`, `coach_voucher_entitlements.*`,
+`bracket_matches.score_entered_by`, `registrations.checked_in_by`/
+`added_by_director_id`, `courts.created_by`, …). Those constraints exist
+precisely to stop financial and bracket history from vanishing.
+
+So the choice was: destroy financial/bracket history, fake the deletion, or let
+the `profiles` row survive as a tombstone. The third is the only acceptable one,
+and it requires dropping `profiles_id_fkey`.
+
+#### Chosen policy
+
+**Option A — immediate deletion, no grace period, no request queue.**
+
+Chosen over Option B because a queue defers the actual erasure behind an admin
+surface that does not exist (`4.3` has not been started), and because store
+review wants deletion the user can complete themselves. A 14-day grace period is
+a legal/product decision that can be layered on later without changing this
+function's shape; shipping the queue *first* would have meant shipping a screen
+that deletes nothing.
+
+| Data | Policy | Reason |
+| --- | --- | --- |
+| Profile row | **Anonymize in place**, `deleted_at` set | 23 FK constraints require a valid target; the row keeps only `id`/`created_at` |
+| Auth user | **Deleted immediately**, last step | Identities, sessions, refresh tokens, MFA factors all cascade with it |
+| Push tokens | **Deleted** — current device first, then all rows | Explicit requirement; device must stop being a push target |
+| Precise location, partner prefs, outbound likes/swipes, hidden matches, story views, bookmarks, saved events, notifications, conversation settings | **Deleted** | Private, no counterparty, no integrity role |
+| Messages | **Retained, sender anonymized** | The recipient was legitimately party to them; the sender resolves to "Deleted User" |
+| Tournament registrations & results | **Retained, display anonymized** | Deleting them corrupts brackets and other players' match history |
+| Payments / transactions | **Retained in full** | Financial reconciliation; PII linkage removed by nulling `stripe_customer_id` / `stripe_connect_account_id` on the profile — Stripe keeps its own authoritative customer records, and `payments.provider_payment_intent_id` remains the reconciliation key |
+| Support tickets | **Retained, requester anonymized** | Support audit trail; tickets stay resolvable |
+| Abuse reports (`user_reports`, `group_post_reports`) | **Retained, both directions** | See risk below — this is deliberate |
+| Uploaded media | **Orphaned, not deleted** | Product decision, 2026-08-17. See risk below |
+| Marketplace listings | **Retained, seller anonymized** | Product decision, 2026-08-17 |
+| Coaching / wallet / booking records | **Retained** | Financially and operationally required |
+
+**Abuse reports are deliberately not deleted.** `user_reports.reported_id` and
+`group_post_reports.reported_user_id` are both `ON DELETE CASCADE`, so a naive
+profile delete would let a bad actor erase every report filed *against* them by
+deleting their own account. Because the profile row survives as a tombstone,
+those reports survive too. The purge list explicitly excludes
+`partner_likes.to_user_id`, `matchmaking_swipes.target_id`,
+`user_reports.reported_id`, and `group_post_reports.reported_user_id` for the
+same reason: those rows are other people's actions, not the deleting user's.
+
+**Precondition, not a policy loophole:** deletion is refused with `409
+active_tournaments` if the user directs a tournament in a non-terminal status
+(`draft`, `completed`, and `cancelled` do not block). A director who walks away
+from a live event strands every player who registered and paid for it, and no
+amount of anonymization repairs that.
+
+#### Files changed
+
+- `supabase/migrations/20260817000000_account_deletion.sql` (new) — forward-only.
+  Drops `profiles_id_fkey` so an anonymized profile can outlive its auth user;
+  adds `profiles.deleted_at` plus a partial index. RLS deliberately unchanged.
+- `supabase/functions/delete-account/index.ts` (new) — verifies the JWT with an
+  anon client, derives the user id **from the token only**, checks the director
+  precondition, purges 11 private tables, anonymizes the profile, then deletes
+  the auth user last. Fails loudly rather than reporting a partial purge as success.
+- `supabase/config.toml` — registers `[functions.delete-account] verify_jwt = true`.
+- `apps/mobile/src/lib/accountDeletion.ts` (new) — typed client wrapper.
+  Best-effort local push-token cleanup, then `functions.invoke`. Recovers the
+  specific failure reason from the `FunctionsHttpError` body so a blocked
+  director sees why. Resolves **only** on a confirmed backend `ok`.
+- `apps/mobile/src/app/delete-account.tsx` (new) — confirmation screen: what is
+  deleted, what is kept and why, typed `DELETE` confirmation, loading/error/
+  success states. Signs out (`scope: 'local'`) and routes to `/` only after the
+  backend confirms.
+- `apps/mobile/src/app/account-settings.tsx` — destructive "Delete Account" row
+  above the footer. No route registration needed in `_layout.tsx`; expo-router
+  picks the file up, same as the other account sub-screens.
+
+Deliberately unchanged: `web/`. Its settings page is a non-functional mock with
+no auth wiring, so adding a real deletion call there would have meant building
+the page first — out of scope for 1.3, and the store requirement is satisfied by
+the mobile flow. Item 1.4 should revisit it.
+
+#### Verification run
+
+- `cd apps/mobile && npx tsc --noEmit` — **PASS**.
+- `cd apps/mobile && npm run lint` — **PASS**, 0 errors / 64 warnings, identical
+  to the 0.2 baseline (no new warnings).
+- `npx eslint` on all 3 touched/added mobile files — **PASS**, 0 errors, 0 warnings.
+- `supabase/config.toml` parsed with Python `tomllib` — **VALID**, and
+  `functions.delete-account.verify_jwt` reads back as `True`.
+- **Migration validated against production inside a self-aborting transaction.**
+  A `DO` block ran every statement of the migration, then `DELETE FROM auth.users`
+  on the same user that previously failed, then raised to roll everything back.
+  It reached the deliberate rollback — meaning the DDL is valid *and* the auth
+  delete succeeds once the FK is gone. Confirmed afterwards that production is
+  untouched: `profiles_id_fkey` still present, no `deleted_at` column, probe user
+  alive.
+- **Anonymization payload validated the same way** — the exact `UPDATE` the edge
+  function issues was run against a real profile and accepted by every column,
+  enum (`user_role`, `coach_status`, `director_status`), and CHECK constraint,
+  then rolled back.
+- All 11 purge `table.column` pairs verified to exist via `information_schema`.
+- Not run: the edge function itself. Deno is not installed locally, so its syntax
+  is unvalidated beyond review; `supabase functions deploy` will be the first
+  real parse. Its Supabase calls were checked against the schema by hand.
+- Not run: any on-device test. The whole flow is unexercised end to end.
+
+Scenario checks, reasoned statically:
+
+- *Signed-out caller* — blocked twice: `verify_jwt = true` at the platform edge,
+  then `auth.getUser()` returning null → 401.
+- *Deleting another user* — impossible by construction. The handler reads
+  `user.id` from the verified token; the request body is `{}` and no code path
+  reads a user id from it.
+- *Access after deletion* — `auth.users` row gone, so identities, sessions, and
+  refresh tokens cascade away; the existing access token dies at its natural
+  expiry (see risk below).
+- *Push tokens* — device token removed client-side, then every `push_tokens` row
+  for the user removed server-side.
+- *Profile exposure* — name, email, photo, cover, bio, DOB, gender, location,
+  coords, home court, rating, and Stripe ids all nulled; `is_discoverable` false;
+  role/director/coach authority revoked.
+- *Failure safety* — the client signs out **only** on a confirmed `ok`. Every
+  failure path leaves the session intact and shows the reason.
+
+#### Deployment checklist (required before 1.3 can close)
+
+- [ ] Apply `20260817000000_account_deletion.sql` to production. Blocked on item
+      2.1 — see risk below.
+- [ ] `supabase functions deploy delete-account`.
+- [ ] Confirm `SUPABASE_SERVICE_ROLE_KEY` is set as a secret on the deployed
+      function (the payment functions already have it; a new function does not
+      inherit it automatically).
+- [ ] End-to-end test on a device with a throwaway account that has a payment and
+      a registration — the case that used to be undeletable.
+- [ ] Confirm the deleted user cannot sign in, and that re-signup with the same
+      email produces a fresh, empty account.
+
+#### Risks remaining
+
+- **This change conflicts with item 2.1's schema freeze.** 2.1 says "stop all
+  schema work" until migration history is reconciled, and 1.1 deferred an
+  `onboarding_completed` column on exactly that basis. 1.3 cannot be done without
+  this migration — the FK proof above is unambiguous — so the freeze is being
+  broken deliberately, for one narrow forward-only file. It must be folded into
+  2.1's reconciliation rather than pushed ad hoc.
+- **Uploaded media is not deleted.** Product decision on 2026-08-17. A deleted
+  user's avatar stays in the public `avatars/<uid>/` path and remains fetchable
+  by anyone who recorded the URL, even though `profiles.avatar_url` is nulled.
+  This is the weakest point in the flow for a GDPR erasure request and the most
+  likely thing a privacy reviewer would object to. Deleting
+  `avatars/<uid>/` and `marketplace/<uid>/` is a few lines in the edge function
+  if the decision is revisited; item M10's orphaned-upload sweeper is the other
+  route.
+- **Existing access tokens survive until expiry.** Deleting the auth user removes
+  refresh tokens and sessions, so the token cannot be renewed, but a JWT already
+  minted stays cryptographically valid for the remainder of its TTL. During that
+  window the (now anonymized, now unprivileged) account could still make RLS-level
+  reads. Bounded by the project's JWT expiry setting.
+- **Non-atomic across the purge → anonymize → auth-delete sequence.** Each step is
+  its own transaction. A crash between anonymize and auth-delete leaves a wrecked
+  but still-signable-into profile; the user sees an error, stays signed in, and
+  can retry — the retry is safe and idempotent — but the intermediate state is
+  ugly. Making it atomic needs a single `SECURITY DEFINER` RPC, which cannot
+  delete an auth user, so the split is inherent.
+- **The director precondition is a hard block with no in-app escape.** The user is
+  told to cancel the tournament or contact support. Whether store review accepts
+  that is unverified, and there is no support deep link on the error yet.
+- **`deleted_at` is written but nothing reads it.** Search, discovery,
+  matchmaking, invites, and directory queries do not yet filter tombstones out.
+  Anonymization plus `is_discoverable = false` and `looking_status = 'not_looking'`
+  covers the main surfaces, but any query that ignores those flags will list
+  "Deleted User" rows. Auditing every profile-listing query is follow-up work.
+- **`web/` still tells users to contact support.** The mock settings page is
+  unchanged, so deletion is mobile-only.
+- **No confirmation email.** `send-transactional-email` exists and could send one,
+  but the address is destroyed by the same operation — it would have to be
+  captured and sent before the anonymize step. Deferred; item M8 owns email
+  verification anyway.
+
+#### Unresolved legal / product decisions
+
+- Grace period: none today. If legal wants a 14-day reversible window, that is
+  Option B and a different shape.
+- Retention duration for the anonymized tombstone and the retained financial rows
+  — currently indefinite, with no purge job.
+- Whether "Deleted User" is the right public label in brackets and tournament
+  history, or whether directors should see something more specific.
+- Whether a deleted user's marketplace listings should stay purchasable-looking
+  with no reachable seller.
+
 ### 1.4 Add Legal Links and Store-Required Support Surfaces
 
 - Issue: Terms/Privacy are text or placeholders, not real linked surfaces.

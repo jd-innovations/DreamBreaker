@@ -223,6 +223,24 @@ export default function AccountSettingsScreen() {
         </TouchableOpacity>
 
         {/* Ã¢â€â‚¬Ã¢â€â‚¬ FOOTER ROW Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* Store review requires self-service deletion to be reachable from the
+            account area, not buried behind a support request. The screen itself
+            carries the confirmation step. */}
+        <TouchableOpacity
+          style={styles.deleteRow}
+          activeOpacity={0.75}
+          onPress={() => router.push('/delete-account' as never)}
+          accessibilityRole="button"
+          accessibilityLabel="Delete account"
+        >
+          <Ionicons name="trash-outline" size={20} color={L.danger} />
+          <View style={styles.deleteText}>
+            <Text style={styles.deleteTitle}>Delete Account</Text>
+            <Text style={styles.deleteSub}>Permanently delete your account and personal data.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={L.danger} />
+        </TouchableOpacity>
+
         <View style={styles.footerRow}>
           <TouchableOpacity style={styles.footerBtn}>
             <Ionicons name="shield-outline" size={16} color={L.navy} />
@@ -413,6 +431,23 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   footerDivider: { width: 1, backgroundColor: L.border, marginVertical: 8 },
+
+  // Delete account
+  deleteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: L.bg,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: L.danger,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  deleteText: { flex: 1 },
+  deleteTitle: { color: L.danger, fontSize: 14, fontWeight: '800', marginBottom: 2 },
+  deleteSub: { color: L.textSub, fontSize: 12, fontWeight: '500' },
+
   footerText: { color: L.navy, fontSize: 13, fontWeight: '600' },
 
   // Version

@@ -79,3 +79,12 @@ enabled = true
 # Storage buckets — provisioned by migration or dashboard
 # tournament-covers: public read, 5MB max, images only
 # player-avatars:    public read, 2MB max, images only
+
+# delete-account: self-service account deletion (TODO1.1_EXECUTION_PLAN.md 1.3).
+# verify_jwt = true is load-bearing, not cosmetic — it is the outer gate that
+# stops an unauthenticated caller from ever reaching the handler. The handler
+# independently re-verifies the JWT and derives the target user id from it, so
+# there is no request parameter by which one user could delete another. Requires
+# SUPABASE_SERVICE_ROLE_KEY set on the deployed function.
+[functions.delete-account]
+verify_jwt = true
