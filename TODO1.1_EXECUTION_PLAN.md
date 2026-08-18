@@ -621,7 +621,34 @@ alone, so the mid-render session it establishes is unaffected).
 
 ### Completion Notes - 1.3
 
-- Status: **SOURCE-COMPLETE. NOT PRODUCTION-ACTIVE. NOT BETA-READY.**
+- Status (2026-08-18, updated): **SCHEMA APPLIED. FUNCTION NOT YET DEPLOYED.
+  STILL NOT BETA-READY.**
+
+  | Claim | State |
+  | --- | --- |
+  | Source implementation committed | **Yes** — `5030831` |
+  | Migration applied to production | **Yes** — `20260817000000`, applied 2026-08-18 |
+  | Rehearsed on a disposable branch | **Yes** — full replay + live delete test passed |
+  | Edge function deployed | **No** — blocked, see below |
+  | Function secrets bound | **Yes** — `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` confirmed present |
+  | On-device QA run | **No** |
+
+  Production now has `profiles.deleted_at`, the partial index, and **no**
+  `profiles_id_fkey`. Verified after apply: 36 history rows, 24 profiles,
+  22 payments, 24 auth users — no data touched, zero tombstones.
+
+  **Current runtime behaviour is unchanged and still safe:** the Delete Account
+  button calls a function that does not exist, gets a 404, and the client surfaces
+  the generic `internal_error` message while leaving the user signed in. Nothing is
+  deleted. The schema is merely *ready*.
+
+  **Rehearsal evidence** (preview branch `pewftnsrfogfmeijifga`, since deleted):
+  inserted an `auth.users` row → profile auto-created → inserted a `payments` row →
+  `DELETE FROM auth.users` **succeeded** → profile tombstone survived, payment
+  survived, identities and sessions cascaded to 0. This is the operation that was
+  impossible before the migration.
+
+  Superseded status line (kept for history): SOURCE-COMPLETE, NOT PRODUCTION-ACTIVE.
   (implemented 2026-08-17; deployment status re-verified against production
   2026-08-17.)
 
@@ -920,16 +947,16 @@ the test can be repeated.
 
 **A. Infrastructure**
 
-- [ ] **A1. Apply the migration.** `20260817000000_account_deletion.sql`, by
+- [x] **A1. Apply the migration.** DONE 2026-08-18 via `supabase db push --linked --include-all`. Plain `db push` applies nothing here: `20260817000000` sorts *before* the newest applied version `20260817010000`, so the CLI refuses to insert behind the remote head without `--include-all`. `20260817000000_account_deletion.sql`, by
       whichever route the 2.1 coordination above settles on. Verify after:
       `profiles_id_fkey` absent, `profiles.deleted_at` present,
       `profiles_deleted_at_idx` present, `20260817000000` recorded in
       `supabase_migrations.schema_migrations`.
-- [ ] **A2. Deploy the edge function.** `supabase functions deploy delete-account`.
+- [ ] **A2. Deploy the edge function.** BLOCKED 2026-08-18 — `supabase functions deploy delete-account` was refused by the local permission classifier. Must be run manually. Still the first real parse of the Deno source. `supabase functions deploy delete-account`.
       This is also the first real parse of the Deno source — no local Deno was
       available, so a syntax error would surface here rather than earlier.
       Verify it appears ACTIVE with `verify_jwt = true`.
-- [ ] **A3. Bind secrets.** A new function does **not** inherit secrets from
+- [x] **A3. Bind secrets.** CONFIRMED 2026-08-18 — `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_URL` and `SUPABASE_ANON_KEY` are all present in the project's function secrets. A new function does **not** inherit secrets from
       existing ones. Required: `SUPABASE_SERVICE_ROLE_KEY`. Also relied on and
       normally injected by the platform, so confirm rather than assume:
       `SUPABASE_URL`, `SUPABASE_ANON_KEY`. No Stripe, Resend, or Google key is
