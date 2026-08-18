@@ -9,10 +9,13 @@
 > `supabase/migrations_legacy/` exists with 86 archived files.
 >
 > Two things this document assumed did **not** happen:
-> - The re-baseline was never committed to git. The baseline and every
->   post-baseline migration are still **untracked worktree files**.
+> - The re-baseline was never committed to git. **Fixed 2026-08-18** by 2.1 Phase 0
+>   (`chore(db): normalize local migration history`) — the baseline, every
+>   post-baseline migration, and the 86-file legacy archive are now tracked.
 > - Step 7 (PAR) was never completed. PAR's tables came in via the baseline, but
->   none of its functions or triggers exist in production.
+>   none of its functions or triggers exist in production. Its two migrations now
+>   live in `supabase/migrations_pending/`, out of the replay path, until the PAR
+>   algorithm is approved and validated.
 >
 > New divergence has accumulated since. **For the current state of migration
 > history, the repo-vs-production comparison, and the plan to reconcile it, read

@@ -842,7 +842,8 @@ amount of anonymization repairs that.
 
 #### Files changed
 
-- `supabase/migrations/20260817000000_account_deletion.sql` (new) — forward-only.
+- `supabase/migrations_pending/20260817000000_account_deletion.sql` (new; moved
+  out of `supabase/migrations/` by 2.1 Phase 1 on 2026-08-18) — forward-only.
   Drops `profiles_id_fkey` so an anonymized profile can outlive its auth user;
   adds `profiles.deleted_at` plus a partial index. RLS deliberately unchanged.
 - `supabase/functions/delete-account/index.ts` (new) — verifies the JWT with an
@@ -1128,9 +1129,27 @@ Goal: make backend state reproducible and safe.
 
 ### Completion Notes - 2.1
 
-- Status: **ACTIVE — audit complete, plan written, nothing executed** (2026-08-17).
-  **2.1 is now the gate for item 1.3's deployment.** Account deletion cannot reach
-  production until at least Phases 0–2 of the reconciliation plan are done.
+- Status: **ACTIVE — Phases 0 and 1 DONE (2026-08-18), Phases 2–4 outstanding.**
+  Audit completed 2026-08-17; the two local-only phases were executed 2026-08-18 in
+  `chore(db): normalize local migration history`. **2.1 remains the gate for item
+  1.3's deployment** — account deletion cannot reach production until Phase 2
+  (branch rebuild + parity diff) is done and approval is given.
+
+  Phases 0 and 1 touched **nothing** in production: `git mv`, `mv`, and `git add`
+  only. No Supabase CLI command of any kind was run.
+
+  | Disposition | Count |
+  | --- | --- |
+  | Committed as production-history migrations (`supabase/migrations/`) | **32** — exactly production's 32 history rows |
+  | Moved to `supabase/migrations_pending/` | **4** + a README documenting each hold |
+  | Archived as legacy (`supabase/migrations_legacy/`) | **86** — git recorded the 20 previously-tracked files as `R100` renames, so provenance is preserved |
+  | Intentionally untouched | 1 unrelated in-flight migration + the rest of the dirty tree |
+
+  Local verification, no database needed: the replay path's version list diffed
+  against production's 32 versions (zero missing); comment-stripped content hash of
+  every file in `supabase/migrations/` (zero duplicates, so every alias pair
+  collapsed); all 20 pre-baseline files confirmed present in the legacy archive
+  before staging; staged paths confirmed entirely under `supabase/`.
 - Deliverable: **`docs/DB_MIGRATION_RECONCILIATION.md`** — full inventory,
   bucket-by-bucket classification, evidence, exact commands, and risk table.
   `docs/DB_REBASELINE_PLAN.md` got a status banner: its steps 1–5 were largely
@@ -1165,12 +1184,17 @@ Goal: make backend state reproducible and safe.
    PAR functions and **0 of 5** PAR triggers exist in production. PAR rating
    processing does not run in production. Treat PAR as not deployed in any
    readiness accounting — item L4 and the My Stats docs should reflect this.
-6. **Production runs an older `check_in_registration()` than the repo.** Identical
-   signature and return type — so the mobile RPC in
-   `apps/mobile/src/lib/supabase/registrations.ts:288` is wire-compatible and QR
-   check-in is not broken — but the body is 2251 chars in production vs 3308 in
-   `20260814000000`. The "physically verified" QR check-in in item 5.3 was verified
-   against production's body, not the repo's. Needs its own diff review and re-test.
+6. ~~**Production runs an older `check_in_registration()` than the repo.**~~
+   **WITHDRAWN — the 2026-08-17 finding was wrong.** The body comparison behind it
+   did not strip SQL comments from inside the function. Re-checked with comments
+   stripped from both sides, the bodies are **identical** (`0a7d31cb…`, 1827 chars).
+   Production also carries the `r.checked_in_at` alias hotfix, confirmed in
+   `pg_proc`. **Item 5.3's QR verification stands and no re-test is needed.**
+   The real status of `20260814000000` is that it is *already applied* to production
+   via direct `CREATE OR REPLACE`, but production never recorded a history row for
+   it — so it needs a history repair under a chosen version, not an apply. It is
+   held in `supabase/migrations_pending/` meanwhile, because with no history row a
+   `db push` would re-execute it against a live RPC.
 
 #### Recommended path (details in the reconciliation doc)
 
@@ -1178,9 +1202,10 @@ Guiding rule: **anything not in production must not be in the replay path.** A
 migrations folder that builds a database *unlike* production is runnable, not
 reproducible.
 
-- **Phase 0 — commit the re-baseline.** No production contact. Do this first.
-- **Phase 1 — rename the 15 alias files to production's versions**, and move PAR ×2
-  and QR into `supabase/migrations_pending/`. No production contact. Renaming is
+- ~~**Phase 0 — commit the re-baseline.**~~ ✅ **DONE 2026-08-18.**
+- ~~**Phase 1 — rename the 15 alias files to production's versions**, and move PAR ×2
+  and QR into `supabase/migrations_pending/`.~~ ✅ **DONE 2026-08-18** — account
+  deletion was moved there too, so nothing can be pushed by accident. Renaming is
   preferred over `migration repair`: repair would append 15 more rows to production
   history (30 rows describing 15 migrations, plus a permanent remote-only set),
   whereas renaming makes repo history *equal* production history and touches
