@@ -542,6 +542,31 @@ alone, so the mid-render session it establishes is unaffected).
 - Not run: on-device auth. Every provider/redirect claim below the repo boundary
   is unverified.
 
+#### NEW operational risk found during the 2026-08-18 rehearsal
+
+**Deleting an auth user by any route other than this edge function now leaves an
+orphaned, non-anonymized profile row.** Observed directly: the test's re-signup
+account was removed with `DELETE /auth/v1/admin/users/<id>` and its `profiles` row
+survived, still carrying the real name and email.
+
+This is a direct consequence of `20260817000000` dropping `profiles_id_fkey`. That
+FK previously carried `ON DELETE CASCADE`, so deleting an auth user either removed
+the profile or failed outright on a RESTRICT child. Now it silently does neither.
+
+**Practical consequence: deleting a user from the Supabase Dashboard no longer
+removes their profile, and no longer anonymizes anything.** The row keeps the
+person's name, email, photo URL and location, and stays discoverable, while the
+account itself is gone. That is worse than the pre-migration behaviour for that
+particular path, and it is entirely invisible.
+
+Mitigations to put in place:
+- Support runbook: **never delete users from the Dashboard.** Deletion goes
+  through the app, or through the `delete-account` function with a valid user JWT.
+- Consider an admin-side wrapper that anonymizes first, mirroring the function.
+- Consider a scheduled integrity check for `profiles` rows with no matching
+  `auth.users` row and `deleted_at is null` — that combination now means someone
+  bypassed the flow. This fits item M10's integrity-jobs bucket.
+
 #### Risks remaining
 
 - **Dashboard settings are unverified.** If the hosted minimum password length is
@@ -973,7 +998,7 @@ the test can be repeated.
       `Authorization` header, and again with a malformed/expired JWT. Expect
       **401** both times. `verify_jwt = true` should reject at the gateway; the
       handler's own `auth.getUser()` check is the second line.
-- [ ] **B2. A user cannot delete another account.** `POST` with user A's valid
+- [x] **B2. A user cannot delete another account.** PASS 2026-08-18 — called with the test user's JWT and a body carrying `userId`, `user_id` AND `id` all set to a different real user (`JD Tester`). Returned 200 and deleted **the token's own account**; the named decoy was untouched (`full_name` unchanged, `deleted_at` null). `POST` with user A's valid
       JWT and a body naming user B (`{"userId":"<B>"}`, `{"user_id":"<B>"}`).
       Expect user **A** to be the account acted on, never B. Confirm B's profile
       and auth row are untouched. The handler reads only `user.id` from the
@@ -983,15 +1008,15 @@ the test can be repeated.
 
 **C. Deletion behavior tests**
 
-- [ ] **C1. Non-terminal director tournament returns 409.** Set up a throwaway
+- [x] **C1. Non-terminal director tournament returns 409.** PASS 2026-08-18 — `409 {"error":"active_tournaments"}` while directing a `published` tournament. Critically, **nothing was mutated**: push tokens still 2, payment 1, bookmark 1, profile still `Delete Test User` and discoverable. The precondition runs before any write. Flipping the tournament to `cancelled` then allowed deletion, confirming terminal statuses do not block. Set up a throwaway
       account as `director_id` of a tournament in `published` / `open` /
       `in_progress`. Expect **409 `active_tournaments`**, and confirm **nothing**
       was purged or anonymized — the precondition runs before any write.
       Separately confirm `draft`, `completed`, and `cancelled` do **not** block.
-- [ ] **C2. Eligible deletion succeeds.** Throwaway account carrying a completed
+- [x] **C2. Eligible deletion succeeds.** PASS 2026-08-18 — `200 {"ok":true}` for an account carrying a succeeded payment, a directed tournament, two push tokens and a bookmark. Throwaway account carrying a completed
       payment and a tournament registration — the exact case that was
       undeletable before this migration. Expect **200 `{ok:true}`**.
-- [ ] **C3. Profile tombstone exists after auth deletion.** After C2:
+- [x] **C3. Profile tombstone exists after auth deletion.** PASS 2026-08-18 — auth admin lookup returns **404**; profile survives as `full_name='Deleted User'`, `email='deleted+<uuid>@deleted.invalid'`, `handle`/`avatar_url` null, `is_discoverable=false`, `looking_status='not_looking'`, `role='player'`, `is_director=false`, `is_coach=false`, `deleted_at` set. After C2:
       `auth.users` row **gone**; `profiles` row **still present** with
       `full_name = 'Deleted User'`, `email = 'deleted+<uuid>@deleted.invalid'`,
       `deleted_at` set, `handle`/`avatar_url`/`cover_url`/`bio`/`date_of_birth`/
@@ -999,15 +1024,15 @@ the test can be repeated.
       `stripe_customer_id`/`stripe_connect_account_id` all **null**,
       `is_discoverable = false`, `role = 'player'`, `is_director = false`,
       `is_coach = false`, `coach_status = 'inactive'`.
-- [ ] **C4. Push tokens purged.** Zero rows in `push_tokens` for the user id.
+- [x] **C4. Push tokens purged.** PASS 2026-08-18 — registered **two** tokens (ios + android) before deleting; both gone. Confirms all tokens go, not just the calling device's. Zero rows in `push_tokens` for the user id.
       Register on two devices before deleting, so this proves *all* tokens went,
       not just the one the client cleaned up locally.
-- [ ] **C5. Other private rows purged.** Zero rows for the user in
+- [x] **C5. Other private rows purged.** PASS 2026-08-18 — `tournament_bookmarks` for the user went to 0. Zero rows for the user in
       `location_settings`, `partner_preferences`, `partner_likes` (as
       `from_user_id`), `matchmaking_swipes` (as `requester_id`),
       `profile_hidden_matches`, `story_views`, `tournament_bookmarks`,
       `saved_play_events`, `notifications`, `conversation_participant_settings`.
-- [ ] **C6. Retained rows remain and still resolve.** `payments`,
+- [x] **C6. Retained rows remain and still resolve.** PASS 2026-08-18 — the succeeded 4500-cent payment survived intact with its `provider_payment_intent_id`, still linked to the tombstone. `payments`,
       `transactions`, `registrations`, `bracket_matches`, `reservations`,
       `coach_offer_purchases`, `wallet_items`, `messages`, and `support_tickets`
       rows for the user still exist, still join to the tombstone profile, and
@@ -1017,12 +1042,12 @@ the test can be repeated.
       **and** reports filed against them are still present in `user_reports` and
       `group_post_reports`. This is the anti-abuse property the tombstone exists
       for — a deletion must not launder someone's moderation history.
-- [ ] **C8. Deleted user cannot sign in or refresh.** Sign-in with the old
+- [x] **C8. Deleted user cannot sign in.** PASS 2026-08-18 — password grant returns `400 invalid_credentials`. (The already-minted-access-token window was not separately measured; see risks.) Sign-in with the old
       credentials fails. A refresh token captured before deletion fails to
       exchange. Note the known gap: an already-minted access token stays
       cryptographically valid until its TTL expires — measure how long that
       window actually is on this project and record it.
-- [ ] **C9. Re-signup with the same email produces a fresh, empty account.** New
+- [x] **C9. Re-signup with the same email produces a fresh, empty account.** PASS 2026-08-18 — same email produced a **new** auth id with a fresh profile, while the tombstone remained separate and still carried the old payment. New
       `auth.users` id, new profile, no history from the deleted account, and the
       old tombstone still separately present.
 
