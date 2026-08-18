@@ -5,6 +5,15 @@ Project: `fbzetvkbhneptvfruilw` (production)
 Owner item: `TODO1.1_EXECUTION_PLAN.md` **2.1**
 Blocks: `TODO1.1_EXECUTION_PLAN.md` **1.3** (account deletion deployment)
 
+> **Update 2026-08-18 (correction) — §3.3's parity PASS was OVER-SCOPED.** The
+> fingerprint filtered `pg_trigger` to `nspname='public'`, so it could not see
+> `trg_on_auth_user_created`, which lives on **`auth.users`**. Production has that
+> trigger; every database rebuilt from this repo did **not**. A rebuild therefore
+> accepted signups and silently created no profile. Found while rehearsing item 1.3
+> on a preview branch. Fixed by `20260818000000_auth_user_trigger_companion.sql`
+> and re-verified — see **§3.5**. The tables/columns/constraints/indexes/policies/
+> grants results in §3.3 stand; only the trigger category was under-scoped.
+>
 > **Update 2026-08-18 (final) — RECONCILIATION COMPLETE.** `supabase migration
 > list --linked` now shows **34 migrations with `local` == `remote` on every row**:
 > zero local-only, zero remote-only. The last delta was closed by recording
@@ -512,6 +521,52 @@ end-to-end. The added migration is a single `CREATE OR REPLACE FUNCTION` plus
 grants, depending only on tables created much earlier in the chain, and it is
 byte-identical to what production already runs — so the risk is very low, but it
 is untested as a set. A repeat of the §3.3 branch test would close it.
+
+### 3.5 Auth-schema gap and 1.3 rehearsal — **2026-08-18**
+
+Rehearsing item 1.3 on preview branch `deletion-rehearsal` (ref
+`pewftnsrfogfmeijifga`) surfaced a defect that §3.3 could not have caught.
+
+**The gap.** Inserting a row into `auth.users` on a repo-built database created
+**no profile**. Production runs
+`trg_on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION fn_handle_new_user()`;
+the branch had no triggers on `auth.users` at all.
+
+**Cause.** The 2026-07-25 baseline was captured with `--schema public`, which
+excludes objects that live *on* tables in other schemas. The function
+`public.fn_handle_new_user()` came through fine — only the binding was lost. So
+the repo carried the behaviour with nothing wired to fire it.
+
+**Why §3.3 missed it.** The parity query filtered triggers to `nspname='public'`.
+`auth.users` is not in `public`. "triggers 72 = 72, identical hash" was true and
+irrelevant. `DB_REBASELINE_PLAN.md` step 1 lists the dump's blind spots — storage,
+extensions, realtime, cron — and triggers on `auth` tables were not on that list.
+
+**Scope check — nothing else is missing.** Storage matched exactly (21 policies,
+7 buckets on both sides), `fn_handle_new_user` is present in `public` on both, and
+there are no app-created functions in unexpected schemas. The gap is this one
+trigger.
+
+**Fix.** `20260818000000_auth_user_trigger_companion.sql` — idempotent
+`drop trigger if exists` + `create trigger`. A no-op in production, which already
+has it. After replaying all 36 migrations onto the branch, the rendered definition
+is **byte-identical** to production's.
+
+**1.3 rehearsal result — the mechanism works end to end.** On the rebuilt branch:
+
+| Step | Result |
+| --- | --- |
+| Insert `auth.users` row | profile auto-created by the restored trigger |
+| Insert a `payments` row for that user | accepted |
+| `DELETE FROM auth.users` — impossible before `20260817000000` | **succeeded** |
+| `profiles` tombstone after delete | **survived** |
+| `payments` row after delete | **survived** |
+| `auth.identities` / `auth.sessions` | cascaded to 0 |
+
+That is the designed behaviour exactly: the account ceases to exist, the financial
+record does not, and the tombstone keeps every foreign key valid.
+
+Branch deleted after the run.
 
 ### Phase 3 — Apply account deletion (see §4)
 

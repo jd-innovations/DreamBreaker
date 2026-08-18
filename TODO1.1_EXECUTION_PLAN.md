@@ -1129,6 +1129,16 @@ Goal: make backend state reproducible and safe.
 
 ### Completion Notes - 2.1
 
+- **Correction (2026-08-18):** Phase 2's parity PASS was **over-scoped**. The
+  fingerprint filtered triggers to schema `public`, so it missed
+  `trg_on_auth_user_created` on **`auth.users`** — present in production, absent
+  from every repo-built database, meaning a rebuild accepted signups and silently
+  created no profile. Caused by the baseline's `--schema public` dump. Fixed by
+  `20260818000000_auth_user_trigger_companion.sql`, re-verified byte-identical to
+  production's trigger definition. Storage, functions and everything else were
+  re-checked and are complete. See `docs/DB_MIGRATION_RECONCILIATION.md` §3.5.
+  The 35-migration replay caveat is also now closed — all 36 replay cleanly.
+
 - Status: **RECONCILIATION COMPLETE (2026-08-18).** `supabase migration list --linked`
   shows **34 migrations, `local` == `remote` on every row** — zero local-only, zero
   remote-only. Item 2.1's "done when" is met: the database can be recreated from
