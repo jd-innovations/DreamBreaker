@@ -49,7 +49,7 @@ const GENDERS     = ["Men's", "Women's", 'Mixed', 'Open'];
 // ─── Components ───────────────────────────────────────────────────────────────
 
 function Field({
-  label, value, onChangeText, placeholder, keyboardType, error,
+  label, value, onChangeText, placeholder, keyboardType, error, hint,
 }: {
   label: string;
   value: string;
@@ -57,6 +57,7 @@ function Field({
   placeholder?: string;
   keyboardType?: 'default' | 'numeric' | 'decimal-pad';
   error?: string;
+  hint?: string;
 }) {
   return (
     <View style={f.wrap}>
@@ -70,6 +71,7 @@ function Field({
         keyboardType={keyboardType ?? 'default'}
         autoCapitalize="none"
       />
+      {!!hint && !error && <Text style={f.hint}>{hint}</Text>}
       {!!error && <Text style={f.error}>{error}</Text>}
     </View>
   );
@@ -329,12 +331,13 @@ export default function CreateDivisionScreen() {
             />
 
             <Field
-              label="Entry Fee ($)"
+              label="Entry Fee (per player, $)"
               value={form.entryFee}
               onChangeText={v => set('entryFee', v)}
               placeholder="e.g. 120"
               keyboardType="decimal-pad"
               error={errors.entryFee}
+              hint="Charged to EACH player — both partners on a doubles team pay it separately. Leave blank to use the tournament's entry fee; any value here overrides it for this division only."
             />
           </View>
 
@@ -393,6 +396,7 @@ const f = StyleSheet.create({
     color: L.navy, fontSize: 15, fontWeight: '500',
   },
   inputError: { borderColor: L.danger },
+  hint:       { color: L.textSub, fontSize: 11, lineHeight: 15 },
   error:      { color: L.danger, fontSize: 12, fontWeight: '500' },
 });
 

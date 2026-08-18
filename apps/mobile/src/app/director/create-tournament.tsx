@@ -551,12 +551,14 @@ export default function CreateTournamentScreen() {
                 <Text style={s.stepHeroSub}>Set your fees and draw size. Enter dollar amounts.</Text>
               </View>
               <Field
-                label="Entry Fee *"
+                label="Entry Fee (per player) *"
                 value={form.entryFee}
                 onChange={v => set('entryFee', v)}
                 placeholder="e.g. 75.00"
                 keyboardType="decimal-pad"
-                hint={stripeOnboarded ? 'Full entry fee in dollars (e.g. 75.00)' : 'Enter $0 — connect Stripe payouts on web to charge an entry fee'}
+                hint={stripeOnboarded
+                  ? 'Charged to EACH player, including both partners on a doubles team — a pair pays this twice.'
+                  : 'Enter $0 — connect Stripe payouts on web to charge an entry fee'}
                 error={errors.entryFee}
               />
               <Field

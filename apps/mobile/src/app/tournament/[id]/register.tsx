@@ -536,7 +536,7 @@ export default function TournamentRegisterScreen() {
           <Text style={s.sectionTitle}>FEES</Text>
           <View style={s.feesCard}>
             <View style={s.feeRow}>
-              <Text style={s.feeLabel}>Entry Fee</Text>
+              <Text style={s.feeLabel}>Entry Fee{partnerRequired ? ' (per player)' : ''}</Text>
               <Text style={s.feeValue}>{fmt(entryCents)}</Text>
             </View>
             <View style={[s.feeRow, s.feeRowBorder]}>
@@ -548,6 +548,14 @@ export default function TournamentRegisterScreen() {
               <Text style={s.balanceValue}>{fmt(balanceCents)}</Text>
             </View>
           </View>
+          {/* Per-player billing is the single most surprising thing about a
+              doubles entry — say it before the card is charged, not after. */}
+          {partnerRequired && (
+            <Text style={s.feeNote}>
+              This is your entry fee only. Your partner pays their own {fmt(entryCents)} separately, and
+              your team isn&apos;t confirmed until both of you have paid.
+            </Text>
+          )}
         </View>
 
         {/* ── Partner section ── */}
@@ -686,6 +694,7 @@ const s = StyleSheet.create({
   feeValue:    { color: L.navy,    fontSize: 14, fontWeight: '700' },
   balanceLabel:{ color: L.navy,    fontSize: 14, fontWeight: '700' },
   balanceValue:{ color: L.navy,    fontSize: 17, fontWeight: '900' },
+  feeNote:     { color: L.textSub, fontSize: 12, lineHeight: 17, marginTop: 8 },
 
   emptyConnections: {
     alignItems: 'center', paddingVertical: 20, paddingHorizontal: 16,

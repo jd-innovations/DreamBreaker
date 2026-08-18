@@ -373,9 +373,11 @@ export default function EditTournamentScreen() {
 
           <Text style={s.sectionTitle}>Registration</Text>
           <Field
-            label="Entry Fee *" value={form.entryFee} onChange={v => set('entryFee', v)}
+            label="Entry Fee (per player) *" value={form.entryFee} onChange={v => set('entryFee', v)}
             keyboardType="decimal-pad" error={errors.entryFee}
-            hint={stripeOnboarded ? undefined : 'Enter $0 — connect Stripe payouts on web to charge an entry fee'}
+            hint={stripeOnboarded
+              ? 'Charged to EACH player, including both partners on a doubles team — a pair pays this twice.'
+              : 'Enter $0 — connect Stripe payouts on web to charge an entry fee'}
           />
           <Field
             label="Hold / Deposit Amount *" value={form.holdFee} onChange={v => set('holdFee', v)}

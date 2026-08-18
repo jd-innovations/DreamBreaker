@@ -213,7 +213,9 @@ export default function HoldConfirmScreen() {
             <Text style={r.feeValue}>{fmt(holdCents)}</Text>
           </View>
           <View style={r.feeRow}>
-            <Text style={r.feeLabel}>Entry Fee</Text>
+            <Text style={r.feeLabel}>
+              Entry Fee{division && /doubles|mixed/i.test(division.name) ? ' (per player)' : ''}
+            </Text>
             <Text style={r.feeValue}>{fmt(entryCents)}</Text>
           </View>
           <View style={[r.feeRow, r.balanceRow]}>

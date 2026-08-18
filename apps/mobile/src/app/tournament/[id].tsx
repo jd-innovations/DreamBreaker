@@ -279,10 +279,15 @@ export default function TournamentDetail() {
   const anyHeld       = heldDivIds.size > 0;
   const anyRegistered = regDivIds.size > 0;
 
-  // Entry fee is charged per registrant unit — a doubles pair ("Team") unless
-  // every division on this tournament is Singles, in which case it's per player.
-  const entryUnitLabel = divisions.length > 0 && divisions.every(d => d.type === 'singles')
-    ? 'Player' : 'Team';
+  // Entry fee is charged PER PLAYER, in every format. On a doubles/mixed team
+  // each player owes this amount individually and pays it separately (see
+  // supabase/migrations/20260817010000_registration_team_payment_groups.sql),
+  // so a pair pays this twice in total.
+  //
+  // This previously read "Team" for any tournament with a doubles division,
+  // which described the opposite of what the server charges: a player saw
+  // "$50 / Team" and was then charged $50 on their own.
+  const entryUnitLabel = 'Player';
 
   const [tournamentStatusKey, setTournamentStatusKey] = useState<TournamentStatusKey>('open');
   const [playerRegStatus, setPlayerRegStatus] = useState<PlayerRegStatusKey | null>(null);
