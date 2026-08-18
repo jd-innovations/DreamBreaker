@@ -48,7 +48,12 @@ export default function SignInScreen() {
     setLoading(true);
     try {
       await signIn(email.trim().toLowerCase(), password);
-      router.replace((returnTo ?? '/(tabs)/profile') as never);
+      // No returnTo -> hand off to the root gate (item 1.1) rather than picking
+      // a destination here, so a signed-in user with an incomplete profile is
+      // routed to onboarding immediately instead of on their next cold start.
+      // An explicit returnTo means the user was mid-way through a protected
+      // action, so it still wins.
+      router.replace((returnTo ?? '/') as never);
     } catch (e: any) {
       Alert.alert('Sign in failed', e.message ?? 'Please check your credentials and try again.');
     } finally {
@@ -61,7 +66,8 @@ export default function SignInScreen() {
     setGoogleLoading(true);
     try {
       const session = await signInWithGoogle();
-      if (session) router.replace((returnTo ?? '/(tabs)/profile') as never);
+      // Same reasoning as the email path above — let the root gate decide.
+      if (session) router.replace((returnTo ?? '/') as never);
     } catch (e: any) {
       Alert.alert('Sign in failed', e.message ?? 'Something went wrong. Please try again.');
     } finally {

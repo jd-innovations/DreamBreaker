@@ -547,17 +547,44 @@ alone, so the mid-render session it establishes is unaffected).
 - **Dashboard settings are unverified.** If the hosted minimum password length is
   not 8, the client is now mismatched in the other direction. The checklist above
   is the gate.
-- **`sign-in.tsx` still routes to `returnTo ?? '/(tabs)/profile'`.** An existing
-  user with an incomplete profile therefore lands in the tabs rather than
-  onboarding. Left deliberately: item 1.1 scoped the gate to `/` only, and this
-  is the documented consequence, not a regression. Revisit if beta shows users
-  stuck with half-built profiles.
+- ~~**`sign-in.tsx` still routes to `returnTo ?? '/(tabs)/profile'`.**~~
+  **RESOLVED** in the 1.2 follow-up — see "Follow-up: sign-in routing" below.
 - **The Apple sign-up redirect fix is worktree-only.** HEAD's `sign-up.tsx` has no
   Apple handler — that arrives with the uncommitted Apple Sign-In work — so only
   the Google path could be committed here. The Apple path carries the same fix in
   the worktree and lands with that work.
 - Password *strength* beyond length is unenforced client-side; GoTrue's own
   complexity rules (if enabled in the Dashboard) would still surface as raw errors.
+
+#### Follow-up: sign-in routing (2026-08-17)
+
+- **Decision: Option A — route sign-in through the root gate.**
+  `apps/mobile/src/app/sign-in.tsx` now uses `returnTo ?? '/'` instead of
+  `returnTo ?? '/(tabs)/profile'` on every success path.
+- Rationale: item 1.1's stated goal is that the auth flow has *one source of
+  truth*. Sign-in is the exact moment the session changes, so deferring the
+  complete-vs-incomplete decision to the user's next cold start was arbitrary.
+  Keeping the old behavior would have meant duplicating the gate's logic in the
+  screen, which is the thing 1.1 set out to eliminate.
+- `returnTo` is untouched and still wins: a user who signed in mid-way through a
+  protected action (deep link → `/sign-in?returnTo=…`) still lands where they
+  were headed.
+- **Intentional UX change:** a complete-profile user now lands on `/(tabs)`
+  (Home) after sign-in rather than `/(tabs)/profile`. This follows from letting
+  the gate choose the destination — `APP_HREF` is `/(tabs)`. Home is the more
+  conventional post-sign-in landing; flagged here because it was not the
+  motivating defect.
+- No redirect loop: `/` only ever redirects outward, and a just-authenticated
+  user cannot resolve to the `guest` branch — `signInWithPassword()` and
+  `setSession()` both `await _notifyAllSubscribers('SIGNED_IN', …)` before
+  resolving (verified in the installed `@supabase/auth-js` `GoTrueClient.js`),
+  so `useSession`'s store is populated before the gate renders.
+- Committed: the email/password and Google handlers, which are the two that
+  exist in HEAD.
+- **Pending worktree parity:** the Apple handler exists only in the worktree
+  (it arrives with the uncommitted Apple Sign-In work). The same
+  `returnTo ?? '/'` change has been applied to it there and must land with that
+  work — the identical caveat recorded for `sign-up.tsx` in the 1.2 notes.
 
 ### 1.3 Implement Account Deletion
 
