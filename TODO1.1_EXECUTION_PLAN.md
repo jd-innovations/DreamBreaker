@@ -952,7 +952,7 @@ the test can be repeated.
       `profiles_id_fkey` absent, `profiles.deleted_at` present,
       `profiles_deleted_at_idx` present, `20260817000000` recorded in
       `supabase_migrations.schema_migrations`.
-- [ ] **A2. Deploy the edge function.** BLOCKED 2026-08-18 — `supabase functions deploy delete-account` was refused by the local permission classifier. Must be run manually. Still the first real parse of the Deno source. `supabase functions deploy delete-account`.
+- [x] **A2. Deploy the edge function.** DONE 2026-08-18 — deployed manually, version 1, ACTIVE. The Deno source parsed and bundled on the first attempt. Previously BLOCKED 2026-08-18 — `supabase functions deploy delete-account` was refused by the local permission classifier. Must be run manually. Still the first real parse of the Deno source. `supabase functions deploy delete-account`.
       This is also the first real parse of the Deno source — no local Deno was
       available, so a syntax error would surface here rather than earlier.
       Verify it appears ACTIVE with `verify_jwt = true`.
@@ -969,7 +969,7 @@ the test can be repeated.
 
 **B. Authorization tests** (run before any destructive test)
 
-- [ ] **B1. Unauthenticated request is rejected.** `POST` with no
+- [x] **B1. Unauthenticated request is rejected.** PASS 2026-08-18. No header → **401** `UNAUTHORIZED_NO_AUTH_HEADER`; malformed JWT → **401** `UNAUTHORIZED_INVALID_JWT_FORMAT`. Both from the platform gateway, which confirms `verify_jwt = true` is genuinely in effect — note the API's function listing omits the `verify_jwt` field for this function, so the listing is not evidence either way. `POST` with no
       `Authorization` header, and again with a malformed/expired JWT. Expect
       **401** both times. `verify_jwt = true` should reject at the gateway; the
       handler's own `auth.getUser()` check is the second line.
@@ -978,7 +978,7 @@ the test can be repeated.
       Expect user **A** to be the account acted on, never B. Confirm B's profile
       and auth row are untouched. The handler reads only `user.id` from the
       token, so this should be structurally impossible — test it anyway.
-- [ ] **B3. Anon key alone is not sufficient.** `POST` with only the anon key and
+- [x] **B3. Anon key alone is not sufficient.** PASS 2026-08-18 — **401** `{"error":"unauthorized"}`. Note the error *shape*: this came from the handler, not the gateway. The anon key is a structurally valid JWT so the gateway passes it, then `auth.getUser()` returns no user and the handler rejects. Both layers demonstrated working, and distinguishable. `POST` with only the anon key and
       no user JWT. Expect **401**.
 
 **C. Deletion behavior tests**
