@@ -102,6 +102,18 @@ Interpretation: The app is more capable than the first audit, but not more beta-
 - Recommended implementation: Add Terms, Privacy Policy, Support, and Delete Account routes in mobile and web. Implement account deletion request/completion with Supabase Auth deletion, profile anonymization or deletion, storage cleanup policy, payment/support record retention policy, and confirmation email.
 - Dependencies: Legal/privacy policy owner, Supabase service-role backend.
 - Estimated effort: L
+- Status update (2026-08-17): **Account deletion is source-complete but NOT
+  production-active. C7 remains open.** Commit `5030831` added the mobile Delete
+  Account screen, the `delete-account` edge function, and migration
+  `20260817000000_account_deletion.sql`. Verified against production the same
+  day: the migration is **not applied** (`profiles_id_fkey` still present, no
+  `profiles.deleted_at`, version not in `schema_migrations`) and the function is
+  **not deployed**. Secrets are unbound and no device QA has run, so the shipped
+  button currently reaches a backend that does not exist. Deployment is gated on
+  item `2.1` migration reconciliation — see the 1.3 completion notes and
+  deployment checklist in `TODO1.1_EXECUTION_PLAN.md`. The legal/privacy half of
+  C7 (Terms, Privacy Policy, Support routes) is untouched and belongs to item
+  `1.4`.
 
 ### C8 - Establish a beta QA matrix on real devices
 
@@ -523,7 +535,10 @@ Interpretation: The app is more capable than the first audit, but not more beta-
 - [ ] Supabase migrations are reproducible from source.
 - [ ] RLS test suite passes.
 - [ ] Global auth/onboarding gate implemented.
-- [ ] Account deletion implemented and tested.
+- [ ] Account deletion implemented and tested. *(Source committed in `5030831`;
+      migration not applied, edge function not deployed, secrets unbound, no
+      device QA. Stays unchecked until the 1.3 deployment checklist is signed
+      off.)*
 - [ ] Terms, Privacy Policy, Support URL, and Contact flows live.
 - [ ] Crash reporting installed and verified.
 - [ ] Analytics event catalog implemented and verified.

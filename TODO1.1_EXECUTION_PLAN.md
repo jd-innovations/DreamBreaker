@@ -621,11 +621,93 @@ alone, so the mid-render session it establishes is unaffected).
 
 ### Completion Notes - 1.3
 
-- Status: **Code complete, NOT deployed** (2026-08-17). The migration, edge
-  function, and mobile flow are written and verified, but **the migration has not
-  been applied and the edge function has not been deployed**. Until both happen,
-  the Delete Account button reaches a screen whose backend does not exist. Do not
-  close 1.3 or cut a beta build until the deployment checklist below is signed off.
+- Status: **SOURCE-COMPLETE. NOT PRODUCTION-ACTIVE. NOT BETA-READY.**
+  (implemented 2026-08-17; deployment status re-verified against production
+  2026-08-17.)
+
+  Read that as three separate claims, because only the first is true today:
+
+  | Claim | State |
+  | --- | --- |
+  | Source implementation committed | **Yes** — `5030831`, 7 files, +981 |
+  | Migration applied to production | **No** |
+  | Edge function deployed | **No** |
+  | Function secrets / service-role binding verified | **No** |
+  | On-device QA run | **No** |
+
+  **In production right now, this feature does not work.** The Delete Account row
+  in account settings is live in the mobile source and routes to a screen whose
+  backend does not exist: `supabase.functions.invoke('delete-account')` would
+  return a 404 from the Functions gateway, which the client surfaces as the
+  generic `internal_error` message. Nothing is deleted, and the user is correctly
+  left signed in — the failure is safe, but it is a dead end.
+
+  Do not check "Account deletion implemented and tested" on the launch checklist
+  in `TODO1.1.md`, do not count 1.3 toward store readiness, and do not cut a beta
+  build that exposes this button until every box in the deployment checklist
+  below is signed off.
+
+- **Deployment is blocked by item 2.1** and must be coordinated with it, not
+  worked around. See "Why this cannot simply be pushed" below — this is a hard
+  dependency discovered by comparing the repo against production's migration
+  history, not a procedural courtesy.
+
+#### Deployment status evidence (2026-08-17)
+
+Queried directly against production (`fbzetvkbhneptvfruilw`):
+
+| Check | Expected after deploy | Actual |
+| --- | --- | --- |
+| `profiles_id_fkey` constraint | absent (dropped) | **present** |
+| `profiles.deleted_at` column | present | **absent** |
+| `profiles_deleted_at_idx` index | present | **absent** |
+| `20260817000000` in `supabase_migrations.schema_migrations` | recorded | **not recorded** |
+| `delete-account` in deployed edge functions | ACTIVE | **not deployed** (9 functions live: `waitlist-sweeper`, `send-message-push`, `facility-photo`, `event-weather`, `send-transactional-email`, `marketplace-improve-listing`, and the three `create-*-payment-intent` functions) |
+
+Worktree state at the time of this reconciliation: `5030831` is clean — all 7 of
+its files are committed. The ~187 other dirty entries in `git status` are
+unrelated pre-existing work (mobile screens, web pages, the `supabase/migrations`
+deletions belonging to the 2.1 re-baseline) and are untouched by this item.
+
+#### Why this cannot simply be pushed (item 2.1 dependency)
+
+`supabase db push` is **not safe** for this migration today. Comparing
+`supabase/migrations/` against production's `supabase_migrations.schema_migrations`:
+
+- **19 repo migrations are absent from production's history**, including this one:
+  `20260725010000`, `20260725011000`, `20260807030000`, `20260807040000`,
+  `20260807050000`, `20260809140000`, `20260809140100`, `20260809150000`,
+  `20260809150100`, `20260809160000`, `20260809160100`, `20260810000000`,
+  `20260810010000`, `20260810010100`, `20260810010200`, `20260810020000`,
+  `20260810020100`, `20260814000000`, `20260817000000`.
+- **15 production migrations are absent from the repo**: `20260807203246`,
+  `20260807203530`, `20260807203534`, `20260809232329`, `20260809235922`,
+  `20260810004134`, `20260810004259`, `20260810005233`, `20260810005502`,
+  `20260810005547`, `20260810211105`, `20260810222017`, `20260810222246`,
+  `20260810224032`, `20260810224346`.
+
+The 18 non-account-deletion entries in the first list describe schema that
+**already exists in production** — marketplace, coach marketplace phases 1-4,
+wallet vouchers, the shared payment foundation, and QR check-in are all live
+tables — so they were applied out of band under different version stamps. That is
+exactly the divergence `docs/DB_REBASELINE_PLAN.md` documents.
+
+Consequence: a plain `supabase db push` would try to replay all 19, fail or
+double-apply on the first 18, and never reach `20260817000000`. Choose one of:
+
+- **Preferred — after 2.1 lands.** Reconcile history per
+  `docs/DB_REBASELINE_PLAN.md`, then push normally.
+- **If 1.3 must ship before 2.1.** Apply `20260817000000_account_deletion.sql`
+  as a single explicit statement batch, then
+  `supabase migration repair --status applied 20260817000000` so history records
+  it. This adds one more out-of-band application to the pile 2.1 has to clean up
+  — take it only as a deliberate, logged exception, and note it in the
+  rebaseline plan.
+
+Either way the migration file itself is unchanged: it is forward-only, idempotent
+(`drop constraint if exists`, `add column if not exists`,
+`create index if not exists`), and was validated against production inside a
+self-aborting transaction (see Verification below).
 
 #### Current-state findings (audit)
 
@@ -817,25 +899,129 @@ Scenario checks, reasoned statically:
 
 #### Deployment checklist (required before 1.3 can close)
 
-- [ ] Apply `20260817000000_account_deletion.sql` to production. Blocked on item
-      2.1 — see risk below.
-- [ ] `supabase functions deploy delete-account`.
-- [ ] Confirm `SUPABASE_SERVICE_ROLE_KEY` is set as a secret on the deployed
-      function (the payment functions already have it; a new function does not
-      inherit it automatically).
-- [ ] End-to-end test on a device with a throwaway account that has a payment and
-      a registration — the case that used to be undeletable.
-- [ ] Confirm the deleted user cannot sign in, and that re-signup with the same
-      email produces a fresh, empty account.
+Nothing below has been done. Work top to bottom — the test rows assume the
+infrastructure rows are complete, and every deletion test is destructive and
+irreversible, so use throwaway accounts on a non-production project first where
+the test can be repeated.
+
+**A. Infrastructure**
+
+- [ ] **A1. Apply the migration.** `20260817000000_account_deletion.sql`, by
+      whichever route the 2.1 coordination above settles on. Verify after:
+      `profiles_id_fkey` absent, `profiles.deleted_at` present,
+      `profiles_deleted_at_idx` present, `20260817000000` recorded in
+      `supabase_migrations.schema_migrations`.
+- [ ] **A2. Deploy the edge function.** `supabase functions deploy delete-account`.
+      This is also the first real parse of the Deno source — no local Deno was
+      available, so a syntax error would surface here rather than earlier.
+      Verify it appears ACTIVE with `verify_jwt = true`.
+- [ ] **A3. Bind secrets.** A new function does **not** inherit secrets from
+      existing ones. Required: `SUPABASE_SERVICE_ROLE_KEY`. Also relied on and
+      normally injected by the platform, so confirm rather than assume:
+      `SUPABASE_URL`, `SUPABASE_ANON_KEY`. No Stripe, Resend, or Google key is
+      needed. Verify by invoking once with a valid JWT for an account that has a
+      live tournament — a 409 proves the service client authenticated and read
+      the database without deleting anything.
+- [ ] **A4. Confirm the mobile client points at the same project.**
+      `EXPO_PUBLIC_SUPABASE_URL` in the build under test must match the project
+      the function was deployed to.
+
+**B. Authorization tests** (run before any destructive test)
+
+- [ ] **B1. Unauthenticated request is rejected.** `POST` with no
+      `Authorization` header, and again with a malformed/expired JWT. Expect
+      **401** both times. `verify_jwt = true` should reject at the gateway; the
+      handler's own `auth.getUser()` check is the second line.
+- [ ] **B2. A user cannot delete another account.** `POST` with user A's valid
+      JWT and a body naming user B (`{"userId":"<B>"}`, `{"user_id":"<B>"}`).
+      Expect user **A** to be the account acted on, never B. Confirm B's profile
+      and auth row are untouched. The handler reads only `user.id` from the
+      token, so this should be structurally impossible — test it anyway.
+- [ ] **B3. Anon key alone is not sufficient.** `POST` with only the anon key and
+      no user JWT. Expect **401**.
+
+**C. Deletion behavior tests**
+
+- [ ] **C1. Non-terminal director tournament returns 409.** Set up a throwaway
+      account as `director_id` of a tournament in `published` / `open` /
+      `in_progress`. Expect **409 `active_tournaments`**, and confirm **nothing**
+      was purged or anonymized — the precondition runs before any write.
+      Separately confirm `draft`, `completed`, and `cancelled` do **not** block.
+- [ ] **C2. Eligible deletion succeeds.** Throwaway account carrying a completed
+      payment and a tournament registration — the exact case that was
+      undeletable before this migration. Expect **200 `{ok:true}`**.
+- [ ] **C3. Profile tombstone exists after auth deletion.** After C2:
+      `auth.users` row **gone**; `profiles` row **still present** with
+      `full_name = 'Deleted User'`, `email = 'deleted+<uuid>@deleted.invalid'`,
+      `deleted_at` set, `handle`/`avatar_url`/`cover_url`/`bio`/`date_of_birth`/
+      `gender`/location columns/`dupr`/`self_rating`/`skill_level`/
+      `stripe_customer_id`/`stripe_connect_account_id` all **null**,
+      `is_discoverable = false`, `role = 'player'`, `is_director = false`,
+      `is_coach = false`, `coach_status = 'inactive'`.
+- [ ] **C4. Push tokens purged.** Zero rows in `push_tokens` for the user id.
+      Register on two devices before deleting, so this proves *all* tokens went,
+      not just the one the client cleaned up locally.
+- [ ] **C5. Other private rows purged.** Zero rows for the user in
+      `location_settings`, `partner_preferences`, `partner_likes` (as
+      `from_user_id`), `matchmaking_swipes` (as `requester_id`),
+      `profile_hidden_matches`, `story_views`, `tournament_bookmarks`,
+      `saved_play_events`, `notifications`, `conversation_participant_settings`.
+- [ ] **C6. Retained rows remain and still resolve.** `payments`,
+      `transactions`, `registrations`, `bracket_matches`, `reservations`,
+      `coach_offer_purchases`, `wallet_items`, `messages`, and `support_tickets`
+      rows for the user still exist, still join to the tombstone profile, and
+      render as "Deleted User" rather than erroring or showing blanks. Check a
+      bracket the user played in and a support ticket they opened.
+- [ ] **C7. Abuse reports survive in both directions.** Reports the user filed
+      **and** reports filed against them are still present in `user_reports` and
+      `group_post_reports`. This is the anti-abuse property the tombstone exists
+      for — a deletion must not launder someone's moderation history.
+- [ ] **C8. Deleted user cannot sign in or refresh.** Sign-in with the old
+      credentials fails. A refresh token captured before deletion fails to
+      exchange. Note the known gap: an already-minted access token stays
+      cryptographically valid until its TTL expires — measure how long that
+      window actually is on this project and record it.
+- [ ] **C9. Re-signup with the same email produces a fresh, empty account.** New
+      `auth.users` id, new profile, no history from the deleted account, and the
+      old tombstone still separately present.
+
+**D. Client behavior tests**
+
+- [ ] **D1. Success path.** Typed `DELETE` enables the button; loading state
+      shows; on success the session is cleared locally and the app lands on the
+      root gate, which routes to onboarding/sign-in. Relaunch the app cold and
+      confirm it does not restore a session.
+- [ ] **D2. Failure path does not sign the user out.** Force each of the three
+      reasons — `active_tournaments` (409, real), `unauthorized` (401, by
+      clearing the session), `internal_error` (e.g. airplane mode). Each must
+      show its specific message, leave the user signed in, and leave the account
+      intact.
+- [ ] **D3. Confirmation gate.** Button stays disabled for empty, partial, and
+      wrong text; lowercase `delete` is accepted (it is upper-cased before
+      comparison); back / "Keep my account" exits with nothing deleted.
+- [ ] **D4. Physical device, both platforms.** iOS and Android internal builds,
+      not simulator and not Expo Go — `deleteCurrentDevicePushToken()` early-returns
+      on non-devices, so the client-side token cleanup step is only genuinely
+      exercised on hardware.
+
+**E. Sign-off**
+
+- [ ] **E1.** Record the results, the JWT-expiry window from C8, and any
+      deviation, in these notes.
+- [ ] **E2.** Only then check "Account deletion implemented and tested" in
+      `TODO1.1.md`.
 
 #### Risks remaining
 
-- **This change conflicts with item 2.1's schema freeze.** 2.1 says "stop all
-  schema work" until migration history is reconciled, and 1.1 deferred an
-  `onboarding_completed` column on exactly that basis. 1.3 cannot be done without
-  this migration — the FK proof above is unambiguous — so the freeze is being
-  broken deliberately, for one narrow forward-only file. It must be folded into
-  2.1's reconciliation rather than pushed ad hoc.
+- **This change conflicts with item 2.1's schema freeze, and 2.1 now gates
+  deployment.** 2.1 says "stop all schema work" until migration history is
+  reconciled, and 1.1 deferred an `onboarding_completed` column on exactly that
+  basis. 1.3 cannot be done without this migration — the FK proof above is
+  unambiguous — so the freeze is being broken deliberately, for one narrow
+  forward-only file. Because the file is only *committed*, not applied, the
+  conflict is still fully recoverable: fold it into 2.1's reconciliation rather
+  than pushing it ad hoc. See "Why this cannot simply be pushed" above for the
+  concrete 19-vs-15 history divergence that makes `supabase db push` unsafe.
 - **Uploaded media is not deleted.** Product decision on 2026-08-17. A deleted
   user's avatar stays in the public `avatars/<uid>/` path and remains fetchable
   by anyone who recorded the URL, even though `profiles.avatar_url` is nulled.
