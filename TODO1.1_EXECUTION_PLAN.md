@@ -1038,15 +1038,49 @@ the test can be repeated.
       rows for the user still exist, still join to the tombstone profile, and
       render as "Deleted User" rather than erroring or showing blanks. Check a
       bracket the user played in and a support ticket they opened.
-- [ ] **C7. Abuse reports survive in both directions.** Reports the user filed
+- [x] **C7. Abuse reports survive in both directions.** PASS 2026-08-19 —
+      verified structurally and then empirically. Structure: every FK on both
+      report tables (`reporter_id`, `reported_id`/`reported_user_id`) targets
+      `public.profiles`, not `auth.users`, so their `ON DELETE CASCADE` can only
+      fire if the *profile* is deleted — which the tombstone prevents. `profiles`
+      itself has no FK to `auth.users` at all (only `director_approved_by` and
+      `home_court_id`), and `auth.users` carries no DELETE trigger, only
+      `trg_on_auth_user_created` on INSERT. Neither reports table appears in the
+      edge function's `PRIVATE_ROWS`. Empirically: a transactional rehearsal on
+      production created an auth user A (profile auto-created by the trigger), a
+      counterparty B, a group, and reports in both directions in both tables,
+      then tombstoned A and deleted A's `auth.users` row. Result:
+      `auth_gone=t profile_survives=t tombstone='Deleted User'`,
+      `ur_filed_by=1 ur_against=1 gpr_filed_by=1 gpr_against=1` — all four
+      reports intact. The rehearsal was rolled back via `RAISE EXCEPTION`;
+      production was re-checked afterwards and holds zero probe rows.
+      Original wording: Reports the user filed
       **and** reports filed against them are still present in `user_reports` and
       `group_post_reports`. This is the anti-abuse property the tombstone exists
       for — a deletion must not launder someone's moderation history.
 - [x] **C8. Deleted user cannot sign in.** PASS 2026-08-18 — password grant returns `400 invalid_credentials`. (The already-minted-access-token window was not separately measured; see risks.) Sign-in with the old
       credentials fails. A refresh token captured before deletion fails to
-      exchange. Note the known gap: an already-minted access token stays
-      cryptographically valid until its TTL expires — measure how long that
-      window actually is on this project and record it.
+      exchange.
+
+      **Window measured 2026-08-19: 3600 seconds (exactly 1 hour), ES256.**
+      Method: signed up a throwaway account against production, captured its
+      access token (`iat` 21:02:23Z, `exp` 22:02:23Z, server-reported
+      `expires_in` 3600), deleted it through the real `delete-account` edge
+      function with its own JWT (`200 {"ok":true}`), then reused the same token
+      immediately.
+
+      **The two paths diverge, and this is the finding that matters:**
+      - `/auth/v1/user` (GoTrue) → **403**. The auth path resolves the user and
+        correctly refuses.
+      - `/rest/v1/profiles` (PostgREST) → **200**. The data path validates the
+        JWT by signature alone and never asks whether the subject still exists.
+
+      So a deleted user keeps working **data-plane** access as
+      `role=authenticated` with their original `sub` for up to one hour. RLS
+      policies keyed on `auth.uid()` still match the tombstone id. `auth.sessions`
+      and `auth.refresh_tokens` are both purged by the deletion, so the session
+      cannot be *extended* — the exposure is bounded by the 1-hour TTL and cannot
+      be renewed. See the new risk entry below.
 - [x] **C9. Re-signup with the same email produces a fresh, empty account.** PASS 2026-08-18 — same email produced a **new** auth id with a fresh profile, while the tombstone remained separate and still carried the old payment. New
       `auth.users` id, new profile, no history from the deleted account, and the
       old tombstone still separately present.
@@ -1149,6 +1183,21 @@ D2a, D2c, and the D3 variants.
   conflict is still fully recoverable: fold it into 2.1's reconciliation rather
   than pushing it ad hoc. See "Why this cannot simply be pushed" above for the
   concrete 19-vs-15 history divergence that makes `supabase db push` unsafe.
+- **A deleted user keeps data-plane access for up to 1 hour** (measured
+  2026-08-19, C8). Deletion revokes `auth.sessions` and `auth.refresh_tokens`,
+  and GoTrue immediately 403s the token — but PostgREST validates the JWT by
+  signature only and returned **200** for the deleted user right after the
+  edge function reported success. For the remainder of the token's 3600s TTL
+  the holder is still `role=authenticated` with their original `sub`, so any
+  RLS policy keyed on `auth.uid()` still matches the tombstone. The exposure
+  is bounded — it cannot be renewed once the refresh token is gone — and the
+  account's private rows are already purged, but it is not zero: the window
+  allows reads of anything an ordinary authenticated user may read, and writes
+  that reference the tombstone id. This is inherent to stateless JWT
+  verification, not a bug in this flow. Mitigations if it must be closed:
+  shorten the project's JWT expiry, or have RLS policies join `profiles` and
+  reject rows where `deleted_at IS NOT NULL`. Neither is done. Worth deciding
+  before public launch rather than after.
 - **Uploaded media is not deleted.** Product decision on 2026-08-17. A deleted
   user's avatar stays in the public `avatars/<uid>/` path and remains fetchable
   by anyone who recorded the URL, even though `profiles.avatar_url` is nulled.
