@@ -45,7 +45,27 @@ function reasonFrom(value: unknown): DeleteAccountFailure {
  * rejection — a thrown error means the account is intact and still signed in.
  */
 export async function deleteAccount(): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  // getSession() reads the locally cached session and does not reach the
+  // network; getUser() posts to /auth/v1/user and does. That difference is the
+  // whole point of using it here: offline, getUser() resolves with no user, and
+  // a bare `!user` guard cannot tell an absent session from an unreachable
+  // server — so every offline attempt reported "your session has expired" when
+  // nothing was wrong with the session (D2b, TODO1.1_EXECUTION_PLAN.md).
+  //
+  // Whether the session is still *valid* is deliberately not decided here. A
+  // revoked or expired token still sits in local storage, so this check only
+  // establishes that the user is signed in at all; the edge function verifies
+  // the JWT and returns 401 `unauthorized`, which the invoke branch below maps
+  // back. The server stays the sole authority on authorization, and transport
+  // failures fall through to internal_error rather than being misreported.
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) {
+    // Reading the cached session failed — in practice an expired token whose
+    // refresh could not reach the server. Nothing has been attempted against
+    // the account, so this is retryable, not an authorization failure.
+    throw new AccountDeletionError('internal_error', DELETE_ACCOUNT_MESSAGES.internal_error);
+  }
+  const user = session?.user;
   if (!user) {
     throw new AccountDeletionError('unauthorized', DELETE_ACCOUNT_MESSAGES.unauthorized);
   }

@@ -1088,7 +1088,15 @@ project. Test account `dhjesus122+dtest1@gmail.com`.
         is to read the error `getUser()` returns and only map a genuine auth
         rejection (401 / `AuthApiError`) to `unauthorized`, sending transport
         failures to `internal_error` — or to check the locally-cached session
-        with `getSession()` before making any network call. Not yet fixed.
+        with `getSession()` before making any network call.
+        **FIXED 2026-08-19** — `deleteAccount()` now opens with
+        `getSession()` (local storage, no network) and treats a session-read
+        failure as `internal_error`. Validity is left to the edge function,
+        which still returns 401 `unauthorized` for a revoked or expired JWT,
+        so the server remains the sole authority on authorization. Typecheck
+        and lint clean; the mobile app has no test runner, so this is
+        **unverified on device** — re-run D2b (and D2c, which must still
+        produce the expired-session message) on the next preview build.
   - [ ] **D2a. Active tournament protection.** NOT TESTED — deletion while the
         user directs/owns a non-terminal tournament. Expect deletion rejected,
         the specific active-tournament message, account intact, user still
