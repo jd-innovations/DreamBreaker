@@ -9,24 +9,21 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_APP_ENV": "development"
-      },
-      "npm": "11.6.2"
+      }
     },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
       "env": {
         "EXPO_PUBLIC_APP_ENV": "internal"
-      },
-      "npm": "11.6.2"
+      }
     },
     "production": {
       "channel": "production",
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_APP_ENV": "production"
-      },
-      "npm": "11.6.2"
+      }
     }
   },
   "submit": {
