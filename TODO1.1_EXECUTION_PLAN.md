@@ -988,7 +988,7 @@ the test can be repeated.
       needed. Verify by invoking once with a valid JWT for an account that has a
       live tournament — a 409 proves the service client authenticated and read
       the database without deleting anything.
-- [ ] **A4. Confirm the mobile client points at the same project.**
+- [x] **A4. Confirm the mobile client points at the same project.** CONFIRMED 2026-08-19 — the EAS `preview` build log lists `EXPO_PUBLIC_SUPABASE_URL=https://fbzetvkbhneptvfruilw.supabase.co`, the project the function is deployed to, and the D1 deletion on that build took effect. Note this was only true from build `77faaac` onward: earlier builds shipped with the var **undefined** (`.env` is git-ignored and never reaches the builder), which crashed the app at launch before any screen rendered.
       `EXPO_PUBLIC_SUPABASE_URL` in the build under test must match the project
       the function was deployed to.
 
@@ -1053,22 +1053,75 @@ the test can be repeated.
 
 **D. Client behavior tests**
 
-- [ ] **D1. Success path.** Typed `DELETE` enables the button; loading state
-      shows; on success the session is cleared locally and the app lands on the
-      root gate, which routes to onboarding/sign-in. Relaunch the app cold and
-      confirm it does not restore a session.
-- [ ] **D2. Failure path does not sign the user out.** Force each of the three
-      reasons — `active_tournaments` (409, real), `unauthorized` (401, by
-      clearing the session), `internal_error` (e.g. airplane mode). Each must
-      show its specific message, leave the user signed in, and leave the account
-      intact.
-- [ ] **D3. Confirmation gate.** Button stays disabled for empty, partial, and
-      wrong text; lowercase `delete` is accepted (it is upper-cased before
-      comparison); back / "Keep my account" exits with nothing deleted.
-- [ ] **D4. Physical device, both platforms.** iOS and Android internal builds,
-      not simulator and not Expo Go — `deleteCurrentDevicePushToken()` early-returns
-      on non-devices, so the client-side token cleanup step is only genuinely
-      exercised on hardware.
+Device test run 2026-08-19 — physical iPhone, EAS `preview` build (internal
+distribution, `EXPO_PUBLIC_APP_ENV=internal`), against the production Supabase
+project. Test account `dhjesus122+dtest1@gmail.com`.
+
+- [x] **D1. Success path.** PASS 2026-08-19 — deletion completed; the app
+      returned to the sign-in/onboarding state; signing in with the deleted
+      credentials returned **Invalid login credentials**; the same email address
+      then created a completely new account that did **not** inherit the previous
+      account's Hold My Spot/payment-related state (device-side confirmation of
+      C9). Cold relaunch was not separately observed. Typed `DELETE` enables the
+      button; loading state shows; on success the session is cleared locally and
+      the app lands on the root gate, which routes to onboarding/sign-in.
+- [ ] **D2. Failure path does not sign the user out.** PARTIAL 2026-08-19 — one
+      of three reasons exercised. Force each of the three reasons —
+      `active_tournaments` (409, real), `unauthorized` (401, by clearing the
+      session), `internal_error` (e.g. airplane mode). Each must show its
+      specific message, leave the user signed in, and leave the account intact.
+  - [x] **D2b. Offline / network failure.** PASS WITH ISSUE 2026-08-19 —
+        navigated to Delete Account while online, enabled Airplane Mode and
+        disabled Wi-Fi, typed `DELETE`, attempted deletion. The account was
+        **not** deleted, the user stayed on the Delete Account screen and
+        remained authenticated, and after restoring connectivity "Keep my
+        account" worked normally. **Safety property holds.** But the message
+        shown was `unauthorized` — "Your session has expired. Please sign in
+        again and retry." — for what was a pure network failure. Expected the
+        `internal_error` copy: "We could not delete your account. Nothing has
+        been changed."
+        **Root cause** (`apps/mobile/src/lib/accountDeletion.ts:48`):
+        `deleteAccount()` opens with `supabase.auth.getUser()`, which is a
+        *network* call to `/auth/v1/user`. Offline it resolves with `user`
+        null, and the `if (!user)` guard on line 49 cannot tell "no session"
+        from "could not reach the server", so it throws `unauthorized`. The fix
+        is to read the error `getUser()` returns and only map a genuine auth
+        rejection (401 / `AuthApiError`) to `unauthorized`, sending transport
+        failures to `internal_error` — or to check the locally-cached session
+        with `getSession()` before making any network call. Not yet fixed.
+  - [ ] **D2a. Active tournament protection.** NOT TESTED — deletion while the
+        user directs/owns a non-terminal tournament. Expect deletion rejected,
+        the specific active-tournament message, account intact, user still
+        signed in. Backend half already proven by C1.
+  - [ ] **D2c. True unauthorized / expired session.** NOT TESTED — requires
+        intentionally expiring or revoking the session. Expect the
+        expired-session message and no partial deletion. Also the regression
+        test for the D2b error-mapping fix: after that fix, this path must
+        still produce `unauthorized`.
+- [ ] **D3. Confirmation gate.** PARTIAL 2026-08-19 — the confirmation screen
+      was exercised and typing `DELETE` correctly enabled the destructive
+      action. Remaining variants unverified: empty → disabled, `DEL` → disabled,
+      `DELETED` → disabled, lowercase `delete` → enabled (it is upper-cased
+      before comparison), and back / "Keep my account" exits with nothing
+      deleted.
+- [ ] **D4. Physical device, both platforms.** iOS DONE 2026-08-19 (physical
+      iPhone, EAS `preview` build — not simulator, not Expo Go, so
+      `deleteCurrentDevicePushToken()` was genuinely exercised). **Android
+      DEFERRED — no physical Android device available.** Do not mark native
+      Android push-token cleanup as verified from an emulator; Android
+      physical-device validation stays a documented follow-up before public
+      Android release.
+
+**Network coverage note.** The standalone `preview` build was confirmed usable
+over cellular data with Wi-Fi off, so future device passes can deliberately
+cover Wi-Fi, cellular-only, and fully offline (Airplane Mode + Wi-Fi disabled)
+rather than only the last of those.
+
+**Assessment 2026-08-19.** iOS Delete Account behaves correctly on every
+destructive/safety path tested — nothing deletes when it should not, and no
+failure signs the user out. One confirmed defect: offline/network errors are
+presented as expired-session errors (D2b). Remaining meaningful iOS work is
+D2a, D2c, and the D3 variants.
 
 **E. Sign-off**
 
