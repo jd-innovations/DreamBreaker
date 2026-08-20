@@ -18,7 +18,8 @@
       "env": {
         "EXPO_PUBLIC_APP_ENV": "internal"
       },
-      "environment": "preview"
+      "environment": "preview",
+      "autoIncrement": true
     },
     "production": {
       "channel": "production",

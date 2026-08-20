@@ -1226,10 +1226,33 @@ and is deferred for lack of hardware.
   account's private rows are already purged, but it is not zero: the window
   allows reads of anything an ordinary authenticated user may read, and writes
   that reference the tombstone id. This is inherent to stateless JWT
-  verification, not a bug in this flow. Mitigations if it must be closed:
-  shorten the project's JWT expiry, or have RLS policies join `profiles` and
-  reject rows where `deleted_at IS NOT NULL`. Neither is done. Worth deciding
-  before public launch rather than after.
+  verification, not a bug in this flow.
+
+  **RESOLVED 2026-08-20** by migration `20260820013554_reject_deleted_user_requests`.
+  Rather than shortening the JWT expiry (narrows the window, never closes it, and
+  changes refresh cadence for every user) or adding `deleted_at IS NULL` to
+  policies across the schema (large surface, easy for a future policy to forget),
+  a PostgREST `db-pre-request` hook was installed: `public.reject_deleted_users()`
+  raises `42501` when `auth.uid()` resolves to a profile with `deleted_at` set.
+  One object, every current and future table, nothing to remember. Verified end
+  to end against production: anon **200**, authenticated-not-deleted **200**, and
+  the *same* token immediately after deletion **403**
+  `{"code":"42501","hint":"This account has been deleted."}` — where it returned
+  200 before the migration. Anon traffic re-checked afterwards and unaffected.
+
+  **Scope limits, deliberately not covered.** The hook guards PostgREST only.
+  Storage and edge functions authenticate separately and still accept a deleted
+  user's unexpired token. The `delete-account` function itself must keep working
+  during a deletion, and does, because it uses the service role where `auth.uid()`
+  is null. The hook runs on every request, so it is kept to a single primary-key
+  lookup narrowed by `profiles_deleted_at_idx`. Rollback if it ever misbehaves:
+  `ALTER ROLE authenticator RESET pgrst.db_pre_request;` then
+  `NOTIFY pgrst, 'reload config';`.
+
+  The hook depends on the tombstone existing: hard-deleting a tombstone row,
+  rather than retaining it as the design intends, removes the record the check
+  reads and would restore the old behaviour for that user's remaining token
+  window.
 - **Uploaded media is not deleted.** Product decision on 2026-08-17. A deleted
   user's avatar stays in the public `avatars/<uid>/` path and remains fetchable
   by anyone who recorded the URL, even though `profiles.avatar_url` is nulled.
