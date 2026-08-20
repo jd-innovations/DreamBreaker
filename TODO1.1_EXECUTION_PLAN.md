@@ -1099,8 +1099,9 @@ project. Test account `dhjesus122+dtest1@gmail.com`.
       C9). Cold relaunch was not separately observed. Typed `DELETE` enables the
       button; loading state shows; on success the session is cleared locally and
       the app lands on the root gate, which routes to onboarding/sign-in.
-- [ ] **D2. Failure path does not sign the user out.** PARTIAL 2026-08-19 — one
-      of three reasons exercised. Force each of the three reasons —
+- [x] **D2. Failure path does not sign the user out.** PASS 2026-08-20 — all
+      three reasons exercised on device; each showed its own message, left the
+      user signed in, and left the account intact. Force each of the three reasons —
       `active_tournaments` (409, real), `unauthorized` (401, by clearing the
       session), `internal_error` (e.g. airplane mode). Each must show its
       specific message, leave the user signed in, and leave the account intact.
@@ -1128,24 +1129,45 @@ project. Test account `dhjesus122+dtest1@gmail.com`.
         failure as `internal_error`. Validity is left to the edge function,
         which still returns 401 `unauthorized` for a revoked or expired JWT,
         so the server remains the sole authority on authorization. Typecheck
-        and lint clean; the mobile app has no test runner, so this is
-        **unverified on device** — re-run D2b (and D2c, which must still
-        produce the expired-session message) on the next preview build.
-  - [ ] **D2a. Active tournament protection.** NOT TESTED — deletion while the
-        user directs/owns a non-terminal tournament. Expect deletion rejected,
-        the specific active-tournament message, account intact, user still
-        signed in. Backend half already proven by C1.
-  - [ ] **D2c. True unauthorized / expired session.** NOT TESTED — requires
-        intentionally expiring or revoking the session. Expect the
-        expired-session message and no partial deletion. Also the regression
-        test for the D2b error-mapping fix: after that fix, this path must
-        still produce `unauthorized`.
-- [ ] **D3. Confirmation gate.** PARTIAL 2026-08-19 — the confirmation screen
-      was exercised and typing `DELETE` correctly enabled the destructive
-      action. Remaining variants unverified: empty → disabled, `DEL` → disabled,
-      `DELETED` → disabled, lowercase `delete` → enabled (it is upper-cased
-      before comparison), and back / "Keep my account" exits with nothing
-      deleted.
+        and lint clean. **RE-VERIFIED ON DEVICE 2026-08-20** against a build
+        carrying the fix: same offline conditions now produce "We could not
+        delete your account. Nothing has been changed." The caveat is retired.
+
+        **Why the first re-test appeared to fail.** The fix was reported still
+        broken on a build that did contain it. It was the wrong binary: the
+        `preview` profile sets no `autoIncrement`, so every preview build ships
+        as `v1.0.0 build 3`, and iOS gave no way to tell the new install from
+        the old one. Server-side session rows disproved the alternative
+        explanation — the token was 10 minutes old and never refreshed, far
+        inside its 1-hour TTL, so `getSession()` had a valid cached session and
+        could not have produced an `unauthorized`. Deleting the app and
+        reinstalling resolved it. **Consider adding `autoIncrement` to the
+        preview profile** so device test results can never again be attributed
+        to the wrong binary.
+  - [x] **D2a. Active tournament protection.** PASS 2026-08-20 — the test
+        account was made `director_id` of a `published` tournament and attempted
+        deletion. Rejected with the active-tournament message; account intact
+        and still signed in. Note the precondition query filters on
+        `director_id` + status only — it does **not** require registrations, so
+        the checklist's original "that players have registered for" wording is
+        stricter than the code. Backend half already proven by C1.
+  - [x] **D2c. True unauthorized / expired session.** PASS 2026-08-20 —
+        `auth.sessions` rows for the user were deleted server-side while the app
+        held the Delete Account screen with `DELETE` typed, then deletion was
+        confirmed **with the network up**. Showed "Your session has expired.
+        Please sign in again and retry." Verified afterwards that the account
+        was untouched: `deleted_at` null, `auth.users` row present, `full_name`
+        still the real name rather than a tombstone.
+
+        This is the regression test for the D2b fix, and the pair is the actual
+        proof: identical client code, two different causes, two different and
+        correct messages. D2c's message now originates from the **server** (the
+        edge function's 401 `unauthorized`, since GoTrue cannot resolve the
+        deleted `session_id`) rather than from a client-side guess.
+- [x] **D3. Confirmation gate.** PASS 2026-08-20 — all variants exercised on
+      device: empty → disabled, `DEL` → disabled, `DELETED` → disabled,
+      lowercase `delete` → enabled (it is upper-cased before comparison), and
+      "Keep my account" exits with nothing deleted.
 - [ ] **D4. Physical device, both platforms.** iOS DONE 2026-08-19 (physical
       iPhone, EAS `preview` build — not simulator, not Expo Go, so
       `deleteCurrentDevicePushToken()` was genuinely exercised). **Android
@@ -1159,18 +1181,28 @@ over cellular data with Wi-Fi off, so future device passes can deliberately
 cover Wi-Fi, cellular-only, and fully offline (Airplane Mode + Wi-Fi disabled)
 rather than only the last of those.
 
-**Assessment 2026-08-19.** iOS Delete Account behaves correctly on every
-destructive/safety path tested — nothing deletes when it should not, and no
-failure signs the user out. One confirmed defect: offline/network errors are
-presented as expired-session errors (D2b). Remaining meaningful iOS work is
-D2a, D2c, and the D3 variants.
+**Assessment 2026-08-20.** iOS Delete Account is fully verified on device.
+Every client-side row (D1, D2, D2a, D2b, D2c, D3) passes: the success path
+deletes and signs out, and all three failure paths refuse the deletion, keep the
+user signed in, and show their own distinct message. The one defect found —
+offline errors reported as expired sessions — was fixed in `97b9c6d` and
+re-verified on device. **Android (D4) remains the only outstanding client work**
+and is deferred for lack of hardware.
 
 **E. Sign-off**
 
-- [ ] **E1.** Record the results, the JWT-expiry window from C8, and any
-      deviation, in these notes.
-- [ ] **E2.** Only then check "Account deletion implemented and tested" in
-      `TODO1.1.md`.
+- [x] **E1.** DONE 2026-08-20. Results for A1–A4, B1–B3, C1–C9 and D1–D3 are
+      recorded above. JWT-expiry window from C8: **3600 s (1 hour), ES256** —
+      with the finding that PostgREST keeps honouring a deleted user's token for
+      that hour while GoTrue rejects it immediately (see Risks remaining).
+      Deviations from the checklist as written: (a) C7 was proven by a
+      rolled-back transactional rehearsal rather than a live destructive test,
+      since both report tables were empty in production; (b) D2a needs only a
+      directed tournament in a live status, not registrations, because the
+      precondition queries `director_id` + status alone; (c) D4 Android is
+      deferred, no device.
+- [x] **E2.** DONE 2026-08-20 — checked in `TODO1.1.md`, with the Android
+      deferral noted there rather than left implicit.
 
 #### Risks remaining
 

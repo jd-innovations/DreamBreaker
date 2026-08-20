@@ -102,8 +102,18 @@ Interpretation: The app is more capable than the first audit, but not more beta-
 - Recommended implementation: Add Terms, Privacy Policy, Support, and Delete Account routes in mobile and web. Implement account deletion request/completion with Supabase Auth deletion, profile anonymization or deletion, storage cleanup policy, payment/support record retention policy, and confirmation email.
 - Dependencies: Legal/privacy policy owner, Supabase service-role backend.
 - Estimated effort: L
-- Status update (2026-08-17): **Account deletion is source-complete but NOT
-  production-active. C7 remains open.** Commit `5030831` added the mobile Delete
+- Status update (2026-08-20): **Account deletion is COMPLETE and production-active
+  on iOS.** Migration applied, edge function deployed, secrets bound, and every
+  checklist row signed off: authorization (B1-B3), deletion behaviour (C1-C9,
+  including C7 abuse-report retention and the C8 token window of 3600 s), and
+  device QA (D1, D2a, D2b, D2c, D3) on a physical iPhone. One defect was found
+  and fixed during device QA: offline failures were reported as expired sessions
+  (`97b9c6d`). Android D4 remains deferred. One risk stays open and is recorded
+  in the plan: a deleted user's access token is still honoured by PostgREST for
+  up to an hour after deletion, though GoTrue rejects it immediately.
+
+  Superseded status (2026-08-17, kept for history): **Account deletion is
+  source-complete but NOT production-active. C7 remains open.** Commit `5030831` added the mobile Delete
   Account screen, the `delete-account` edge function, and migration
   `20260817000000_account_deletion.sql`. Verified against production the same
   day: the migration is **not applied** (`profiles_id_fkey` still present, no
@@ -555,10 +565,12 @@ Interpretation: The app is more capable than the first audit, but not more beta-
 - [ ] Supabase migrations are reproducible from source.
 - [ ] RLS test suite passes.
 - [ ] Global auth/onboarding gate implemented.
-- [ ] Account deletion implemented and tested. *(Source committed in `5030831`;
-      migration not applied, edge function not deployed, secrets unbound, no
-      device QA. Stays unchecked until the 1.3 deployment checklist is signed
-      off.)*
+- [x] Account deletion implemented and tested. *(Signed off 2026-08-20. Migration
+      applied, edge function deployed and ACTIVE, secrets bound, and the full
+      A/B/C/D checklist in `TODO1.1_EXECUTION_PLAN.md` passed — including device
+      QA on a physical iPhone. **iOS only: Android device QA (D4) is deferred for
+      lack of hardware and must be done before public Android release**, since an
+      emulator cannot exercise native push-token cleanup.)*
 - [ ] Terms, Privacy Policy, Support URL, and Contact flows live.
 - [ ] Crash reporting installed and verified.
 - [ ] Analytics event catalog implemented and verified.
