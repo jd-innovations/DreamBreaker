@@ -9,11 +9,15 @@ import { goBack } from '@/lib/navigation';
 import { StatusChip } from '@/components';
 import {
   fetchReservationById, fetchReservationPlayersWithProfiles,
-  playersNeeded, occupancyStatusLabel,
+  playersNeeded, occupancyStatusLabel, parseTstzrange,
   type Reservation,
 } from '@/lib/supabase/reservations';
+import { fetchFacilityById } from '@/lib/supabase/facilities';
+import { fetchCourtById } from '@/lib/supabase/courts';
+import { fetchBallMachineById } from '@/lib/supabase/ballMachines';
 import { confirmReservation } from '@/lib/supabase/reservationPayment';
-import { createBookingPaymentIntent, reservationPaymentErrorMessage } from '@/lib/payments/reservationPaymentIntent';
+import { reservationPaymentErrorMessage } from '@/lib/payments/reservationPaymentIntent';
+import { useReservationPayment } from '@/lib/payments/useReservationPayment';
 import { getBookingFacility, getBookingSelection, getBookingReservationId } from '@/lib/bookingStore';
 import { isFeatureEnabled } from '@/lib/featureFlags';
 
@@ -43,10 +47,21 @@ function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
+function formatCountdown(msRemaining: number): string {
+  const total = Math.max(0, Math.ceil(msRemaining / 1000));
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
 export default function ReviewScreen() {
   const insets = useSafeAreaInsets();
-  const facility = getBookingFacility();
-  const selection = getBookingSelection();
+  // Snapshot once at mount: these getters return a new object each call, so
+  // depending on them directly would re-run load() on every render.
+  const [fromWizard] = useState(() => ({
+    facilityName: getBookingFacility().facilityName,
+    assetName:    getBookingSelection().assetName,
+  }));
   const reservationId = getBookingReservationId();
   // Stable for the lifetime of this screen visit, so retrying Pay after a
   // transient failure reuses the same PaymentIntent (create-booking-payment-intent's
@@ -55,11 +70,24 @@ export default function ReviewScreen() {
 
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [currentPlayers, setCurrentPlayers] = useState(0);
+  // bookingStore is plain in-memory module state — it is empty after an app
+  // relaunch, and this screen is reachable in exactly that condition (kill the
+  // app mid-payment, reopen). Names are recovered from the reservation row
+  // itself rather than rendering "—" on the screen where money changes hands.
+  const [names, setNames] = useState<{ facility: string | null; asset: string | null }>({
+    facility: fromWizard.facilityName,
+    asset:    fromWizard.assetName,
+  });
+  // Ticks once a second while a hold is live, to drive the countdown.
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-  const [payingIntent, setPayingIntent] = useState(false);
-  const [paymentReady, setPaymentReady] = useState<{ clientSecret: string; amountCents: number } | null>(null);
+  // Last non-fatal payment problem, shown inline above the Pay button so a
+  // failed attempt leaves something on screen to act on after the alert is
+  // dismissed. Cleared at the start of every attempt.
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const { payForReservation, processing: paying } = useReservationPayment();
 
   const load = useCallback(async () => {
     if (!reservationId) { setError('No active reservation. Go back and choose a time.'); setLoading(false); return; }
@@ -73,25 +101,50 @@ export default function ReviewScreen() {
       if (!res) { setError('This reservation no longer exists.'); return; }
       setReservation(res);
       setCurrentPlayers(roster.length);
+
+      // Only fetch what the wizard store could not carry over.
+      if (!fromWizard.facilityName || !fromWizard.assetName) {
+        const [fac, asset] = await Promise.all([
+          fromWizard.facilityName ? null : fetchFacilityById(res.facility_id).catch(() => null),
+          fromWizard.assetName
+            ? null
+            : (res.asset_type === 'ball_machine'
+                ? fetchBallMachineById(res.asset_id)
+                : fetchCourtById(res.asset_id)).catch(() => null),
+        ]);
+        setNames({
+          facility: fromWizard.facilityName ?? fac?.name ?? null,
+          asset:    fromWizard.assetName    ?? asset?.name ?? null,
+        });
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load your reservation.');
     } finally {
       setLoading(false);
     }
-  }, [reservationId]);
+  }, [reservationId, fromWizard]);
 
   useEffect(() => { load(); }, [load]);
 
-  // Calls confirm_reservation() directly — the same boundary used before
-  // Stripe was wired in, and still the correct one for (a) free reservations
-  // (create-booking-payment-intent returns no_payment_required — nothing to
-  // charge), and (b) internal builds continuing past the "payment UI
-  // unavailable in this build" state after a real PaymentIntent has already
-  // been created (see handlePay below and BOOKING_ENGINE_PHASE3_REPORT.md).
-  //
-  // Case (b) is gated behind the `paidBooking` feature flag: confirming a
-  // priced reservation without a completed charge is a test-only affordance
-  // and must never be reachable in a production build.
+  // A hold has a server-side fuse (create_reservation defaults to 10 minutes)
+  // and nothing on this screen used to show it — a user could sit on Review &
+  // Pay past expiry and only discover it by tapping Pay. Tick while the hold is
+  // live so the countdown below stays honest; stop once it lapses or the
+  // reservation is no longer held.
+  const holdExpiresAt = reservation?.status === 'held' ? reservation.hold_expires_at : null;
+  useEffect(() => {
+    if (!holdExpiresAt) return;
+    if (new Date(holdExpiresAt).getTime() <= Date.now()) return;
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [holdExpiresAt]);
+
+  // Calls confirm_reservation() directly. This is the no-charge path ONLY: a
+  // reservation with nothing to pay, or one create-booking-payment-intent has
+  // told us needs no payment (no_payment_required). It must never be reachable
+  // for a priced reservation that hasn't been paid — confirming one here
+  // manufactures a booking nobody paid for. The "Continue in Test Mode" branch
+  // that did exactly that was removed when PaymentSheet was wired in (3.1).
   async function handleConfirmWithoutPayment() {
     if (!reservation || confirming) return;
 
@@ -115,41 +168,64 @@ export default function ReviewScreen() {
     }
   }
 
-  // The real payment boundary. Creates (or, on retry, reuses) a real Stripe
-  // PaymentIntent attached to this EXISTING reservation via
-  // create-booking-payment-intent -- the amount charged is always
+  // The real payment boundary. Presents Stripe's native PaymentSheet against a
+  // PaymentIntent created (or, on retry, reused) by create-booking-payment-intent
+  // for this EXISTING reservation -- the amount charged is always
   // reservation.final_price_cents, server-snapshotted at Choose Time & Court
   // (already includes any Flash Deal discount), never recomputed here.
   //
-  // This does NOT present Stripe's PaymentSheet: @stripe/stripe-react-native
-  // cannot be imported anywhere reachable from src/app/ in this dev
-  // environment without breaking the Metro bundle on every available target
-  // (confirmed 2026-08-11 -- see BOOKING_ENGINE_PHASE3_REPORT.md). The real
-  // PaymentSheet hook (useReservationPayment.ts) is written and ready; it
-  // just isn't wired in here yet. Once a real PaymentIntent exists, this
-  // screen is honest about that gap rather than presenting a fake payment UI
-  // or silently skipping to a false "confirmed" state.
+  // The client never declares the reservation confirmed off its own PaymentSheet
+  // result: useReservationPayment polls reservations.status for the
+  // webhook-confirmed state, and anything short of that is reported as "payment
+  // received, still confirming" -- never as a failure. Telling someone their
+  // card payment failed seconds after it succeeded is how you get a duplicate
+  // charge.
   async function handlePay() {
-    if (!reservation || payingIntent) return;
+    if (!reservation || paying) return;
+    setPaymentError(null);
 
-    setPayingIntent(true);
-    try {
-      const result = await createBookingPaymentIntent(reservation.id, attemptId);
-      if (!result.ok) {
-        if (result.code === 'already_confirmed') {
+    const outcome = await payForReservation(reservation.id, attemptId);
+
+    switch (outcome.status) {
+      case 'confirmed':
+        router.push('/booking/confirmation' as never);
+        return;
+
+      case 'succeeded_pending_confirmation':
+        // Stripe captured the money; the webhook just hasn't landed yet. The
+        // confirmation screen reads the payments row directly and shows
+        // "Payment Pending" until it does.
+        Alert.alert(
+          'Payment Received',
+          "We're still confirming your booking. It'll appear in My Bookings in a moment — no need to pay again.",
+          [{ text: 'OK', onPress: () => router.push('/booking/confirmation' as never) }],
+        );
+        return;
+
+      case 'canceled':
+        // The user dismissed PaymentSheet. Not an error and not worth an alert
+        // -- the Pay button is still right there, and the hold is untouched.
+        return;
+
+      case 'failed':
+        setPaymentError(outcome.message);
+        Alert.alert('Payment Failed', `${outcome.message} You have not been charged.`);
+        return;
+
+      case 'error': {
+        if (outcome.code === 'already_confirmed') {
           router.push('/booking/confirmation' as never);
           return;
         }
-        if (result.code === 'no_payment_required') {
+        if (outcome.code === 'no_payment_required') {
           await handleConfirmWithoutPayment();
           return;
         }
-        Alert.alert('Could Not Start Payment', reservationPaymentErrorMessage(result.code));
+        const message = reservationPaymentErrorMessage(outcome.code);
+        setPaymentError(message);
+        Alert.alert('Could Not Start Payment', message);
         return;
       }
-      setPaymentReady({ clientSecret: result.clientSecret, amountCents: result.amountCents });
-    } finally {
-      setPayingIntent(false);
     }
   }
 
@@ -179,9 +255,14 @@ export default function ReviewScreen() {
   const max = reservation.max_players;
   const needed = playersNeeded(currentPlayers, max);
   const hasDeal = reservation.flash_deal_discount_percent != null;
-  const startsAt = selection.startsAt ?? reservation.created_at;
-  const endsAt = selection.endsAt ?? reservation.created_at;
+  // Read the slot from the reservation row, never from bookingStore. The store
+  // is empty after a relaunch, and the old `?? reservation.created_at` fallback
+  // rendered the row's creation timestamp as though it were the booking time —
+  // wrong information, on the screen where the user decides to pay.
+  const { startsAt, endsAt } = parseTstzrange(reservation.time_range as string);
   const { date, time } = formatDateTimeRange(startsAt, endsAt);
+  const holdMsLeft = holdExpiresAt ? new Date(holdExpiresAt).getTime() - nowMs : null;
+  const holdExpired = holdMsLeft != null && holdMsLeft <= 0;
   const alreadyConfirmed = reservation.status === 'confirmed';
   // Free reservations have no payment boundary to cross, so they stay in beta
   // scope regardless of the paid-booking flag. Server-side, whether a charge is
@@ -204,11 +285,11 @@ export default function ReviewScreen() {
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.screenH, paddingBottom: insets.bottom + 32 }}>
         <View style={s.card}>
-          <Row icon="business-outline" label="Facility" value={facility.facilityName ?? '—'} />
+          <Row icon="business-outline" label="Facility" value={names.facility ?? '—'} />
           <Row
             icon={isBallMachine ? 'disc-outline' : 'pickleball' as never}
             label={isBallMachine ? 'Ball Machine' : 'Court'}
-            value={selection.assetName ?? '—'}
+            value={names.asset ?? '—'}
           />
           <Row icon="calendar-outline" label="Date" value={date} />
           <Row icon="time-outline" label="Time" value={time} />
@@ -255,7 +336,32 @@ export default function ReviewScreen() {
           <Text style={s.priceNote}>No taxes or service fees are applied yet.</Text>
         </View>
 
-        {alreadyConfirmed ? (
+        {holdMsLeft != null && !holdExpired && (
+          <View style={s.holdBanner}>
+            <Ionicons name="time-outline" size={15} color={L.gold} />
+            <Text style={s.holdBannerText}>
+              Your hold on this slot expires in {formatCountdown(holdMsLeft)}.
+            </Text>
+          </View>
+        )}
+
+        {holdExpired ? (
+          // The server refuses to start a charge against a lapsed hold
+          // (create-booking-payment-intent returns hold_expired), so offering
+          // Pay here would only produce an error alert. Say so up front.
+          <>
+            <View style={s.paymentErrorCard}>
+              <Ionicons name="alert-circle-outline" size={16} color={colors.danger} />
+              <Text style={s.paymentErrorText}>
+                Your hold expired, so this slot is no longer reserved for you. You have not been
+                charged. Choose a new time to book it.
+              </Text>
+            </View>
+            <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={() => goBack()}>
+              <Text style={s.primaryBtnText}>Choose a New Time</Text>
+            </TouchableOpacity>
+          </>
+        ) : alreadyConfirmed ? (
           <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handleConfirmWithoutPayment} disabled={confirming}>
             {confirming ? <ActivityIndicator size="small" color={L.white} /> : (
               <Text style={s.primaryBtnText}>Continue to Confirmation</Text>
@@ -268,10 +374,11 @@ export default function ReviewScreen() {
             )}
           </TouchableOpacity>
         ) : !paidBookingEnabled ? (
-          // Paid booking is out of beta scope until PaymentSheet is wired
-          // (execution plan 3.1). No CTA here: there is no honest way to take
-          // this payment yet, and confirming without one would be a fake
-          // success state.
+          // PaymentSheet is wired (execution plan 3.1), but paid booking stays
+          // out of beta scope until the flow has been exercised end-to-end on a
+          // device build. No CTA here rather than a real charge nobody has
+          // watched go through. Flip FEATURE_VISIBILITY.paidBooking to
+          // 'included' (and BETA_SCOPE.md with it) once it has.
           <View style={s.paymentNotice}>
             <Ionicons name="lock-closed-outline" size={16} color={L.textSub} />
             <Text style={s.paymentNoticeText}>
@@ -280,33 +387,24 @@ export default function ReviewScreen() {
               been charged. Free courts can still be booked.
             </Text>
           </View>
-        ) : paymentReady ? (
-          <>
-            <View style={s.paymentReadyCard}>
-              <Ionicons name="checkmark-circle-outline" size={18} color={L.success} />
-              <Text style={s.paymentReadyText}>
-                Payment created for {formatCents(paymentReady.amountCents)}. The native payment UI isn&apos;t available in this build (see BOOKING_ENGINE_PHASE3_REPORT.md) — continue in test mode to finish verifying the booking flow.
-              </Text>
-            </View>
-            <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handleConfirmWithoutPayment} disabled={confirming}>
-              {confirming ? <ActivityIndicator size="small" color={L.white} /> : (
-                <Text style={s.primaryBtnText}>Continue in Test Mode</Text>
-              )}
-            </TouchableOpacity>
-          </>
         ) : (
           <>
-            <View style={s.paymentNotice}>
-              <Ionicons name="construct-outline" size={16} color={L.textSub} />
-              <Text style={s.paymentNoticeText}>
-                Payment UI is not live in this build yet. Tapping Pay creates a real Stripe PaymentIntent for the amount above.
-              </Text>
-            </View>
-            <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handlePay} disabled={payingIntent}>
-              {payingIntent ? <ActivityIndicator size="small" color={L.white} /> : (
-                <Text style={s.primaryBtnText}>Pay {formatCents(reservation.final_price_cents)}</Text>
+            {paymentError && (
+              <View style={s.paymentErrorCard}>
+                <Ionicons name="alert-circle-outline" size={16} color={colors.danger} />
+                <Text style={s.paymentErrorText}>{paymentError}</Text>
+              </View>
+            )}
+            <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handlePay} disabled={paying}>
+              {paying ? <ActivityIndicator size="small" color={L.white} /> : (
+                <Text style={s.primaryBtnText}>
+                  {paymentError ? 'Try Again' : `Pay ${formatCents(reservation.final_price_cents)}`}
+                </Text>
               )}
             </TouchableOpacity>
+            <Text style={s.paymentFootnote}>
+              Payments are processed by Stripe. Your booking is confirmed once the payment clears.
+            </Text>
           </>
         )}
       </ScrollView>
@@ -363,11 +461,19 @@ const s = StyleSheet.create({
   },
   paymentNoticeText: { flex: 1, color: L.textSub, fontSize: 12, fontWeight: '500', lineHeight: 17 },
 
-  paymentReadyCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: colors.successBg, borderRadius: radius.card, padding: spacing.md, marginTop: spacing.md,
+  holdBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: L.goldBg, borderRadius: radius.card,
+    paddingHorizontal: spacing.md, paddingVertical: 10, marginTop: spacing.md,
   },
-  paymentReadyText: { flex: 1, color: L.text, fontSize: 12, fontWeight: '500', lineHeight: 17 },
+  holdBannerText: { flex: 1, color: L.text, fontSize: 12, fontWeight: '600' },
+
+  paymentErrorCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: colors.dangerBg, borderRadius: radius.card, padding: spacing.md, marginTop: spacing.md,
+  },
+  paymentErrorText: { flex: 1, color: L.text, fontSize: 12, fontWeight: '500', lineHeight: 17 },
+  paymentFootnote: { color: L.textSub, fontSize: 11, fontWeight: '500', textAlign: 'center', marginTop: spacing.md },
 
   primaryBtn: { backgroundColor: L.navy, borderRadius: radius.button, paddingVertical: 16, alignItems: 'center', marginTop: spacing.xl },
   primaryBtnText: { color: L.white, fontSize: 15, fontWeight: '800' },

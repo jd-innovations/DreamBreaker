@@ -2,16 +2,17 @@ import { supabase } from '@/lib/supabase';
 import { fetchReservationById } from '@/lib/supabase/reservations';
 
 // Booking Engine Phase 3A. Deliberately Stripe-SDK-free -- this file must
-// never import @stripe/stripe-react-native (directly or transitively).
-// Confirmed 2026-08-11: importing that package anywhere reachable from
-// src/app/ breaks Expo Router's route-manifest bundle on BOTH available
-// targets in this dev environment (web: "Importing react-native internals
-// is not supported on web" via a transitive ReactFabric import in its
-// helpers.js; Expo Go: "Unable to resolve module @stripe/stripe-react-native").
-// See BOOKING_ENGINE_PHASE3_REPORT.md. useReservationPayment.ts (the actual
-// PaymentSheet hook) imports the functions below rather than duplicating
-// them, but is itself only safe to import from a custom Expo dev client
-// build -- not from any screen under src/app/ in this environment.
+// never import @stripe/stripe-react-native (directly or transitively), so
+// that server-side payment lookups (fetchReservationPayment and friends)
+// stay usable from any target.
+//
+// The old restriction that nothing under src/app/ could reach the Stripe SDK
+// was web-bundler-specific: Metro's web target refuses
+// @stripe/stripe-react-native because of a transitive ReactFabric import.
+// That is still true, and the web target still cannot render the booking
+// payment flow. It no longer constrains the app, which runs on a custom Expo
+// dev client / device build -- useReservationPayment.ts is wired into
+// booking/review.tsx as of Phase 3.1.
 
 export const RESERVATION_PAYMENT_ERROR_MESSAGES: Record<string, string> = {
   not_authenticated: 'Please sign in to pay for this reservation.',
@@ -64,21 +65,43 @@ export async function createBookingPaymentIntent(
   return { ok: true, clientSecret: data.clientSecret, amountCents: data.amountCents };
 }
 
-// Polls reservations.status for the webhook-confirmed 'confirmed' state.
+// How long to wait for the webhook to reflect a payment before handing the
+// user back a "still confirming" message. Matches the window
+// useTournamentEntryPayment.ts arrived at the hard way: measured production
+// latency from PaymentIntent creation to webhook finalization has been ~22s,
+// and the poll only starts once PaymentSheet closes. The previous 5 x 1500ms
+// (7.5s) window here would have expired on essentially every real payment.
+const CONFIRMATION_TIMEOUT_MS = 30_000;
+
+// Polls reservations.status for the webhook-confirmed 'confirmed' state, with
+// backoff so a slow confirmation doesn't hammer the API.
+//
 // Never used to make the client itself declare the reservation finalized --
 // see the callers' own comments for the "do not claim finalized from the
-// client" contract this exists to support.
+// client" contract this exists to support. A false return means ONLY "not
+// visible yet", never "the payment failed": Stripe has already captured the
+// money by the time this runs, and the webhook is authoritative.
 export async function pollForReservationConfirmation(
   reservationId: string,
-  attempts = 5,
-  intervalMs = 1500,
+  timeoutMs = CONFIRMATION_TIMEOUT_MS,
 ): Promise<boolean> {
-  for (let i = 0; i < attempts; i++) {
+  const isConfirmed = async () => {
     const res = await fetchReservationById(reservationId).catch(() => null);
-    if (res?.status === 'confirmed') return true;
-    if (i < attempts - 1) await new Promise(resolve => setTimeout(resolve, intervalMs));
+    return res?.status === 'confirmed';
+  };
+
+  const deadline = Date.now() + timeoutMs;
+  let delay = 750;
+
+  while (Date.now() < deadline) {
+    if (await isConfirmed()) return true;
+    await new Promise(resolve => setTimeout(resolve, delay));
+    delay = Math.min(Math.round(delay * 1.4), 4000);
   }
-  return false;
+
+  // One last look after the final wait, so we never report "not yet" on a
+  // result that arrived during the sleep.
+  return isConfirmed();
 }
 
 // ── Payment status lookup (for Review, Confirmation, My Bookings, Game Status) ─

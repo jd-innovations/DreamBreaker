@@ -1,5 +1,13 @@
 # Pickleballapp Post-Native / Pre-TestFlight Gap Audit
 
+> **Status note added 2026-08-21.** This audit is a dated record; its findings are
+> preserved verbatim rather than rewritten. Where an item has since been resolved,
+> the Status cell is marked RESOLVED with a date and the original Finding text is
+> left intact. Live status lives in `TODO1.1_EXECUTION_PLAN.md`.
+>
+> Resolved since this audit ran: **Booking payment** (execution plan 3.1 —
+> PaymentSheet wired, test-mode path deleted).
+
 ## Executive Summary
 
 This is a fresh read-only repository audit of DreamBreaker / pickleballapp after the native capability phases. Current code has materially advanced since `NATIVE_CAPABILITIES_AUDIT.md`: push notifications, haptics, Universal Links, QR scanning, tournament QR check-in, native calendar event creation, Stripe provider wiring, and Apple Sign-In code/config now exist in the repo.
@@ -19,7 +27,7 @@ READY FOR TESTFLIGHT WITH KNOWN GAPS
 | Supabase migrations | RISK | P0 - TestFlight/release blocker | Phase reports document local and production migration histories diverged; current repo contains direct-production SQL workarounds. | Freeze production `db push`; reconcile history before any schema deploy. |
 | Account deletion | GAP | P1 - fix before App Store submission | No in-app account deletion UI or backend `auth.users` deletion path found. | Implement deletion/anonymization flow before App Review. |
 | Apple Sign-In onboarding | GAP | P0 - TestFlight/release blocker | Standalone Apple Sign-In exists, but onboarding `create-account` Apple button does not call it and finalize still errors that Apple is unavailable. | Fix before testing onboarding with Apple. |
-| Booking payment | GAP | P0 - TestFlight/release blocker | Booking review still creates a PaymentIntent then offers "Continue in Test Mode"; no native PaymentSheet call in that route. | Wire `useReservationPayment()` or hide paid booking from TestFlight. |
+| Booking payment | RESOLVED 2026-08-21 | ~~P0 - TestFlight/release blocker~~ | Booking review still creates a PaymentIntent then offers "Continue in Test Mode"; no native PaymentSheet call in that route. | Done via execution plan 3.1: `useReservationPayment()` is wired into `booking/review.tsx`, PaymentSheet is presented, the test-mode branch is deleted, and canceled/failed/pending-webhook/confirmed states are explicit. `paidBooking` stays `hidden` until a real card payment is run on a device build. |
 | Edge Function config | GAP | P1 - fix before App Store submission | `create-booking-payment-intent` exists in `supabase/functions` but has no `[functions.create-booking-payment-intent]` entry in `supabase/config.toml`. | Add config entry during implementation phase. |
 | Secrets in SQL | RISK | P1 - fix before App Store submission | Bearer JWT literals exist in baseline/transactional-email migrations. | Rotate/review credentials and replace hard-coded SQL auth where possible. |
 | Universal Links | NEEDS VERIFICATION | P1 - fix before App Store submission | AASA route depends on `APPLE_TEAM_ID`; Phase 4 documented apex redirect risk. | Verify live AASA returns 200 without redirect and correct appID. |
@@ -513,7 +521,7 @@ Recommendation:
 Fact found in repository:
 
 - Dev routes registered: `onboarding-preview`, `design-lab`, `dev-qr-scan` (`_layout.tsx:66-69`).
-- Booking paid flow has visible "Payment UI is not live" and "Continue in Test Mode" (`booking/review.tsx:253-264`, `:269-274`).
+- ~~Booking paid flow has visible "Payment UI is not live" and "Continue in Test Mode" (`booking/review.tsx:253-264`, `:269-274`).~~ **Removed 2026-08-21 (execution plan 3.1)** — both notices and the test-mode CTA are deleted; the line references no longer resolve. The screen now presents the real PaymentSheet, and priced bookings behind a disabled `paidBooking` flag render a no-CTA notice.
 - Wallet redemption is "Coming Soon" (`wallet/[id].tsx:220`; `WalletCard.tsx:118`) and coach voucher redemption is intentionally partial.
 - Multiple local/demo/mock stores remain for community/round-robin/mini-tournament/partner flows.
 - Web public app uses mock fallback in several pages; separate from mobile TestFlight but relevant to Universal Link fallback credibility.

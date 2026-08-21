@@ -1,5 +1,14 @@
 # BOOKING_ENGINE_PHASE3_REPORT.md
 
+> **SUPERSEDED 2026-08-21 — do not action the unblock steps below.** Execution-plan
+> item 3.1 completed the wiring this report was waiting on: `useReservationPayment()`
+> is imported by `booking/review.tsx`, PaymentSheet is presented, and the
+> "Continue in Test Mode" branch is deleted. Both blockers described below have
+> also been re-tested and neither holds as written — see "What changed since this
+> report" immediately after the blocker section. The findings are preserved as a
+> record of what was true on 2026-08-11, not as outstanding work. Current status
+> lives in `TODO1.1_EXECUTION_PLAN.md` §3.1 Completion Notes.
+
 > Status: Phase 3A complete (PaymentIntent creation + finalize logic, real and deployed) — client-side PaymentSheet code is written but **not wired into any screen**, blocked by an environment constraint discovered this phase. Phase 3B (webhook-based confirmation) remains blocked as expected, per explicit scope.
 > Source of truth: [BOOKING_ENGINE_PHASE1_REPORT.md](BOOKING_ENGINE_PHASE1_REPORT.md), [BOOKING_ENGINE_PHASE2_REPORT.md](BOOKING_ENGINE_PHASE2_REPORT.md)
 > Applied to: Supabase project `fbzetvkbhneptvfruilw` ("dreambreaker-pb")
@@ -13,6 +22,32 @@
 2. **PaymentSheet / `@stripe/stripe-react-native` — new, discovered this phase.** Importing that package anywhere reachable from `apps/mobile/src/app/` breaks the Metro bundle on **both** targets available in this dev environment — not just Expo Go. Confirmed by direct test (see "What actually happened" below). This is a separate, harder blocker than the webhook one: there is no way to visually exercise Stripe's native payment UI in this session at all, on any target.
 
 Both are infrastructure/environment gaps, not code defects. Everything on the server side (PaymentIntent creation, pricing, finalize logic) is real, deployed, and verified. The one thing genuinely missing is the mobile screen actually presenting Stripe's UI.
+
+## What changed since this report (verified 2026-08-21)
+
+Both blockers above were re-tested directly. Neither is accurate any more:
+
+1. **Webhook (blocker 1) — resolved, and partly wrong when written.**
+   `POST https://pickleballapp.app/api/stripe/webhooks` returns
+   `400 {"error":"Missing stripe-signature header"}`, i.e. the signature check
+   fires — so `STRIPE_WEBHOOK_SECRET` **is** set. `stripe_webhook_events` holds
+   16 `payment_intent.succeeded` rows, all processed, and 15 payments have
+   reached `succeeded` in production. Vercel SSO protection is real
+   (`all_except_custom_domains`) but the API route answers regardless; point
+   Stripe at the custom domain to be safe.
+
+2. **PaymentSheet (blocker 2) — narrower than described.** The constraint is
+   web-target-specific: Metro's *web* bundler still refuses
+   `@stripe/stripe-react-native` over a transitive `ReactFabric` import. It never
+   applied to a dev-client device build, which is how the app now runs. Steps 1–6
+   below are all done: `StripeProvider` wraps the tree in `_layout.tsx`, the
+   config plugin is in `app.config.js`, `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` is
+   set in `.env` and in all three EAS environments, and `review.tsx` branches on
+   the full `PaymentOutcome`.
+
+What genuinely remains: `finalizeReservationPayment()` has still never executed
+in production — every succeeded payment to date is a tournament one. That is what
+the pending device test will exercise for the first time.
 
 ---
 
@@ -61,8 +96,8 @@ I reverted both files immediately (confirmed via `curl` that the home route retu
 2. Install it on a device or simulator (not Expo Go).
 3. In `apps/mobile/src/app/_layout.tsx`, re-add `import { StripeProvider } from '@stripe/stripe-react-native'` and `import { STRIPE_PUBLISHABLE_KEY } from '@/lib/payments/stripeConfig'`, and wrap the app in `<StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY} merchantIdentifier="...">` (see the git history of this file for the exact diff I wrote and reverted — it's correct, just untestable here).
 4. In `apps/mobile/app.config.js`, re-add the `['@stripe/stripe-react-native', { merchantIdentifier: '...' }]` plugin entry (a real merchant ID, not the placeholder I used).
-5. Set `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` in `apps/mobile/.env` (currently unset).
-6. In `booking/review.tsx`, replace the `handlePay` implementation's "create intent, then show a static Test Mode message" behavior with a call to `useReservationPayment().payForReservation(reservation.id, attemptId)`, and branch the UI on its returned `PaymentOutcome` (`confirmed` / `succeeded_pending_confirmation` / `canceled` / `failed` / `error`) instead of the current `paymentReady` state.
+5. ~~Set `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` in `apps/mobile/.env` (currently unset).~~ **Done** — set locally and in the EAS `development`, `preview`, and `production` environments (2026-08-21).
+6. **Done (3.1, 2026-08-21).** In `booking/review.tsx`, replace the `handlePay` implementation's "create intent, then show a static Test Mode message" behavior with a call to `useReservationPayment().payForReservation(reservation.id, attemptId)`, and branch the UI on its returned `PaymentOutcome` (`confirmed` / `succeeded_pending_confirmation` / `canceled` / `failed` / `error`) instead of the current `paymentReady` state.
 7. Test on the real device/simulator. Do not attempt this on `expo start --web` or Expo Go again — both are confirmed broken.
 
 ---

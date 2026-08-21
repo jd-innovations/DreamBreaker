@@ -1881,6 +1881,48 @@ Goal: no user can lose money or receive false purchase state.
 - Done when:
   - Booking payment is real end to end or paid booking is hidden from beta.
 
+### Completion Notes - 3.1
+
+- Status: **Code complete, device verification outstanding.** Implemented
+  2026-08-21. The flag stays `hidden` until a real card payment has been run on
+  a dev-client device build.
+
+- The documented blocker was web-target-specific and no longer binds. Metro's
+  web bundler still refuses `@stripe/stripe-react-native` (transitive
+  `ReactFabric` import), so `expo start --web` cannot render this flow — but the
+  app runs on a custom dev client, `StripeProvider` wraps the tree in
+  `_layout.tsx`, and the config plugin is in `app.config.js`.
+
+- Files changed:
+  - `apps/mobile/src/app/booking/review.tsx` — `useReservationPayment()` is
+    wired in. `handlePay` now presents PaymentSheet and branches on all four
+    outcomes: `confirmed` → confirmation screen; `succeeded_pending_confirmation`
+    → "Payment Received, still confirming" alert then the confirmation screen
+    (never a failure message — the money is real); `canceled` → silent return,
+    hold untouched, Pay button still available; `failed` → alert plus an inline
+    error card and a "Try Again" CTA. Edge-function error codes keep their old
+    handling (`already_confirmed` → confirmation, `no_payment_required` → the
+    free path, everything else → `reservationPaymentErrorMessage`).
+  - The "Continue in Test Mode" branch and its `paymentReady` state are deleted.
+    `handleConfirmWithoutPayment()` survives as the no-charge path only.
+  - `apps/mobile/src/lib/payments/reservationPaymentIntent.ts` —
+    `pollForReservationConfirmation()` widened from 5 × 1500ms (7.5s) to a 30s
+    deadline with backoff, matching the window `useTournamentEntryPayment.ts`
+    already arrived at. Measured production webhook latency is ~22s, so the old
+    window would have reported "still confirming" on essentially every real
+    payment.
+  - `apps/mobile/src/lib/payments/useReservationPayment.ts` — header comment
+    corrected; it is imported by a screen now.
+
+- Not done, and the reason: none of the Verification list has been exercised.
+  Real card payment, cancel behavior, failed-payment non-confirmation, webhook
+  confirmation, and kill-during-payment recovery all need a device build. That
+  build should also carry the Apple sign-in fix from step 20.
+
+- Done when (from the item): "real end to end or paid booking is hidden from
+  beta." Both halves currently hold — the implementation is real, and the flag
+  keeps it out of production until it has been watched take money.
+
 ### 3.2 Verify Stripe Webhooks in Production
 
 - Issue: Webhook code exists, but production reachability/secrets must be verified.

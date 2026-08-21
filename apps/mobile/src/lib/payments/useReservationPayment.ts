@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { useStripe } from '@stripe/stripe-react-native';
 import { createBookingPaymentIntent, pollForReservationConfirmation } from './reservationPaymentIntent';
 
-// Booking Engine Phase 3A — the real PaymentSheet hook. NOT currently
-// imported by any screen under src/app/: doing so breaks the Metro bundle in
-// this dev environment (see reservationPaymentIntent.ts's header comment and
-// BOOKING_ENGINE_PHASE3_REPORT.md). This file is code-complete and ready to
-// wire into booking/review.tsx the moment the app runs via a custom Expo dev
-// client on a real device/simulator instead.
+// Booking Engine Phase 3A — the real PaymentSheet hook, wired into
+// booking/review.tsx as of Phase 3.1. Importing this (and therefore
+// @stripe/stripe-react-native) from a screen means the booking flow only
+// bundles on native targets; Metro's web bundler still refuses the Stripe SDK
+// over a transitive ReactFabric import. Verify on a dev-client device build,
+// not `expo start --web`.
 //
-// Follows the contract documented in the (stubbed) useTournamentEntryPayment.ts:
+// Follows the same contract as useTournamentEntryPayment.ts:
 // the client NEVER declares a reservation production-confirmed off its own
 // PaymentSheet result. It only creates the PaymentIntent, presents Stripe's
 // native PaymentSheet, then polls the server for the webhook-confirmed state
