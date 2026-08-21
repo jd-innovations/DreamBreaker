@@ -51,9 +51,9 @@ app name in the document prose is "Pickleball App".
 
 Still outstanding before submission:
 
-1. **Governing law**, Terms §16, still reads `[GOVERNING LAW JURISDICTION]` —
-   the one remaining placeholder. Florida is the obvious answer given the
-   entity, but it is a legal choice; left for the review below.
+1. ~~Governing law~~ — set 2026-08-20 to **the State of Florida, United
+   States**, matching the entity's home state. Still subject to the legal
+   review below. **No placeholders remain in the documents.**
 2. **`privacy@pickleballapp.app` does not exist.** `PRIVACY_EMAIL` in
    `web/src/lib/legal.ts` deliberately aliases `SUPPORT_EMAIL` so the policy
    does not promise a 30-day response at an unmonitored address. Flip it back

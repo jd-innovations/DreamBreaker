@@ -303,9 +303,9 @@ export default function TermsPage() {
       <Section id="general" heading="16. General">
         <OL>
           <li>
-            <Strong>Governing law.</Strong> These Terms are governed by the laws of{" "}
-            {"[GOVERNING LAW JURISDICTION]"}, without regard to conflict-of-laws rules, and the
-            courts of that jurisdiction have exclusive jurisdiction over disputes.
+            <Strong>Governing law.</Strong> These Terms are governed by the laws of the State
+            of Florida, United States, without regard to conflict-of-laws rules, and the courts
+            of that jurisdiction have exclusive jurisdiction over disputes.
           </li>
           <li>
             <Strong>Severability.</Strong> If any provision is unenforceable, the rest remains in

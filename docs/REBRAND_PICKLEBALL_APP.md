@@ -78,8 +78,8 @@ claim links in their inboxes it is not.
 1. **Privacy contact.** The privacy policy promises a `privacy@` address and a
    30-day response. Either create `privacy@pickleballapp.app` or collapse it to
    `support@pickleballapp.app`.
-2. **Governing law**, Terms §16 — still `[GOVERNING LAW JURISDICTION]`. Florida
-   is the obvious answer given the entity, but leave it for legal review.
+2. ~~**Governing law**, Terms §16~~ — **DONE 2026-08-20**: the State of Florida,
+   United States. Still subject to legal review.
 3. **The logo lockup.** `apps/mobile/src/app/(tabs)/landing.tsx:219` renders
    `DREAMBREAKER` with a separately-styled `PB` suffix (`styles.logoPB`), and
    line 311 does the same for `Join DreamBreakerPB!`. That is a two-part layout,

@@ -1,8 +1,10 @@
 # Rebrand runbook — Pickleball App
 
-Ordered steps to finish the rebrand. The repo-side work (Steps 1–3 and 5 of
-`docs/REBRAND_PICKLEBALL_APP.md`) is already done and sitting uncommitted on
-`feature/expo-mobile-foundation`; everything below is what remains.
+Ordered steps to finish the rebrand.
+
+**Progress: Steps 1–7 and 16 are done as of 2026-08-20.** The legal/support
+pages are live on `pickleballapp.app`, the web app serves the new brand and
+bundle id, and both edge functions are redeployed. Step 8 is next.
 
 **Ownership:** 🧑 = you, in a console I cannot reach. 🤖 = me, on request.
 
@@ -13,7 +15,7 @@ Step 5 must precede Step 6. The rest can slip without harm.
 
 ## Phase A — get the code out of the working tree
 
-### 1. 🤖 Review the diff, then commit
+### 1. ✅ DONE — reviewed and committed
 
 81 changed paths across two apps plus Supabase. Worth reading the diff before it
 becomes history:
@@ -31,7 +33,7 @@ Then a commit per concern, not one giant one:
   migration
 - `docs: record the rebrand plan and runbook`
 
-### 2. 🧑 Push and open the PR
+### 2. ✅ DONE — pushed (no PR needed; see Step 5)
 
 ```bash
 git push -u origin feature/expo-mobile-foundation
@@ -45,7 +47,7 @@ confusing; landing them in order avoids explaining it later.
 
 ## Phase B — the blocking console change
 
-### 3. 🧑 Add the new scheme to the Supabase Auth redirect allow-list
+### 3. ✅ DONE — new scheme added to the Auth redirect allow-list
 
 **This blocks every mobile build from here on.** The repo now emits
 `pickleballapp://`; a build made before this lands fails OAuth sign-in and
@@ -70,7 +72,7 @@ new one. Remove them at Step 15.
 
 ## Phase C — web and backend
 
-### 4. 🧑 Set the environment variables
+### 4. ✅ DONE — environment variables set
 
 Both currently fall back to a hardcoded value in code. The fallbacks are now
 correct, but relying on them is what item 2.3 exists to prevent.
@@ -80,40 +82,51 @@ correct, but relying on them is what item 2.3 exists to prevent.
 - **Supabase** → Edge Functions → Secrets:
   `PUBLIC_APP_URL = https://pickleballapp.app`
 
-### 5. 🧑 Merge and deploy the web app
+### 5. ✅ DONE — promoted to production
 
-Merge the PR to `main`. Vercel deploys via git integration, so the merge is the
-deploy.
+**Correction to the original plan: this project does not deploy from `main`.**
+Every deployment in its history is built from `feature/expo-mobile-foundation`,
+and production releases are *manual promotions* of preview builds. There is no
+merge step, and `main` deploys nothing.
 
-This is the step that makes the four legal/support routes stop returning 404.
-They have never resolved — item 1.4 shipped them into a working tree, not to
-production.
+Vercel -> *JD's projects* -> **dream-breaker-fv6x** -> Deployments -> find the
+build -> the ... menu -> **Promote to Production**.
 
-### 6. 🧑 Verify the web deploy
+Promoted `9036d65` on 2026-08-20 (`dpl_DmibGFHCHkyfg7ZhoP8LC4ZibcmR`, 36s).
+Production had been serving `756ebbac` from 08-18, which predates item 1.4
+entirely — that is why the four routes had never resolved.
+
+Promotion rebuilt rather than aliasing, so it picked up the Step 4 environment
+variables. The `npm warn allow-scripts` lines for `sharp` and `unrs-resolver`
+are benign: both ship prebuilt platform binaries as optional dependencies, so
+neither needs its install script.
+
+### 6. ✅ DONE — web deploy verified
+
+**Check content, not status codes.** A protected Vercel preview returns `200`
+with a login page, which reads as a pass and is not one.
 
 ```bash
 for p in /legal/terms /legal/privacy /legal/delete-account /help; do
   printf "%-26s " "$p"
-  curl -s -o /dev/null -w "%{http_code}\n" -L "https://pickleballapp.app$p"
+  curl -s -L "https://pickleballapp.app$p"     | grep -o -m1 -E "TERMS OF SERVICE|PRIVACY POLICY|DELETE YOUR ACCOUNT|SUPPORT"
 done
 curl -s https://pickleballapp.app/.well-known/apple-app-site-association
 ```
 
-Expect four `200`s, and an AASA naming **`app.pickleballapp`**. If the AASA still
-says `com.dreambreakerpb.app`, the deploy did not pick up the change — stop and
-fix before building the app, or universal links will break.
+Result 2026-08-20: four `200`s with the right headings; AASA reads
+`ZSH27U747N.app.pickleballapp`; homepage title and footer show Pickleball App;
+zero old-brand strings served.
 
-### 7. 🧑 Redeploy the two edge functions
+### 7. ✅ DONE — edge functions redeployed
 
-Neither redeploys automatically on a git merge.
+`send-transactional-email` v8 and `waitlist-sweeper` v13, both ACTIVE as of
+2026-08-20. Neither redeploys with the web app.
 
 ```bash
 supabase functions deploy send-transactional-email
 supabase functions deploy waitlist-sweeper
 ```
-
-`send-transactional-email` carries the sender display name; `waitlist-sweeper`
-carries the `APP_URL` fallback.
 
 ---
 
@@ -218,11 +231,11 @@ Once a build with the new scheme is installed and verified, delete the
 
 ## Phase F — still open, not blocking
 
-### 16. 🧑 Decide the governing-law jurisdiction
+### 16. ✅ DONE — governing-law jurisdiction
 
-Terms §16 still reads `[GOVERNING LAW JURISDICTION]` — the last placeholder in
-the documents. Florida is the obvious answer given the entity is a Bradenton
-LLC, but it is a legal choice, so it belongs with Step 18.
+Terms §16 now reads **the State of Florida, United States**, matching the
+entity's home state. No placeholders remain in the documents. Still subject to
+the legal review in Step 18.
 
 ### 17. 🧑 Decide on a privacy mailbox
 
