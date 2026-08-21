@@ -2,9 +2,13 @@
 
 Ordered steps to finish the rebrand.
 
-**Progress: Steps 1–7 and 16 are done as of 2026-08-20.** The legal/support
+**Progress: Steps 1–9 and 16 are done as of 2026-08-20.** The legal/support
 pages are live on `pickleballapp.app`, the web app serves the new brand and
-bundle id, and both edge functions are redeployed. Step 8 is next.
+bundle id, both edge functions are redeployed, and the production data is
+rebranded with migration history in parity. **Step 10 (Stripe) is next.**
+
+What remains is Stripe's business name, the optional EAS rename, icon assets,
+and a mobile build — nothing blocking, and nothing that touches the web app.
 
 **Ownership:** 🧑 = you, in a console I cannot reach. 🤖 = me, on request.
 
@@ -132,37 +136,35 @@ supabase functions deploy waitlist-sweeper
 
 ## Phase D — production data
 
-### 8. 🧑 Apply the rebrand migration
+### 8. ✅ DONE — rebrand migration applied
 
-`supabase/migrations_pending/20260820000000_rebrand_pickleball_app.sql`.
+Applied 2026-08-20 to `fbzetvkbhneptvfruilw`.
 
-Held out of the replay path per item 2.1, so `db push` will not pick it up.
-Apply it deliberately — SQL editor, or MCP `apply_migration` — then record it:
+**Applied with `execute_sql`, not `apply_migration`.** The MCP
+`apply_migration` tool assigns its own version number — that is exactly how
+2.1's 15 alias pairs were created. Running the SQL directly and then recording
+it under the chosen version keeps repo and production history identical.
+
+Order matters: `migration repair` globs `supabase/migrations/`, so the file has
+to be moved out of `migrations_pending/` *before* the repair, not after.
 
 ```bash
+git mv supabase/migrations_pending/20260820000000_rebrand_pickleball_app.sql        supabase/migrations/
 supabase migration repair --status applied 20260820000000
 ```
 
-Then move the file from `supabase/migrations_pending/` into
-`supabase/migrations/` and commit, so the repo keeps mirroring production.
+`supabase migration list --linked` now shows **38 migrations, local == remote on
+every row.** Item 2.1's parity is intact.
 
-It touches 8 `email_templates` rows, 1 `wallet_partners` row, and replaces
-`create_personal_match_claim_link` with a body verified byte-identical to
-production's except the scheme literal (md5 `7e10f0d70b3a92267dcdb229f517b337`).
-It is idempotent — running it twice is a no-op.
+### 9. ✅ DONE — migration verified
 
-### 9. 🧑 Verify the migration
-
-The three queries are at the bottom of the migration file:
-
-```sql
-select count(*) from public.email_templates
- where subject like '%DreamBreaker%' or html_body like '%DreamBreaker%';  -- 0
-select name, description from public.wallet_partners
- where slug = 'premium-membership';                                       -- Pickleball App
-select prosrc like '%pickleballapp://claim/%'
-  from pg_proc where proname = 'create_personal_match_claim_link';        -- t
-```
+| Check | Result |
+| --- | --- |
+| `email_templates` still carrying the old brand | **0** |
+| `email_templates` now branded Pickleball App | 6 |
+| `wallet_partners` premium-membership name | **Pickleball App** |
+| Claim function emits `pickleballapp://` | **true** |
+| Claim function still emits `dreambreaker://` | **false** |
 
 ### 10. 🧑 Update Stripe
 
