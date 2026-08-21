@@ -105,11 +105,16 @@ that returns 422 and refuses to send rather than mailing a literal
 `{{tournament_name}}` — **is live in production right now, uncommitted.** That
 was an accident of a rebrand step, not a decision. It needs committing, and the
 trigger callers should be checked for missing variables before real traffic
-reaches it. `public.email_log` was empty for that window, so nothing has been
-dropped yet.
+reaches it. `public.email_log` cannot answer whether anything was dropped:
+the table exists in the baseline with the right shape, but **nothing anywhere
+writes to it** — it appears only in the baseline schema, the two generated
+`database.types.ts` files, and this README. It is always empty, so its
+emptiness is not evidence. The edge function logs are the only record for that
+window. Giving it a writer is tracked as Phase 4 in
+`EMAIL_NOTIFICATIONS_EXECUTION_PLAN.md`.
 
 **3. Migration history parity is currently exact and worth preserving.**
-`supabase migration list --linked` returns 38 rows with `local` == `remote` on
+`supabase migration list --linked` returns 39 rows with `local` == `remote` on
 every one. Two habits keep it that way:
 
 - **Never apply through MCP `apply_migration`.** It assigns its own version
