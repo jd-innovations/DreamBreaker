@@ -106,8 +106,10 @@ export function renderEmail(opts: EmailShellOptions): string {
   // The alt text is coloured white and kept small on purpose: these sit on the
   // navy footer, so unstyled alt would fall back to dark-on-navy and disappear
   // in any inbox that blocks images.
-  const socials = SOCIALS.map((s) =>
-    `<td style="padding-left:10px;"><a href="${safeUrl(s.url)}"><img src="${A}/${s.file}" width="32" height="32" alt="${s.name}" style="display:block;border:0;width:32px;height:32px;color:${BRAND.white};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;font-weight:bold;" /></a></td>`
+  const socials = SOCIALS.map((s, i) =>
+    // No left padding on the first icon: keeps the group flush right on desktop
+    // and flush left once the footer stacks on a phone, with no CSS either way.
+    `<td style="${i === 0 ? "" : "padding-left:10px;"}"><a href="${safeUrl(s.url)}"><img src="${A}/${s.file}" width="32" height="32" alt="${s.name}" style="display:block;border:0;width:32px;height:32px;color:${BRAND.white};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;font-weight:bold;" /></a></td>`
   ).join("");
 
   const unsub = opts.unsubscribeUrl
@@ -137,7 +139,21 @@ export function renderEmail(opts: EmailShellOptions): string {
     .dbp-card { background:${BRAND.darkCard} !important; }
     .dbp-body, .dbp-body p, .dbp-body strong, .dbp-body h2 { color:${BRAND.textDark} !important; }
     .dbp-body a { color:${BRAND.gold} !important; }
-    .dbp-muted { color:${BRAND.mutedDark} !important; }
+  }
+  /* Phones. The card is fluid up to 600px rather than a fixed 600px table: a
+     hard width made iOS Mail shrink the whole message to fit instead of
+     reflowing it, which is what made the type unreadably small.
+     Outlook on Windows ignores media queries AND max-width, so it is pinned to
+     600px by the MSO ghost table below instead. */
+  @media only screen and (max-width:600px) {
+    .dbp-hpad   { padding-left:20px !important; padding-right:20px !important; }
+    .dbp-header { padding:28px 20px !important; }
+    .dbp-footer { padding:26px 20px 22px !important; }
+    .dbp-logo   { width:250px !important; }
+    .dbp-flogo  { width:150px !important; }
+    /* Footer's two-column rows stack; side by side they crush below ~380px. */
+    .dbp-stack     { display:block !important; width:100% !important; text-align:left !important; }
+    .dbp-stack-gap { padding-top:14px !important; }
   }
 </style>
 </head>
@@ -147,17 +163,18 @@ export function renderEmail(opts: EmailShellOptions): string {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="dbp-page" style="background:${BRAND.page};">
   <tr><td align="center" style="padding:24px 12px;">
 
-    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="dbp-card" style="width:600px;max-width:600px;background:${BRAND.white};">
+    <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="dbp-card" style="width:100%;max-width:600px;margin:0 auto;background:${BRAND.white};">
 
       <!-- Header A -->
-      <tr><td align="center" bgcolor="${BRAND.navy}" style="background:${BRAND.navy};padding:40px 32px;">
-        <img src="${A}/logo-light-v1.png" width="380" height="71" alt="Pickleball App"
+      <tr><td align="center" class="dbp-header" bgcolor="${BRAND.navy}" style="background:${BRAND.navy};padding:40px 32px;">
+        <img src="${A}/logo-light-v1.png" width="380" height="71" alt="Pickleball App" class="dbp-logo"
              style="display:block;border:0;width:380px;max-width:100%;height:auto;color:${BRAND.white};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:22px;font-weight:bold;" />
       </td></tr>
       <tr><td height="3" bgcolor="${BRAND.gold}" style="height:3px;background:${BRAND.gold};font-size:0;line-height:0;">&nbsp;</td></tr>
 
       <!-- Body -->
-      <tr><td class="dbp-body" style="padding:36px 32px 40px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:${BRAND.textLight};">
+      <tr><td class="dbp-body dbp-hpad" style="padding:36px 32px 40px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:${BRAND.textLight};">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr><td class="dbp-body" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:${BRAND.textLight};">${opts.bodyHtml}</td></tr>${cta}
         </table>
@@ -165,17 +182,17 @@ export function renderEmail(opts: EmailShellOptions): string {
 
       <!-- Footer B -->
       <tr><td height="3" bgcolor="${BRAND.gold}" style="height:3px;background:${BRAND.gold};font-size:0;line-height:0;">&nbsp;</td></tr>
-      <tr><td bgcolor="${BRAND.navy}" style="background:${BRAND.navy};padding:30px 32px 26px;">
+      <tr><td class="dbp-footer" bgcolor="${BRAND.navy}" style="background:${BRAND.navy};padding:30px 32px 26px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
 
           <tr>
-            <td align="left" valign="top">
-              <img src="${A}/logo-light-v1.png" width="168" height="31" alt="Pickleball App"
+            <td align="left" valign="top" class="dbp-stack">
+              <img src="${A}/logo-light-v1.png" width="168" height="31" alt="Pickleball App" class="dbp-flogo"
                    style="display:block;border:0;width:168px;height:auto;color:${BRAND.white};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:bold;" />
               <div style="padding-top:9px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;color:${BRAND.mutedDark};">${TAGLINE}</div>
             </td>
-            <td align="right" valign="top">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>${socials}</tr></table>
+            <td align="right" valign="top" class="dbp-stack dbp-stack-gap">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="left"><tr>${socials}</tr></table>
             </td>
           </tr>
 
@@ -184,10 +201,10 @@ export function renderEmail(opts: EmailShellOptions): string {
           <tr><td colspan="2" height="20" style="height:20px;font-size:0;line-height:0;">&nbsp;</td></tr>
 
           <tr>
-            <td align="left" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;">
+            <td align="left" class="dbp-stack" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;">
               <a href="mailto:${SUPPORT_EMAIL}" style="color:${BRAND.gold};text-decoration:none;font-weight:bold;">${SUPPORT_EMAIL}</a>
             </td>
-            <td align="right" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;color:${BRAND.mutedDark};">
+            <td align="right" class="dbp-stack dbp-stack-gap" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;color:${BRAND.mutedDark};">
               <a href="${safeUrl(opts.preferencesUrl)}" style="color:${BRAND.mutedDark};text-decoration:underline;">Notification preferences</a>${unsub}
             </td>
           </tr>
@@ -201,6 +218,7 @@ export function renderEmail(opts: EmailShellOptions): string {
       </td></tr>
 
     </table>
+    <!--[if mso]></td></tr></table><![endif]-->
   </td></tr>
 </table>
 </body>
