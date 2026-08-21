@@ -3,8 +3,9 @@
 Ordered steps to finish the rebrand.
 
 **Progress: Steps 1–9, 13, 16 and 19 are done as of 2026-08-20; Step 14 is done
-except Apple sign-in.** One open blocker: **Step 20**, which must be fixed
-before App Store submission.
+except Apple sign-in.** **Step 20** is fixed in configuration and awaiting a
+rebuild; Apple sign-in stays broken in installed builds until then, and it
+blocks App Store submission.
 
 Superseded status line: **Steps 1–9 and 16 are done as of 2026-08-20.** The legal/support
 pages are live on `pickleballapp.app`, the web app serves the new brand and
@@ -273,10 +274,24 @@ converge, and it is still ahead of you.
 
 ---
 
-### 20. 🧑 OPEN BLOCKER — enable Sign in with Apple on the new App ID
+### 20. 🧑 AWAITING REBUILD — Sign in with Apple
 
-**Found 2026-08-20 on the first `app.pickleballapp` build. Needs a rebuild, so
-it was deferred rather than fixed on the spot.**
+**Found 2026-08-20 on the first `app.pickleballapp` build.**
+
+**Status: both fixes are applied; only the rebuild remains.**
+
+- ✅ Sign in with Apple enabled on the `app.pickleballapp` App ID, as a primary
+  App ID. Server-to-server notification endpoint left blank — optional, and it
+  needs an endpoint that does not exist yet. Worth revisiting alongside account
+  deletion (item 1.3), since it is how Apple reports a user deleting their
+  Apple account.
+- ✅ Provisioning profile regenerated via `eas credentials -p ios`. The prompt
+  *"All your registered devices are present… reuse the profile?"* must be
+  answered **No** — reusing keeps the profile minted before the capability
+  existed, which is the broken state. A stale profile reports as valid; it is
+  the entitlement that is missing, not the devices.
+- ⬜ **Rebuild, then re-run Step 14 checks 3 and 7.** Until then Apple sign-in
+  is still broken in every installed build.
 
 **This blocks App Store submission, not just the feature.** Apple requires Sign
 in with Apple wherever a third-party sign-in is offered, and this app offers
@@ -304,13 +319,8 @@ It presents as a silent failure because `signInWithApple()` in
 `apps/mobile/src/lib/auth.ts` returns `null` rather than throwing when Apple is
 unavailable or the user cancels.
 
-#### Fix
+#### Remaining
 
-1. Apple Developer → Certificates, Identifiers & Profiles → **Identifiers** →
-   `app.pickleballapp` → tick **Sign in with Apple** → Save.
-2. Regenerate the provisioning profile so it carries the entitlement:
-   `eas credentials -p ios` → `preview` → Provisioning Profile → regenerate.
-3. Rebuild, then re-run checks 3 and 7 from Step 14.
-
-Fold this into whichever build comes next rather than spending one on it alone.
-Item 7.1 will need a fresh build regardless.
+Fold the rebuild into whichever build comes next rather than spending one on it
+alone — item 7.1 will need a fresh build regardless. Verify Step 14 check 3
+(Apple sign-in) and check 7 (guest claim link) on it.
