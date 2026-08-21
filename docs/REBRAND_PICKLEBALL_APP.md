@@ -115,12 +115,10 @@ claim links in their inboxes it is not.
 The infrastructure move already happened. There is nothing to cut over and
 nothing to keep redirecting: `dreambreakerpb.com` is simply dead.
 
-**Consequence: every `dreambreakerpb.com` string in the repo is a dead link
-today**, including the four legal/support URLs item 1.4 shipped and the
-help-centre link that predates it. `pickleballapp.app/legal/terms` and the
-other three currently return **404** only because 1.4's work is not yet
-committed or deployed. Fixing the two constants and deploying makes all of it
-resolve at once.
+**Consequence: every `dreambreakerpb.com` string in the repo was a dead link**,
+including the four legal/support URLs item 1.4 shipped and the help-centre link
+that predates it. ✅ **Resolved 2026-08-20** — the constants were fixed and the
+build promoted; all four URLs now return 200 on `pickleballapp.app`.
 
 This is the highest-value, lowest-risk change in this document and it does not
 depend on any of the open decisions.
@@ -128,7 +126,8 @@ depend on any of the open decisions.
 `dreambreakerpb.com` → `pickleballapp.app`:
 
 - `web/src/lib/legal.ts` — `SITE_URL`, `SUPPORT_EMAIL`, `PRIVACY_EMAIL`, plus
-  `LEGAL_ENTITY` and `LEGAL_ADDRESS` (currently the bracketed placeholders).
+  `LEGAL_ENTITY` and `LEGAL_ADDRESS` (were bracketed placeholders; now the real
+  entity and address).
 - `apps/mobile/src/lib/legal.ts` — `LEGAL_BASE_URL`, `SUPPORT_EMAIL`.
 - `apps/mobile/src/components/support/SupportSheet.tsx:15` — a **duplicate**
   private `HELP_CENTER_URL`. Fold it into `lib/legal.ts` instead of editing it.
@@ -243,7 +242,7 @@ Ownership: **[me]** = repo change, **[you]** = external console action.
 - ✅ `supabase/functions/send-transactional-email/index.ts` — sender display name.
 - **[you]** confirm `NEXT_PUBLIC_APP_URL` (Vercel) and `PUBLIC_APP_URL`
   (Supabase function secrets) are `https://pickleballapp.app`.
-- **[you]** deploy web — the four 1.4 routes 404 until then.
+- ✅ web deployed 2026-08-20 by promoting the build; all four 1.4 routes live.
 - **[you]** redeploy the `waitlist-sweeper` and `send-transactional-email`
   edge functions.
 
@@ -281,26 +280,29 @@ Ownership: **[me]** = repo change, **[you]** = external console action.
   through the sweep and is intact.
 - ✅ Legal document prose, titles and meta descriptions.
 
-### Step 4 — production data ✅ MIGRATION WRITTEN, not applied
+### Step 4 — production data ✅ APPLIED 2026-08-20
 
-`supabase/migrations_pending/20260820000000_rebrand_pickleball_app.sql`, held
-out of the replay path per item 2.1.
+`20260820000000_rebrand_pickleball_app.sql`, now returned to
+`supabase/migrations/` and recorded in production history.
 
-Verified read-only against production before writing it:
+Verified read-only before applying, and again after:
 
-- 8 `email_templates` rows carry the old brand (subject / html_body / name).
-- 1 `wallet_partners` row (`premium-membership`).
-- The `create_personal_match_claim_link` body in the migration is
-  **byte-identical to production's** — md5 `7e10f0d70b3a92267dcdb229f517b337`,
-  1732 chars — once the scheme literal is restored. It changes the scheme and
-  nothing else. The body is extracted verbatim rather than hand-written; it
-  carries `#variable_conflict`, a revoke-then-regenerate loop, and error codes
-  the app depends on.
+| Check | Before | After |
+| --- | --- | --- |
+| `email_templates` carrying the old brand | 8 | **0** |
+| `wallet_partners` premium-membership | DreamBreaker PB | **Pickleball App** |
+| Claim function scheme | `dreambreaker://` | **`pickleballapp://`** |
+| `migration list --linked` | 37 rows in parity | **38 rows, local == remote** |
 
-- **[you]** apply it, then
-  `supabase migration repair --status applied 20260820000000`.
-- **[you]** Stripe dashboard: business name and statement descriptor.
-- **[you]** Supabase project display name (`dreambreaker-pb`), cosmetic.
+Applied with raw SQL plus `migration repair --status applied 20260820000000`,
+**not** with MCP `apply_migration` — that tool assigns its own version, which is
+how this project's 15 alias pairs were created. The function body was extracted
+verbatim from the baseline rather than hand-written; a reconstruction from
+memory got the return columns, `#variable_conflict`, the revoke loop and the
+error codes all wrong and would have broken guest match claims.
+
+- ❌ **[you] Stripe dashboard** — business name and statement descriptor. Not done.
+- ❌ **[you] Supabase project display name** (`dreambreaker-pb`), cosmetic. Not done.
 
 ### Step 5 — cosmetics ✅ DONE (repo)
 

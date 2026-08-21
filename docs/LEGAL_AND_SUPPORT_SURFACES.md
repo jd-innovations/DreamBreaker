@@ -59,8 +59,9 @@ Still outstanding before submission:
    does not promise a 30-day response at an unmonitored address. Flip it back
    to a dedicated mailbox — one constant — if one is created.
 3. `support@pickleballapp.app` must exist and be monitored.
-4. **Deploy the web app.** `pickleballapp.app` serves the site, but the four
-   legal/support routes 404 until this branch ships.
+4. ~~Deploy the web app~~ — **DONE 2026-08-20.** All four routes are live and
+   verified on `pickleballapp.app`, and the AASA serves the new bundle id
+   `ZSH27U747N.app.pickleballapp`.
 5. **Have a lawyer review both documents.** They are drafted to be accurate
    about what this system does, not to be a substitute for legal advice.
 
