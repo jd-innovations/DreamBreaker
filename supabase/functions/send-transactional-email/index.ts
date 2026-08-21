@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { renderEmail, renderText } from "../_shared/email-shell.ts";
+import { escapeHtml, renderEmail, renderText } from "../_shared/email-shell.ts";
 
 // Single shared sender for all real transactional email in this app —
 // either template-driven (looks up email_templates by key, substitutes
@@ -50,6 +50,16 @@ const PREVIEW_PREFERENCES_URL = "https://pickleballapp.app/settings/notification
 // null counts as missing alongside undefined: the old `??` treated it that way,
 // and substituting it would put the literal string "null" into an email.
 // An empty string is left alone — that is an explicit "this field is blank".
+//
+// Values are HTML-ESCAPED. Not every value is staff-authored: `full_name` is
+// whatever a user typed into their profile, and `subject` is a support ticket
+// title — both reach an admin's inbox. Unescaped, either could carry a live
+// `<a href>` into mail that appears to come from us, which is a phishing
+// surface even though mail clients do not execute script.
+//
+// Escaping is correct in BOTH positions these values appear in. In text it is
+// obvious; inside an `href` it is also right, because `&` -> `&amp;` is how a
+// URL's query separators are spelled in HTML and parses back to the same URL.
 function substitute(
   text: string,
   variables: Record<string, string>,
@@ -61,7 +71,7 @@ function substitute(
       missing.add(key);
       return match;
     }
-    return value;
+    return escapeHtml(String(value));
   });
   return { text: out, missing: [...missing] };
 }
