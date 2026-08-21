@@ -17,6 +17,7 @@ import { colors } from '@/theme';
 import { useProfile } from '@/hooks/useProfile';
 import { getProfileCompletion } from '@/lib/profileCompletion';
 import { signOut } from '@/lib/auth';
+import { openPrivacy, openTerms } from '@/lib/legal';
 import { ProfileCompletionRing } from '@/components';
 
 // Theme-backed alias Ã¢â‚¬â€ brand values resolve from @/theme.
@@ -185,7 +186,7 @@ export default function AccountSettingsScreen() {
 
           <View style={styles.upgradeText}>
             <Text style={styles.upgradeTitle}>
-              Upgrade to DreamBreakerPB{' '}
+              Upgrade to Pickleball App{' '}
               <Text style={styles.upgradePlus}>PLUS</Text>
             </Text>
             <Text style={styles.upgradeSub}>Get premium features and more.</Text>
@@ -242,14 +243,14 @@ export default function AccountSettingsScreen() {
         </TouchableOpacity>
 
         <View style={styles.footerRow}>
-          <TouchableOpacity style={styles.footerBtn}>
+          <TouchableOpacity style={styles.footerBtn} onPress={openPrivacy} activeOpacity={0.7}>
             <Ionicons name="shield-outline" size={16} color={L.navy} />
             <Text style={styles.footerText}>Privacy</Text>
           </TouchableOpacity>
 
           <View style={styles.footerDivider} />
 
-          <TouchableOpacity style={styles.footerBtn}>
+          <TouchableOpacity style={styles.footerBtn} onPress={openTerms} activeOpacity={0.7}>
             <Ionicons name="document-text-outline" size={16} color={L.navy} />
             <Text style={styles.footerText}>Terms</Text>
           </TouchableOpacity>

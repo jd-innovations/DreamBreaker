@@ -8,6 +8,7 @@ import { Logo } from "@/components/layout/logo";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { LEGAL_ROUTES } from "@/lib/legal";
 
 const ROLE_OPTIONS = [
   { id: "player",   label: "PLAYER",   desc: "Compete in tournaments & find partners", icon: Trophy },
@@ -177,7 +178,7 @@ export default function AuthPage() {
               </form>
             </TabsContent>
           </Tabs>
-          <p className="text-center text-xs text-muted-foreground mt-6">By continuing you agree to our <Link href="#" className="text-primary hover:underline">Terms</Link> &amp; <Link href="#" className="text-primary hover:underline">Privacy Policy</Link>.</p>
+          <p className="text-center text-xs text-muted-foreground mt-6">By continuing you agree to our <Link href={LEGAL_ROUTES.terms} className="text-primary hover:underline" data-testid="auth-terms-link">Terms of Service</Link> &amp; <Link href={LEGAL_ROUTES.privacy} className="text-primary hover:underline" data-testid="auth-privacy-link">Privacy Policy</Link>.</p>
         </div>
       </div>
     </div>

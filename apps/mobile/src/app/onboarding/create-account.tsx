@@ -8,6 +8,7 @@ import { colors, radius, spacing } from '@/theme';
 import { getUser, signInWithGoogle, signInWithApple } from '@/lib/auth';
 import { haptics } from '@/lib/haptics';
 import { useOnboarding } from '@/lib/onboarding/state';
+import { openPrivacy, openTerms } from '@/lib/legal';
 
 const L = colors;
 const PAGE_BG = '#F8F5EF';
@@ -126,7 +127,14 @@ export default function CreateAccountScreen() {
 
       <Text style={s.legal}>
         By continuing, you agree to our{`\n`}
-        <Text style={s.legalLink}>Terms of Service</Text> and <Text style={s.legalLink}>Privacy Policy</Text>.
+        <Text style={s.legalLink} onPress={openTerms} suppressHighlighting>
+          Terms of Service
+        </Text>{' '}
+        and{' '}
+        <Text style={s.legalLink} onPress={openPrivacy} suppressHighlighting>
+          Privacy Policy
+        </Text>
+        .
       </Text>
     </View>
   );
@@ -266,5 +274,6 @@ const s = StyleSheet.create({
   legalLink: {
     color: L.gold,
     fontWeight: '800',
+    textDecorationLine: 'underline',
   },
 });

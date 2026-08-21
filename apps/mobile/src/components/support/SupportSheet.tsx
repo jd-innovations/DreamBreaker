@@ -8,11 +8,10 @@ import type { SupportTicket, SupportTicketCategory } from '@/lib/supportTicketSe
 import { trackSupportEvent } from '@/lib/support/supportAnalytics';
 import { ReportProblemForm } from './ReportProblemForm';
 import { SupportConfirmation } from './SupportConfirmation';
-
-// Same external Help Center URL help-support.tsx already links to -- there is
-// no in-app article/FAQ content model yet (SUPPORT_EXPERIENCE_ARCHITECTURE.md
-// §2/§10), so this reuses that existing entry point rather than inventing one.
-const HELP_CENTER_URL = 'https://dreambreakerpb.com/help';
+// Shared with help-support.tsx: there is no in-app article/FAQ content model
+// yet (SUPPORT_EXPERIENCE_ARCHITECTURE.md), so both reuse the same web entry
+// point rather than each inventing one.
+import { HELP_CENTER_URL } from '@/lib/legal';
 
 function formatFeature(feature: string): string {
   return feature

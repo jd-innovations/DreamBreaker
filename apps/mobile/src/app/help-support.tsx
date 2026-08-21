@@ -9,6 +9,14 @@ import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/theme';
+import {
+  SUPPORT_EMAIL,
+  SUPPORT_MAILTO,
+  openDeleteAccountInfo,
+  openHelpCenter,
+  openPrivacy,
+  openTerms,
+} from '@/lib/legal';
 
 // Theme-backed alias â€” brand values resolve from @/theme.
 const L = {
@@ -120,8 +128,8 @@ export default function HelpSupportScreen() {
           <SupportRow
             icon="mail-outline"
             label="Email Support"
-            sub="support@dreambreakerpb.com"
-            onPress={() => Linking.openURL('mailto:support@dreambreakerpb.com')}
+            sub={SUPPORT_EMAIL}
+            onPress={() => Linking.openURL(SUPPORT_MAILTO)}
           />
           <SupportRow
             icon="chatbubble-outline"
@@ -140,7 +148,7 @@ export default function HelpSupportScreen() {
             label="Help Center"
             sub="Browse articles and guides"
             trailing="external"
-            onPress={() => Linking.openURL('https://dreambreakerpb.com/help')}
+            onPress={openHelpCenter}
             last
           />
         </Card>
@@ -177,8 +185,35 @@ export default function HelpSupportScreen() {
           <SupportRow
             icon="create-outline"
             label="Share Feedback"
-            sub="Help us improve DreamBreakerPB"
+            sub="Help us improve Pickleball App"
             onPress={() => router.push({ pathname: '/support/new-ticket', params: { category: 'feedback' } } as never)}
+            last
+          />
+        </Card>
+
+        {/* â”€â”€ Policies â”€â”€ */}
+        <Card>
+          <CardTitle label="Policies" />
+          <SupportRow
+            icon="document-text-outline"
+            label="Terms of Service"
+            sub="The agreement that governs your use of Pickleball App"
+            trailing="external"
+            onPress={openTerms}
+          />
+          <SupportRow
+            icon="shield-checkmark-outline"
+            label="Privacy Policy"
+            sub="What we collect, why, and how to get rid of it"
+            trailing="external"
+            onPress={openPrivacy}
+          />
+          <SupportRow
+            icon="trash-outline"
+            label="Delete Your Account"
+            sub="How deletion works and what we keep"
+            trailing="external"
+            onPress={openDeleteAccountInfo}
             last
           />
         </Card>

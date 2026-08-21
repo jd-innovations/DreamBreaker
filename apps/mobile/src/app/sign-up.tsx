@@ -13,6 +13,7 @@ import { signInWithGoogle, signInWithApple, signUp } from '@/lib/auth';
 import { colors, gradients, radius } from '@/theme';
 import { isPasswordLongEnough, PASSWORD_PLACEHOLDER, PASSWORD_TOO_SHORT_MESSAGE } from '@/lib/authPolicy';
 import { haptics } from '@/lib/haptics';
+import { openPrivacy, openTerms } from '@/lib/legal';
 
 const INPUT_BG = '#EAF1FF';
 const MUTED_BLUE = '#8297C3';
@@ -145,7 +146,7 @@ export default function SignUpScreen() {
           <View style={s.content}>
             <View style={s.heroBlock}>
               <Text style={s.heading}>Create account</Text>
-              <Text style={s.sub}>Join DreamBreakerPB</Text>
+              <Text style={s.sub}>Join Pickleball App</Text>
             </View>
 
             <View style={s.form}>
@@ -262,7 +263,15 @@ export default function SignUpScreen() {
             </TouchableOpacity>
 
             <Text style={s.terms}>
-              By creating an account, you agree to our Terms of Service and Privacy Policy.
+              By creating an account, you agree to our{' '}
+              <Text style={s.termsLink} onPress={openTerms} suppressHighlighting>
+                Terms of Service
+              </Text>{' '}
+              and{' '}
+              <Text style={s.termsLink} onPress={openPrivacy} suppressHighlighting>
+                Privacy Policy
+              </Text>
+              .
             </Text>
           </View>
         </ScrollView>
@@ -411,4 +420,5 @@ const s = StyleSheet.create({
   linkAccent: { color: colors.gold, fontWeight: '900' },
 
   terms: { color: MUTED_BLUE, fontSize: 11, textAlign: 'center', lineHeight: 16 },
+  termsLink: { color: MUTED_BLUE, fontSize: 11, lineHeight: 16, fontWeight: '700', textDecorationLine: 'underline' },
 });
