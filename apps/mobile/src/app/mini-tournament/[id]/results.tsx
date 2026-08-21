@@ -215,7 +215,7 @@ export default function ResultsScreen() {
       `Type: ${tType}`,
       `Completed: ${dateStr}`,
       '',
-      'Powered by DreamBreaker',
+      'Powered by Pickleball App',
     ].filter(Boolean).join('\n');
     try {
       await Share.share({ message: text, title });

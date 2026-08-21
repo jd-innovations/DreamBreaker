@@ -1,5 +1,5 @@
 /**
- * DreamBreakerPB Design System v1 — shared component barrel.
+ * Pickleball App Design System v1 — shared component barrel.
  */
 export { AppHeader, APP_HEADER_HEIGHT } from './AppHeader';
 export { PrimaryButton } from './PrimaryButton';

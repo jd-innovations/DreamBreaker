@@ -35,7 +35,7 @@ function getRedeemCopy(item: WalletItem, partnerName: string): { heading: string
       steps: [
         { icon: 'shield-checkmark-outline', title: `You'll be taken to ${partnerName}`, sub: "We'll securely pass your credit" },
         { icon: 'cart-outline',              title: 'Shop and checkout',                sub: `Your ${valueText} will be applied` },
-        { icon: 'star-outline',              title: 'Enjoy your gear!',                 sub: 'Thanks for being part of DreamBreaker PB' },
+        { icon: 'star-outline',              title: 'Enjoy your gear!',                 sub: 'Thanks for being part of Pickleball App' },
       ],
     };
   }
@@ -46,7 +46,7 @@ function getRedeemCopy(item: WalletItem, partnerName: string): { heading: string
       steps: [
         { icon: 'shield-checkmark-outline', title: `You'll be taken to ${partnerName}`, sub: 'A secure browser window will open' },
         { icon: 'pricetag-outline',         title: 'Complete your purchase',            sub: 'Your discount will be applied at checkout' },
-        { icon: 'star-outline',             title: 'Enjoy!',                            sub: 'Thanks for being part of DreamBreaker PB' },
+        { icon: 'star-outline',             title: 'Enjoy!',                            sub: 'Thanks for being part of Pickleball App' },
       ],
     };
   }
@@ -56,7 +56,7 @@ function getRedeemCopy(item: WalletItem, partnerName: string): { heading: string
     steps: [
       { icon: 'shield-checkmark-outline', title: `You'll be taken to ${partnerName}`, sub: 'A secure browser window will open' },
       { icon: 'checkmark-circle-outline', title: 'Complete the next steps',           sub: 'Follow their instructions to finish' },
-      { icon: 'star-outline',             title: 'Enjoy!',                           sub: 'Thanks for being part of DreamBreaker PB' },
+      { icon: 'star-outline',             title: 'Enjoy!',                           sub: 'Thanks for being part of Pickleball App' },
     ],
   };
 }

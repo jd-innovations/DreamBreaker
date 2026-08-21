@@ -124,7 +124,7 @@ export default function ListingDetailScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out this ${listing.title} for ${formatPriceCents(listing.asking_price_cents)} on DreamBreaker: ${appLinks.marketplaceListing(listing.id)}`,
+        message: `Check out this ${listing.title} for ${formatPriceCents(listing.asking_price_cents)} on Pickleball App: ${appLinks.marketplaceListing(listing.id)}`,
       });
     } catch {
       // user cancelled or share unavailable — nothing to do
@@ -352,7 +352,7 @@ function FullContent({ listing, seller, onReport }: {
       <Text style={s.description}>{listing.description || 'No description provided.'}</Text>
 
       <Text style={s.sectionLabel}>SELLER</Text>
-      <Text style={s.sellerName}>{seller?.full_name ?? 'DreamBreaker user'}</Text>
+      <Text style={s.sellerName}>{seller?.full_name ?? 'Pickleball App user'}</Text>
       <Text style={s.meta}>Member since {memberSinceLabel(seller?.created_at ?? null)}</Text>
 
       <Text style={s.sectionLabel}>LISTING DETAILS</Text>

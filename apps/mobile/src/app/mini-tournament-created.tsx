@@ -404,7 +404,7 @@ export default function MiniTournamentCreatedScreen() {
     try {
       const message = isSupabase && sbEvent
         ? createCommunityShareMessage(sbEvent)
-        : `Join my mini tournament "${g.title}" on DreamBreaker!\n${fmtDate(g.date)} at ${fmtTime(g.startTime)} — ${g.locationName}`;
+        : `Join my mini tournament "${g.title}" on Pickleball App!\n${fmtDate(g.date)} at ${fmtTime(g.startTime)} — ${g.locationName}`;
       await Share.share({ message, title: g.title });
     } catch { /* dismissed */ }
   }

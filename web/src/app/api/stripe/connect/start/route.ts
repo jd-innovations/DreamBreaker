@@ -84,7 +84,7 @@ export async function POST(request: Request) {
   }
 
   // Generate a fresh AccountLink (they expire after a few minutes)
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "https://dreambreakerpb.com";
+  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "https://pickleballapp.app";
   const accountLink = await getStripe().accountLinks.create({
     account: accountId,
     refresh_url: `${origin}/api/stripe/connect/start`,

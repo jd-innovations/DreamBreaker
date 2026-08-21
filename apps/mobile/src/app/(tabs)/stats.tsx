@@ -347,7 +347,7 @@ function buildMatchShareMessage(item: PersonalMatchHistoryItem): string {
   ];
   if (facilityName) lines.push(`📍 ${facilityName}`);
   lines.push(`${gameCount} game${gameCount === 1 ? '' : 's'} logged${record ? ` · ${record.wins}-${record.losses} record` : ''}`);
-  lines.push('\nLogged on DreamBreaker 🏓');
+  lines.push('\nLogged on Pickleball App 🏓');
   return lines.join('\n');
 }
 

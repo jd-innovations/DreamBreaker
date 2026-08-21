@@ -440,7 +440,7 @@ export default function RoundRobinCreatedScreen() {
     try {
       const message = isSupabase && sbEvent
         ? createCommunityShareMessage(sbEvent)
-        : `Join my round robin "${g.title}" on DreamBreaker!\n${fmtDate(g.date)} at ${fmtTime(g.startTime)} — ${g.locationName}`;
+        : `Join my round robin "${g.title}" on Pickleball App!\n${fmtDate(g.date)} at ${fmtTime(g.startTime)} — ${g.locationName}`;
       await Share.share({ message, title: g.title });
     } catch { /* dismissed */ }
   }

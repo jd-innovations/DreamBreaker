@@ -27,7 +27,7 @@ function getParStageLabel(data: MyStatsPlayerCard) {
 }
 
 function formatName(data: MyStatsPlayerCard) {
-  return cleanText(data.profile.full_name) ?? 'DreamBreaker Player';
+  return cleanText(data.profile.full_name) ?? 'Pickleball App Player';
 }
 
 function formatHand(hand: string | null) {

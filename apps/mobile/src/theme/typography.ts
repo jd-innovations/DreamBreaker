@@ -1,7 +1,7 @@
 import { TextStyle } from 'react-native';
 
 /**
- * DreamBreakerPB Design System v1 — Canonical typography.
+ * Pickleball App Design System v1 — Canonical typography.
  *
  * Use these presets for all text. Do not hand-roll fontSize/fontWeight combos.
  */

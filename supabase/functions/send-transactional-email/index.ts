@@ -8,7 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // send-message-push: this one owns the real Resend secret and is the only
 // place it should ever live.
 
-const FROM = "DreamBreakerPB <notifications@pickleballapp.app>";
+const FROM = "Pickleball App <notifications@pickleballapp.app>";
 
 interface EmailRequest {
   to: string | string[];

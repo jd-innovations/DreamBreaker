@@ -6,7 +6,7 @@ const iosGoogleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY;
 // Single source of truth for the app's one native camera permission string —
 // see the expo-camera plugin entry below for why this must be shared.
 const CAMERA_PERMISSION_TEXT =
-  'Allow DreamBreaker to use your camera to take and send photos in chat, and to scan QR codes for check-in and redemption.';
+  'Allow Pickleball App to use your camera to take and send photos in chat, and to scan QR codes for check-in and redemption.';
 
 module.exports = {
   ...appJson.expo,
@@ -48,14 +48,14 @@ module.exports = {
       'expo-location',
       {
         locationWhenInUsePermission:
-          'DreamBreaker uses your location to show nearby courts, games, and tournaments.',
+          'Pickleball App uses your location to show nearby courts, games, and tournaments.',
       },
     ],
     [
       'expo-image-picker',
       {
         photosPermission:
-          'Allow DreamBreaker to access your photos so you can send images in chat.',
+          'Allow Pickleball App to access your photos so you can send images in chat.',
         cameraPermission: CAMERA_PERMISSION_TEXT,
       },
     ],

@@ -57,7 +57,7 @@ export function classifyQrPayload(raw: string): QrClassification {
 
   // QR is untrusted external input (Step 19) -- restrict to the app's own
   // canonical https domain. Unlike Universal Link inbound handling, a
-  // scanned code never gets the legacy dreambreaker:// custom-scheme path;
+  // scanned code never gets the legacy custom-scheme path;
   // that path exists for the OS's own link-opening flow, not for handing
   // arbitrary scanned strings straight into it.
   if (url.protocol !== 'https:') return { kind: 'unsupported' };

@@ -56,12 +56,12 @@ export function createCommunityShareMessage(event: PlayEvent): string {
   const link    = appLinks.communityEvent(event.id);
 
   const parts: string[] = [
-    `Join my ${label} "${name}" on DreamBreaker!`,
+    `Join my ${label} "${name}" on Pickleball App!`,
   ];
   if (date && time) parts.push(`${date} at ${time}`);
   else if (date)    parts.push(date);
   if (loc)          parts.push(`📍 ${loc}`);
-  parts.push(`\nOpen in DreamBreaker: ${link}`);
+  parts.push(`\nOpen in Pickleball App: ${link}`);
 
   return parts.join('\n');
 }

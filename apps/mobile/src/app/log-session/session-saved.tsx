@@ -232,7 +232,7 @@ function createSmsMessage({
 }) {
   const scoreLines = games.length > 0
     ? games.map((game) => `Game ${game.gameNumber}: ${game.myTeamLabel} ${game.myScore}, ${game.opponentsLabel} ${game.opponentScore}`).join('\n')
-    : 'Score saved in DreamBreaker.';
+    : 'Score saved in Pickleball App.';
 
   return [
     `Great game today, ${firstName(guestName)}!`,
@@ -248,7 +248,7 @@ function createSmsMessage({
     'Open in the app:',
     appClaimUrl,
     '',
-    'Your match is saved on DreamBreaker.',
+    'Your match is saved on Pickleball App.',
   ].join('\n');
 }
 

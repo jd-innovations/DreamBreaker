@@ -171,7 +171,7 @@ export function ProfileSettings({ userId }: { userId: string }) {
       <div className="flex items-center justify-between gap-3 sticky top-0 z-10 -mx-6 -mt-6 px-6 py-4 bg-card/95 backdrop-blur border-b border-border rounded-t-2xl">
         <div>
           <p className="font-display text-lg tracking-wide">EDIT PROFILE</p>
-          <p className="text-xs text-muted-foreground">Your photo and details across DreamBreaker</p>
+          <p className="text-xs text-muted-foreground">Your photo and details across Pickleball App</p>
         </div>
         <button
           onClick={save}

@@ -350,7 +350,7 @@ export default function TournamentDetail() {
     if (!tournament) return;
     try {
       await Share.share({
-        message: `Check out ${tournament.name} on DreamBreaker: ${appLinks.tournament(tournament.id)}`,
+        message: `Check out ${tournament.name} on Pickleball App: ${appLinks.tournament(tournament.id)}`,
       });
     } catch {
       // User cancelled or the native share sheet was unavailable.

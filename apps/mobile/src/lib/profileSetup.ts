@@ -29,7 +29,7 @@ export function getProfileSetupTasks({
   return [
     {
       id: 'join',
-      label: 'Join DreamBreaker PB',
+      label: 'Join Pickleball App',
       done: isSignedIn,
       icon: 'pickleball',
       desc: isSignedIn ? null : 'Create an account to save your player profile.',

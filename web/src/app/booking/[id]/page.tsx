@@ -5,7 +5,7 @@ export default async function BookingFallbackPage({ params }: { params: Promise<
   return (
     <MobileLinkFallback
       title="Open Booking"
-      description="This booking is available in the DreamBreaker mobile app."
+      description="This booking is available in the Pickleball App mobile app."
       path={`/booking/${encodeURIComponent(id)}`}
     />
   );

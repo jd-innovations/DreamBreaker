@@ -1,4 +1,4 @@
-# Supabase project configuration — DreamBreaker PB
+# Supabase project configuration — Pickleball App
 # https://supabase.com/docs/reference/cli/config
 
 [api]
@@ -36,8 +36,8 @@ file_size_limit = "5MiB"
 #   Site URL:        the deployed web origin
 #   Redirect allow-list must include, at minimum:
 #     - <web origin>/auth/callback        (web OAuth, see web/src/app/auth/callback/route.ts)
-#     - dreambreaker://                   (mobile OAuth return, makeRedirectUri() in lib/auth.ts)
-#     - dreambreaker://reset-password     (password recovery deep link)
+#     - pickleballapp://                 (mobile OAuth return, makeRedirectUri() in lib/auth.ts)
+#     - pickleballapp://reset-password   (password recovery deep link)
 #     - https://pickleballapp.app/**      (universal links, see lib/appLinks.ts)
 #     - exp://** for Expo Go / dev-client testing, if used
 # Google/Apple provider client IDs and secrets are also Dashboard-side for hosted

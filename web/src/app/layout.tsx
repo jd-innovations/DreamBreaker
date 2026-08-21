@@ -33,7 +33,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Compete Pickleball — Pickleball Tournaments",
+  title: "Pickleball App — Pickleball Tournaments",
   description:
     "Compete in elite pickleball tournaments. Find partners. Hold your spot. Earn your rank.",
 };

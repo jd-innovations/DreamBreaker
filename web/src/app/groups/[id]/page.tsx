@@ -5,7 +5,7 @@ export default async function GroupFallbackPage({ params }: { params: Promise<{ 
   return (
     <MobileLinkFallback
       title="Open Group"
-      description="Join or view this group in the DreamBreaker mobile app."
+      description="Join or view this group in the Pickleball App mobile app."
       path={`/groups/${encodeURIComponent(id)}`}
     />
   );

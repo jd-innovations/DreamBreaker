@@ -138,7 +138,7 @@ export function useTournamentEntryPayment() {
   async function presentTournamentPayment(clientSecret: string): Promise<PayTournamentEntryResult> {
     const { error: initError } = await initPaymentSheet({
       paymentIntentClientSecret: clientSecret,
-      merchantDisplayName: 'DreamBreaker PB',
+      merchantDisplayName: 'Pickleball App',
     });
     if (initError) {
       console.error('[presentTournamentPayment] initPaymentSheet error:', initError.code, initError.message);

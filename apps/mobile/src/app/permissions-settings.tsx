@@ -104,7 +104,7 @@ export default function PermissionsSettingsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 40 }]}
       >
-        <Text style={s.intro}>Manage device access used by DreamBreakerPB.</Text>
+        <Text style={s.intro}>Manage device access used by Pickleball App.</Text>
 
         {/* â”€â”€ Device Access â”€â”€ */}
         <SectionHeader label="DEVICE ACCESS" />
@@ -146,7 +146,7 @@ export default function PermissionsSettingsScreen() {
         <View style={s.infoRow}>
           <Ionicons name="lock-closed-outline" size={14} color={L.textMuted} style={{ marginTop: 2 }} />
           <Text style={s.infoText}>
-            Permissions help DreamBreakerPB provide the best experience. You can change these anytime.
+            Permissions help Pickleball App provide the best experience. You can change these anytime.
           </Text>
         </View>
 

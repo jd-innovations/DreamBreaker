@@ -37,7 +37,7 @@ function getMenuItems(directorStatus: string | null, coachStatus: string | null)
         ? { icon: 'time-outline',   label: 'Coach Mode', sub: 'Setup in progress',          route: '/coach', protected: true }
         : coachStatus === 'restricted'
           ? { icon: 'alert-circle-outline', label: 'Coach Mode', sub: 'Payout account needs attention', route: '/coach', protected: true }
-          : { icon: 'school-outline', label: 'Become a Coach', sub: 'Sell lessons on DreamBreaker', route: '/coach', protected: true };
+          : { icon: 'school-outline', label: 'Become a Coach', sub: 'Sell lessons on Pickleball App', route: '/coach', protected: true };
 
   const directorRow: MenuItem =
     directorStatus === 'approved'
@@ -116,7 +116,7 @@ function GuestView({ insets }: { insets: { bottom: number } }) {
       <View style={g.iconCircle}>
         <Ionicons name="person-outline" size={36} color={colors.gold} />
       </View>
-      <Text style={g.title}>Welcome to DreamBreakerPB</Text>
+      <Text style={g.title}>Welcome to Pickleball App</Text>
       <Text style={g.sub}>
         Log in to manage tournaments, registrations, partner connections, and profile settings.
       </Text>

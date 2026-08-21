@@ -671,7 +671,7 @@ export default function PartnerFinderScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.reportTitle}>Report Profile</Text>
-                <Text style={s.reportSub}>Help keep DreamBreaker safe</Text>
+                <Text style={s.reportSub}>Help keep Pickleball App safe</Text>
               </View>
               <TouchableOpacity onPress={closeReport} style={s.reportCloseBtn} activeOpacity={0.7}>
                 <Ionicons name="close" size={22} color={L.textMuted} />

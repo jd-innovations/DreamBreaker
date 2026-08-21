@@ -245,7 +245,7 @@ export default function CreateCoachOfferScreen() {
         <View style={s.premiumRow}>
           <View style={{ flex: 1 }}>
             <Text style={s.sectionLabel}>Premium-Only Offer</Text>
-            <Text style={s.hint}>Only DreamBreaker Premium members can purchase.</Text>
+            <Text style={s.hint}>Only Pickleball App Premium members can purchase.</Text>
           </View>
           <Switch value={premiumOnly} onValueChange={setPremiumOnly} trackColor={{ true: L.gold }} />
         </View>

@@ -375,7 +375,7 @@ export default function PlayerProfileScreen() {
   async function handleShare() {
     if (!profile) return;
     try {
-      await Share.share({ message: `Check out ${profile.name} on DreamBreaker!` });
+      await Share.share({ message: `Check out ${profile.name} on Pickleball App!` });
     } catch {
       // user cancelled or share unavailable — nothing to do
     }

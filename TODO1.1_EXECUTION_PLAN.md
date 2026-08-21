@@ -1317,6 +1317,143 @@ and is deferred for lack of hardware.
 - Done when:
   - Legal and support routes are real and reachable.
 
+### Completion Notes - 1.4
+
+- Status: **Complete in the repo (2026-08-19).** Three external actions are
+  required before it is complete in production — see "Before this is truly done".
+- Deliverable doc: **`docs/LEGAL_AND_SUPPORT_SURFACES.md`** — canonical URLs,
+  every link site, the placeholder list, and the accuracy notes behind the
+  privacy policy.
+
+#### Approach
+
+The canonical documents are **pages in the Next app**, and the mobile app links
+out to them through the in-app browser. One text, not two — a native mirror of
+the policy would have started drifting from the web copy the first time either
+changed, and app review only requires that the link resolve.
+
+#### What was added
+
+**Web (`web/`)**
+
+- `src/lib/legal.ts` — route constants, support/privacy addresses, entity
+  placeholders, last-updated date. Single source of truth.
+- `src/components/legal/legal-shell.tsx` — page chrome and prose primitives.
+  Tailwind's typography plugin is not installed here, so element styling lives
+  in one component instead of on every paragraph.
+- `src/app/legal/terms/page.tsx` — 17 sections: eligibility, accounts,
+  acceptable use, user content licence, tournaments/holds, payments and refunds
+  (per payment type), marketplace, messaging, third parties, termination,
+  disclaimers, liability cap, indemnity, **Apple App Store EULA clause**
+  (third-party-beneficiary language, required for submission), and general terms.
+- `src/app/legal/privacy/page.tsx` — collection table covering all ten
+  categories the item names, legal bases, recipients, retention per data type,
+  rights and how to exercise them, security, children, transfers.
+- `src/app/legal/delete-account/page.tsx` — the store-required deletion
+  instructions, written against what the shipped 1.3 flow actually does,
+  including the blocked-deletion cases and the no-sign-in path.
+- `src/app/help/page.tsx` — the support surface. `https://dreambreakerpb.com/help`
+  was already linked from the mobile app and from `SupportSheet`; it 404'd.
+
+All four build as static routes (`npm run build` output).
+
+**Web wiring**
+
+- `src/components/layout/footer.tsx` — `Terms · Privacy` was inert text. Now
+  four real links: Support, Terms of Service, Privacy Policy, Delete Account.
+- `src/app/auth/page.tsx` — the two `href="#"` legal links now resolve.
+- `src/app/settings/page.tsx` — the Danger Zone's "Contact support to delete
+  your account" toast stopped being true when 1.3 shipped self-service deletion;
+  it now links to the instructions page. A Legal & Support block was added.
+  (This is the revisit that 1.3's completion notes asked 1.4 to do. The page is
+  still a non-functional mock; making it real is not 1.4's job.)
+
+**Mobile (`apps/mobile/`)**
+
+- `src/lib/legal.ts` — URL constants mirroring the web module, plus
+  `openLegalLink` using `expo-web-browser` in page-sheet presentation with brand
+  toolbar colors. Failures are swallowed; a dead tap beats an unhandled rejection.
+- `src/app/onboarding/create-account.tsx` — the gold "Terms of Service" and
+  "Privacy Policy" words *looked* like links and did nothing. Now tappable and
+  underlined.
+- `src/app/sign-up.tsx` — the same legal sentence was flat text with no styling
+  at all; now two tappable, underlined links.
+- `src/app/account-settings.tsx` — the footer Privacy and Terms buttons had no
+  `onPress`. Wired.
+- `src/app/help-support.tsx` — support email and help-centre URL now come from
+  the shared module, and a **Policies** card links Terms, Privacy, and the
+  deletion page.
+
+#### Verification run
+
+- `cd web && npx tsc --noEmit` — **PASS**.
+- `cd web && npm run build` — **PASS**. `/legal/terms`, `/legal/privacy`,
+  `/legal/delete-account` and `/help` all prerender as static (`○`).
+- `npx eslint` on all 9 touched/added web files — **0 errors**, 1 pre-existing
+  warning (`auth/page.tsx:49` unused `data`, untouched by this work).
+- `cd apps/mobile && npx tsc --noEmit` — **PASS**.
+- `npx eslint` on all 5 touched/added mobile files — **0 errors**, 1 pre-existing
+  BOM warning on `help-support.tsx`.
+- Repo-wide grep: **no `href="#"` remains on any legal link**, and every
+  "Terms of Service" / "Privacy Policy" string in `apps/mobile/src` and
+  `web/src` is now inside a wired link.
+
+#### Follow-up recorded (2026-08-19) — the whole app is being renamed
+
+The identity arrived after this item shipped, and it is not just the legal
+placeholders: **everything becomes "Pickleball App"** on
+**pickleballapp.app**, operated by **JD Innovations LLC**, 11615 Gramercy
+Park Ave, Bradenton FL 34211, support **support@pickleballapp.app**.
+**None of it has been applied** — these pages still carry the placeholders
+and the old domain, so items 4 and 1–2 below are still open.
+
+**`docs/REBRAND_PICKLEBALL_APP.md`** is the plan. 1.4's legal pages are one
+tier of it. What that survey turned up, beyond the obvious:
+
+- **Three brand names are already in the tree**, not one — `DreamBreaker`
+  (171 lines / 88 files), `Compete Pickleball` (8 lines, web only), and now
+  Pickleball App.
+- **Repo edits do not reach the live email templates.** Ten `email_templates`
+  rows seeded by migrations carry the old brand in the visible footer, and
+  production sends from those rows. Needs a forward `UPDATE` migration under
+  item 2.1's rules, not a re-seed.
+- **A production database function emits `dreambreaker://claim/…`**, so the
+  OAuth scheme is not a client-only string; changing it breaks claim links
+  already in inboxes.
+- **The bundle identifier `com.dreambreakerpb.app` cannot change after first
+  publish** — the only irreversible decision in the set, and it belongs with
+  item 7.1.
+- **A blind find/replace would corrupt a pickleball term**: `director/page.tsx`
+  describes the MLP *dreambreaker* tiebreaker format.
+
+Two decisions still open: whether `privacy@` gets its own mailbox, and the
+governing-law jurisdiction.
+
+#### Before this is truly done (external, not code)
+
+1. Replace `[LEGAL ENTITY NAME]`, `[MAILING ADDRESS]` (both in
+   `web/src/lib/legal.ts`) and `[GOVERNING LAW JURISDICTION]` (Terms §16).
+2. Create and monitor `privacy@dreambreakerpb.com`; the policy commits to a
+   30-day response window. Confirm `support@dreambreakerpb.com` is monitored.
+3. Confirm the Next app is deployed at `dreambreakerpb.com`. Every link assumes
+   it — as did the pre-existing help-centre link, which has been broken.
+4. **Have a lawyer review both documents.** They are drafted to describe this
+   system accurately, which is not the same as being legally sufficient.
+
+#### One honest caveat
+
+The privacy policy describes **analytics and crash reporting**, which items 4.1
+and 4.2 have not built yet. The item's instructions explicitly require the
+policy to cover them, and describing processing you have not started is
+over-inclusive rather than false — but the two sections should be re-read when
+4.1/4.2 ship so the provider names are right.
+
+#### Deliberately out of scope
+
+The four social icons in the web footer still carry `href="#"`. They are a
+marketing decision, not a legal surface, and 1.4's verification criterion is
+specific to legal links.
+
 ## Phase 2 - Database, Security, and Production Config
 
 Goal: make backend state reproducible and safe.

@@ -84,7 +84,7 @@ function validate(form: FormState, stripeOnboarded: boolean): Errors {
   if (!form.entryFee.trim() || isNaN(entry) || entry < 0)
     e.entryFee = 'Entry fee must be $0 or more';
   else if (entry > 0 && !stripeOnboarded)
-    e.entryFee = 'Connect Stripe payouts on the DreamBreaker website before charging an entry fee';
+    e.entryFee = 'Connect Stripe payouts on the Pickleball App website before charging an entry fee';
 
   if (!form.holdFee.trim() || isNaN(hold) || hold < 0)
     e.holdFee = 'Deposit must be $0 or more';

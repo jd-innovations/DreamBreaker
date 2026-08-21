@@ -1,5 +1,5 @@
 /**
- * DreamBreakerPB Design System v1 — Spacing scale.
+ * Pickleball App Design System v1 — Spacing scale.
  *
  * 4pt base scale. Use these instead of magic numbers for padding/margin/gap.
  */

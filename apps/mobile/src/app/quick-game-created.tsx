@@ -412,7 +412,7 @@ export default function QuickGameCreatedScreen() {
     try {
       const message = isSupabase && event
         ? createCommunityShareMessage(event)
-        : `Join my pickleball game "${g.title}" on DreamBreaker!\n${fmtDate(g.date)} at ${fmtTime(g.startTime)} — ${g.locationName}`;
+        : `Join my pickleball game "${g.title}" on Pickleball App!\n${fmtDate(g.date)} at ${fmtTime(g.startTime)} — ${g.locationName}`;
       await Share.share({ message, title: g.title });
     } catch { /* dismissed */ }
   }

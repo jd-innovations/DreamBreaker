@@ -188,7 +188,7 @@ export default function RatingSettingsScreen() {
       >
         {/* Intro */}
         <Text style={s.intro}>
-          Manage your ratings, preferences, and how your skill level is used across DreamBreakerPB.
+          Manage your ratings, preferences, and how your skill level is used across Pickleball App.
         </Text>
 
         {/* ── Rating Overview ── */}
@@ -197,7 +197,7 @@ export default function RatingSettingsScreen() {
           <RatingRow
             left={<PARBox />}
             label="PAR Rating"
-            sub="Building from your DreamBreaker activity"
+            sub="Building from your Pickleball App activity"
             value="Building"
           />
           <RatingRow

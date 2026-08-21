@@ -1,4 +1,4 @@
-const BUNDLE_IDENTIFIER = 'com.dreambreakerpb.app';
+const BUNDLE_IDENTIFIER = 'app.pickleballapp';
 const TEAM_ID = process.env.APPLE_TEAM_ID ?? process.env.APPLE_DEVELOPER_TEAM_ID;
 
 const PATHS = [

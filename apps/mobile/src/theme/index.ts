@@ -1,5 +1,5 @@
 /**
- * DreamBreakerPB Design System v1 â€” theme barrel.
+ * Pickleball App Design System v1 â€” theme barrel.
  *
  * import { colors, typography, spacing, radius, iconCircle } from '@/theme';
  */

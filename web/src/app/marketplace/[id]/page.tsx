@@ -5,7 +5,7 @@ export default async function MarketplaceFallbackPage({ params }: { params: Prom
   return (
     <MobileLinkFallback
       title="Open Listing"
-      description="Marketplace listings are best viewed in the DreamBreaker mobile app."
+      description="Marketplace listings are best viewed in the Pickleball App mobile app."
       path={`/marketplace/${encodeURIComponent(id)}`}
     />
   );

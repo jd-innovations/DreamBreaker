@@ -938,7 +938,7 @@ export default function BracketScreen() {
 
   async function handleShare() {
     try {
-      await Share.share({ message: `Check out the bracket for "${title}" on DreamBreaker!`, title });
+      await Share.share({ message: `Check out the bracket for "${title}" on Pickleball App!`, title });
     } catch { /* dismissed */ }
   }
 

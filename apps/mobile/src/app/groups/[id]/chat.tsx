@@ -342,7 +342,7 @@ export default function GroupChat() {
 
   function handleShare() {
     if (!id || !group) return;
-    Share.share({ message: `Join "${group.name}" on DreamBreaker: ${appLinks.group(id)}` });
+    Share.share({ message: `Join "${group.name}" on Pickleball App: ${appLinks.group(id)}` });
   }
 
   if (loading) {

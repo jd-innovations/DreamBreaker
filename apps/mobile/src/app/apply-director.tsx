@@ -88,7 +88,7 @@ export default function ApplyDirectorScreen() {
         </View>
         <Text style={s.title}>Tournament Director Access</Text>
         <Text style={s.subtitle}>
-          Directors can create and run their own pickleball tournaments on DreamBreaker.
+          Directors can create and run their own pickleball tournaments on Pickleball App.
           Applications are reviewed by our team before you get access.
         </Text>
 

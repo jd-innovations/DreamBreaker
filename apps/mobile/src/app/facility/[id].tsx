@@ -647,7 +647,7 @@ export default function FacilityDetailScreen() {
   async function handleShare() {
     try {
       await Share.share({
-        message: `Check out ${facility!.name} on DreamBreaker: ${appLinks.facility(facility!.id)}`,
+        message: `Check out ${facility!.name} on Pickleball App: ${appLinks.facility(facility!.id)}`,
       });
     } catch {
       // user cancelled or share unavailable — nothing to do

@@ -58,7 +58,7 @@ export const QRScanner = forwardRef<QRScannerHandle, QRScannerProps>(function QR
         </View>
         <Text style={s.permissionTitle}>Camera Access Needed</Text>
         <Text style={s.permissionBody}>
-          Allow DreamBreaker to use your camera to scan QR codes for check-in and redemption.
+          Allow Pickleball App to use your camera to scan QR codes for check-in and redemption.
         </Text>
         <TouchableOpacity
           style={s.primaryBtn}

@@ -72,7 +72,7 @@ export default function DesignLabScreen() {
         </Pressable>
         <View style={styles.headerCopy}>
           <Text style={styles.headerTitle}>Design Lab</Text>
-          <Text style={styles.headerSub}>DreamBreakerPB Design System v1</Text>
+          <Text style={styles.headerSub}>Pickleball App Design System v1</Text>
         </View>
       </View>
 
@@ -134,7 +134,7 @@ function TypographyBoard() {
   return (
     <LabSection title="Typography" caption="Use named roles before inventing new size/weight pairs.">
       <View style={styles.typeStack}>
-        <Text style={styles.displaySample}>DREAMBREAKER</Text>
+        <Text style={styles.displaySample}>PICKLEBALL APP</Text>
         <Text style={[typography.pageTitle, styles.typeText]}>Page title - 17 / 900</Text>
         <Text style={[typography.sectionTitle, styles.typeText]}>Section title - 17 / 900</Text>
         <Text style={[typography.cardTitle, styles.typeText]}>Card title - 16 / 700</Text>
@@ -221,7 +221,7 @@ function CardBoard() {
             <Text style={styles.avatarText}>DB</Text>
           </View>
           <View style={styles.profileCopy}>
-            <Text style={styles.profileTitle}>DreamBreaker Player</Text>
+            <Text style={styles.profileTitle}>Pickleball App Player</Text>
             <Text style={styles.profileMeta}>Sarasota, FL · 3.5-4.0</Text>
           </View>
           <StatusChip label="Joined" variant="green" />
@@ -254,7 +254,7 @@ function FormBoard() {
         </View>
         <Text style={styles.label}>Form field</Text>
         <View style={styles.inputField}>
-          <Text style={styles.inputText}>DreamBreaker Open</Text>
+          <Text style={styles.inputText}>Pickleball App Open</Text>
         </View>
         <Text style={styles.helperText}>Helper text explains what happens next.</Text>
         <View style={[styles.inputField, styles.inputError]}>

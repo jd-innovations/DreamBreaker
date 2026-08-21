@@ -409,7 +409,7 @@ export default function PlayerResultsScreen() {
         .filter(b => b.championName)
         .map(b => `${b.divisionName}: 🥇 ${b.championName}${b.runnerUpName ? `  🥈 ${b.runnerUpName}` : ''}`),
       '',
-      'Powered by DreamBreaker',
+      'Powered by Pickleball App',
     ];
     try {
       await Share.share({ message: lines.join('\n') });

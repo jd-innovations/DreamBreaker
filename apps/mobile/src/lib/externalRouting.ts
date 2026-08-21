@@ -45,7 +45,7 @@ function parseExternalUrl(rawUrl: string): ParsedExternalUrl | null {
       return { pathname: url.pathname, search: url.search };
     }
 
-    if (url.protocol === 'dreambreaker:') {
+    if (url.protocol === 'pickleballapp:') {
       if (url.hostname === 'app') return { pathname: url.pathname || '/', search: url.search };
       if (url.hostname) return { pathname: `/${url.hostname}${url.pathname}`, search: url.search };
       return { pathname: url.pathname || '/', search: url.search };

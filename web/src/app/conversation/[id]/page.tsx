@@ -5,7 +5,7 @@ export default async function ConversationFallbackPage({ params }: { params: Pro
   return (
     <MobileLinkFallback
       title="Open Conversation"
-      description="This chat is available in the DreamBreaker mobile app."
+      description="This chat is available in the Pickleball App mobile app."
       path={`/conversation/${encodeURIComponent(id)}`}
     />
   );

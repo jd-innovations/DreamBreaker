@@ -1,5 +1,5 @@
 /**
- * DreamBreakerPB Design System v1 — Border radius + icon geometry.
+ * Pickleball App Design System v1 — Border radius + icon geometry.
  */
 export const radius = {
   button: 14,   // primary + secondary buttons

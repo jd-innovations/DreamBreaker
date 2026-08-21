@@ -216,7 +216,7 @@ export default function LandingScreen() {
         <TouchableOpacity style={styles.logoCenter}>
           <PickleballLogo />
           <Text style={styles.logoText}>
-            DREAMBREAKER<Text style={styles.logoPB}>PB</Text>
+            PICKLEBALL<Text style={styles.logoPB}>APP</Text>
           </Text>
         </TouchableOpacity>
 
@@ -308,7 +308,7 @@ export default function LandingScreen() {
           </View>
           <View style={styles.joinContent}>
             <Text style={styles.joinTitle}>
-              Join DreamBreaker<Text style={styles.joinPB}>PB!</Text>
+              Join Pickleball<Text style={styles.joinPB}>App!</Text>
             </Text>
             <Text style={styles.joinSub}>
               Become part of the fastest growing pickleball tournament circuit.

@@ -386,7 +386,7 @@ function FeedPostCard({
   }
 
   function handleShare() {
-    Share.share({ message: item.body || 'Check out this post on DreamBreaker.' });
+    Share.share({ message: item.body || 'Check out this post on Pickleball App.' });
   }
 
   async function handleReportSubmit(reason: ReportReason, notes: string) {
@@ -1489,7 +1489,7 @@ export default function GroupDetail() {
 
   function handleShare() {
     if (!groupId || !group) return;
-    Share.share({ message: `Join "${group.name}" on DreamBreaker: ${appLinks.group(groupId)}` });
+    Share.share({ message: `Join "${group.name}" on Pickleball App: ${appLinks.group(groupId)}` });
   }
 
   async function openInviteMembers() {

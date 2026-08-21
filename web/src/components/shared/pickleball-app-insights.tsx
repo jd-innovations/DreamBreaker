@@ -1,16 +1,16 @@
 import { Sparkle } from "@phosphor-icons/react/dist/ssr";
 import type { InsightResult } from "@/lib/insights";
 
-interface DreamBreakerInsightsProps {
+interface PickleballAppInsightsProps {
   insight: InsightResult;
   className?: string;
 }
 
-export function DreamBreakerInsights({ insight, className = "" }: DreamBreakerInsightsProps) {
+export function PickleballAppInsights({ insight, className = "" }: PickleballAppInsightsProps) {
   return (
     <div
       className={`relative rounded-2xl border border-border bg-card overflow-hidden px-5 py-4 sm:px-7 sm:py-5 flex items-center gap-2 sm:gap-4 ${className}`}
-      data-testid="dreambreaker-insights"
+      data-testid="pickleball-app-insights"
     >
       {/* Glow — matches "Ready to Play" section */}
       <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
@@ -20,7 +20,7 @@ export function DreamBreakerInsights({ insight, className = "" }: DreamBreakerIn
         <div className="flex items-center gap-1.5 mb-1.5">
           <Sparkle size={11} weight="fill" className="text-primary flex-shrink-0" />
           <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.35em] font-bold text-muted-foreground uppercase">
-            Compete Insights
+            Pickleball App Insights
           </span>
         </div>
         <div className="font-display text-xl sm:text-2xl md:text-3xl tracking-wide leading-tight">

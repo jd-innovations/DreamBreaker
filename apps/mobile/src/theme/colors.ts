@@ -1,5 +1,5 @@
 /**
- * DreamBreakerPB Design System v1 — Canonical colors.
+ * Pickleball App Design System v1 — Canonical colors.
  *
  * This is the single source of truth for color across the app.
  * No screen should declare its own local color object.

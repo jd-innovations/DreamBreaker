@@ -35,7 +35,7 @@ export function useReservationPayment() {
 
       const { error: initError } = await initPaymentSheet({
         paymentIntentClientSecret: intentResult.clientSecret,
-        merchantDisplayName: 'DreamBreaker PB',
+        merchantDisplayName: 'Pickleball App',
       });
       if (initError) return { status: 'error', code: initError.code ?? 'init_failed' };
 

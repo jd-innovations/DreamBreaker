@@ -5,7 +5,7 @@ export default async function ClaimFallbackPage({ params }: { params: Promise<{ 
   return (
     <MobileLinkFallback
       title="Open Invite"
-      description="Continue in DreamBreaker to claim this invitation."
+      description="Continue in Pickleball App to claim this invitation."
       path={`/claim/${encodeURIComponent(token)}`}
     />
   );

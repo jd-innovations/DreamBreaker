@@ -10,7 +10,7 @@ export function MobileLinkFallback({ title, description, path }: MobileLinkFallb
   return (
     <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
       <section className="w-full max-w-md text-center space-y-5">
-        <p className="font-mono text-xs tracking-[0.28em] text-primary uppercase">DreamBreaker</p>
+        <p className="font-mono text-xs tracking-[0.28em] text-primary uppercase">Pickleball App</p>
         <h1 className="font-display text-4xl tracking-wide">{title}</h1>
         <p className="text-sm leading-6 text-muted-foreground">{description}</p>
         <a

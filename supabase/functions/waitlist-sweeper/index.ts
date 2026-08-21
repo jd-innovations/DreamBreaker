@@ -5,7 +5,7 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
-const APP_URL = Deno.env.get("PUBLIC_APP_URL") ?? "https://dreambreakerpb.com";
+const APP_URL = Deno.env.get("PUBLIC_APP_URL") ?? "https://pickleballapp.app";
 
 // ── Email — routed through the shared send-transactional-email function ───────
 // Previously this had its own local sendEmail() hitting Resend directly under

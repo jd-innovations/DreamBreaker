@@ -5,7 +5,7 @@ export default async function CoachOfferFallbackPage({ params }: { params: Promi
   return (
     <MobileLinkFallback
       title="Open Coach Offer"
-      description="Coach offer details are available in the DreamBreaker mobile app."
+      description="Coach offer details are available in the Pickleball App mobile app."
       path={`/coach/offers/${encodeURIComponent(id)}`}
     />
   );

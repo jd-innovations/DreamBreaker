@@ -86,7 +86,7 @@ export default function CoachModeScreen() {
         </View>
         <Text style={s.title}>Coach Marketplace</Text>
         <Text style={s.subtitle}>
-          Sell discounted lesson offers through DreamBreaker and get paid weekly through Stripe.
+          Sell discounted lesson offers through Pickleball App and get paid weekly through Stripe.
         </Text>
 
         <View style={s.benefits}>
@@ -119,14 +119,14 @@ export default function CoachModeScreen() {
           <View style={s.statusCard}>
             <Ionicons name="time-outline" size={18} color={L.gold} />
             <Text style={s.statusText}>
-              Coach Mode is active. Connect Stripe payouts on the DreamBreaker website to start publishing offers.
+              Coach Mode is active. Connect Stripe payouts on the Pickleball App website to start publishing offers.
             </Text>
           </View>
         ) : coachStatus === 'restricted' ? (
           <View style={[s.statusCard, { backgroundColor: L.dangerBg, borderColor: 'rgba(239,68,68,0.30)' }]}>
             <Ionicons name="alert-circle-outline" size={18} color={L.danger} />
             <Text style={[s.statusText, { color: L.danger }]}>
-              Your payout account needs attention. Reconnect Stripe on the DreamBreaker website.
+              Your payout account needs attention. Reconnect Stripe on the Pickleball App website.
             </Text>
           </View>
         ) : coachStatus === 'active' ? (
