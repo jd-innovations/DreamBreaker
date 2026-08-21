@@ -98,7 +98,7 @@ end $$;
 --
 -- That is a systemic gap, not a payment artifact — Booking Engine Phase 2
 -- deferred the sweep and it was never built. It is fixed properly by
--- `supabase/migrations/20260821010000_reservation_hold_sweeper.sql`, which adds
+-- `supabase/migrations/20260821020000_reservation_hold_sweeper.sql`, which adds
 -- `expire_stale_reservation_holds()` on a 5-minute cron and clears all 11.
 --
 -- So: apply that migration, and the holds resolve themselves. Running this
