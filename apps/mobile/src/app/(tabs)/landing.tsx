@@ -216,7 +216,7 @@ export default function LandingScreen() {
         <TouchableOpacity style={styles.logoCenter}>
           <PickleballLogo />
           <Text style={styles.logoText}>
-            PICKLEBALL<Text style={styles.logoPB}>APP</Text>
+            pickleball<Text style={styles.logoPB}>app</Text>
           </Text>
         </TouchableOpacity>
 
@@ -308,7 +308,7 @@ export default function LandingScreen() {
           </View>
           <View style={styles.joinContent}>
             <Text style={styles.joinTitle}>
-              Join Pickleball<Text style={styles.joinPB}>App!</Text>
+              Join pickleball<Text style={styles.joinPB}>app</Text>!
             </Text>
             <Text style={styles.joinSub}>
               Become part of the fastest growing pickleball tournament circuit.
@@ -400,7 +400,10 @@ const styles = StyleSheet.create({
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   addBtn: { width: 30, height: 30, borderRadius: 15, borderWidth: 1.5, borderColor: L.gold },
   logoCenter: { alignItems: 'center', flex: 1 },
-  logoText: { color: L.navy, fontSize: 15, fontWeight: '900', letterSpacing: 1.5, marginTop: 2 },
+  // Matches the brand wordmark in assets/images/logo-header.png: lowercase,
+  // navy "pickleball" + gold "app", set tight. Not letter-spaced — the old
+  // uppercase treatment belonged to the previous mark.
+  logoText: { color: L.navy, fontSize: 17, fontWeight: '900', letterSpacing: -0.2, marginTop: 2 },
   logoPB: { color: L.gold },
   scroll: { flex: 1 },
   scrollContent: { paddingTop: 16 },
