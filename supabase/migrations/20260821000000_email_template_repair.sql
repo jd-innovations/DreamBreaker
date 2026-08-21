@@ -64,3 +64,29 @@ UPDATE public.email_templates
 --                                      '\{\{(\w+)\}\}', 'g') as m(tok)
 --    where not (m.tok[1] = any(coalesce(t.variables, '{}')))
 --    group by key;
+
+-- ── Applied minutes after the three statements above, under this same version ─
+--
+-- The sweep that proves the fix (scripts/check-email-templates.mjs) found two
+-- MORE templates dropping mail, by a different mechanism. These two declare
+-- their variables correctly, so the "undeclared token" query above returns
+-- clean for them — the mismatch is that their TRIGGERS never pass what the
+-- bodies ask for. Production's rows are older seed versions wanting
+-- {{first_name}} and {{link}}; fn_notify_tournament_status passes only
+-- tournament_name + reason, and fn_notify_director_status only full_name.
+--
+-- Appended here rather than given their own version so that replaying this
+-- file reproduces production exactly, which is the invariant migrations_pending
+-- exists to protect.
+
+UPDATE public.email_templates
+   SET html_body = '<h2>Changes needed</h2><p>Your tournament <strong>{{tournament_name}}</strong> was returned for changes.</p><p>Reason: {{reason}}</p><p>Open the tournament in the app to edit and resubmit.</p>',
+       variables = ARRAY['tournament_name','reason'],
+       updated_at = now()
+ WHERE key = 'tournament_rejected';
+
+UPDATE public.email_templates
+   SET html_body = '<h2>Director access suspended</h2><p>Hi {{full_name}},</p><p>Your director access has been suspended. Please contact support if you believe this is a mistake.</p>',
+       variables = ARRAY['full_name'],
+       updated_at = now()
+ WHERE key = 'director_suspended';

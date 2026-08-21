@@ -12,65 +12,52 @@
 | 3 — preview | ✅ **done and live.** `dryRun` + `withShell` in `send-transactional-email` (v9); admin page live at https://pickleballapp.app/admin/email-preview (production deploy `bf1edda`, promoted 2026-08-21). |
 | 4–8 | not started |
 
-## ⚠ START HERE — open items as of 2026-08-21
+## Open items (updated 2026-08-21)
 
-### 1. LIVE BUG: two trigger-fired emails are being dropped
+### ✅ CLOSED — the mail-dropping incident
 
-Phase 0's 422 guard is correct; the **templates** are wrong. Their bodies
-reference variables no caller supplies, so every send returns 422 and delivers
-nothing. Live since the Phase 0 deploy (2026-08-20 ~20:26 UTC).
+Four trigger-fired templates were returning 422 and sending nothing. All 10 now
+render with their callers' real payloads; verified against production.
 
-| Template | Body wants | Trigger passes | Missing |
-|---|---|---|---|
-| `registration_confirmed` | `first_name`, `tournament_name`, `event_date`, `link`, `sponsor_logos` | `tournament_name` | 4 |
-| `director_approved` | `first_name`, `link`, `sponsor_logos` | `full_name` | 3 |
+Two distinct failure modes, which is why it took two rounds to find them all:
 
-Impact so far: 0 registrations and 1 director promotion since the deploy, so at
-most one dropped email. **Every future registration confirmation is affected.**
+1. **Undeclared token.** `{{sponsor_logos}}` appeared in 10 templates and nothing
+   server-side ever supplied it — the only implementation is an admin *preview*
+   helper emitting `display:flex`, and `email_sponsors` has 0 rows. Stripped.
+   A SQL query over `email_templates` finds this mode.
+2. **Declared, but never passed.** `tournament_rejected` and `director_suspended`
+   declared `first_name`/`link` correctly, but their triggers pass only
+   `tournament_name`+`reason` and `full_name`. **The SQL query returns clean for
+   this mode** — the mismatch exists only between template and caller. Bodies
+   rewritten to match what the triggers send.
 
-These were already broken before Phase 0 — they delivered with raw `{{tokens}}`
-visible. Phase 0 turned visibly-broken into silently-dropped. Do not roll back
-the guard; fix the templates.
+**`scripts/check-email-templates.mjs` now catches both** and exits non-zero.
+Run it after any change to a template body or a trigger's payload.
 
-### 2. `{{sponsor_logos}}` has no server-side implementation
+**Root cause of the whole episode:** template state was repeatedly reasoned about
+from migration *files* rather than production *rows*. They diverged months ago —
+production carries older seed versions from `20260725000001_seed_config.sql`,
+not the cleaner bodies `20260807000000_transactional_email.sql` intended. Query
+production before trusting any statement about templates.
 
-It is expanded **client-side only**, in the admin composer
-(`web/src/app/admin/page.tsx:115`). The edge function has never known about it.
-**10 of 21 templates contain it.** Open product decision: implement it server-side
-against the existing `email_sponsors` table, or strip it from all 10 as dead weight.
+### ✅ CLOSED — escaping
 
-### 3. Production has 21 templates, not 10
+All substituted values run through `escapeHtml`. Correct in both text and `href`
+positions. (An earlier note here claimed `link_url` could not take a blanket
+escape; that was wrong.)
 
-The plan below was sized from `20260807000000_transactional_email.sql`. The other
-11 are older seed rows from `20260725000001_seed_config.sql`. **Phase 5's scope
-roughly doubles.** Only these are trigger-fired: `registration_confirmed`,
-`tournament_approved`, `tournament_rejected`, `director_approved`,
-`director_suspended`, `support_ticket_new`, `support_ticket_reply`,
-`waitlist_spot_offered`, `hold_expired`, `waitlist_offer_expired`. The rest
-appear orphaned.
+### ✅ CLOSED — shell responsiveness
 
-### 4. ~~The shell is not responsive on phones~~ — FIXED 2026-08-21
+Fixed and verified by a real send to a phone. See Phase 2 notes.
 
-Confirmed broken on iPhone Mail from a real sample send, then fixed and
-re-verified by a second sample send. In `_shared/email-shell.ts`:
+### Still open
 
-- The card was `width="600"` **and** `width:600px` — a hard floor, so clients
-  scaled the whole message down rather than reflowing. Now `width="100%"` with
-  `max-width:600px`.
-- Outlook on Windows ignores media queries *and* `max-width`, so it is pinned to
-  600px by an MSO ghost table instead.
-- Added `@media only screen and (max-width:600px)`: padding 32→20px, header logo
-  380→250px, footer logo 168→150px.
-- The footer's two column rows now stack; they crushed below ~380px.
-
-**Not deployed at time of writing** — the live function and `/admin/email-preview`
-still render the pre-fix shell until `send-transactional-email` is redeployed.
-
-### 5. Still unresolved from earlier
-
-Variable values are injected into HTML raw, so a tournament name containing
-`<a href>` renders as live markup. `link_url` is substituted inside an `href`,
-so a blanket escape breaks it. **Open decision.**
+- **21 templates, not 10.** Phase 5's scope is roughly double what this plan was
+  drafted against. 11 are not trigger-fired and appear orphaned — listed by
+  `check-email-templates.mjs` on every run.
+- **The four repaired bodies send unwrapped** until Phase 4's `layout` gate ships,
+  so they look plain. They are already structure-only, so Phase 5 needs no rework
+  of them.
 
 ---
 
