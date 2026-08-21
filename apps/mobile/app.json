@@ -34,7 +34,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#07091A",
-          "image": "./assets/images/logo-splash.png",
+          "image": "./assets/images/pickleballapp-logo-light.png",
           "imageWidth": 260,
           "resizeMode": "contain"
         }

@@ -37,6 +37,12 @@ module.exports = {
       'expo-splash-screen',
       {
         backgroundColor: '#07091A',
+        // Light wordmark, not logo-splash.png: that asset is dark ink on
+        // transparency, so on this near-black background only the gold "app"
+        // would have been visible.
+        image: './assets/images/pickleballapp-logo-light.png',
+        imageWidth: 260,
+        resizeMode: 'contain',
       },
     ],
     '@react-native-community/datetimepicker',
