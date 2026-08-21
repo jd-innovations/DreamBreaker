@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { renderEmail, renderText } from "../_shared/email-shell.ts";
 
 // Single shared sender for all real transactional email in this app —
 // either template-driven (looks up email_templates by key, substitutes
@@ -17,7 +18,26 @@ interface EmailRequest {
   subject?: string;
   html?: string;
   idempotencyKey?: string;
+  /**
+   * Render and return what WOULD be sent, without calling Resend. Backs the
+   * admin preview at /admin/email-preview. Deliberately shares this handler
+   * rather than re-rendering in the web app: the shell is a Deno module the
+   * Next.js side cannot import, and a second implementation would drift from
+   * the one that actually sends.
+   */
+  dryRun?: boolean;
+  /**
+   * Preview only. Wraps the body in the email shell even though live sending
+   * does not wrap yet (that is gated on the `layout` column in Phase 4). This
+   * is what lets Phase 5 check a template's wrapped appearance BEFORE
+   * migrating it. Ignored unless `dryRun` is set.
+   */
+  withShell?: boolean;
 }
+
+// Stand-ins used only when previewing with the shell. Real values arrive in
+// Phase 6 (a `preheader` column and signed per-recipient preference links).
+const PREVIEW_PREFERENCES_URL = "https://pickleballapp.app/settings/notifications";
 
 // Substitutes {{token}} and REPORTS what it could not resolve. The reporting
 // half is the point: this used to be `variables[key] ?? match`, which left an
@@ -57,10 +77,6 @@ Deno.serve(async (req: Request) => {
   }
 
   const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendKey) {
-    console.error("[send-transactional-email] RESEND_API_KEY not set");
-    return new Response(JSON.stringify({ error: "Email sending not configured" }), { status: 500 });
-  }
 
   let payload: EmailRequest;
   try {
@@ -69,12 +85,22 @@ Deno.serve(async (req: Request) => {
     return new Response("Invalid JSON body", { status: 400 });
   }
 
-  if (!payload.to) {
-    return new Response(JSON.stringify({ error: "Missing `to`" }), { status: 400 });
+  // A preview has no recipient and needs no Resend credentials — it never
+  // reaches Resend. Both checks are therefore scoped to real sends, so the
+  // preview keeps working in an environment where the secret is not set.
+  if (!payload.dryRun) {
+    if (!resendKey) {
+      console.error("[send-transactional-email] RESEND_API_KEY not set");
+      return new Response(JSON.stringify({ error: "Email sending not configured" }), { status: 500 });
+    }
+    if (!payload.to) {
+      return new Response(JSON.stringify({ error: "Missing `to`" }), { status: 400 });
+    }
   }
 
   let subject = payload.subject;
   let html = payload.html;
+  let templateEnabled = true;
 
   if (payload.templateKey) {
     const { data: template, error } = await supabase
@@ -86,11 +112,15 @@ Deno.serve(async (req: Request) => {
     if (error || !template) {
       return new Response(JSON.stringify({ error: `Template not found: ${payload.templateKey}` }), { status: 404 });
     }
-    if (!template.enabled) {
+    // A disabled template still renders for a preview — disabling one is often
+    // the first step in fixing it, and you cannot fix what you cannot see. The
+    // disabled state travels in the response so the preview can show it.
+    if (!template.enabled && !payload.dryRun) {
       return new Response(JSON.stringify({ skipped: true, reason: "template disabled" }), {
         headers: { "Content-Type": "application/json" },
       });
     }
+    templateEnabled = template.enabled;
 
     const variables = payload.variables ?? {};
     const subjectResult = substitute(template.subject, variables);
@@ -121,6 +151,37 @@ Deno.serve(async (req: Request) => {
 
   if (!subject || !html) {
     return new Response(JSON.stringify({ error: "Missing subject/html (or a valid templateKey)" }), { status: 400 });
+  }
+
+  // Stop here for a preview. Everything above — template lookup, the disabled
+  // check, substitution, the unresolved-variable 422 — has already run, so a
+  // dry run exercises the real path and fails in the same places a real send
+  // would. Only the Resend call is skipped.
+  if (payload.dryRun) {
+    const shell = payload.withShell === true;
+    const renderedHtml = shell
+      ? renderEmail({
+        preheader: subject,
+        bodyHtml: html,
+        preferencesUrl: PREVIEW_PREFERENCES_URL,
+      })
+      : html;
+    const text = shell
+      ? renderText({ preheader: subject, bodyHtml: html, preferencesUrl: PREVIEW_PREFERENCES_URL })
+      : undefined;
+
+    return new Response(
+      JSON.stringify({
+        dryRun: true,
+        shell,
+        enabled: templateEnabled,
+        subject,
+        html: renderedHtml,
+        text,
+        bytes: new TextEncoder().encode(renderedHtml).length,
+      }),
+      { headers: { "Content-Type": "application/json" } },
+    );
   }
 
   const res = await fetch("https://api.resend.com/emails", {

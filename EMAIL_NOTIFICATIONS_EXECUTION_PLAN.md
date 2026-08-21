@@ -9,7 +9,8 @@
 | 0 — unresolved-variable fix | ✅ **done and deployed** (`send-transactional-email` v8). Still uncommitted in git. |
 | 1 — asset pipeline | ✅ **done.** Bucket applied; all 5 PNGs uploaded and serving, byte-identical to `supabase/email-assets/`. |
 | 2 — shell module | ✅ **built, not yet wired.** `supabase/functions/_shared/email-shell.ts`. Sample output at `email-shell.preview.html` — open in a browser. |
-| 3–8 | not started |
+| 3 — preview | ✅ **built, needs deploy.** `dryRun` + `withShell` in the edge function; admin page at `/admin/email-preview`. Deploy `send-transactional-email` to activate. |
+| 4–8 | not started |
 
 **Added to scope since drafting:**
 
