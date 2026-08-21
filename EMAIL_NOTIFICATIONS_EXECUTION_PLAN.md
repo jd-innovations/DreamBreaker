@@ -18,9 +18,9 @@ things it changed: (a) `layout` now carries the transactional/notification
 distinction rather than being an on/off flag, because that decides unsubscribe
 presence and preference-respect; (b) ~5 items (Verify Email, Password Reset,
 Email Address Changed) belong to **Supabase Auth's** own template system, not
-`email_templates`; (c) **no notification-preferences table exists** — only
-`partner_preferences` — so the entire Notification half of the list is blocked on
-building that surface first. Templates should be created WITH their triggers, not
+`email_templates`; (c) the Notification half of the list is blocked on **Phase 5.5**: a
+Notifications screen already exists in the mobile app but persists nothing, so
+its Email toggle is decorative. Templates should be created WITH their triggers, not
 in bulk: 11 orphaned templates already exist and orphans are what caused the
 2026-08-21 incident.
 
@@ -63,6 +63,9 @@ escape; that was wrong.)
 Fixed and verified by a real send to a phone. See Phase 2 notes.
 
 ### Still open
+
+- **The notification preferences screen persists nothing** — see **Phase 5.5**.
+  Blocks any template being set to `layout = 'notification'`.
 
 - **21 templates, not 10.** Phase 5's scope is roughly double what this plan was
   drafted against. 11 are not trigger-fired and appear orphaned — listed by
@@ -236,6 +239,52 @@ The three carrying `link_url` map straight onto the shell's CTA button.
 Verify each in the preview **before** setting `layout`. Rollback for any single template is `UPDATE ... SET layout = NULL` plus restoring its old body — reversible per row, no redeploy.
 
 **Acceptance:** all 10 render correctly in preview; a spot-check send of each lands correctly in the Phase 8 client matrix.
+
+---
+
+## Phase 5.5 — Make the notification preferences screen real
+
+**BLOCKS any template being set to `layout = 'notification'`.**
+
+`apps/mobile/src/app/notifications-settings.tsx` already ships a Notifications
+screen with Email, SMS, Quiet Hours and badge toggles. It is **374 lines of
+local React state with no persistence** — the email toggle is literally
+`value={emailNotifs} onChange={setEmailNotifs}`. No Supabase call, no
+AsyncStorage, no SecureStore anywhere in the file. Every toggle resets to its
+hardcoded default on the next mount.
+
+Push is the exception: `handlePushToggle` really does register a device token.
+Email and SMS sit beside it looking identical and do nothing.
+
+This is worse than the surface not existing. A user turns off Email
+Notifications, watches the toggle move, believes it saved, and keeps receiving
+email. That is a trust problem on its own, and a compliance one for anything
+that is not strictly transactional.
+
+**Why it gates Phase 5:** `layout = 'notification'` promises the send respects
+the user's settings. There is no stored value to read, so flipping any template
+to `notification` before this ships means mailing people who have explicitly
+opted out.
+
+**Scope** — smaller than "build a preferences UI", because the UI exists:
+
+1. A `notification_preferences` table keyed by `user_id`, with per-channel
+   columns (email / sms / push) and per-category rows or columns matching the
+   screen's existing categories. RLS: a user reads and writes only their own.
+2. Read on mount, write on toggle, in the existing screen. No new UI.
+3. `send-transactional-email` consults it when `layout = 'notification'`, and
+   skips with an `email_log` row of `status = 'skipped_preference'` rather than
+   silently not sending — the same visibility rule Phase 4 established.
+4. Quiet Hours and the badge toggles can persist in the same change or be left
+   for later; they are not on the email path.
+
+**Note:** transactional mail must ignore this entirely. You cannot opt out of a
+receipt for something you paid for, which is exactly why `layout` distinguishes
+the two.
+
+**Acceptance:** toggle email off, reload the app, it is still off; a template
+with `layout = 'notification'` sent to that user writes `skipped_preference`
+and delivers nothing; a `transactional` template still delivers.
 
 ---
 
