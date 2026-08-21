@@ -10,7 +10,19 @@
 | 1 — asset pipeline | ✅ **done.** Bucket applied; all 5 PNGs uploaded and serving, byte-identical to `supabase/email-assets/`. |
 | 2 — shell module | ✅ **built, not yet wired.** `supabase/functions/_shared/email-shell.ts`. Sample output at `email-shell.preview.html` — open in a browser. |
 | 3 — preview | ✅ **done and live.** `dryRun` + `withShell` in `send-transactional-email` (v9); admin page live at https://pickleballapp.app/admin/email-preview (production deploy `bf1edda`, promoted 2026-08-21). |
-| 4–8 | not started |
+| 4 — wrap gate + email_log | 🟡 **built, not applied.** Migration `20260821010000` in `migrations_pending/`; function writes `email_log` and wraps when `layout` is set. |
+| 5–8 | not started |
+
+**Template scope (2026-08-21):** a ~70-item requirements list was supplied. Three
+things it changed: (a) `layout` now carries the transactional/notification
+distinction rather than being an on/off flag, because that decides unsubscribe
+presence and preference-respect; (b) ~5 items (Verify Email, Password Reset,
+Email Address Changed) belong to **Supabase Auth's** own template system, not
+`email_templates`; (c) **no notification-preferences table exists** — only
+`partner_preferences` — so the entire Notification half of the list is blocked on
+building that surface first. Templates should be created WITH their triggers, not
+in bulk: 11 orphaned templates already exist and orphans are what caused the
+2026-08-21 incident.
 
 ## Open items (updated 2026-08-21)
 

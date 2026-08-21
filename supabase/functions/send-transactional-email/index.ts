@@ -35,9 +35,32 @@ interface EmailRequest {
   withShell?: boolean;
 }
 
-// Stand-ins used only when previewing with the shell. Real values arrive in
-// Phase 6 (a `preheader` column and signed per-recipient preference links).
-const PREVIEW_PREFERENCES_URL = "https://pickleballapp.app/settings/notifications";
+// TODO(phase-6): these are the same link for everyone. They need to become
+// signed per-recipient URLs so they work from a mail client with no session.
+const PREFERENCES_URL = "https://pickleballapp.app/settings/notifications";
+const UNSUBSCRIBE_URL = "https://pickleballapp.app/settings/notifications";
+
+// Every terminal outcome writes one row. public.email_log has existed since the
+// baseline with exactly the right shape and NOTHING has ever written to it,
+// which is why the mail-dropping incident of 2026-08-21 was invisible: the
+// callers reach this function through pg_net fire-and-forget, so a 422 surfaces
+// nowhere. This is the record that makes failures findable.
+async function logEmail(row: {
+  to_email: string;
+  subject: string | null;
+  template_key: string | null;
+  status: string;
+  error?: string | null;
+  provider_id?: string | null;
+}) {
+  const { error } = await supabase.from("email_log").insert(row);
+  // Never let bookkeeping break a send that otherwise worked.
+  if (error) console.error(`[email_log] insert failed: ${error.message}`);
+}
+
+function recipientLabel(to: string | string[] | undefined): string {
+  return Array.isArray(to) ? to.join(", ") : (to ?? "(none)");
+}
 
 // Substitutes {{token}} and REPORTS what it could not resolve. The reporting
 // half is the point: this used to be `variables[key] ?? match`, which left an
@@ -111,11 +134,13 @@ Deno.serve(async (req: Request) => {
   let subject = payload.subject;
   let html = payload.html;
   let templateEnabled = true;
+  let layout: string | null = null;
+  let preheader: string | null = null;
 
   if (payload.templateKey) {
     const { data: template, error } = await supabase
       .from("email_templates")
-      .select("subject, html_body, enabled")
+      .select("subject, html_body, enabled, layout, preheader")
       .eq("key", payload.templateKey)
       .maybeSingle();
 
@@ -126,11 +151,19 @@ Deno.serve(async (req: Request) => {
     // the first step in fixing it, and you cannot fix what you cannot see. The
     // disabled state travels in the response so the preview can show it.
     if (!template.enabled && !payload.dryRun) {
+      await logEmail({
+        to_email: recipientLabel(payload.to),
+        subject: template.subject,
+        template_key: payload.templateKey,
+        status: "skipped_disabled",
+      });
       return new Response(JSON.stringify({ skipped: true, reason: "template disabled" }), {
         headers: { "Content-Type": "application/json" },
       });
     }
     templateEnabled = template.enabled;
+    layout = template.layout ?? null;
+    preheader = template.preheader ?? null;
 
     const variables = payload.variables ?? {};
     const subjectResult = substitute(template.subject, variables);
@@ -139,12 +172,22 @@ Deno.serve(async (req: Request) => {
     // Refuse to send a half-rendered email. Callers reach this function through
     // pg_net (fire-and-forget), so this 422 does not surface to the trigger and
     // cannot abort its transaction — the edge function log is where it is loud.
-    const missing = [...new Set([...subjectResult.missing, ...htmlResult.missing])];
+    const preheaderResult = preheader ? substitute(preheader, variables) : { text: "", missing: [] };
+    const missing = [...new Set([...subjectResult.missing, ...htmlResult.missing, ...preheaderResult.missing])];
     if (missing.length > 0) {
       console.error(
         `[send-transactional-email] unresolved variables for template "${payload.templateKey}": ` +
           `${missing.join(", ")} — nothing sent`,
       );
+      if (!payload.dryRun) {
+        await logEmail({
+          to_email: recipientLabel(payload.to),
+          subject: template.subject,
+          template_key: payload.templateKey,
+          status: "unresolved_variables",
+          error: `missing: ${missing.join(", ")}`,
+        });
+      }
       return new Response(
         JSON.stringify({
           error: "Unresolved template variables",
@@ -157,6 +200,9 @@ Deno.serve(async (req: Request) => {
 
     subject = subjectResult.text;
     html = htmlResult.text;
+    // The preheader may carry variables of its own. It is checked for
+    // unresolved tokens alongside the others above.
+    if (preheader) preheader = substitute(preheader, variables).text;
   }
 
   if (!subject || !html) {
@@ -168,16 +214,18 @@ Deno.serve(async (req: Request) => {
   // dry run exercises the real path and fails in the same places a real send
   // would. Only the Resend call is skipped.
   if (payload.dryRun) {
-    const shell = payload.withShell === true;
+    // Default to what a real send would do; withShell overrides so Phase 5 can
+    // inspect a template's wrapped look before its layout is set.
+    const shell = payload.withShell ?? (layout !== null);
     const renderedHtml = shell
       ? renderEmail({
         preheader: subject,
         bodyHtml: html,
-        preferencesUrl: PREVIEW_PREFERENCES_URL,
+        preferencesUrl: PREFERENCES_URL,
       })
       : html;
     const text = shell
-      ? renderText({ preheader: subject, bodyHtml: html, preferencesUrl: PREVIEW_PREFERENCES_URL })
+      ? renderText({ preheader: subject, bodyHtml: html, preferencesUrl: PREFERENCES_URL })
       : undefined;
 
     return new Response(
@@ -194,6 +242,28 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  // ── The wrap gate ──────────────────────────────────────────────────────────
+  // layout NULL means the body is still a whole legacy <div> document; wrapping
+  // it would nest a document inside the shell's own. Only migrated templates
+  // (Phase 5) carry a layout, so this is inert until each one is switched on.
+  //
+  // The value also decides the footer: an unsubscribe link is required on
+  // notification mail and wrong on a receipt — you cannot unsubscribe from the
+  // confirmation for something you paid for.
+  let finalHtml = html;
+  let finalText: string | undefined;
+  if (layout) {
+    const shellOpts = {
+      preheader: preheader ?? subject,
+      bodyHtml: html,
+      preferencesUrl: PREFERENCES_URL,
+      unsubscribeUrl: layout === "notification" ? UNSUBSCRIBE_URL : undefined,
+    };
+    finalHtml = renderEmail(shellOpts);
+    // HTML-only mail is spam-scored; a wrapped send always carries both parts.
+    finalText = renderText(shellOpts);
+  }
+
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -201,14 +271,37 @@ Deno.serve(async (req: Request) => {
       "Content-Type": "application/json",
       ...(payload.idempotencyKey ? { "Idempotency-Key": payload.idempotencyKey } : {}),
     },
-    body: JSON.stringify({ from: FROM, to: payload.to, subject, html }),
+    body: JSON.stringify({
+      from: FROM,
+      to: payload.to,
+      subject,
+      html: finalHtml,
+      ...(finalText ? { text: finalText } : {}),
+    }),
   });
 
   const result = await res.text();
   if (!res.ok) {
     console.error(`[resend send failed] ${res.status} ${result}`);
+    await logEmail({
+      to_email: recipientLabel(payload.to),
+      subject,
+      template_key: payload.templateKey ?? null,
+      status: "failed",
+      error: `${res.status} ${result}`.slice(0, 1000),
+    });
     return new Response(result, { status: res.status === 409 ? 409 : 502 });
   }
+
+  let providerId: string | null = null;
+  try { providerId = JSON.parse(result)?.id ?? null; } catch { /* body is not JSON */ }
+  await logEmail({
+    to_email: recipientLabel(payload.to),
+    subject,
+    template_key: payload.templateKey ?? null,
+    status: "sent",
+    provider_id: providerId,
+  });
 
   return new Response(result, { headers: { "Content-Type": "application/json" } });
 });

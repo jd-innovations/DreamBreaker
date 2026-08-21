@@ -71,6 +71,7 @@ to 39 with `20260820013554_reject_deleted_user_requests.sql`,
 | `20260725010000_par_v1_organized_events.sql` | **Not applied.** The PAR tables reached production through the baseline, but **0 of 10** PAR functions and **0 of 5** PAR triggers exist there. PAR rating processing does not run in production. | PAR algorithm approval + replay validation. `AGENTS.md` forbids implementing a PAR formula before the product spec marks it approved. Tracked under item L4. |
 | `20260725011000_par_v1_replay_engine.sql` | **Not applied.** `par_replay_jobs` does not exist in production. Depends on `20260725010000`. | Same gate; must land in order after the file above. |
 | `20260821000000_email_template_repair.sql` | **Not applied.** Strips `{{sponsor_logos}}` from 10 templates and rewrites `registration_confirmed` + `director_approved`, which reference variables their triggers never pass and have been returning 422 and sending nothing since 2026-08-20. Nothing blocks it technically. | Decision to run it. Move to `supabase/migrations/`, apply with raw SQL, then `migration repair --status applied 20260821000000`. |
+| `20260821010000_email_layout_and_preheader.sql` | **Not applied.** Phase 4 wrap gate: adds `layout` (NULL / transactional / notification) and `preheader` to `email_templates`. Applying it changes no delivered mail — every existing row gets `layout = NULL`, and the function only wraps when it is set. | Decision to run it. Raw SQL, then `migration repair --status applied 20260821010000`. |
 
 ## Note for the parallel email-notifications work
 
