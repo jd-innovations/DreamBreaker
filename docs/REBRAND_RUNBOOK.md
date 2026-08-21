@@ -2,7 +2,11 @@
 
 Ordered steps to finish the rebrand.
 
-**Progress: Steps 1–9 and 16 are done as of 2026-08-20.** The legal/support
+**Progress: Steps 1–9, 13, 16 and 19 are done as of 2026-08-20; Step 14 is done
+except Apple sign-in.** One open blocker: **Step 20**, which must be fixed
+before App Store submission.
+
+Superseded status line: **Steps 1–9 and 16 are done as of 2026-08-20.** The legal/support
 pages are live on `pickleballapp.app`, the web app serves the new brand and
 bundle id, both edge functions are redeployed, and the production data is
 rebranded with migration history in parity. **Step 10 (Stripe) is next.**
@@ -205,24 +209,23 @@ Skip this entirely if you would rather not risk it — nothing else depends on i
 Only if the mark itself changes. `apps/mobile/assets/images/` — `icon.png`,
 `logo-splash.png`, `android-icon-foreground.png`, `android-icon-background.png`.
 
-### 14. 🧑 Build and verify on device
+### 14. ⚠️ MOSTLY DONE — device verification, one failure
 
-```bash
-eas build --profile preview --platform ios
-```
+Preview build `app.pickleballapp` installed and tested 2026-08-20.
 
-The new bundle id needs new credentials — expect an Apple sign-in prompt. Then
-verify, in this order, because each depends on the last:
+| # | Check | Result |
+| --- | --- | --- |
+| 1 | Icon + splash | ✅ |
+| 2 | Google sign-in | ✅ — confirms the Step 3 allow-list entry |
+| 3 | **Apple sign-in** | ❌ **fails — see Step 20** |
+| 4 | Password reset (`pickleballapp://reset-password`) | ✅ |
+| 5 | Maps | ✅ — the Google Cloud key restrictions did **not** need updating |
+| 6 | Universal links | ✅ |
+| 7 | Guest claim link (`pickleballapp://claim/…`) | not yet checked |
 
-1. **Google sign-in** — proves the Step 3 allow-list entry works.
-2. **Apple sign-in.**
-3. **Password reset** — the `pickleballapp://reset-password` deep link.
-4. **A universal link** — open `https://pickleballapp.app/tournament/<id>` from
-   Messages, with the app installed. Then again with it removed, to confirm the
-   web fallback page renders.
-5. **A guest match claim link**, if Step 8 is applied — confirm it opens the app.
-6. **Skim for stale copy** — the landing header lockup, sign-up, account
-   settings, permissions, help & support.
+Two of the three risks flagged before the build did not materialise: Google
+OAuth needed nothing (its redirect URI is Supabase's callback, never the app
+scheme), and the Maps API keys were not bundle-id restricted.
 
 ### 15. 🧑 Remove the old redirect entries
 
@@ -267,3 +270,47 @@ The rebrand does not close any item in `TODO1.1_EXECUTION_PLAN.md` by itself.
 Item **1.4** is complete once Step 5 deploys and Step 6 verifies. Item **7.1**
 (store metadata) is where the name, icon, screenshots and store listing
 converge, and it is still ahead of you.
+
+---
+
+### 20. 🧑 OPEN BLOCKER — enable Sign in with Apple on the new App ID
+
+**Found 2026-08-20 on the first `app.pickleballapp` build. Needs a rebuild, so
+it was deferred rather than fixed on the spot.**
+
+**This blocks App Store submission, not just the feature.** Apple requires Sign
+in with Apple wherever a third-party sign-in is offered, and this app offers
+Google. Review will reject the binary while it is broken.
+
+#### What is wrong
+
+Nothing in Supabase, and nothing in the repo. `expo-apple-authentication` is in
+the `app.config.js` plugins array, so the build carries the
+`com.apple.developer.applesignin` entitlement, and the Supabase Apple provider's
+Client IDs field correctly reads `app.pickleballapp`.
+
+The App ID itself is missing the capability. EAS registered `app.pickleballapp`
+during the build but does not enable Sign in with Apple on it.
+
+#### Evidence it is client-side, not the provider
+
+The Supabase auth logs for the test window show Google's `/authorize` and
+`/callback`, the password reset's `/recover` and `/verify`, and **zero errors**.
+A rejected Apple identity token would appear as a failed `/token` call. There is
+no Apple request at all — so `signInAsync` threw on the device before any
+network call. Re-checking the Supabase provider config is wasted effort.
+
+It presents as a silent failure because `signInWithApple()` in
+`apps/mobile/src/lib/auth.ts` returns `null` rather than throwing when Apple is
+unavailable or the user cancels.
+
+#### Fix
+
+1. Apple Developer → Certificates, Identifiers & Profiles → **Identifiers** →
+   `app.pickleballapp` → tick **Sign in with Apple** → Save.
+2. Regenerate the provisioning profile so it carries the entitlement:
+   `eas credentials -p ios` → `preview` → Provisioning Profile → regenerate.
+3. Rebuild, then re-run checks 3 and 7 from Step 14.
+
+Fold this into whichever build comes next rather than spending one on it alone.
+Item 7.1 will need a fresh build regardless.
