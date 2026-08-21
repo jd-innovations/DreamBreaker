@@ -253,7 +253,6 @@ export default function TournamentRegisterScreen() {
   const divisionId     = p.divisionId      ?? '';
   const divisionName   = p.divisionName    ?? 'Division';
   const divisionLevel  = p.divisionLevel   ?? '';
-  const holdCents      = parseInt(p.holdAmountCents  ?? '0', 10);
   const paramEntryCents = parseInt(p.entryAmountCents ?? '0', 10);
   const date           = p.date  ?? '—';
   const venue          = p.venue ?? '—';
@@ -270,6 +269,20 @@ export default function TournamentRegisterScreen() {
   // send a paid division down the free-registration path below.
   const [resolvedEntryCents, setResolvedEntryCents] = useState<number | null>(null);
   const entryCents   = resolvedEntryCents ?? paramEntryCents;
+
+  // The deposit is what this player ACTUALLY paid to hold a spot, so it can
+  // only come from their own hold row. The `holdAmountCents` route param is
+  // not that: select-division and the tournament detail screen pass the
+  // tournament's CONFIGURED hold fee, which exists whether or not the player
+  // ever held anything. Subtracting it quoted a $1-deposit tournament's $10
+  // entry as "$9 balance due" to a player who had paid nothing, while the
+  // entry edge function charged the full $10.
+  //
+  // Until the hold resolves the deposit is treated as zero rather than
+  // optimistically filled from the param: showing the full entry fee and then
+  // dropping it is safe, showing a discount and then raising it is the bug.
+  const [resolvedHoldCents, setResolvedHoldCents] = useState<number | null>(null);
+  const holdCents    = resolvedHoldCents ?? 0;
   const balanceCents = balanceDueCents(entryCents, holdCents);
 
   const [connections,        setConnections]        = useState<Connection[]>([]);
@@ -283,8 +296,17 @@ export default function TournamentRegisterScreen() {
     let active = true;
     if (user?.id) {
       fetchRealConnections(user.id).then(conns => { if (active) setConnections(conns); }).catch(() => {});
+      // Same lookup handleSubmit makes before choosing between the balance and
+      // the full-entry charge — read here so the quoted balance and the branch
+      // that charges the card agree on whether a deposit exists.
+      fetchPlayerHolds(user.id).then(holds => {
+        if (!active) return;
+        const hold = holds.find(h => h.tournamentId === tournamentId && h.divisionId === divisionId);
+        setResolvedHoldCents(hold?.holdAmountCents ?? 0);
+      }).catch(() => { if (active) setResolvedHoldCents(0); });
     } else {
       setConnections([]);
+      setResolvedHoldCents(0);
     }
     fetchDivisionsForTournament(tournamentId).then(divs => {
       if (!active) return;
@@ -539,10 +561,12 @@ export default function TournamentRegisterScreen() {
               <Text style={s.feeLabel}>Entry Fee{partnerRequired ? ' (per player)' : ''}</Text>
               <Text style={s.feeValue}>{fmt(entryCents)}</Text>
             </View>
-            <View style={[s.feeRow, s.feeRowBorder]}>
-              <Text style={s.feeLabel}>Deposit Applied</Text>
-              <Text style={[s.feeValue, { color: L.success }]}>−{fmt(holdCents)}</Text>
-            </View>
+            {holdCents > 0 && (
+              <View style={[s.feeRow, s.feeRowBorder]}>
+                <Text style={s.feeLabel}>Deposit Applied</Text>
+                <Text style={[s.feeValue, { color: L.success }]}>−{fmt(holdCents)}</Text>
+              </View>
+            )}
             <View style={[s.feeRow, s.balanceRow]}>
               <Text style={s.balanceLabel}>Balance Due</Text>
               <Text style={s.balanceValue}>{fmt(balanceCents)}</Text>
