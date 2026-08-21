@@ -19,8 +19,31 @@ interface EmailRequest {
   idempotencyKey?: string;
 }
 
-function substitute(text: string, variables: Record<string, string>): string {
-  return text.replace(/\{\{(\w+)\}\}/g, (match, key) => variables[key] ?? match);
+// Substitutes {{token}} and REPORTS what it could not resolve. The reporting
+// half is the point: this used to be `variables[key] ?? match`, which left an
+// unresolved token in place and sent it — a caller that forgot a variable
+// mailed a real user "You're registered for {{tournament_name}}". Callers are
+// all code (DB triggers in 20260807000000_transactional_email.sql, plus
+// waitlist-sweeper), never a human composing a message, so a missing variable
+// is always a bug and never a state worth delivering.
+//
+// null counts as missing alongside undefined: the old `??` treated it that way,
+// and substituting it would put the literal string "null" into an email.
+// An empty string is left alone — that is an explicit "this field is blank".
+function substitute(
+  text: string,
+  variables: Record<string, string>,
+): { text: string; missing: string[] } {
+  const missing = new Set<string>();
+  const out = text.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+    const value = variables[key];
+    if (value === undefined || value === null) {
+      missing.add(key);
+      return match;
+    }
+    return value;
+  });
+  return { text: out, missing: [...missing] };
 }
 
 const supabase = createClient(
@@ -70,8 +93,30 @@ Deno.serve(async (req: Request) => {
     }
 
     const variables = payload.variables ?? {};
-    subject = substitute(template.subject, variables);
-    html = substitute(template.html_body, variables);
+    const subjectResult = substitute(template.subject, variables);
+    const htmlResult = substitute(template.html_body, variables);
+
+    // Refuse to send a half-rendered email. Callers reach this function through
+    // pg_net (fire-and-forget), so this 422 does not surface to the trigger and
+    // cannot abort its transaction — the edge function log is where it is loud.
+    const missing = [...new Set([...subjectResult.missing, ...htmlResult.missing])];
+    if (missing.length > 0) {
+      console.error(
+        `[send-transactional-email] unresolved variables for template "${payload.templateKey}": ` +
+          `${missing.join(", ")} — nothing sent`,
+      );
+      return new Response(
+        JSON.stringify({
+          error: "Unresolved template variables",
+          templateKey: payload.templateKey,
+          missing,
+        }),
+        { status: 422, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    subject = subjectResult.text;
+    html = htmlResult.text;
   }
 
   if (!subject || !html) {
