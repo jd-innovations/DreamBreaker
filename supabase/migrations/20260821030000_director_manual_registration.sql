@@ -171,8 +171,14 @@ begin
       hint = 'Supply exactly one of p_player_id or p_guest.';
   end if;
 
-  v_is_doubles    := (p_partner_id is not null) or (p_partner_guest is not null);
-  v_needs_partner := lower(v_division.name) ~ '(doubles|mixed)';
+  v_is_doubles := (p_partner_id is not null) or (p_partner_guest is not null);
+
+  -- Partner requirement comes from divisions.format, never from the name.
+  -- Production carries both a 'doubles' division named "Mixed Doubles" and a
+  -- 'mixed_doubles' one, so name matching would misclassify real data. The
+  -- client-side requiresPartner() helper in register.tsx does regex the name;
+  -- that is a UI convenience and not the authority.
+  v_needs_partner := v_division.format in ('doubles', 'mixed_doubles');
 
   if (p_partner_id is not null) and (p_partner_guest is not null) then
     raise exception 'invalid_partner' using errcode = 'P0007',
