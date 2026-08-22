@@ -686,6 +686,12 @@ export default function CommandCenterScreen() {
               accent
               onPress={() => router.push(`/tournament/${id}/check-in` as never)}
             />
+            <QuickAction
+              icon="person-add-outline"
+              label="Add Registration"
+              accent
+              onPress={() => router.push(`/tournament/${id}/add-registration` as never)}
+            />
           </View>
 
           <View style={[s.actionGrid, { marginTop: 8 }]}>
