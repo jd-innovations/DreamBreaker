@@ -75,22 +75,15 @@ function guestPayload(g: GuestInput) {
 export async function directorAddRegistration(input: DirectorAddInput): Promise<DirectorAddResult> {
   const { player, partner } = input;
 
-  // Cast: director_add_tournament_registration lands in database.types.ts only
-  // after migration 20260821030000 is applied and types are regenerated
-  // (`supabase gen types`). Narrowed to this one call so the rest of the client
-  // keeps its generated typing.
-  const rpc = supabase.rpc as unknown as (
-    fn: string,
-    args: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error: { message?: string } | null }>;
-
-  const { data, error } = await rpc('director_add_tournament_registration', {
+  const { data, error } = await supabase.rpc('director_add_tournament_registration', {
     p_tournament_id: input.tournamentId,
     p_division_id:   input.divisionId,
-    p_player_id:     player.kind === 'profile' ? player.profileId : null,
-    p_guest:         player.kind === 'guest'   ? guestPayload(player.guest) : null,
-    p_partner_id:    partner?.kind === 'profile' ? partner.profileId : null,
-    p_partner_guest: partner?.kind === 'guest'   ? guestPayload(partner.guest) : null,
+    // The generated types declare the uuid params as optional, so omit them with
+    // `undefined` rather than passing null -- the RPC's own DEFAULT NULL applies.
+    p_player_id:     player.kind === 'profile' ? player.profileId : undefined,
+    p_guest:         player.kind === 'guest'   ? guestPayload(player.guest) : undefined,
+    p_partner_id:    partner?.kind === 'profile' ? partner.profileId : undefined,
+    p_partner_guest: partner?.kind === 'guest'   ? guestPayload(partner.guest) : undefined,
   });
 
   if (error) {

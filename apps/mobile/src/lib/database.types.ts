@@ -1299,7 +1299,9 @@ export type Database = {
           enabled: boolean
           html_body: string
           key: string
+          layout: string | null
           name: string
+          preheader: string | null
           subject: string
           updated_at: string
           updated_by: string | null
@@ -1309,7 +1311,9 @@ export type Database = {
           enabled?: boolean
           html_body: string
           key: string
+          layout?: string | null
           name: string
+          preheader?: string | null
           subject: string
           updated_at?: string
           updated_by?: string | null
@@ -1319,7 +1323,9 @@ export type Database = {
           enabled?: boolean
           html_body?: string
           key?: string
+          layout?: string | null
           name?: string
+          preheader?: string | null
           subject?: string
           updated_at?: string
           updated_by?: string | null
@@ -3862,6 +3868,7 @@ export type Database = {
           cover_url: string | null
           created_at: string
           date_of_birth: string | null
+          deleted_at: string | null
           director_approved_at: string | null
           director_approved_by: string | null
           director_events_hosted: number
@@ -3912,6 +3919,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           date_of_birth?: string | null
+          deleted_at?: string | null
           director_approved_at?: string | null
           director_approved_by?: string | null
           director_events_hosted?: number
@@ -3964,6 +3972,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           date_of_birth?: string | null
+          deleted_at?: string | null
           director_approved_at?: string | null
           director_approved_by?: string | null
           director_events_hosted?: number
@@ -4204,6 +4213,13 @@ export type Database = {
             foreignKeyName: "registration_groups_tournament_id_fkey"
             columns: ["tournament_id"]
             isOneToOne: false
+            referencedRelation: "v_director_earnings"
+            referencedColumns: ["tournament_id"]
+          },
+          {
+            foreignKeyName: "registration_groups_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
             referencedRelation: "v_tournament_listing"
             referencedColumns: ["id"]
           },
@@ -4219,13 +4235,15 @@ export type Database = {
           director_added: boolean
           division_id: string | null
           entry_fee_paid_cents: number
+          guest_partner_id: string | null
+          guest_player_id: string | null
           hold_expired_at: string | null
           hold_expires_at: string | null
           hold_fee_paid_cents: number
           id: string
           needs_partner: boolean
           partner_id: string | null
-          player_id: string
+          player_id: string | null
           registration_group_id: string | null
           replaces_registration_id: string | null
           status: Database["public"]["Enums"]["registration_status"]
@@ -4246,13 +4264,15 @@ export type Database = {
           director_added?: boolean
           division_id?: string | null
           entry_fee_paid_cents?: number
+          guest_partner_id?: string | null
+          guest_player_id?: string | null
           hold_expired_at?: string | null
           hold_expires_at?: string | null
           hold_fee_paid_cents?: number
           id?: string
           needs_partner?: boolean
           partner_id?: string | null
-          player_id: string
+          player_id?: string | null
           registration_group_id?: string | null
           replaces_registration_id?: string | null
           status?: Database["public"]["Enums"]["registration_status"]
@@ -4273,13 +4293,15 @@ export type Database = {
           director_added?: boolean
           division_id?: string | null
           entry_fee_paid_cents?: number
+          guest_partner_id?: string | null
+          guest_player_id?: string | null
           hold_expired_at?: string | null
           hold_expires_at?: string | null
           hold_fee_paid_cents?: number
           id?: string
           needs_partner?: boolean
           partner_id?: string | null
-          player_id?: string
+          player_id?: string | null
           registration_group_id?: string | null
           replaces_registration_id?: string | null
           status?: Database["public"]["Enums"]["registration_status"]
@@ -4311,6 +4333,20 @@ export type Database = {
             columns: ["division_id"]
             isOneToOne: false
             referencedRelation: "divisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registrations_guest_partner_id_fkey"
+            columns: ["guest_partner_id"]
+            isOneToOne: false
+            referencedRelation: "personal_guest_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registrations_guest_player_id_fkey"
+            columns: ["guest_player_id"]
+            isOneToOne: false
+            referencedRelation: "personal_guest_players"
             referencedColumns: ["id"]
           },
           {
@@ -5854,38 +5890,6 @@ export type Database = {
           tournament_name: string
         }[]
       }
-      decline_registration_group_invite: {
-        Args: { p_group_id: string }
-        Returns: boolean
-      }
-      ensure_registration_group: {
-        Args: {
-          p_amount_due_cents: number
-          p_division_id: string
-          p_expires_at?: string
-          p_initiator_id: string
-          p_partner_id: string
-          p_tournament_id: string
-        }
-        Returns: {
-          group_id: string
-          initiator_member_id: string
-          partner_member_id: string
-        }[]
-      }
-      expire_registration_group_invites: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      mark_registration_group_member_paid: {
-        Args: {
-          p_amount_cents: number
-          p_member_id: string
-          p_payment_id: string
-          p_stripe_intent_id?: string
-        }
-        Returns: string
-      }
       claim_personal_match: {
         Args: { p_token: string }
         Returns: {
@@ -6109,6 +6113,55 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      decline_registration_group_invite: {
+        Args: { p_group_id: string }
+        Returns: boolean
+      }
+      director_add_tournament_registration: {
+        Args: {
+          p_division_id: string
+          p_guest?: Json
+          p_partner_guest?: Json
+          p_partner_id?: string
+          p_player_id?: string
+          p_tournament_id: string
+        }
+        Returns: {
+          added_by_director_id: string | null
+          checked_in_at: string | null
+          checked_in_by: string | null
+          converted_at: string | null
+          created_at: string
+          director_added: boolean
+          division_id: string | null
+          entry_fee_paid_cents: number
+          guest_partner_id: string | null
+          guest_player_id: string | null
+          hold_expired_at: string | null
+          hold_expires_at: string | null
+          hold_fee_paid_cents: number
+          id: string
+          needs_partner: boolean
+          partner_id: string | null
+          player_id: string | null
+          registration_group_id: string | null
+          replaces_registration_id: string | null
+          status: Database["public"]["Enums"]["registration_status"]
+          stripe_entry_intent_id: string | null
+          stripe_hold_intent_id: string | null
+          tournament_id: string
+          updated_at: string
+          waitlist_offer_expires_at: string | null
+          waitlist_position: number | null
+          waiver_accepted_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "registrations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
@@ -6145,6 +6198,21 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: undefined
       }
+      ensure_registration_group: {
+        Args: {
+          p_amount_due_cents: number
+          p_division_id: string
+          p_expires_at?: string
+          p_initiator_id: string
+          p_partner_id: string
+          p_tournament_id: string
+        }
+        Returns: {
+          group_id: string
+          initiator_member_id: string
+          partner_member_id: string
+        }[]
+      }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       evaluate_personal_game_par_eligibility: {
         Args: { p_game_id: string }
@@ -6168,7 +6236,9 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      expire_registration_group_invites: { Args: never; Returns: number }
       expire_stale_holds: { Args: never; Returns: number }
+      expire_stale_reservation_holds: { Args: never; Returns: number }
       facility_id_for_owner: {
         Args: {
           p_owner_id: string
@@ -6379,6 +6449,14 @@ export type Database = {
         Args: { p_session_id: string; p_user_id: string }
         Returns: boolean
       }
+      is_registration_group_director: {
+        Args: { p_group_id: string }
+        Returns: boolean
+      }
+      is_registration_group_member: {
+        Args: { p_group_id: string }
+        Returns: boolean
+      }
       is_reservation_organizer: {
         Args: { p_reservation_id: string; p_user_id: string }
         Returns: boolean
@@ -6454,6 +6532,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      mark_registration_group_member_paid: {
+        Args: {
+          p_amount_cents: number
+          p_member_id: string
+          p_payment_id: string
+          p_stripe_intent_id?: string
+        }
+        Returns: string
       }
       mark_wallet_item_seen: { Args: { p_item_id: string }; Returns: undefined }
       par_clamp: {
@@ -6612,6 +6699,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      reject_deleted_users: { Args: never; Returns: undefined }
       reservation_asset_hourly_rate_cents: {
         Args: {
           p_asset_id: string
@@ -7622,6 +7710,7 @@ export type Database = {
           public: boolean | null
           type: Database["storage"]["Enums"]["buckettype"]
           updated_at: string | null
+          versioning_status: string
         }
         Insert: {
           allowed_mime_types?: string[] | null
@@ -7635,6 +7724,7 @@ export type Database = {
           public?: boolean | null
           type?: Database["storage"]["Enums"]["buckettype"]
           updated_at?: string | null
+          versioning_status?: string
         }
         Update: {
           allowed_mime_types?: string[] | null
@@ -7648,6 +7738,7 @@ export type Database = {
           public?: boolean | null
           type?: Database["storage"]["Enums"]["buckettype"]
           updated_at?: string | null
+          versioning_status?: string
         }
         Relationships: []
       }
@@ -7725,9 +7816,12 @@ export type Database = {
       }
       objects: {
         Row: {
+          archived_at: string | null
           bucket_id: string | null
           created_at: string | null
           id: string
+          is_delete_marker: boolean
+          is_versioned: boolean
           last_accessed_at: string | null
           metadata: Json | null
           name: string | null
@@ -7739,9 +7833,12 @@ export type Database = {
           version: string | null
         }
         Insert: {
+          archived_at?: string | null
           bucket_id?: string | null
           created_at?: string | null
           id?: string
+          is_delete_marker?: boolean
+          is_versioned?: boolean
           last_accessed_at?: string | null
           metadata?: Json | null
           name?: string | null
@@ -7753,9 +7850,12 @@ export type Database = {
           version?: string | null
         }
         Update: {
+          archived_at?: string | null
           bucket_id?: string | null
           created_at?: string | null
           id?: string
+          is_delete_marker?: boolean
+          is_versioned?: boolean
           last_accessed_at?: string | null
           metadata?: Json | null
           name?: string | null
