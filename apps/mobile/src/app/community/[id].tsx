@@ -2236,7 +2236,11 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.page },
 
   // Hero
-  hero: { height: 300, position: 'relative' },
+  // 324, not 300: heroContent is bottom-anchored, so a two-line event name
+  // grows the stack upward until the status badge collides with the back
+  // chevron (which sits at insets.top + 8). The extra height lowers the whole
+  // text block instead of shrinking the title.
+  hero: { height: 324, position: 'relative' },
   topControls: {
     position: 'absolute', left: spacing.screenH, right: spacing.screenH,
     flexDirection: 'row', justifyContent: 'space-between', zIndex: 10,
@@ -2311,7 +2315,11 @@ const s = StyleSheet.create({
   msgOrgText: { color: L.navy, fontSize: 14, fontWeight: '700' },
 
   // About
-  aboutText: { color: L.textSub, fontSize: 14, lineHeight: 22, marginBottom: spacing.xxl },
+  // Matches the tournament detail screen's `description` (text / 14 / 22 / 400).
+  // Only the colour differed — this was textSub, which read as muted next to
+  // the tournament copy. paddingHorizontal is deliberately not copied across:
+  // that screen's description sits in an unpadded container, this one doesn't.
+  aboutText: { color: L.text, fontSize: 14, lineHeight: 22, fontWeight: '400', marginBottom: spacing.xxl },
 
   // Details card
   detailsCard: {
