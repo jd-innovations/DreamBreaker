@@ -1116,19 +1116,19 @@ export default function CommunityEventScreen() {
         </View>
 
         {/* About */}
-        <Text style={s.sectionTitle}>About This Event</Text>
+        <Text style={[s.sectionTitle, s.sectionTitleUpper]}>About This Event</Text>
         <Text style={s.aboutText}>{event.about}</Text>
 
         {/* Weather */}
         {weather != null && (
           <>
-            <Text style={s.sectionTitle}>Weather on Event Day</Text>
+            <Text style={[s.sectionTitle, s.sectionTitleUpper]}>Weather on Event Day</Text>
             <DetailedWeatherWidget w={weather} locationLabel={venueCity || undefined} />
           </>
         )}
 
         {/* Event details */}
-        <Text style={s.sectionTitle}>Event Details</Text>
+        <Text style={[s.sectionTitle, s.sectionTitleUpper]}>Event Details</Text>
         <View style={s.detailsCard}>
           <InfoRow icon="calendar-outline"   label="DATE"        value={event.date} />
           <View style={s.divider} />
@@ -1163,7 +1163,7 @@ export default function CommunityEventScreen() {
         </View>
 
         {/* Players joined preview */}
-        <Text style={s.sectionTitle}>Players Joined</Text>
+        <Text style={[s.sectionTitle, s.sectionTitleUpper]}>Players Joined</Text>
         {(() => {
           const previewParticipants = isUUID ? liveParticipants.slice(0, 6) : event.participants;
           return (
@@ -1184,7 +1184,7 @@ export default function CommunityEventScreen() {
         })()}
 
         {/* Organizer */}
-        <Text style={s.sectionTitle}>Organizer</Text>
+        <Text style={[s.sectionTitle, s.sectionTitleUpper]}>Organizer</Text>
         <View style={s.organizerCard}>
           <Avatar uri={event.organizer.avatarUrl} initials={event.organizer.initials} bg={event.organizer.bg} size={48} />
           <View style={s.orgInfo}>
@@ -1220,7 +1220,7 @@ export default function CommunityEventScreen() {
         </TouchableOpacity>
 
         {/* Location */}
-        <Text style={s.sectionTitle}>Location</Text>
+        <Text style={[s.sectionTitle, s.sectionTitleUpper]}>Location</Text>
         <View style={s.locationCard}>
           <View style={s.mapPlaceholder}>
             {facilityDetail ? (
@@ -1902,6 +1902,7 @@ const tb = StyleSheet.create({
     color: L.textMuted,
     fontSize: 14,
     fontWeight: '600',
+    textTransform: 'uppercase',
   },
   labelActive: {
     color: L.navy,
@@ -2252,7 +2253,7 @@ const s = StyleSheet.create({
     borderRadius: 8, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, marginBottom: spacing.sm,
   },
   badgeText:    { fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
-  heroTitle:    { color: colors.white, fontSize: 32, fontWeight: '800', lineHeight: 36, marginBottom: spacing.sm },
+  heroTitle:    { color: colors.white, fontSize: 32, fontWeight: '800', lineHeight: 36, marginBottom: spacing.sm, textTransform: 'uppercase' },
   heroMeta:     { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
   heroMetaText: { color: 'rgba(255,255,255,0.88)', fontSize: 13, fontWeight: '500' },
   heroMetaSubline: { marginLeft: 17, marginBottom: spacing.xs },
@@ -2277,6 +2278,9 @@ const s = StyleSheet.create({
 
   // Section title
   sectionTitle: { color: L.navy, fontSize: 17, fontWeight: '900', marginBottom: spacing.md, marginTop: spacing.xs },
+  // Overview-tab headings only. sectionTitle is shared with the Players tab
+  // (Accepted Players, Pending Invites, Waitlist), which stays title case.
+  sectionTitleUpper: { textTransform: 'uppercase' as const },
 
   // Organizer
   organizerCard: {
