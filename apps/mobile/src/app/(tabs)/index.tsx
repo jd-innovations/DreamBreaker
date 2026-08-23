@@ -245,7 +245,9 @@ function tournamentToTrending(t: Tournament): typeof TRENDING[0] {
       const hi = t.divisionSkillMax ?? (t.skillMax > 0 ? t.skillMax : null);
       return lo != null || hi != null ? skillLabel(lo ?? hi!, hi ?? lo!) : null;
     })(),
-    holdFee: `$${Math.round(t.holdFeeCents / 100)}`,
+    // "Free" rather than "$0": a zero hold fee means holding costs nothing,
+    // and "Hold My Spot · $0" reads like a broken price.
+    holdFee: t.holdFeeCents > 0 ? `$${Math.round(t.holdFeeCents / 100)}` : 'Free',
     entryFee: `$${Math.round(t.entryFeeCents / 100)}`,
     photo: t.coverImgUrl ?? FALLBACK_TOURNEY_PHOTO,
     logoLines: [words.slice(0, mid).join(' '), words.slice(mid).join(' ')],
@@ -574,7 +576,7 @@ function TrendingCard({ item, onSave, saved }: {
               } as never)}
             >
               <Ionicons name="hand-left-outline" size={15} color={L.gold} />
-              <Text style={tc.holdBtnLabel}>Hold My Spot</Text>
+              <Text style={tc.holdBtnLabel} numberOfLines={1}>Hold My Spot · {item.holdFee}</Text>
             </TouchableOpacity>
             {item.primaryAction === 'hold' && (
               <TouchableOpacity
