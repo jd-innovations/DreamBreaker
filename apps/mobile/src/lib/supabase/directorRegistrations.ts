@@ -114,25 +114,37 @@ export type DirectorDivision = {
 };
 
 export async function fetchDirectorDivisions(tournamentId: string): Promise<DirectorDivision[]> {
-  const { data, error } = await supabase
-    .from('divisions')
-    .select('id, name, format, entry_fee_cents, draw_size, spots_filled')
-    .eq('tournament_id', tournamentId)
-    .order('name');
+  // The tournament fee is needed too: a division's NULL entry_fee_cents means
+  // "inherit the tournament's fee", not "free". Resolving it the same way the
+  // RPC and create-tournament-entry-payment-intent do keeps the picker honest --
+  // otherwise it would offer a division the server then refuses.
+  const [{ data: tournament }, { data, error }] = await Promise.all([
+    supabase.from('tournaments').select('entry_fee_cents').eq('id', tournamentId).maybeSingle(),
+    supabase
+      .from('divisions')
+      .select('id, name, format, entry_fee_cents, draw_size, spots_filled')
+      .eq('tournament_id', tournamentId)
+      .order('name'),
+  ]);
 
   if (error || !data) return [];
 
-  return data.map(d => ({
-    id:            d.id,
-    name:          d.name,
-    format:        d.format,
-    entryFeeCents: d.entry_fee_cents ?? 0,
-    drawSize:      d.draw_size,
-    spotsFilled:   d.spots_filled,
-    manualEligible: (d.entry_fee_cents ?? 0) === 0,
-    // Mirrors the RPC's own rule, which reads format rather than the name.
-    requiresPartner: d.format === 'doubles' || d.format === 'mixed_doubles',
-  }));
+  const tournamentFee = tournament?.entry_fee_cents ?? null;
+
+  return data.map(d => {
+    const effectiveFee = d.entry_fee_cents ?? tournamentFee ?? 0;
+    return {
+      id:            d.id,
+      name:          d.name,
+      format:        d.format,
+      entryFeeCents: effectiveFee,
+      drawSize:      d.draw_size,
+      spotsFilled:   d.spots_filled,
+      manualEligible: effectiveFee === 0,
+      // Mirrors the RPC's own rule, which reads format rather than the name.
+      requiresPartner: d.format === 'doubles' || d.format === 'mixed_doubles',
+    };
+  });
 }
 
 export type RegistrableProfile = {

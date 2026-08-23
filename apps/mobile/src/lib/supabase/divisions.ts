@@ -64,7 +64,13 @@ export async function createDivision(input: {
   skillMin: number;
   skillMax: number;
   capacity: number;
-  entryFeeCents: number;
+  /**
+   * Omit to store null, which means "inherit the tournament's entry fee" --
+   * the semantics create-tournament-entry-payment-intent charges on
+   * (division.entry_fee_cents ?? tournament.entry_fee_cents ?? 0). Pass 0 to
+   * make the division explicitly free regardless of the tournament's fee.
+   */
+  entryFeeCents?: number;
 }): Promise<DivisionData> {
   const format = input.eventType === 'Singles' ? 'singles'
     : input.eventType === 'Mixed Doubles' ? 'mixed_doubles' : 'doubles';
@@ -82,7 +88,7 @@ export async function createDivision(input: {
       skill_min: input.skillMin,
       skill_max: input.skillMax,
       draw_size: input.capacity,
-      entry_fee_cents: input.entryFeeCents,
+      entry_fee_cents: input.entryFeeCents ?? null,
     })
     .select('id,tournament_id,name,format,skill_min,skill_max,draw_size,entry_fee_cents,spots_filled,created_at,gender_category')
     .single();

@@ -140,9 +140,16 @@ function validate(form: FormState): FormErrors {
     errors.capacity = 'Capacity must be at least 2';
   }
 
-  const entryFee = parseFloat(form.entryFee);
-  if (!form.entryFee || isNaN(entryFee) || entryFee <= 0) {
-    errors.entryFee = 'Entry fee must be greater than $0';
+  // Blank is legitimate and always was — the field's own hint promises "leave
+  // blank to use the tournament's entry fee", which stores null and inherits.
+  // Requiring > 0 contradicted that and made a free division impossible to
+  // create: a $0 tournament's divisions had to be given a token fee to get past
+  // this check, which then blocked manual registration.
+  if (form.entryFee.trim() !== '') {
+    const entryFee = parseFloat(form.entryFee);
+    if (isNaN(entryFee) || entryFee < 0) {
+      errors.entryFee = 'Entry fee must be $0 or more';
+    }
   }
 
   return errors;
@@ -221,7 +228,12 @@ export default function CreateDivisionScreen() {
         skillMin:      parseFloat(form.skillMin),
         skillMax:      parseFloat(form.skillMax),
         capacity:      parseInt(form.capacity, 10),
-        entryFeeCents: Math.round(parseFloat(form.entryFee) * 100),
+        // Blank -> undefined -> stored as null, meaning "inherit the
+        // tournament's entry fee". An explicit 0 means this division is free
+        // regardless of what the tournament charges.
+        entryFeeCents: form.entryFee.trim() === ''
+          ? undefined
+          : Math.round(parseFloat(form.entryFee) * 100),
       });
 
       Alert.alert(
