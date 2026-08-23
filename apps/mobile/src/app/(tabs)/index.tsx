@@ -450,14 +450,10 @@ function TrendingCard({ item, onSave, saved }: {
       activeOpacity={0.88}
       onPress={() => router.push(`/tournament/${item.id}` as never)}
     >
-      {/* Photo column */}
-      <View style={tc.photoWrap}>
-        <Image source={{ uri: item.photo }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-        <LinearGradient colors={['rgba(0,0,0,0.08)', 'rgba(0,0,0,0.50)']} style={StyleSheet.absoluteFill} />
-      </View>
-
-      {/* Info column */}
       <View style={tc.info}>
+        {/* Type label, matching CommunityCard's COMMUNITY PLAY treatment */}
+        <Text style={tc.typeText}>TOURNAMENT</Text>
+
         <View style={tc.nameRow}>
           <Text style={tc.name}>{item.name}</Text>
           <TouchableOpacity onPress={onSave} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -539,13 +535,17 @@ function TrendingCard({ item, onSave, saved }: {
 }
 
 const tc = StyleSheet.create({
+  // Column card matching CommunityCard (cl.card): same radius, border and
+  // background, no photo. The hero image and its gradient were dropped so the
+  // tournament listing reads as the community event listing does.
   card: {
-    flexDirection: 'row',
     borderRadius: 16, overflow: 'hidden',
     borderWidth: 1, borderColor: L.border, backgroundColor: L.bg,
     marginHorizontal: 16, marginBottom: 12,
   },
-  photoWrap: { width: 120, position: 'relative' },
+  // Mirrors cl.typeText -- plain gold label, deliberately not a pill, because
+  // COMMUNITY PLAY is not one either.
+  typeText: { color: L.gold, fontSize: 11, fontWeight: '800', letterSpacing: 0.8, marginBottom: 6 },
   badge: {
     position: 'absolute', top: 10, left: 8,
     flexDirection: 'row', alignItems: 'center', gap: 3,
@@ -561,7 +561,7 @@ const tc = StyleSheet.create({
   },
   miniLogoText: { color: '#FFFFFF', fontSize: 8, fontWeight: '900', letterSpacing: 0.5, lineHeight: 10 },
 
-  info:        { flex: 1, padding: 12, gap: 4 },
+  info:        { padding: 16, gap: 4 },
   nameRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
   name:        { color: L.navy, fontSize: 20, fontWeight: '800', flex: 1, marginRight: 8 },
   verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 6 },
