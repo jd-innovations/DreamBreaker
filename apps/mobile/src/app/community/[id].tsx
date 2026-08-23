@@ -45,6 +45,8 @@ const L = {
   navy:        colors.navy,
   gold:        colors.gold,
   goldLight:   colors.goldLight,
+  goldBg:      colors.goldBg,
+  goldBorder:  colors.goldBorder,
   text:        colors.text,
   textSub:     colors.textSub,
   textMuted:   colors.textSub,
@@ -306,6 +308,50 @@ function toParticipantRow(
 // only cover ~10 days out, so events further out (or in the past) render an
 // "unavailable" state instead of stale/fake data.
 
+type AvailableEventWeather = Extract<EventWeatherResult, { available: true }>;
+
+function formatTemp(value: number | null | undefined): string {
+  return value != null ? `${value}\u00B0` : '--';
+}
+
+function primaryWeatherTemp(w: AvailableEventWeather): number | null {
+  if (w.temp != null) return w.temp;
+  if (w.high != null && w.low != null) return Math.round((w.high + w.low) / 2);
+  return w.high ?? w.low ?? null;
+}
+
+function feelsLikeTemp(w: AvailableEventWeather): number | null {
+  const temp = primaryWeatherTemp(w);
+  if (temp == null) return null;
+
+  if (temp >= 80 && w.humidity != null) {
+    const t = temp;
+    const h = w.humidity;
+    return Math.round(
+      -42.379 +
+      2.04901523 * t +
+      10.14333127 * h -
+      0.22475541 * t * h -
+      0.00683783 * t * t -
+      0.05481717 * h * h +
+      0.00122874 * t * t * h +
+      0.00085282 * t * h * h -
+      0.00000199 * t * t * h * h
+    );
+  }
+
+  if (temp <= 50 && w.wind != null && w.wind > 3) {
+    return Math.round(
+      35.74 +
+      0.6215 * temp -
+      35.75 * Math.pow(w.wind, 0.16) +
+      0.4275 * temp * Math.pow(w.wind, 0.16)
+    );
+  }
+
+  return temp;
+}
+
 function WeatherWidget({ w }: { w: EventWeatherResult | 'loading' | null }) {
   if (w == null) return null;
 
@@ -378,6 +424,81 @@ const ww = StyleSheet.create({
     backgroundColor: L.page, borderRadius: radius.chip, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
   },
   windPillText: { color: L.textSub, fontSize: 13, fontWeight: '800' },
+});
+
+function DetailedWeatherWidget({ w, locationLabel }: { w: EventWeatherResult | 'loading' | null; locationLabel?: string }) {
+  if (w == null || w === 'loading' || !w.available) {
+    return <WeatherWidget w={w} />;
+  }
+
+  const temp = primaryWeatherTemp(w);
+  const feels = feelsLikeTemp(w);
+
+  return (
+    <View style={dw.card}>
+      <View style={dw.mainRow}>
+        <View style={dw.iconPanel}>
+          <Ionicons name={w.icon as never} size={44} color={L.gold} />
+        </View>
+
+        <View style={dw.primary}>
+          <Text style={dw.currentTemp}>{formatTemp(temp)}</Text>
+          <Text style={dw.condition}>{w.condition}</Text>
+          {feels != null && <Text style={dw.feels}>Feels {formatTemp(feels)}</Text>}
+        </View>
+
+        <View style={dw.details}>
+          {locationLabel ? (
+            <View style={dw.locationRow}>
+              <Ionicons name="location" size={14} color={L.green} />
+              <Text style={dw.locationText}>{locationLabel}</Text>
+            </View>
+          ) : null}
+          <Text style={dw.highLow} numberOfLines={1}>H:{formatTemp(w.high)} L:{formatTemp(w.low)}</Text>
+          {w.precipChance != null && (
+            <View style={dw.metricRow}>
+              <Ionicons name="water" size={14} color={L.textSub} />
+              <Text style={dw.metricText}>{w.precipChance}%</Text>
+            </View>
+          )}
+        </View>
+      </View>
+
+      <View style={dw.metricGrid}>
+        {w.humidity != null && (
+          <View style={dw.metricPill}>
+            <Ionicons name="water-outline" size={11} color={L.gold} />
+            <Text style={dw.metricPillText}>{w.humidity}% humidity</Text>
+          </View>
+        )}
+        {w.wind != null && (
+          <View style={dw.metricPill}>
+            <Ionicons name="compass-outline" size={11} color={L.gold} />
+            <Text style={dw.metricPillText}>{w.wind} mph wind</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+const dw = StyleSheet.create({
+  card:      { borderWidth: 1, borderColor: L.border, borderRadius: radius.card, paddingVertical: spacing.md, paddingHorizontal: spacing.md, gap: spacing.sm, backgroundColor: L.bg, marginBottom: spacing.xxl },
+  mainRow:   { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  iconPanel: { width: 50, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  primary:   { flex: 1.15, minWidth: 0 },
+  currentTemp:{ color: L.navy, fontSize: 31, fontWeight: '900', lineHeight: 34 },
+  condition: { color: L.navy, fontSize: 14, fontWeight: '800', lineHeight: 17 },
+  feels:     { color: L.navy, fontSize: 12, fontWeight: '700', lineHeight: 15, marginTop: 2 },
+  details:   { flex: 0.9, alignItems: 'flex-end', gap: spacing.xs, minWidth: 0 },
+  locationRow:{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'flex-end', gap: spacing.xs, maxWidth: '100%' },
+  locationText:{ color: L.navy, fontSize: 11, fontWeight: '800', lineHeight: 14, flexShrink: 1, textAlign: 'right' },
+  highLow:   { color: L.text, fontSize: 11, fontWeight: '600', lineHeight: 14 },
+  metricRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  metricText:{ color: L.text, fontSize: 11, fontWeight: '600', lineHeight: 14 },
+  metricGrid:{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  metricPill:{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: L.goldBg, borderColor: L.goldBorder, borderWidth: 1, borderRadius: radius.chip, paddingHorizontal: spacing.sm, paddingVertical: 3 },
+  metricPillText:{ color: L.navy, fontSize: 10, fontWeight: '700', lineHeight: 12 },
 });
 
 // ─── Info row (unchanged) ─────────────────────────────────────────────────────
@@ -955,26 +1076,6 @@ export default function CommunityEventScreen() {
 
   // ── Tab bar ──────────────────────────────────────────────────────────────────
 
-  function TabBar() {
-    return (
-      <View style={tb.bar}>
-        {(['overview', 'players', 'chat'] as Tab[]).map(tab => (
-          <TouchableOpacity
-            key={tab}
-            style={tb.tab}
-            onPress={() => setActiveTab(tab)}
-            activeOpacity={0.75}
-          >
-            <Text style={[tb.label, activeTab === tab && tb.labelActive]}>
-              {tab === 'overview' ? 'Overview' : tab === 'players' ? 'Players' : 'Chat'}
-            </Text>
-            {activeTab === tab && <View style={tb.underline} />}
-          </TouchableOpacity>
-        ))}
-      </View>
-    );
-  }
-
   // ── Overview content (existing, unchanged) ────────────────────────────────
 
   function OverviewContent() {
@@ -1018,7 +1119,7 @@ export default function CommunityEventScreen() {
         {weather != null && (
           <>
             <Text style={s.sectionTitle}>Weather on Event Day</Text>
-            <WeatherWidget w={weather} />
+            <DetailedWeatherWidget w={weather} locationLabel={venueCity || undefined} />
           </>
         )}
 
