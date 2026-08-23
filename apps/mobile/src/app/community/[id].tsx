@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
   Modal, Pressable, Alert, Linking, Animated,
+  type NativeSyntheticEvent, type NativeScrollEvent,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -537,6 +538,35 @@ type Tab        = 'overview' | 'players' | 'chat';
 type UserStatus = 'not_joined' | 'invited' | 'joined' | 'organizer';
 type PlayerFilt = 'accepted' | 'pending' | 'waitlist';
 
+const TAB_LABEL: Record<Tab, string> = {
+  overview: 'Overview',
+  players:  'Players',
+  chat:     'Chat',
+};
+
+// Rendered twice: inline under the hero, and again in the pinned overlay that
+// fades in once the inline one scrolls away. Shared so the two copies cannot
+// drift apart.
+function TabRow({ active, onSelect }: { active: Tab; onSelect: (t: Tab) => void }) {
+  return (
+    <View style={tb.bar}>
+      {(['overview', 'players', 'chat'] as Tab[]).map(tab => (
+        <TouchableOpacity
+          key={tab}
+          style={tb.tab}
+          onPress={() => onSelect(tab)}
+          activeOpacity={0.75}
+        >
+          <Text style={[tb.label, active === tab && tb.labelActive]}>
+            {TAB_LABEL[tab]}
+          </Text>
+          {active === tab && <View style={tb.underline} />}
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
 export default function CommunityEventScreen() {
   const { id, tab: initialTabParam } = useLocalSearchParams<{ id: string; tab?: Tab }>();
   const insets   = useSafeAreaInsets();
@@ -556,6 +586,24 @@ export default function CommunityEventScreen() {
     outputRange: [2, 1, 1.2],
     extrapolate: 'clamp',
   });
+
+  // The inline tab bar starts at content y = HERO_HEIGHT, so it reaches the
+  // bottom of the status bar once we have scrolled HERO_HEIGHT - insets.top.
+  // That is the point the pinned copy has to be fully opaque, or the tabs
+  // visibly disappear for a frame before the overlay catches up.
+  const pinPoint = HERO_HEIGHT - insets.top;
+
+  const stickyOpacity = scrollY.interpolate({
+    inputRange:  [pinPoint - 40, pinPoint],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  // Opacity is native-driven, but pointerEvents is a JS prop, so the overlay
+  // needs a JS-side flag too -- without it the invisible bar would swallow taps
+  // across the top of the screen. Only set state on a threshold crossing rather
+  // than every scroll frame.
+  const [tabsPinned, setTabsPinned] = useState(false);
 
   const isUUID = UUID_RE.test(id as string ?? '');
   const [liveEvent,    setLiveEvent]    = useState<EventShape | null>(null);
@@ -1739,7 +1787,13 @@ export default function CommunityEventScreen() {
         scrollEventThrottle={16}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true },
+          {
+            useNativeDriver: true,
+            listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+              const pinned = e.nativeEvent.contentOffset.y >= pinPoint - 12;
+              setTabsPinned(prev => (prev === pinned ? prev : pinned));
+            },
+          },
         )}
       >
         {/* ── HERO (preserved) ── */}
@@ -1802,21 +1856,7 @@ export default function CommunityEventScreen() {
         </View>
 
         {/* ── TAB BAR ── */}
-        <View style={tb.bar}>
-          {(['overview', 'players', 'chat'] as Tab[]).map(tab => (
-            <TouchableOpacity
-              key={tab}
-              style={tb.tab}
-              onPress={() => setActiveTab(tab)}
-              activeOpacity={0.75}
-            >
-              <Text style={[tb.label, activeTab === tab && tb.labelActive]}>
-                {tab === 'overview' ? 'Overview' : tab === 'players' ? 'Players' : 'Chat'}
-              </Text>
-              {activeTab === tab && <View style={tb.underline} />}
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TabRow active={activeTab} onSelect={setActiveTab} />
 
         {/* ── TAB CONTENT ── */}
         <View style={s.content}>
@@ -1825,6 +1865,18 @@ export default function CommunityEventScreen() {
           {activeTab === 'chat'    && <ChatContent />}
         </View>
       </Animated.ScrollView>
+
+      {/* ── PINNED TAB BAR ──
+          A sibling of the ScrollView, so content scrolls underneath it. Fades
+          in as the inline copy above reaches the status bar. paddingTop carries
+          the same opaque background up behind the notch, otherwise content
+          would show through above the tabs. */}
+      <Animated.View
+        pointerEvents={tabsPinned ? 'auto' : 'none'}
+        style={[s.stickyTabs, { paddingTop: insets.top, opacity: stickyOpacity }]}
+      >
+        <TabRow active={activeTab} onSelect={setActiveTab} />
+      </Animated.View>
 
       {/* ── FIXED BOTTOM BAR ── */}
       <View style={[s.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
@@ -2262,6 +2314,14 @@ const ch = StyleSheet.create({
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.page },
+
+  // Pinned tab bar. Opaque so the content passing underneath does not show
+  // through, and elevated so Android keeps it above the ScrollView.
+  stickyTabs: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    backgroundColor: L.bg,
+    zIndex: 20, elevation: 4,
+  },
 
   // Hero
   // 324, not 300: heroContent is bottom-anchored, so a two-line event name
