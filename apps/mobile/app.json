@@ -3,6 +3,12 @@
     "name": "Pickleball App",
     "slug": "dreambreaker",
     "version": "1.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/04fcdd30-fb9e-47e2-9371-8e4e8b521c17"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "pickleballapp",
