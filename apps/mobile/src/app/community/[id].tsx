@@ -593,8 +593,13 @@ export default function CommunityEventScreen() {
   // visibly disappear for a frame before the overlay catches up.
   const pinPoint = HERO_HEIGHT - insets.top;
 
+  // A hard cut, not a cross-fade. At pinPoint the inline bar sits at exactly
+  // insets.top -- the same pixels this overlay occupies -- so swapping between
+  // two identical bars is invisible. Fading instead made the near-white bar
+  // wash over the dark hero photo at partial opacity on the way in, which read
+  // as a grey smear with two visible tab rows converging behind it.
   const stickyOpacity = scrollY.interpolate({
-    inputRange:  [pinPoint - 40, pinPoint],
+    inputRange:  [pinPoint - 1, pinPoint],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
@@ -1790,7 +1795,7 @@ export default function CommunityEventScreen() {
           {
             useNativeDriver: true,
             listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-              const pinned = e.nativeEvent.contentOffset.y >= pinPoint - 12;
+              const pinned = e.nativeEvent.contentOffset.y >= pinPoint;
               setTabsPinned(prev => (prev === pinned ? prev : pinned));
             },
           },
