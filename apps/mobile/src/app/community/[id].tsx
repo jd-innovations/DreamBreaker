@@ -2277,7 +2277,9 @@ const s = StyleSheet.create({
   fillPct:     { color: L.textMuted, fontSize: 12, fontWeight: '600' },
 
   // Section title
-  sectionTitle: { color: L.navy, fontSize: 17, fontWeight: '900', marginBottom: spacing.md, marginTop: spacing.xs },
+  // Matches the tournament detail screen's sectionTitle (13 / 900 / 0.8) so
+  // headings read the same across both screens. Margins are this screen's own.
+  sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.8, marginBottom: spacing.md, marginTop: spacing.xs },
   // Overview-tab headings only. sectionTitle is shared with the Players tab
   // (Accepted Players, Pending Invites, Waitlist), which stays title case.
   sectionTitleUpper: { textTransform: 'uppercase' as const },
