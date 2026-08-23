@@ -1115,6 +1115,10 @@ export default function CommunityEventScreen() {
           <Text style={s.fillPct}>{Math.round((joinedCount / event.maxPlayers) * 100)}% filled</Text>
         </View>
 
+        {/* About */}
+        <Text style={s.sectionTitle}>About This Event</Text>
+        <Text style={s.aboutText}>{event.about}</Text>
+
         {/* Weather */}
         {weather != null && (
           <>
@@ -1122,46 +1126,6 @@ export default function CommunityEventScreen() {
             <DetailedWeatherWidget w={weather} locationLabel={venueCity || undefined} />
           </>
         )}
-
-        {/* Organizer */}
-        <Text style={s.sectionTitle}>Organizer</Text>
-        <View style={s.organizerCard}>
-          <Avatar uri={event.organizer.avatarUrl} initials={event.organizer.initials} bg={event.organizer.bg} size={48} />
-          <View style={s.orgInfo}>
-            <Text style={s.orgName}>{event.organizer.name}</Text>
-            <View style={s.orgMeta}>
-              <Ionicons name="trophy-outline" size={12} color={L.textMuted} />
-              <Text style={s.orgMetaText}>{event.organizer.rating}</Text>
-              <Text style={s.orgDot}>·</Text>
-              <Text style={s.orgMetaText}>{event.organizer.events} events hosted</Text>
-            </View>
-          </View>
-          <TouchableOpacity style={s.followBtn}>
-            <Text style={s.followBtnText}>Follow</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          style={s.msgOrgBtn}
-          activeOpacity={0.8}
-          disabled={msgingId === 'organizer'}
-          onPress={() => {
-            if (event.organizer.userId) {
-              openDM(event.organizer.userId, 'organizer');
-            } else {
-              platformAlert('Organizer unavailable', 'This event has no organizer set up for messaging yet.');
-            }
-          }}
-        >
-          {msgingId === 'organizer'
-            ? <ActivityIndicator size="small" color={L.navy} />
-            : <Ionicons name="chatbubble-outline" size={15} color={L.navy} />}
-          <Text style={s.msgOrgText}>Message Organizer</Text>
-        </TouchableOpacity>
-
-        {/* About */}
-        <Text style={s.sectionTitle}>About This Event</Text>
-        <Text style={s.aboutText}>{event.about}</Text>
 
         {/* Event details */}
         <Text style={s.sectionTitle}>Event Details</Text>
@@ -1218,6 +1182,42 @@ export default function CommunityEventScreen() {
             </View>
           );
         })()}
+
+        {/* Organizer */}
+        <Text style={s.sectionTitle}>Organizer</Text>
+        <View style={s.organizerCard}>
+          <Avatar uri={event.organizer.avatarUrl} initials={event.organizer.initials} bg={event.organizer.bg} size={48} />
+          <View style={s.orgInfo}>
+            <Text style={s.orgName}>{event.organizer.name}</Text>
+            <View style={s.orgMeta}>
+              <Ionicons name="trophy-outline" size={12} color={L.textMuted} />
+              <Text style={s.orgMetaText}>{event.organizer.rating}</Text>
+              <Text style={s.orgDot}>·</Text>
+              <Text style={s.orgMetaText}>{event.organizer.events} events hosted</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={s.followBtn}>
+            <Text style={s.followBtnText}>Follow</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={s.msgOrgBtn}
+          activeOpacity={0.8}
+          disabled={msgingId === 'organizer'}
+          onPress={() => {
+            if (event.organizer.userId) {
+              openDM(event.organizer.userId, 'organizer');
+            } else {
+              platformAlert('Organizer unavailable', 'This event has no organizer set up for messaging yet.');
+            }
+          }}
+        >
+          {msgingId === 'organizer'
+            ? <ActivityIndicator size="small" color={L.navy} />
+            : <Ionicons name="chatbubble-outline" size={15} color={L.navy} />}
+          <Text style={s.msgOrgText}>Message Organizer</Text>
+        </TouchableOpacity>
 
         {/* Location */}
         <Text style={s.sectionTitle}>Location</Text>
