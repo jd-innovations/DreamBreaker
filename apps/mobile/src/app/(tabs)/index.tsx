@@ -135,7 +135,8 @@ const TRENDING = [
     name: 'Summer Slam', verified: true,
     players: 238, holdSpots: 41, pctFilled: 79,
     formats: "Mixed · Men's · Women's",
-    dates: 'Jul 12 – 14, 2025', city: 'Sarasota, FL',
+    dates: 'Jul 12 – 14, 2025', venue: 'Bobby Jones Pickleball Center', city: 'Sarasota, FL',
+    skill: '3.0 – 4.5',
     holdFee: '$20', entryFee: '$80',
     photo: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=240&fit=crop&q=80',
     logoLines: ['SUMMER', 'SLAM'],
@@ -147,7 +148,8 @@ const TRENDING = [
     name: 'Florida Open', verified: true,
     players: 127, holdSpots: 19, pctFilled: 63,
     formats: "Mixed · Men's · Women's",
-    dates: 'Aug 8 – 10, 2025', city: 'Naples, FL',
+    dates: 'Aug 8 – 10, 2025', venue: 'East Naples Community Park', city: 'Naples, FL',
+    skill: '3.5 – 5.0',
     holdFee: '$15', entryFee: '$80',
     photo: 'https://images.unsplash.com/photo-1477525218966-c4a4c7ee6e56?w=400&h=240&fit=crop&q=80',
     logoLines: ['FLORIDA', 'OPEN'],
@@ -207,7 +209,9 @@ function tournamentToTrending(t: Tournament): typeof TRENDING[0] {
     pctFilled,
     formats: Array.from(new Set(t.formats.map(humanizeFormat))).join(' · ') || 'Doubles',
     dates: formatDateRange(t.eventDate),
+    venue: t.venue,
     city: `${t.city}, ${t.state}`,
+    skill: skillLabel(t.skillMin, t.skillMax),
     holdFee: `$${Math.round(t.holdFeeCents / 100)}`,
     entryFee: `$${Math.round(t.entryFeeCents / 100)}`,
     photo: t.coverImgUrl ?? FALLBACK_TOURNEY_PHOTO,
@@ -484,13 +488,25 @@ function TrendingCard({ item, onSave, saved }: {
         </View>
 
         <Text style={tc.formats} numberOfLines={1}>{item.formats}</Text>
+
+        {/* Meta rows mirror CommunityCard: gold icon at 14, 15pt label. */}
         <View style={tc.metaRow}>
-          <Ionicons name="calendar-outline" size={11} color={L.textMuted} />
+          <Ionicons name="calendar-outline" size={14} color={L.gold} />
           <Text style={tc.metaText}>{item.dates}</Text>
         </View>
-        <View style={[tc.metaRow, { marginBottom: 10 }]}>
-          <Ionicons name="location-outline" size={11} color={L.textMuted} />
+        {!!item.venue && (
+          <View style={tc.metaRow}>
+            <Ionicons name="business-outline" size={14} color={L.gold} />
+            <Text style={tc.metaText} numberOfLines={1}>{item.venue}</Text>
+          </View>
+        )}
+        <View style={tc.metaRow}>
+          <Ionicons name="location-outline" size={14} color={L.gold} />
           <Text style={tc.metaText}>{item.city}</Text>
+        </View>
+        <View style={[tc.metaRow, { marginBottom: 10 }]}>
+          <Ionicons name="speedometer-outline" size={14} color={L.gold} />
+          <Text style={tc.metaText}>{item.skill}</Text>
         </View>
 
         <View style={tc.btns}>
@@ -503,7 +519,8 @@ function TrendingCard({ item, onSave, saved }: {
                 params: { intent: 'hold' },
               } as never)}
             >
-              <Text style={tc.holdBtnLabel}>Hold {item.holdFee}</Text>
+              <Ionicons name="hand-left-outline" size={15} color={L.gold} />
+              <Text style={tc.holdBtnLabel}>Hold My Spot</Text>
             </TouchableOpacity>
             {item.primaryAction === 'hold' && (
               <TouchableOpacity
@@ -563,7 +580,12 @@ const tc = StyleSheet.create({
 
   info:        { padding: 16, gap: 4 },
   nameRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
-  name:        { color: L.navy, fontSize: 20, fontWeight: '800', flex: 1, marginRight: 8 },
+  // Matches cl.name: uppercase, 22/26. flex + marginRight stay because this
+  // title shares its row with the save heart, which cl.name does not.
+  name: {
+    color: L.navy, fontSize: 22, fontWeight: '800', lineHeight: 26,
+    textTransform: 'uppercase', flex: 1, marginRight: 8,
+  },
   verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 6 },
   verifiedText:{ color: '#3B82F6', fontSize: 11, fontWeight: '600' },
 
@@ -574,13 +596,14 @@ const tc = StyleSheet.create({
   statDivider: { width: 1, height: 20, backgroundColor: L.border, marginHorizontal: 8 },
 
   formats:  { color: L.textSub, fontSize: 13, fontWeight: '600', marginBottom: 3 },
-  metaRow:  { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 2 },
-  metaText: { color: '#000000', fontSize: 11, flex: 1 },
+  // Mirrors cl.meta / cl.metaText.
+  metaRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  metaText: { color: '#000000', fontSize: 15, fontWeight: '500', flex: 1 },
 
   btns:   { gap: 6 },
   btnRow: { flexDirection: 'row', gap: 6 },
   holdBtn: {
-    flex: 1, alignItems: 'center',
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     borderWidth: 1.5, borderColor: L.gold, borderRadius: 10,
     paddingVertical: 7,
   },
