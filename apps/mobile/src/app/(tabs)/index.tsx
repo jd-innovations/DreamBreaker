@@ -974,8 +974,11 @@ export default function HomeScreen() {
 
           {/* Gold sweep across the card on arrival. Last child so it layers over
               the greeting and setup strip; the banner's own overflow: hidden and
-              borderRadius clip it to the card. */}
-          <ShimmerOverlay />
+              borderRadius clip it to the card.
+              1s delay: the home screen is still settling on arrival (avatar and
+              profile data land late), so an earlier sweep gets lost under the
+              content popping in. */}
+          <ShimmerOverlay delayMs={1000} />
         </TouchableOpacity>
 
         {/* Expanded checklist (sits below banner) */}
