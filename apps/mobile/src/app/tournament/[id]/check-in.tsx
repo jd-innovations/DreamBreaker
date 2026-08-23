@@ -18,6 +18,7 @@ import {
   type TournamentRegistration,
 } from '@/lib/supabase/registrations';
 import type { Tournament } from '@/lib/tournamentTypes';
+import { DirectorOnly } from '@/components/DirectorOnly';
 
 const L = {
   bg:        colors.bg,
@@ -128,7 +129,7 @@ const cr = StyleSheet.create({
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function CheckInScreen() {
+function CheckInScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, loading: authLoading } = useSession();
@@ -315,3 +316,15 @@ const s = StyleSheet.create({
   },
   emptyTitle: { color: L.navy, fontSize: 18, fontWeight: '800', textAlign: 'center' },
 });
+
+// Director-only route. The screen body above is mounted only after
+// DirectorOnly confirms the signed-in user directs this tournament, so its
+// effects and fetches never run for anyone else.
+export default function CheckInScreenRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return (
+    <DirectorOnly tournamentId={id}>
+      <CheckInScreen />
+    </DirectorOnly>
+  );
+}

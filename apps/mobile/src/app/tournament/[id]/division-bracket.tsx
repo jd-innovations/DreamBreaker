@@ -24,6 +24,7 @@ import { assignCourt, saveMatchScore } from '@/lib/supabase/matches';
 import { useSupportContext } from '@/lib/support/supportContext';
 import type { TournamentRegistration } from '@/lib/registrationStore';
 import type { Tournament } from '@/lib/tournamentTypes';
+import { DirectorOnly } from '@/components/DirectorOnly';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -575,7 +576,7 @@ const ctx = StyleSheet.create({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export default function DivisionBracketScreen() {
+function DivisionBracketScreen() {
   const insets = useSafeAreaInsets();
   const { id, divisionId } = useLocalSearchParams<{ id: string; divisionId: string }>();
   const { user, loading: authLoading } = useSession();
@@ -930,3 +931,15 @@ const s = StyleSheet.create({
   noBracketBtn: { backgroundColor: L.navy, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 13, marginTop: 8 },
   noBracketBtnText: { color: L.bg, fontSize: 15, fontWeight: '700' },
 });
+
+// Director-only route. The screen body above is mounted only after
+// DirectorOnly confirms the signed-in user directs this tournament, so its
+// effects and fetches never run for anyone else.
+export default function DivisionBracketScreenRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return (
+    <DirectorOnly tournamentId={id}>
+      <DivisionBracketScreen />
+    </DirectorOnly>
+  );
+}

@@ -9,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { colors, radius } from '@/theme';
 import { StatusChip } from '@/components';
 import { statusLabel, statusVariant } from '@/lib/directorRegistrationAdapter';
+import { DirectorOnly } from '@/components/DirectorOnly';
 import {
   fetchTournamentReport,
   exportRosterCsv,
@@ -80,7 +81,7 @@ const sh = StyleSheet.create({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export default function TournamentReportScreen() {
+function TournamentReportScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -260,3 +261,15 @@ const s = StyleSheet.create({
 
   emptyText: { color: L.textSub, fontSize: 13, textAlign: 'center', paddingVertical: 20 },
 });
+
+// Director-only route. The screen body above is mounted only after
+// DirectorOnly confirms the signed-in user directs this tournament, so its
+// effects and fetches never run for anyone else.
+export default function TournamentReportScreenRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return (
+    <DirectorOnly tournamentId={id}>
+      <TournamentReportScreen />
+    </DirectorOnly>
+  );
+}

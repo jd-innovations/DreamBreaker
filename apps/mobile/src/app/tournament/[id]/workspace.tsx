@@ -39,6 +39,7 @@ import {
 import type { TournamentRegistration } from '@/lib/registrationStore';
 import type { Tournament } from '@/lib/tournamentTypes';
 import type { DivisionData } from '@/data/divisions';
+import { DirectorOnly } from '@/components/DirectorOnly';
 
 function toDirector(r: TournamentRegistration): DirectorRegistration {
   return {
@@ -642,7 +643,7 @@ const dm = StyleSheet.create({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export default function DirectorWorkspaceScreen() {
+function DirectorWorkspaceScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useSession();
@@ -969,3 +970,15 @@ const s = StyleSheet.create({
   emptyTitle: { color: L.navy, fontSize: 18, fontWeight: '800' },
   emptySub:   { color: L.textSub, fontSize: 14, textAlign: 'center', lineHeight: 22 },
 });
+
+// Director-only route. The screen body above is mounted only after
+// DirectorOnly confirms the signed-in user directs this tournament, so its
+// effects and fetches never run for anyone else.
+export default function DirectorWorkspaceScreenRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return (
+    <DirectorOnly tournamentId={id}>
+      <DirectorWorkspaceScreen />
+    </DirectorOnly>
+  );
+}

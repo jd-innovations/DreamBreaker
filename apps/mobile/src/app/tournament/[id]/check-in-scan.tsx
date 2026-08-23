@@ -9,6 +9,7 @@ import { haptics } from '@/lib/haptics';
 import { classifyQrPayload } from '@/lib/qrPayload';
 import { checkInRegistration, type CheckInResult } from '@/lib/supabase/registrations';
 import { QRScanner, type QRScannerHandle } from '@/components';
+import { DirectorOnly } from '@/components/DirectorOnly';
 
 // Director-facing tournament check-in scanner (Phase 5.1). Reuses the
 // generic Phase 5 QRScanner and qrPayload classifier as-is -- this screen
@@ -67,7 +68,7 @@ function resultCopy(outcome: ScanOutcome): {
   }
 }
 
-export default function CheckInScanScreen() {
+function CheckInScanScreen() {
   const { id: tournamentId } = useLocalSearchParams<{ id: string }>();
   const scannerRef = useRef<QRScannerHandle>(null);
   const [state, setState] = useState<ScreenState>({ kind: 'scanning' });
@@ -197,3 +198,15 @@ const s = StyleSheet.create({
   secondaryBtn: { paddingVertical: 8, paddingHorizontal: 16 },
   secondaryBtnText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600' },
 });
+
+// Director-only route. The screen body above is mounted only after
+// DirectorOnly confirms the signed-in user directs this tournament, so its
+// effects and fetches never run for anyone else.
+export default function CheckInScanScreenRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return (
+    <DirectorOnly tournamentId={id}>
+      <CheckInScanScreen />
+    </DirectorOnly>
+  );
+}

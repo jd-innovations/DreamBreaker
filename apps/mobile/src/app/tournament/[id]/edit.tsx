@@ -12,6 +12,7 @@ import { colors, radius } from '@/theme';
 import { fetchTournamentById, updateTournamentDetails } from '@/lib/supabase/tournaments';
 import { useProfile } from '@/hooks/useProfile';
 import type { Tournament } from '@/lib/tournamentTypes';
+import { DirectorOnly } from '@/components/DirectorOnly';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -209,7 +210,7 @@ const f = StyleSheet.create({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export default function EditTournamentScreen() {
+function EditTournamentScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { profile } = useProfile();
@@ -486,3 +487,15 @@ const s = StyleSheet.create({
   pickerCancel: { color: L.textSub, fontSize: 16, fontWeight: '600' },
   pickerDone:   { color: L.gold, fontSize: 16, fontWeight: '700' },
 });
+
+// Director-only route. The screen body above is mounted only after
+// DirectorOnly confirms the signed-in user directs this tournament, so its
+// effects and fetches never run for anyone else.
+export default function EditTournamentScreenRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return (
+    <DirectorOnly tournamentId={id}>
+      <EditTournamentScreen />
+    </DirectorOnly>
+  );
+}

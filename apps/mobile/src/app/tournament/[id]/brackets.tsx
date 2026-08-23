@@ -15,6 +15,7 @@ import { fetchTournamentById } from '@/lib/supabase/tournaments';
 import { fetchDivisionsForTournament, type DivisionData } from '@/lib/supabase/divisions';
 import { fetchTournamentRegistrations } from '@/lib/supabase/registrations';
 import type { TournamentRegistration } from '@/lib/registrationStore';
+import { DirectorOnly } from '@/components/DirectorOnly';
 import {
   createBracket,
   fetchAllBrackets,
@@ -230,7 +231,7 @@ const dbc = StyleSheet.create({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export default function BracketsScreen() {
+function BracketsScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, loading: authLoading } = useSession();
@@ -435,3 +436,15 @@ const s = StyleSheet.create({
   emptyTitle: { color: L.navy, fontSize: 16, fontWeight: '700' },
   emptySub:   { color: L.textSub, fontSize: 13, textAlign: 'center', paddingHorizontal: 24 },
 });
+
+// Director-only route. The screen body above is mounted only after
+// DirectorOnly confirms the signed-in user directs this tournament, so its
+// effects and fetches never run for anyone else.
+export default function BracketsScreenRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return (
+    <DirectorOnly tournamentId={id}>
+      <BracketsScreen />
+    </DirectorOnly>
+  );
+}

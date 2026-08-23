@@ -22,6 +22,7 @@ import {
 } from '@/lib/directorBracketStore';
 import { getTournamentStatus, getTournamentStatusInfo } from '@/lib/tournamentStatus';
 import { exportRosterCsv } from '@/lib/tournamentReport';
+import { DirectorOnly } from '@/components/DirectorOnly';
 
 // ─── Theme alias ──────────────────────────────────────────────────────────────
 
@@ -226,7 +227,7 @@ const draftBanner = StyleSheet.create({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export default function CommandCenterScreen() {
+function CommandCenterScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -857,3 +858,15 @@ const s = StyleSheet.create({
   },
   emptyInlineText: { color: L.textSub, fontSize: 13, fontWeight: '500' },
 });
+
+// Director-only route. The screen body above is mounted only after
+// DirectorOnly confirms the signed-in user directs this tournament, so its
+// effects and fetches never run for anyone else.
+export default function CommandCenterScreenRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return (
+    <DirectorOnly tournamentId={id}>
+      <CommandCenterScreen />
+    </DirectorOnly>
+  );
+}

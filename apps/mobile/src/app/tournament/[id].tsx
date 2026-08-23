@@ -650,16 +650,18 @@ export default function TournamentDetail() {
             </View>
           </View>
 
-          {/* DIRECTOR BANNER */}
-          <TouchableOpacity
-            style={s.directorBanner}
-            activeOpacity={0.8}
-            onPress={() => router.push(`/tournament/${tournament.id}/workspace` as never)}
-          >
-            <Ionicons name="construct-outline" size={15} color={L.gold} />
-            <Text style={s.directorBannerText}>Director: Manage Tournament</Text>
-            <Ionicons name="chevron-forward" size={14} color={L.textSub} />
-          </TouchableOpacity>
+          {/* DIRECTOR BANNER — only this tournament's own director */}
+          {!!user && user.id === directorUserId && (
+            <TouchableOpacity
+              style={s.directorBanner}
+              activeOpacity={0.8}
+              onPress={() => router.push(`/tournament/${tournament.id}/workspace` as never)}
+            >
+              <Ionicons name="construct-outline" size={15} color={L.gold} />
+              <Text style={s.directorBannerText}>Director: Manage Tournament</Text>
+              <Ionicons name="chevron-forward" size={14} color={L.textSub} />
+            </TouchableOpacity>
+          )}
 
           {/* VIEW BRACKETS BANNER — only when brackets have been generated */}
           {hasBrackets && (

@@ -11,6 +11,7 @@ import { colors, radius } from '@/theme';
 import { useSession } from '@/hooks/useSession';
 import { createDivision } from '@/lib/supabase/divisions';
 import { fetchTournamentById } from '@/lib/supabase/tournaments';
+import { DirectorOnly } from '@/components/DirectorOnly';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -157,7 +158,7 @@ function validate(form: FormState): FormErrors {
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-export default function CreateDivisionScreen() {
+function CreateDivisionScreen() {
   const insets           = useSafeAreaInsets();
   const { id }           = useLocalSearchParams<{ id: string }>();
   const { user, loading: authLoading } = useSession();
@@ -426,3 +427,15 @@ const cs = StyleSheet.create({
   chipTextActive:{ color: L.bg },
   error:         { color: L.danger, fontSize: 12, fontWeight: '500' },
 });
+
+// Director-only route. The screen body above is mounted only after
+// DirectorOnly confirms the signed-in user directs this tournament, so its
+// effects and fetches never run for anyone else.
+export default function CreateDivisionScreenRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return (
+    <DirectorOnly tournamentId={id}>
+      <CreateDivisionScreen />
+    </DirectorOnly>
+  );
+}

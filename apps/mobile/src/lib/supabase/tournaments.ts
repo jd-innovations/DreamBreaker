@@ -195,3 +195,19 @@ export async function submitTournamentForApproval(id: string): Promise<{ ok: tru
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
+
+// Minimal ownership lookup for the director route guard. Deliberately selects
+// only `director_id` rather than reusing fetchTournamentById(): the guard runs
+// on every director screen mount and needs one column, not the full row.
+// Returns null when the tournament does not exist OR is not readable by the
+// caller — both cases mean "not the director" to the guard.
+export async function fetchTournamentDirectorId(id: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('director_id')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.director_id != null ? String(data.director_id) : null;
+}

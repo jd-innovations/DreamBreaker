@@ -13,6 +13,7 @@ import { requireAuth } from '@/lib/authGuard';
 import type { Tournament } from '@/lib/tournamentTypes';
 import { fetchTournamentById } from '@/lib/supabase/tournaments';
 import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
+import { DirectorOnly } from '@/components/DirectorOnly';
 import {
   fetchAllBrackets,
   getBracketMatchCounts,
@@ -172,7 +173,7 @@ const dc = StyleSheet.create({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export default function ResultsScreen() {
+function ResultsScreen() {
   const insets = useSafeAreaInsets();
   const { user, loading: authLoading } = useSession();
 
@@ -444,3 +445,15 @@ const s = StyleSheet.create({
   },
   ccBtnText: { color: L.navy, fontSize: 14, fontWeight: '700' },
 });
+
+// Director-only route. The screen body above is mounted only after
+// DirectorOnly confirms the signed-in user directs this tournament, so its
+// effects and fetches never run for anyone else.
+export default function ResultsScreenRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return (
+    <DirectorOnly tournamentId={id}>
+      <ResultsScreen />
+    </DirectorOnly>
+  );
+}
