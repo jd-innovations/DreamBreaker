@@ -61,6 +61,9 @@ export async function fetchTournaments(): Promise<Tournament[]> {
     formats:        Array.isArray(row.formats) && row.formats.length > 0
                       ? row.formats
                       : row.format ? [row.format] : [],
+    // This query does not embed divisions; callers needing the authoritative
+    // formats should use lib/supabase/tournaments.ts fetchTournaments().
+    divisionFormats: [],
     status:               mapStatus(row.status as DbStatus),
     registrationOpensAt:  null,
     registrationClosesAt: null,

@@ -226,7 +226,14 @@ function tournamentToTrending(t: Tournament): typeof TRENDING[0] {
     players: t.spotsFilled,
     holdSpots: Math.max(0, t.drawSize - t.spotsFilled),
     pctFilled,
-    formats: Array.from(new Set(t.formats.map(humanizeFormat))).join(' · ') || 'Doubles',
+    // Divisions first: tournaments.formats is not maintained by division
+    // creation, so a mixed-doubles tournament can carry formats = [] and used
+    // to fall through to a hardcoded "Doubles" — announcing the wrong event.
+    // Falls back to the column only when divisions were not loaded, and to ''
+    // when neither knows, so the pill is hidden rather than guessing.
+    formats: Array.from(new Set(
+      (t.divisionFormats.length > 0 ? t.divisionFormats : t.formats).map(humanizeFormat),
+    )).join(' · '),
     dates: formatEventDay(t.eventDate),
     time: formatStartTime(t.startTime),
     venue: t.venue,
@@ -507,10 +514,13 @@ function TrendingCard({ item, onSave, saved }: {
           </View>
         </View>
 
-        {/* Format pill, shaped like cl.gameTypePill on the community cards. */}
-        <View style={tc.formatPill}>
-          <Text style={tc.formatPillText} numberOfLines={1}>{item.formats}</Text>
-        </View>
+        {/* Format pill, shaped like cl.gameTypePill on the community cards.
+            Hidden when neither the divisions nor the column say anything. */}
+        {!!item.formats && (
+          <View style={tc.formatPill}>
+            <Text style={tc.formatPillText} numberOfLines={1}>{item.formats}</Text>
+          </View>
+        )}
 
         {/* Meta rows mirror CommunityCard: gold icon at 14, 15pt label. */}
         <View style={tc.metaRow}>

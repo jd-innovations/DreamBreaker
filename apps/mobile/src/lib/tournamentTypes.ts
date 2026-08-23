@@ -29,6 +29,10 @@ export interface Tournament {
   skillMin: number;
   skillMax: number;
   formats: string[];
+  // Distinct divisions.format values. The authoritative answer to "what is
+  // played here"; `formats` above is a tournaments column that division
+  // creation never updates. Empty when the query did not embed divisions.
+  divisionFormats: string[];
   status: 'draft' | 'pending_approval' | 'open' | 'filling_fast' | 'full' | 'upcoming' | 'completed' | 'cancelled';
   registrationOpensAt:  string | null;
   registrationClosesAt: string | null;

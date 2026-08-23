@@ -54,6 +54,18 @@ function dbRowToTournament(row: Record<string, unknown>): Tournament {
     skillMin:             Number(row.skill_min ?? 0),
     skillMax:             Number(row.skill_max ?? 0),
     formats:              Array.isArray(row.formats) ? (row.formats as string[]) : [],
+    // Formats actually offered, read off the divisions rather than the
+    // tournaments.formats array. Division creation does not write back to that
+    // array, so it goes stale: tournaments with a single mixed_doubles division
+    // were carrying formats = [] and being displayed as plain "Doubles".
+    // Empty unless the caller's select embedded divisions(format).
+    divisionFormats: Array.isArray(row.divisions)
+      ? Array.from(new Set(
+          (row.divisions as { format?: unknown }[])
+            .map(d => (d?.format != null ? String(d.format) : ''))
+            .filter(Boolean),
+        ))
+      : [],
     status:               dbStatusToAppStatus(String(row.status ?? '')),
     registrationOpensAt:  row.registration_opens_at != null ? String(row.registration_opens_at) : null,
     registrationClosesAt: row.registration_closes_at != null ? String(row.registration_closes_at) : null,
@@ -67,7 +79,7 @@ function dbRowToTournament(row: Record<string, unknown>): Tournament {
 export async function fetchTournaments(): Promise<Tournament[]> {
   const { data, error } = await supabase
     .from('tournaments')
-    .select('id,name,venue_name,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,registration_opens_at,registration_closes_at,featured,cover_img_url')
+    .select('id,name,venue_name,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,registration_opens_at,registration_closes_at,featured,cover_img_url,divisions(format)')
     .in('status', VISIBLE_STATUSES)
     .order('event_date', { ascending: true });
 
