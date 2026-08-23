@@ -38,3 +38,4 @@ export type { QRScannerHandle, QRScannerProps } from './QRScanner.types';
 export { AddToCalendarButton } from './AddToCalendarButton';
 export type { AddToCalendarButtonProps } from './AddToCalendarButton';
 export { DirectorOnly } from './DirectorOnly';
+export { ShimmerOverlay } from './ShimmerOverlay';

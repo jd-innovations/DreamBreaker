@@ -9,7 +9,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '@/theme';
-import { AppHeader, APP_HEADER_HEIGHT, AppIcon, GlassQuickAction, ProfileCompletionRing, FindGamesFilterModal, FIND_GAMES_DISTANCE_STEPS, FIND_GAMES_SKILL_RANGES, type AppIconName } from '@/components';
+import { AppHeader, APP_HEADER_HEIGHT, AppIcon, GlassQuickAction, ProfileCompletionRing, FindGamesFilterModal, FIND_GAMES_DISTANCE_STEPS, FIND_GAMES_SKILL_RANGES, ShimmerOverlay, type AppIconName } from '@/components';
 import { DraggableQuickActions } from '@/components/DraggableQuickActions';
 import { useSession } from '@/hooks/useSession';
 import { useProfile } from '@/hooks/useProfile';
@@ -971,6 +971,11 @@ export default function HomeScreen() {
               />
             </View>
           </View>
+
+          {/* Gold sweep across the card on arrival. Last child so it layers over
+              the greeting and setup strip; the banner's own overflow: hidden and
+              borderRadius clip it to the card. */}
+          <ShimmerOverlay />
         </TouchableOpacity>
 
         {/* Expanded checklist (sits below banner) */}
