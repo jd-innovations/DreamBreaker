@@ -13,27 +13,39 @@ type Props = {
  * Route guard for director-only tournament screens.
  *
  * Wraps a screen's real component so that `children` is never mounted for a
- * user who does not direct this tournament — the guard resolves ownership
+ * user who may not manage this tournament — the guard resolves permission
  * first, so the screen's own effects, fetches and stores never run for an
  * unauthorized viewer. That is the reason this is a wrapper rather than an
  * early `return` inside each screen: an early return still lets every hook
  * above it fire.
  *
- * A non-director is sent back to the public tournament page rather than shown
- * an error, because the only way to land here is a stale link or a hand-typed
- * URL; `replace` keeps the blocked route out of the back stack.
+ * The guard checks `canManage`, not just ownership, because the RLS policies
+ * behind these screens require director_id = auth.uid() AND
+ * is_approved_director(). Admitting on ownership alone would mount the command
+ * center for a director whose approval lapsed and then fail every write at the
+ * database. The two denials are handled differently on purpose:
  *
- * This is UI-level only. RLS remains the real enforcement server-side.
+ *   not_director — someone else's tournament. Redirected to the public page,
+ *     because the only way to land here is a stale link or a typed URL, and
+ *     there is nothing for them to act on. `replace` keeps the blocked route
+ *     out of the back stack.
+ *
+ *   not_approved — their own tournament, but their director approval is not
+ *     active. Not redirected: bouncing them off their own tournament with no
+ *     explanation is the confusing case this guard exists to prevent. They get
+ *     told why instead.
+ *
+ * This is UI-level only. RLS remains the real enforcement.
  */
 export function DirectorOnly({ tournamentId, children }: Props) {
-  const { isDirector, loading } = useTournamentDirector(tournamentId);
+  const { canManage, denyReason, loading } = useTournamentDirector(tournamentId);
 
   useEffect(() => {
-    if (loading || isDirector) return;
+    if (loading || denyReason !== 'not_director') return;
     router.replace(
       (tournamentId ? `/tournament/${tournamentId}` : '/(tabs)') as never,
     );
-  }, [loading, isDirector, tournamentId]);
+  }, [loading, denyReason, tournamentId]);
 
   if (loading) {
     return (
@@ -43,10 +55,14 @@ export function DirectorOnly({ tournamentId, children }: Props) {
     );
   }
 
-  if (!isDirector) {
+  if (!canManage) {
     return (
       <View style={s.root}>
-        <Text style={s.text}>Only this tournament's director can manage it.</Text>
+        <Text style={s.text}>
+          {denyReason === 'not_approved'
+            ? 'Your director approval is not active, so this tournament cannot be managed right now. Contact support if you think this is a mistake.'
+            : "Only this tournament's director can manage it."}
+        </Text>
       </View>
     );
   }
@@ -67,5 +83,6 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
+    lineHeight: 20,
   },
 });
