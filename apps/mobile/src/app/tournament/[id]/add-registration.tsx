@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '@/theme';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
+import { DirectorOnly } from '@/components/DirectorOnly';
 import { supabase } from '@/lib/supabase';
 import {
   directorAddRegistration, fetchDirectorDivisions, searchRegistrableProfiles,
@@ -21,10 +22,11 @@ import {
 // priced division, and this screen refuses to let you pick one rather than
 // letting the server say no after you have filled in a whole team.
 //
-// The director check is done inline rather than through useTournamentDirector,
-// so this screen carries no dependency on in-progress work elsewhere. RLS and
-// director_add_tournament_registration() are the real enforcement either way;
-// this only decides what renders.
+// Director-only, via the shared DirectorOnly guard like the rest of the
+// director surfaces. The guard also checks is_approved_director(), which the
+// inline ownership check this replaced did not — and it resolves before the
+// screen mounts, so nothing below runs for a non-director. RLS and
+// director_add_tournament_registration() remain the real enforcement.
 
 const L = {
   bg: colors.bg, page: colors.page, navy: colors.navy, gold: colors.gold,
@@ -75,13 +77,12 @@ function slotLabel(slot: SlotDraft): string {
   return p.kind === 'profile' ? p.displayName : `${p.guest.displayName} (guest)`;
 }
 
-export default function AddRegistrationScreen() {
+function AddRegistrationScreen() {
   const insets = useSafeAreaInsets();
   const { id: tournamentId } = useLocalSearchParams<{ id: string }>();
   const { user, loading: sessionLoading } = useSession();
 
   const [loading, setLoading] = useState(true);
-  const [isDirector, setIsDirector] = useState(false);
   const [tournamentName, setTournamentName] = useState('');
   const [divisions, setDivisions] = useState<DirectorDivision[]>([]);
   const [divisionId, setDivisionId] = useState<string | null>(null);
@@ -100,14 +101,11 @@ export default function AddRegistrationScreen() {
     try {
       const { data: t } = await supabase
         .from('tournaments')
-        .select('name, director_id')
+        .select('name')
         .eq('id', tournamentId)
         .maybeSingle();
 
       setTournamentName(t?.name ?? '');
-      const director = !!t && t.director_id === user.id;
-      setIsDirector(director);
-      if (!director) return;
 
       const divs = await fetchDirectorDivisions(tournamentId);
       setDivisions(divs);
@@ -195,19 +193,6 @@ export default function AddRegistrationScreen() {
       <View style={[s.center, { paddingTop: insets.top }]}>
         <StatusBar style="dark" />
         <ActivityIndicator size="large" color={L.navy} />
-      </View>
-    );
-  }
-
-  if (!isDirector) {
-    return (
-      <View style={[s.center, { paddingTop: insets.top }]}>
-        <StatusBar style="dark" />
-        <Ionicons name="lock-closed-outline" size={36} color={L.border} />
-        <Text style={s.errorText}>Only this tournament&apos;s director can add registrations.</Text>
-        <TouchableOpacity onPress={() => goBack()} style={s.errorBackBtn}>
-          <Text style={s.errorBackText}>Go Back</Text>
-        </TouchableOpacity>
       </View>
     );
   }
@@ -503,8 +488,16 @@ const s = StyleSheet.create({
   primaryBtn: { backgroundColor: L.navy, borderRadius: radius.button, paddingVertical: 16, alignItems: 'center', marginTop: spacing.xl },
   primaryBtnText: { color: L.white, fontSize: 15, fontWeight: '800' },
   footnote: { color: L.textSub, fontSize: 11, fontWeight: '500', textAlign: 'center', marginTop: spacing.md },
-
-  errorText: { color: L.textSub, fontSize: 14, fontWeight: '500', textAlign: 'center' },
-  errorBackBtn: { marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: radius.button, backgroundColor: L.navy },
-  errorBackText: { color: L.white, fontSize: 14, fontWeight: '700' },
 });
+
+// Director-only route. The screen body above is mounted only after DirectorOnly
+// confirms the signed-in user directs this tournament, so its effects and
+// fetches never run for anyone else.
+export default function AddRegistrationScreenRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return (
+    <DirectorOnly tournamentId={id}>
+      <AddRegistrationScreen />
+    </DirectorOnly>
+  );
+}
