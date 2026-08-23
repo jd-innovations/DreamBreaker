@@ -135,7 +135,7 @@ const TRENDING = [
     name: 'Summer Slam', verified: true,
     players: 238, holdSpots: 41, pctFilled: 79,
     formats: "Mixed · Men's · Women's",
-    dates: 'Jul 12 – 14, 2025', venue: 'Bobby Jones Pickleball Center', city: 'Sarasota, FL',
+    dates: 'Saturday, July 12', venue: 'Bobby Jones Pickleball Center', city: 'Sarasota, FL',
     skill: '3.0 – 4.5',
     holdFee: '$20', entryFee: '$80',
     photo: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=240&fit=crop&q=80',
@@ -148,7 +148,7 @@ const TRENDING = [
     name: 'Florida Open', verified: true,
     players: 127, holdSpots: 19, pctFilled: 63,
     formats: "Mixed · Men's · Women's",
-    dates: 'Aug 8 – 10, 2025', venue: 'East Naples Community Park', city: 'Naples, FL',
+    dates: 'Friday, August 8', venue: 'East Naples Community Park', city: 'Naples, FL',
     skill: '3.5 – 5.0',
     holdFee: '$15', entryFee: '$80',
     photo: 'https://images.unsplash.com/photo-1477525218966-c4a4c7ee6e56?w=400&h=240&fit=crop&q=80',
@@ -169,6 +169,15 @@ function formatDateRange(isoDateStr: string): string {
   return new Date(y, m - 1, d)
     .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     .toUpperCase();
+}
+
+// "Thursday, October 16". Same Hermes-safe parse as formatDateRange above —
+// split the ISO string rather than letting Date parse it.
+function formatEventDay(isoDateStr: string): string {
+  const [y, m, d] = isoDateStr.split('-').map(Number);
+  if (!y || !m || !d) return isoDateStr;
+  return new Date(y, m - 1, d)
+    .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
 function tournamentToFeatured(t: Tournament): typeof FEATURED[0] {
@@ -208,7 +217,7 @@ function tournamentToTrending(t: Tournament): typeof TRENDING[0] {
     holdSpots: Math.max(0, t.drawSize - t.spotsFilled),
     pctFilled,
     formats: Array.from(new Set(t.formats.map(humanizeFormat))).join(' · ') || 'Doubles',
-    dates: formatDateRange(t.eventDate),
+    dates: formatEventDay(t.eventDate),
     venue: t.venue,
     city: `${t.city}, ${t.state}`,
     skill: skillLabel(t.skillMin, t.skillMax),
@@ -487,7 +496,10 @@ function TrendingCard({ item, onSave, saved }: {
           </View>
         </View>
 
-        <Text style={tc.formats} numberOfLines={1}>{item.formats}</Text>
+        {/* Format pill, shaped like cl.gameTypePill on the community cards. */}
+        <View style={tc.formatPill}>
+          <Text style={tc.formatPillText} numberOfLines={1}>{item.formats}</Text>
+        </View>
 
         {/* Meta rows mirror CommunityCard: gold icon at 14, 15pt label. */}
         <View style={tc.metaRow}>
@@ -589,13 +601,26 @@ const tc = StyleSheet.create({
   verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 6 },
   verifiedText:{ color: '#3B82F6', fontSize: 11, fontWeight: '600' },
 
-  statsRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  // Outlined block so the three figures read as one unit rather than floating
+  // in the card. Same border treatment as the card itself.
+  statsRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderWidth: 1, borderColor: L.border, borderRadius: 12,
+    paddingHorizontal: 8, paddingVertical: 10,
+    marginBottom: 10,
+  },
   statItem:    { flex: 1, alignItems: 'center' },
   statNum:     { color: L.navy, fontSize: 15, fontWeight: '800' },
   statLabel:   { color: L.textMuted, fontSize: 11 },
   statDivider: { width: 1, height: 20, backgroundColor: L.border, marginHorizontal: 8 },
 
-  formats:  { color: L.textSub, fontSize: 13, fontWeight: '600', marginBottom: 3 },
+  formatPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.goldBg, borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 3,
+    marginBottom: 8,
+  },
+  formatPillText: { color: L.gold, fontSize: 11, fontWeight: '800', letterSpacing: 0.4 },
   // Mirrors cl.meta / cl.metaText.
   metaRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   metaText: { color: '#000000', fontSize: 15, fontWeight: '500', flex: 1 },
