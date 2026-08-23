@@ -1,8 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Image, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
-  Modal, Pressable, Alert, Linking,
+  ScrollView, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
+  Modal, Pressable, Alert, Linking, Animated,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -59,6 +59,10 @@ const L = {
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Hero height drives both the layout and the scroll-zoom interpolation, so the
+// two cannot drift apart. See s.hero and the heroScale interpolation.
+const HERO_HEIGHT = 324;
 
 // ─── Mock: events ─────────────────────────────────────────────────────────────
 
@@ -537,6 +541,21 @@ export default function CommunityEventScreen() {
   const { id, tab: initialTabParam } = useLocalSearchParams<{ id: string; tab?: Tab }>();
   const insets   = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
+
+  // Drives the hero zoom. Native-driven, so the transform runs on the UI thread
+  // and keeps up with the scroll even while JS is busy rendering the tabs.
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  // Scale only -- deliberately no translateY. Pulling down past the top (a
+  // negative offset, iOS rubber-band) zooms in hard; scrolling up zooms gently
+  // as the hero recedes, which is the only half Android sees since it has no
+  // bounce by default. Staying at scale >= 1 means the image can never expose a
+  // gap at the edges of the container, which a parallax translate would.
+  const heroScale = scrollY.interpolate({
+    inputRange:  [-HERO_HEIGHT, 0, HERO_HEIGHT],
+    outputRange: [2, 1, 1.2],
+    extrapolate: 'clamp',
+  });
 
   const isUUID = UUID_RE.test(id as string ?? '');
   const [liveEvent,    setLiveEvent]    = useState<EventShape | null>(null);
@@ -1711,16 +1730,25 @@ export default function CommunityEventScreen() {
     >
       <StatusBar style="light" />
 
-      <ScrollView
+      <Animated.ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true },
+        )}
       >
         {/* ── HERO (preserved) ── */}
         <View style={s.hero}>
-          <Image source={{ uri: event.heroPhoto }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <Animated.Image
+            source={{ uri: event.heroPhoto }}
+            style={[StyleSheet.absoluteFill, { transform: [{ scale: heroScale }] }]}
+            resizeMode="cover"
+          />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
           <LinearGradient
             colors={['rgba(0,0,0,0.22)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.70)']}
@@ -1796,7 +1824,7 @@ export default function CommunityEventScreen() {
           {activeTab === 'players' && <PlayersContent />}
           {activeTab === 'chat'    && <ChatContent />}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* ── FIXED BOTTOM BAR ── */}
       <View style={[s.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
@@ -2240,7 +2268,9 @@ const s = StyleSheet.create({
   // grows the stack upward until the status badge collides with the back
   // chevron (which sits at insets.top + 8). The extra height lowers the whole
   // text block instead of shrinking the title.
-  hero: { height: 324, position: 'relative' },
+  // overflow hidden clips the scroll-zoom: the image scales up to 2x on pull,
+  // and without this it would paint over the tab bar below.
+  hero: { height: HERO_HEIGHT, position: 'relative', overflow: 'hidden' },
   topControls: {
     position: 'absolute', left: spacing.screenH, right: spacing.screenH,
     flexDirection: 'row', justifyContent: 'space-between', zIndex: 10,
