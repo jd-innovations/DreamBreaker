@@ -33,6 +33,12 @@ export interface Tournament {
   // played here"; `formats` above is a tournaments column that division
   // creation never updates. Empty when the query did not embed divisions.
   divisionFormats: string[];
+  // Skill range across the divisions — min of mins, max of maxes. Same story as
+  // divisionFormats: skill_min/skill_max on tournaments is set on 2 of 10 rows
+  // while 11 divisions carry real values. Null when no division declares one,
+  // or when the query did not embed divisions.
+  divisionSkillMin: number | null;
+  divisionSkillMax: number | null;
   status: 'draft' | 'pending_approval' | 'open' | 'filling_fast' | 'full' | 'upcoming' | 'completed' | 'cancelled';
   registrationOpensAt:  string | null;
   registrationClosesAt: string | null;

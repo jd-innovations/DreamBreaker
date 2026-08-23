@@ -34,6 +34,29 @@ function formatDate(dateStr: string): string {
   }
 }
 
+// Widest skill band the divisions cover. Zeros are treated as "unset" rather
+// than as a real 0.0 rating, which is what produced the "0 – 0" on cards whose
+// skill only ever lived on their divisions.
+function divisionSkillRange(divisions: unknown): {
+  divisionSkillMin: number | null;
+  divisionSkillMax: number | null;
+} {
+  if (!Array.isArray(divisions)) return { divisionSkillMin: null, divisionSkillMax: null };
+
+  const mins: number[] = [];
+  const maxes: number[] = [];
+  for (const d of divisions as { skill_min?: unknown; skill_max?: unknown }[]) {
+    const lo = Number(d?.skill_min ?? 0);
+    const hi = Number(d?.skill_max ?? 0);
+    if (lo > 0) mins.push(lo);
+    if (hi > 0) maxes.push(hi);
+  }
+  return {
+    divisionSkillMin: mins.length  ? Math.min(...mins)  : null,
+    divisionSkillMax: maxes.length ? Math.max(...maxes) : null,
+  };
+}
+
 function dbRowToTournament(row: Record<string, unknown>): Tournament {
   return {
     id:             String(row.id),
@@ -66,6 +89,7 @@ function dbRowToTournament(row: Record<string, unknown>): Tournament {
             .filter(Boolean),
         ))
       : [],
+    ...divisionSkillRange(row.divisions),
     status:               dbStatusToAppStatus(String(row.status ?? '')),
     registrationOpensAt:  row.registration_opens_at != null ? String(row.registration_opens_at) : null,
     registrationClosesAt: row.registration_closes_at != null ? String(row.registration_closes_at) : null,
@@ -79,7 +103,7 @@ function dbRowToTournament(row: Record<string, unknown>): Tournament {
 export async function fetchTournaments(): Promise<Tournament[]> {
   const { data, error } = await supabase
     .from('tournaments')
-    .select('id,name,venue_name,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,registration_opens_at,registration_closes_at,featured,cover_img_url,divisions(format)')
+    .select('id,name,venue_name,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,registration_opens_at,registration_closes_at,featured,cover_img_url,divisions(format,skill_min,skill_max)')
     .in('status', VISIBLE_STATUSES)
     .order('event_date', { ascending: true });
 

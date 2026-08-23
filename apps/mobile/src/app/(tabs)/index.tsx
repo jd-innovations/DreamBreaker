@@ -136,7 +136,7 @@ const TRENDING = [
     players: 238, holdSpots: 41, pctFilled: 79,
     formats: "Mixed · Men's · Women's",
     dates: 'Saturday, July 12, 2025', time: '8:00 AM' as string | null, venue: 'Bobby Jones Pickleball Center', city: 'Sarasota, FL',
-    skill: '3.0 – 4.5',
+    skill: '3.0 – 4.5' as string | null,
     holdFee: '$20', entryFee: '$80',
     photo: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=240&fit=crop&q=80',
     logoLines: ['SUMMER', 'SLAM'],
@@ -149,7 +149,7 @@ const TRENDING = [
     players: 127, holdSpots: 19, pctFilled: 63,
     formats: "Mixed · Men's · Women's",
     dates: 'Friday, August 8, 2025', time: null as string | null, venue: 'East Naples Community Park', city: 'Naples, FL',
-    skill: '3.5 – 5.0',
+    skill: null as string | null,
     holdFee: '$15', entryFee: '$80',
     photo: 'https://images.unsplash.com/photo-1477525218966-c4a4c7ee6e56?w=400&h=240&fit=crop&q=80',
     logoLines: ['FLORIDA', 'OPEN'],
@@ -238,7 +238,13 @@ function tournamentToTrending(t: Tournament): typeof TRENDING[0] {
     time: formatStartTime(t.startTime),
     venue: t.venue,
     city: `${t.city}, ${t.state}`,
-    skill: skillLabel(t.skillMin, t.skillMax),
+    // Divisions first, same reasoning as formats above. Null (row hidden) when
+    // neither source declares a range, instead of rendering "0 – 0".
+    skill: (() => {
+      const lo = t.divisionSkillMin ?? (t.skillMin > 0 ? t.skillMin : null);
+      const hi = t.divisionSkillMax ?? (t.skillMax > 0 ? t.skillMax : null);
+      return lo != null || hi != null ? skillLabel(lo ?? hi!, hi ?? lo!) : null;
+    })(),
     holdFee: `$${Math.round(t.holdFeeCents / 100)}`,
     entryFee: `$${Math.round(t.entryFeeCents / 100)}`,
     photo: t.coverImgUrl ?? FALLBACK_TOURNEY_PHOTO,
@@ -482,19 +488,24 @@ function TrendingCard({ item, onSave, saved }: {
       onPress={() => router.push(`/tournament/${item.id}` as never)}
     >
       <View style={tc.info}>
-        {/* Type label, matching CommunityCard's COMMUNITY PLAY treatment */}
-        <Text style={tc.typeText}>TOURNAMENT</Text>
+        {/* Top row: type label left, verified badge right — the cl.topRow
+            pattern. Pairing them here frees the row the badge used to own,
+            which this card needs now that it carries four meta lines. */}
+        <View style={tc.topRow}>
+          <Text style={tc.typeText}>TOURNAMENT</Text>
+          {item.verified && (
+            <View style={tc.verifiedRow}>
+              <Ionicons name="checkmark-circle" size={12} color="#3B82F6" />
+              <Text style={tc.verifiedText}>Verified Director</Text>
+            </View>
+          )}
+        </View>
 
         <View style={tc.nameRow}>
           <Text style={tc.name}>{item.name}</Text>
           <TouchableOpacity onPress={onSave} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name={saved ? 'heart' : 'heart-outline'} size={18} color={saved ? '#FF6B6B' : L.textMuted} />
           </TouchableOpacity>
-        </View>
-
-        <View style={tc.verifiedRow}>
-          <Ionicons name="checkmark-circle" size={12} color="#3B82F6" />
-          <Text style={tc.verifiedText}>Verified Director</Text>
         </View>
 
         <View style={tc.statsRow}>
@@ -545,10 +556,12 @@ function TrendingCard({ item, onSave, saved }: {
           <Ionicons name="location-outline" size={14} color={L.gold} />
           <Text style={tc.metaText}>{item.city}</Text>
         </View>
-        <View style={[tc.metaRow, { marginBottom: 10 }]}>
-          <Ionicons name="speedometer-outline" size={14} color={L.gold} />
-          <Text style={tc.metaText}>{item.skill}</Text>
-        </View>
+        {!!item.skill && (
+          <View style={[tc.metaRow, { marginBottom: 10 }]}>
+            <Ionicons name="speedometer-outline" size={14} color={L.gold} />
+            <Text style={tc.metaText}>{item.skill}</Text>
+          </View>
+        )}
 
         <View style={tc.btns}>
           <View style={tc.btnRow}>
@@ -603,7 +616,11 @@ const tc = StyleSheet.create({
   },
   // Mirrors cl.typeText -- plain gold label, deliberately not a pill, because
   // COMMUNITY PLAY is not one either.
-  typeText: { color: L.gold, fontSize: 11, fontWeight: '800', letterSpacing: 0.8, marginBottom: 6 },
+  topRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  typeText: { color: L.gold, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
   badge: {
     position: 'absolute', top: 10, left: 8,
     flexDirection: 'row', alignItems: 'center', gap: 3,
@@ -627,7 +644,7 @@ const tc = StyleSheet.create({
     color: L.navy, fontSize: 22, fontWeight: '800', lineHeight: 26,
     textTransform: 'uppercase', flex: 1, marginRight: 8,
   },
-  verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 6 },
+  verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   verifiedText:{ color: '#3B82F6', fontSize: 11, fontWeight: '600' },
 
   // Outlined block so the three figures read as one unit rather than floating

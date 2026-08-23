@@ -64,6 +64,8 @@ export async function fetchTournaments(): Promise<Tournament[]> {
     // This query does not embed divisions; callers needing the authoritative
     // formats should use lib/supabase/tournaments.ts fetchTournaments().
     divisionFormats: [],
+    divisionSkillMin: null,
+    divisionSkillMax: null,
     status:               mapStatus(row.status as DbStatus),
     registrationOpensAt:  null,
     registrationClosesAt: null,
