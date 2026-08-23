@@ -4916,6 +4916,7 @@ export type Database = {
           skill_min: number | null
           slug: string | null
           spots_filled: number
+          start_time: string | null
           state: string
           status: Database["public"]["Enums"]["tournament_status"]
           submitted_for_approval_at: string | null
@@ -4960,6 +4961,7 @@ export type Database = {
           skill_min?: number | null
           slug?: string | null
           spots_filled?: number
+          start_time?: string | null
           state: string
           status?: Database["public"]["Enums"]["tournament_status"]
           submitted_for_approval_at?: string | null
@@ -5004,6 +5006,7 @@ export type Database = {
           skill_min?: number | null
           slug?: string | null
           spots_filled?: number
+          start_time?: string | null
           state?: string
           status?: Database["public"]["Enums"]["tournament_status"]
           submitted_for_approval_at?: string | null

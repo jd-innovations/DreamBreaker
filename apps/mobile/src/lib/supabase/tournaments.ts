@@ -45,6 +45,7 @@ function dbRowToTournament(row: Record<string, unknown>): Tournament {
     zipCode:        row.zip_code != null ? String(row.zip_code) : null,
     date:           formatDate(String(row.event_date ?? '')),
     eventDate:      String(row.event_date ?? ''),
+    startTime:      row.start_time != null ? String(row.start_time) : null,
     entryFeeCents:  Number(row.entry_fee_cents ?? 0),
     holdFeeCents:   Number(row.hold_fee_cents ?? 0),
     prizePoolCents: row.prize_pool_cents != null ? Number(row.prize_pool_cents) : null,
@@ -66,7 +67,7 @@ function dbRowToTournament(row: Record<string, unknown>): Tournament {
 export async function fetchTournaments(): Promise<Tournament[]> {
   const { data, error } = await supabase
     .from('tournaments')
-    .select('id,name,venue_name,city,state,event_date,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,registration_opens_at,registration_closes_at,featured,cover_img_url')
+    .select('id,name,venue_name,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,registration_opens_at,registration_closes_at,featured,cover_img_url')
     .in('status', VISIBLE_STATUSES)
     .order('event_date', { ascending: true });
 
@@ -77,7 +78,7 @@ export async function fetchTournaments(): Promise<Tournament[]> {
 export async function fetchTournamentById(id: string): Promise<Tournament | null> {
   const { data, error } = await supabase
     .from('tournaments')
-    .select('id,name,venue_name,venue_address,zip_code,city,state,event_date,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id')
+    .select('id,name,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id')
     .eq('id', id)
     .single();
 
@@ -88,7 +89,7 @@ export async function fetchTournamentById(id: string): Promise<Tournament | null
 export async function fetchDirectorTournaments(directorId: string): Promise<Tournament[]> {
   const { data, error } = await supabase
     .from('tournaments')
-    .select('id,name,venue_name,city,state,event_date,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured')
+    .select('id,name,venue_name,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured')
     .eq('director_id', directorId)
     .order('event_date', { ascending: false });
 
@@ -97,7 +98,7 @@ export async function fetchDirectorTournaments(directorId: string): Promise<Tour
 }
 
 const CREATED_SELECT =
-  'id,name,venue_name,city,state,event_date,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,facility_id';
+  'id,name,venue_name,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,facility_id';
 
 export type CreateTournamentInput = {
   directorId: string;
@@ -106,6 +107,7 @@ export type CreateTournamentInput = {
   city: string;
   state: string;
   eventDate: string;              // ISO date, e.g. 2026-08-16
+  startTime: string | null;       // "HH:MM" local wall-clock, or null
   registrationOpensAt: string | null; // ISO date or null
   registrationClosesAt: string;   // ISO date
   entryFeeCents: number;
@@ -129,6 +131,7 @@ export async function createDraftTournament(input: CreateTournamentInput): Promi
       state:                  input.state,
       format:                 'doubles',
       event_date:             input.eventDate,
+      start_time:             input.startTime,
       registration_opens_at:  input.registrationOpensAt,
       registration_closes_at: input.registrationClosesAt,
       entry_fee_cents:        input.entryFeeCents,
@@ -154,6 +157,7 @@ export type UpdateTournamentInput = {
   city: string;
   state: string;
   eventDate: string;
+  startTime: string | null;
   registrationOpensAt: string | null;
   registrationClosesAt: string;
   entryFeeCents: number;
@@ -174,6 +178,7 @@ export async function updateTournamentDetails(id: string, input: UpdateTournamen
       city:                    input.city,
       state:                   input.state,
       event_date:              input.eventDate,
+      start_time:              input.startTime,
       registration_opens_at:   input.registrationOpensAt,
       registration_closes_at:  input.registrationClosesAt,
       entry_fee_cents:         input.entryFeeCents,

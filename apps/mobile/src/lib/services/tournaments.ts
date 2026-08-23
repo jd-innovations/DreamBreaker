@@ -32,7 +32,7 @@ export async function fetchTournaments(): Promise<Tournament[]> {
   const { data, error } = await supabase
     .from('tournaments')
     .select(`
-      id, name, venue_name, city, state, event_date,
+      id, name, venue_name, city, state, event_date, start_time,
       entry_fee_cents, hold_fee_cents, prize_pool_cents,
       draw_size, spots_filled, skill_min, skill_max,
       formats, format, status, featured
@@ -50,6 +50,7 @@ export async function fetchTournaments(): Promise<Tournament[]> {
     state:          row.state,
     date:           formatDate(row.event_date),
     eventDate:      String(row.event_date ?? ''),
+    startTime:      row.start_time != null ? String(row.start_time) : null,
     entryFeeCents:  row.entry_fee_cents,
     holdFeeCents:   row.hold_fee_cents,
     prizePoolCents: row.prize_pool_cents ?? null,

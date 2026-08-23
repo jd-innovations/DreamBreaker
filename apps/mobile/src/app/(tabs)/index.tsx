@@ -135,7 +135,7 @@ const TRENDING = [
     name: 'Summer Slam', verified: true,
     players: 238, holdSpots: 41, pctFilled: 79,
     formats: "Mixed · Men's · Women's",
-    dates: 'Saturday, July 12', venue: 'Bobby Jones Pickleball Center', city: 'Sarasota, FL',
+    dates: 'Saturday, July 12, 2025', time: '8:00 AM' as string | null, venue: 'Bobby Jones Pickleball Center', city: 'Sarasota, FL',
     skill: '3.0 – 4.5',
     holdFee: '$20', entryFee: '$80',
     photo: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=240&fit=crop&q=80',
@@ -148,7 +148,7 @@ const TRENDING = [
     name: 'Florida Open', verified: true,
     players: 127, holdSpots: 19, pctFilled: 63,
     formats: "Mixed · Men's · Women's",
-    dates: 'Friday, August 8', venue: 'East Naples Community Park', city: 'Naples, FL',
+    dates: 'Friday, August 8, 2025', time: null as string | null, venue: 'East Naples Community Park', city: 'Naples, FL',
     skill: '3.5 – 5.0',
     holdFee: '$15', entryFee: '$80',
     photo: 'https://images.unsplash.com/photo-1477525218966-c4a4c7ee6e56?w=400&h=240&fit=crop&q=80',
@@ -171,13 +171,23 @@ function formatDateRange(isoDateStr: string): string {
     .toUpperCase();
 }
 
-// "Thursday, October 16". Same Hermes-safe parse as formatDateRange above —
-// split the ISO string rather than letting Date parse it.
+// "Thursday, October 16, 2026". Same Hermes-safe parse as formatDateRange
+// above — split the ISO string rather than letting Date parse it.
 function formatEventDay(isoDateStr: string): string {
   const [y, m, d] = isoDateStr.split('-').map(Number);
   if (!y || !m || !d) return isoDateStr;
   return new Date(y, m - 1, d)
-    .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+// "14:30:00" (a Postgres `time`) → "2:30 PM". Null when the director never set
+// one, so the caller can omit the time rather than invent a default.
+function formatStartTime(t: string | null): string | null {
+  const m = /^(\d{2}):(\d{2})/.exec(t ?? '');
+  if (!m) return null;
+  const d = new Date();
+  d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
 function tournamentToFeatured(t: Tournament): typeof FEATURED[0] {
@@ -218,6 +228,7 @@ function tournamentToTrending(t: Tournament): typeof TRENDING[0] {
     pctFilled,
     formats: Array.from(new Set(t.formats.map(humanizeFormat))).join(' · ') || 'Doubles',
     dates: formatEventDay(t.eventDate),
+    time: formatStartTime(t.startTime),
     venue: t.venue,
     city: `${t.city}, ${t.state}`,
     skill: skillLabel(t.skillMin, t.skillMax),
@@ -506,6 +517,14 @@ function TrendingCard({ item, onSave, saved }: {
           <Ionicons name="calendar-outline" size={14} color={L.gold} />
           <Text style={tc.metaText}>{item.dates}</Text>
         </View>
+        {/* Omitted entirely when the director set no start time, rather than
+            showing a placeholder or a fabricated default. */}
+        {!!item.time && (
+          <View style={tc.metaRow}>
+            <Ionicons name="time-outline" size={14} color={L.gold} />
+            <Text style={tc.metaText}>{item.time}</Text>
+          </View>
+        )}
         {!!item.venue && (
           <View style={tc.metaRow}>
             <Ionicons name="business-outline" size={14} color={L.gold} />

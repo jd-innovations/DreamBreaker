@@ -20,6 +20,7 @@ export interface Tournament {
   zipCode?: string | null;
   date: string;       // display-formatted, e.g. "Jul 16, 2026"
   eventDate: string;  // raw ISO date (YYYY-MM-DD), for date comparisons
+  startTime: string | null;  // raw "HH:MM:SS" local wall-clock, null when unset
   entryFeeCents: number;
   holdFeeCents: number;
   prizePoolCents: number | null;

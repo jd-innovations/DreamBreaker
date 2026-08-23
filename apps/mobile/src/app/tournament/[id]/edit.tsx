@@ -36,6 +36,7 @@ type FormState = {
   city: string;
   state: string;
   date: string;
+  startTime: string;   // "HH:MM" 24h, '' when unset
   registrationOpenDate: string;
   registrationCloseDate: string;
   entryFee: string;
@@ -112,6 +113,7 @@ function tournamentToForm(t: Tournament): FormState {
     city:                  t.city,
     state:                 t.state,
     date:                  t.eventDate,
+    startTime:             (t.startTime ?? '').slice(0, 5),
     registrationOpenDate:  toDateOnly(t.registrationOpensAt),
     registrationCloseDate: toDateOnly(t.registrationClosesAt),
     entryFee:              (t.entryFeeCents / 100).toString(),
@@ -263,6 +265,33 @@ function EditTournamentScreen() {
     set(activeDateField, `${y}-${m}-${day}`);
   }
 
+  // ── Start time ──────────────────────────────────────────────────────────────
+  // Separate from the date picker: that writes ISO dates into three fields,
+  // this writes one wall-clock "HH:MM".
+  const [timeOpen, setTimeOpen]   = useState(false);
+  const [timeDraft, setTimeDraft] = useState(new Date());
+
+  function openTimePicker() {
+    const m = /^(\d{2}):(\d{2})$/.exec(form?.startTime?.trim() ?? '');
+    const d = new Date();
+    d.setHours(m ? Number(m[1]) : 8, m ? Number(m[2]) : 0, 0, 0);
+    setTimeDraft(d);
+    setTimeOpen(true);
+  }
+
+  function confirmTime(d: Date) {
+    set('startTime', `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+  }
+
+  function handleTimeChange(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') {
+      setTimeOpen(false);
+      if (d) confirmTime(d);
+      return;
+    }
+    if (d) setTimeDraft(d);
+  }
+
   function handleDateChange(_: DateTimePickerEvent, d?: Date) {
     if (Platform.OS === 'android') {
       setActiveDateField(null);
@@ -295,6 +324,7 @@ function EditTournamentScreen() {
       city:                 form.city.trim(),
       state:                form.state.trim().toUpperCase(),
       eventDate,
+      startTime:            form.startTime.trim() || null,
       registrationOpensAt:  parseFormDate(form.registrationOpenDate),
       registrationClosesAt: closesAt,
       entryFeeCents:        Math.round(parseFloat(form.entryFee) * 100),
@@ -358,6 +388,18 @@ function EditTournamentScreen() {
             error={errors.date}
           />
           <DateField
+            label="Start Time"
+            value={(() => {
+              const m = /^(\d{2}):(\d{2})$/.exec(form.startTime.trim());
+              if (!m) return '';
+              const d = new Date();
+              d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+              return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            })()}
+            onPress={openTimePicker}
+            hint="Optional — leave blank if the schedule varies by division"
+          />
+          <DateField
             label="Registration Opens"
             value={formatDisplayDate(form.registrationOpenDate)}
             onPress={() => openDatePicker('registrationOpenDate')}
@@ -404,6 +446,39 @@ function EditTournamentScreen() {
       </View>
 
       {/* ── Date picker ── */}
+      {timeOpen && Platform.OS === 'ios' && (
+        <Modal transparent animationType="slide" onRequestClose={() => setTimeOpen(false)}>
+          <View style={s.pickerSheetOverlay}>
+            <TouchableOpacity style={{ flex: 1 }} onPress={() => setTimeOpen(false)} activeOpacity={1} />
+            <View style={s.pickerSheet}>
+              <View style={s.pickerSheetHeader}>
+                <TouchableOpacity onPress={() => setTimeOpen(false)}>
+                  <Text style={s.pickerCancel}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { confirmTime(timeDraft); setTimeOpen(false); }}>
+                  <Text style={s.pickerDone}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={timeDraft}
+                mode="time"
+                display="spinner"
+                onChange={handleTimeChange}
+                themeVariant="light"
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+      {timeOpen && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={timeDraft}
+          mode="time"
+          display="default"
+          onChange={handleTimeChange}
+        />
+      )}
+
       {activeDateField && Platform.OS === 'ios' && (
         <Modal transparent animationType="slide" onRequestClose={() => setActiveDateField(null)}>
           <View style={s.pickerSheetOverlay}>
