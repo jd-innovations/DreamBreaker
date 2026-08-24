@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   Image, Dimensions, NativeScrollEvent, NativeSyntheticEvent, ActivityIndicator,
@@ -853,13 +853,22 @@ export default function HomeScreen() {
 
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
 
-  useEffect(() => {
-    fetchTournaments()
-      // Past events keep a visible status in the DB, and the list arrives
-      // oldest-first — so without this they'd permanently own the home slots.
-      .then(rows => setTournaments(rows.filter(t => !isTournamentExpired(t))))
-      .catch(() => setTournaments([]));
-  }, []);
+  // Refetch on focus, not just mount — same reason the community list below
+  // does. Registering or holding a spot happens on another screen, and a
+  // mount-only fetch left this section showing the fill bar and % filled from
+  // whenever the tab first mounted, so a registration only appeared after a
+  // full app restart.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      fetchTournaments()
+        // Past events keep a visible status in the DB, and the list arrives
+        // oldest-first — so without this they'd permanently own the home slots.
+        .then(rows => { if (!cancelled) setTournaments(rows.filter(t => !isTournamentExpired(t))); })
+        .catch(() => { if (!cancelled) setTournaments([]); });
+      return () => { cancelled = true; };
+    }, []),
+  );
 
   const featuredTournaments = tournaments.filter(t => t.featured);
   const featuredPool = featuredTournaments.length > 0 ? featuredTournaments : tournaments;
