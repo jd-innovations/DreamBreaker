@@ -79,16 +79,15 @@ function TournamentCard({ t, playerStatus }: { t: Tournament; playerStatus?: Pla
       style={({ pressed }) => [s2.card, pressed && { opacity: 0.85 }]}
       onPress={() => router.push(`/tournament/${t.id}` as never)}
     >
-      <View style={s2.cardHeader}>
-        <View style={{ flex: 1, marginRight: 10 }}>
-          <Text style={s2.cardName} numberOfLines={2}>{t.name.toUpperCase()}</Text>
-          <Text style={s2.cardSub}>{t.venue} · {t.city}, {t.state}</Text>
-        </View>
-        <View style={{ alignItems: 'flex-end', gap: 4 }}>
-          {ps && <StatusChip label={ps.label} variant={ps.variant} />}
-          <StatusChip label={st.label} variant={st.variant} />
-        </View>
+      {/* Status chips sit above the title, left-aligned, rather than in a right
+          column beside it. The title now wraps to two lines, and a right column
+          both squeezed it and left the chips floating against a ragged edge. */}
+      <View style={s2.chipRow}>
+        {ps && <StatusChip label={ps.label} variant={ps.variant} />}
+        <StatusChip label={st.label} variant={st.variant} />
       </View>
+      <Text style={s2.cardName} numberOfLines={2}>{t.name.toUpperCase()}</Text>
+      <Text style={s2.cardSub}>{t.venue} · {t.city}, {t.state}</Text>
       <View style={s2.metaRow}>
         <Ionicons name="calendar-outline" size={12} color={colors.textSub} />
         <Text style={s2.metaText}>{formatEventDayShort(t.eventDate)}</Text>
@@ -461,9 +460,10 @@ const s2 = StyleSheet.create({
     backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.card, padding: 16,
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
+  chipRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   cardName: { color: colors.text, fontSize: 18, fontWeight: '800', lineHeight: 23, marginBottom: 3 },
-  cardSub: { color: colors.textSub, fontSize: 11, fontWeight: '500' },
+  // Carries the 6pt gap the old cardHeader wrapper used to provide.
+  cardSub: { color: colors.textSub, fontSize: 11, fontWeight: '500', marginBottom: 6 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 12 },
   metaText: { color: colors.textSub, fontSize: 11, fontWeight: '600' },
   dot: { color: colors.textSub },
