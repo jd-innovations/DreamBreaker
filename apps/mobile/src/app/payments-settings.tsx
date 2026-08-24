@@ -1,17 +1,18 @@
-﻿import React from 'react';
+import React from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/theme';
+import { usePurchaseHistory } from '@/hooks/usePurchaseHistory';
+import type { Purchase, PurchasePurposeType } from '@/lib/paymentTypes';
 
-// Theme-backed alias â€” brand values resolve from @/theme.
-// purple/teal are payment-brand accent colors â€” documented exception.
+// Theme-backed alias — brand values resolve from @/theme.
+// purple/teal are payment-brand accent colors — documented exception.
 const L = {
   bg:         colors.bg,
   page:       colors.page,
@@ -29,7 +30,41 @@ const L = {
   teal:       '#0B9E8A',
 };
 
-// â”€â”€â”€ Shared helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/** How many purchases the preview list shows before "View All". */
+const PREVIEW_LIMIT = 3;
+
+// ─── Purpose presentation ────────────────────────────────────────────────────
+// purpose_type is free text in the database so new paid features don't need a
+// migration; anything not listed here falls back to the generic entry below.
+
+const PURPOSE_META: Record<PurchasePurposeType, { icon: string; bg: string; label: string }> = {
+  tournament_registration_entry:   { icon: 'trophy',     bg: L.navy,   label: 'Tournament Registration' },
+  tournament_registration_hold:    { icon: 'calendar',   bg: L.gold,   label: 'Hold My Spot Deposit' },
+  tournament_registration_balance: { icon: 'trophy',     bg: L.navy,   label: 'Registration Balance' },
+  tournament_team_entry:           { icon: 'people',     bg: L.navy,   label: 'Team Registration' },
+  coach_offer_purchase:            { icon: 'bag',        bg: L.purple, label: 'Coach Marketplace' },
+  reservation_payment:             { icon: 'tennisball', bg: L.teal,   label: 'Court Booking' },
+};
+
+const FALLBACK_META = { icon: 'card', bg: L.navy, label: 'Purchase' };
+
+function metaFor(purposeType: PurchasePurposeType) {
+  return PURPOSE_META[purposeType] ?? FALLBACK_META;
+}
+
+// ─── Formatting ──────────────────────────────────────────────────────────────
+
+function formatCents(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ─── Shared helpers ──────────────────────────────────────────────────────────
 
 function SectionHeader({ label }: { label: string }) {
   return <Text style={s.sectionHeader}>{label}</Text>;
@@ -43,7 +78,7 @@ function Div() {
   return <View style={s.div} />;
 }
 
-// â”€â”€â”€ Visa logo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Visa logo ───────────────────────────────────────────────────────────────
 
 function VisaLogo() {
   return (
@@ -53,7 +88,7 @@ function VisaLogo() {
   );
 }
 
-// â”€â”€â”€ Colored icon circle (solid fill) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Colored icon circle (solid fill) ────────────────────────────────────────
 
 function SolidCircle({
   name, bg,
@@ -67,7 +102,7 @@ function SolidCircle({
   );
 }
 
-// â”€â”€â”€ Outlined circle (for add row) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Outlined circle (for add row) ───────────────────────────────────────────
 
 function OutlineCircle({ name }: { name: string }) {
   return (
@@ -77,25 +112,33 @@ function OutlineCircle({ name }: { name: string }) {
   );
 }
 
-// â”€â”€â”€ Purchase row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Purchase row ────────────────────────────────────────────────────────────
 
-function PurchaseRow({
-  iconName, iconBg, label, sub, date, amount, last,
-}: {
-  iconName: string; iconBg: string;
-  label: string; sub: string; date: string;
-  amount: string; last?: boolean;
-}) {
+function PurchaseRow({ purchase, last }: { purchase: Purchase; last?: boolean }) {
+  const meta = metaFor(purchase.purposeType);
+  const refunded = purchase.refundedCents > 0;
+
   return (
     <>
       <TouchableOpacity style={s.row} activeOpacity={0.7}>
-        <SolidCircle name={iconName} bg={iconBg} />
+        <SolidCircle name={meta.icon} bg={meta.bg} />
         <View style={s.rowCenter}>
-          <Text style={s.rowLabel}>{label}</Text>
-          <Text style={s.rowSub}>{sub}</Text>
-          <Text style={s.rowDate}>{date}</Text>
+          <Text style={s.rowLabel}>{meta.label}</Text>
+          {purchase.subtitle ? <Text style={s.rowSub}>{purchase.subtitle}</Text> : null}
+          <Text style={s.rowDate}>{formatDate(purchase.paidAt)}</Text>
         </View>
-        <Text style={s.amount}>{amount}</Text>
+        <View style={s.amountCol}>
+          <Text style={s.amount}>{formatCents(purchase.amountCents)}</Text>
+          {/* Without this the row would show the original charge as if the
+              money were still gone, which contradicts the user's statement. */}
+          {refunded ? (
+            <Text style={s.refundNote}>
+              {purchase.status === 'refunded'
+                ? 'Refunded'
+                : `${formatCents(purchase.refundedCents)} refunded`}
+            </Text>
+          ) : null}
+        </View>
         <Ionicons name="chevron-forward" size={16} color={L.textMuted} style={{ marginLeft: 4 }} />
       </TouchableOpacity>
       {!last && <Div />}
@@ -103,7 +146,57 @@ function PurchaseRow({
   );
 }
 
-// â”€â”€â”€ Nav row with solid circle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Purchase history states ─────────────────────────────────────────────────
+
+function StateRow({ children }: { children: React.ReactNode }) {
+  return <View style={s.stateRow}>{children}</View>;
+}
+
+function PurchaseHistory({
+  purchases, loading, error,
+}: {
+  purchases: Purchase[]; loading: boolean; error: string | null;
+}) {
+  if (loading) {
+    return (
+      <StateRow>
+        <ActivityIndicator color={L.textMuted} />
+      </StateRow>
+    );
+  }
+
+  if (error) {
+    return (
+      <StateRow>
+        <Text style={s.stateText}>{error}</Text>
+      </StateRow>
+    );
+  }
+
+  if (purchases.length === 0) {
+    return (
+      <StateRow>
+        <Text style={s.stateText}>No purchases yet.</Text>
+      </StateRow>
+    );
+  }
+
+  return (
+    <>
+      {purchases.map((p, i) => (
+        <PurchaseRow key={p.id} purchase={p} last={i === purchases.length - 1} />
+      ))}
+      <Div />
+      {/* TODO: no full-history route exists yet — this opens nothing. */}
+      <TouchableOpacity style={s.viewAllRow} activeOpacity={0.7}>
+        <Text style={s.viewAllText}>View All Purchases</Text>
+        <Ionicons name="chevron-forward" size={16} color={L.textMuted} />
+      </TouchableOpacity>
+    </>
+  );
+}
+
+// ─── Nav row with solid circle ───────────────────────────────────────────────
 
 function NavRow({
   iconName, iconBg, label, sub, last,
@@ -126,16 +219,17 @@ function NavRow({
   );
 }
 
-// â”€â”€â”€ Main screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function PaymentsSettingsScreen() {
   const insets = useSafeAreaInsets();
+  const { purchases, loading, refreshing, error, refresh } = usePurchaseHistory(PREVIEW_LIMIT);
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
 
-      {/* â”€â”€ Header â”€â”€ */}
+      {/* ── Header ── */}
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => goBack()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={L.blue} />
@@ -148,18 +242,21 @@ export default function PaymentsSettingsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 40 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
       >
         <Text style={s.intro}>
           Manage your payment methods{'\n'}and view your purchase history.
         </Text>
 
-        {/* â”€â”€ Payment Methods â”€â”€ */}
+        {/* ── Payment Methods ── */}
+        {/* TODO: placeholder. No payment-methods table exists — saved cards
+            need Stripe Customer/PaymentMethod support before this is real. */}
         <SectionHeader label="PAYMENT METHODS" />
         <Group>
           {/* Saved card */}
           <TouchableOpacity style={s.row} activeOpacity={0.7}>
             <VisaLogo />
-            <Text style={[s.rowLabel, { flex: 1 }]}>Visa â€¢â€¢â€¢â€¢ 4321</Text>
+            <Text style={[s.rowLabel, { flex: 1 }]}>Visa •••• 4321</Text>
             <View style={s.defaultBadge}>
               <Text style={s.defaultText}>DEFAULT</Text>
             </View>
@@ -180,43 +277,13 @@ export default function PaymentsSettingsScreen() {
           <Text style={s.noteText}>Your payment information is secure and encrypted.</Text>
         </View>
 
-        {/* â”€â”€ Purchase History â”€â”€ */}
+        {/* ── Purchase History ── */}
         <SectionHeader label="PURCHASE HISTORY" />
         <Group>
-          <PurchaseRow
-            iconName="trophy"
-            iconBg={L.navy}
-            label="Tournament Registration"
-            sub="Florida Open"
-            date="Jun 7, 2026"
-            amount="$75.00"
-          />
-          <PurchaseRow
-            iconName="calendar"
-            iconBg={L.gold}
-            label="Hold My Spot Deposit"
-            sub="Summer Slam"
-            date="Jun 3, 2026"
-            amount="$15.00"
-          />
-          <PurchaseRow
-            iconName="bag"
-            iconBg={L.purple}
-            label="Marketplace Promotion"
-            sub="Boost Listing"
-            date="May 28, 2026"
-            amount="$4.99"
-            last
-          />
-          <Div />
-          {/* View All */}
-          <TouchableOpacity style={s.viewAllRow} activeOpacity={0.7}>
-            <Text style={s.viewAllText}>View All Purchases</Text>
-            <Ionicons name="chevron-forward" size={16} color={L.textMuted} />
-          </TouchableOpacity>
+          <PurchaseHistory purchases={purchases} loading={loading} error={error} />
         </Group>
 
-        {/* â”€â”€ Refunds â”€â”€ */}
+        {/* ── Refunds ── */}
         <SectionHeader label="REFUNDS" />
         <Group>
           <NavRow
@@ -228,7 +295,7 @@ export default function PaymentsSettingsScreen() {
           />
         </Group>
 
-        {/* â”€â”€ Billing â”€â”€ */}
+        {/* ── Billing ── */}
         <SectionHeader label="BILLING" />
         <Group>
           <NavRow
@@ -240,7 +307,7 @@ export default function PaymentsSettingsScreen() {
           />
         </Group>
 
-        {/* â”€â”€ Footer â”€â”€ */}
+        {/* ── Footer ── */}
         <View style={s.footer}>
           <Ionicons name="lock-closed-outline" size={14} color={L.textMuted} style={{ marginTop: 2 }} />
           <Text style={s.footerText}>
@@ -252,7 +319,7 @@ export default function PaymentsSettingsScreen() {
   );
 }
 
-// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.bg },
@@ -295,6 +362,14 @@ const s = StyleSheet.create({
   rowSub:    { color: L.textSub, fontSize: 12, fontWeight: '400' },
   rowDate:   { color: L.textMuted, fontSize: 12, fontWeight: '400', marginTop: 1 },
 
+  // Loading / empty / error placeholder inside a Group
+  stateRow: {
+    paddingHorizontal: 16, paddingVertical: 24, alignItems: 'center',
+  },
+  stateText: {
+    color: L.textMuted, fontSize: 14, fontWeight: '400', textAlign: 'center', lineHeight: 20,
+  },
+
   // Visa logo
   visaBox: {
     width: 52, height: 36, borderRadius: 6,
@@ -327,7 +402,9 @@ const s = StyleSheet.create({
   },
 
   // Purchase amount
-  amount: { color: L.navy, fontSize: 15, fontWeight: '700', marginRight: 2 },
+  amountCol:  { alignItems: 'flex-end', marginRight: 2 },
+  amount:     { color: L.navy, fontSize: 15, fontWeight: '700' },
+  refundNote: { color: L.textMuted, fontSize: 11, fontWeight: '500', marginTop: 2 },
 
   // View all row
   viewAllRow: {
