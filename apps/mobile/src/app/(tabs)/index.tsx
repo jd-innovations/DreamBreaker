@@ -24,6 +24,7 @@ import { eventCoverUri } from '@/lib/eventCover';
 import { claimGuestParticipants, fetchJoinedPlayEvents, fetchOpenPlayEvents, gameTypePillStyle, skillLabel, type PlayEventWithCount, type PlayEventType } from '@/lib/supabase/playEvents';
 import { fetchTournaments } from '@/lib/supabase/tournaments';
 import { isTournamentExpired, type Tournament } from '@/lib/tournamentTypes';
+import { formatEventDay, formatStartTime, humanizeFormat } from '@/lib/tournamentDisplay';
 
 const { width: SW } = Dimensions.get('window');
 const CARD_W  = SW - 56;
@@ -171,25 +172,6 @@ function formatDateRange(isoDateStr: string): string {
     .toUpperCase();
 }
 
-// "Thursday, October 16, 2026". Same Hermes-safe parse as formatDateRange
-// above — split the ISO string rather than letting Date parse it.
-function formatEventDay(isoDateStr: string): string {
-  const [y, m, d] = isoDateStr.split('-').map(Number);
-  if (!y || !m || !d) return isoDateStr;
-  return new Date(y, m - 1, d)
-    .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-}
-
-// "14:30:00" (a Postgres `time`) → "2:30 PM". Null when the director never set
-// one, so the caller can omit the time rather than invent a default.
-function formatStartTime(t: string | null): string | null {
-  const m = /^(\d{2}):(\d{2})/.exec(t ?? '');
-  if (!m) return null;
-  const d = new Date();
-  d.setHours(Number(m[1]), Number(m[2]), 0, 0);
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-}
-
 function tournamentToFeatured(t: Tournament): typeof FEATURED[0] {
   const pctFilled = t.drawSize > 0 ? Math.round((t.spotsFilled / t.drawSize) * 100) : 0;
   return {
@@ -204,13 +186,6 @@ function tournamentToFeatured(t: Tournament): typeof FEATURED[0] {
     pctFilled,
     photo: t.coverImgUrl ?? FALLBACK_TOURNEY_PHOTO,
   };
-}
-
-function humanizeFormat(f: string) {
-  // Capitalize only the first letter of each word (split on whitespace) —
-  // \b\w treats the apostrophe in "men's" as a word boundary and wrongly
-  // capitalizes the "s", producing "Men'S".
-  return f.replace(/_/g, ' ').replace(/(^|\s)\S/g, c => c.toUpperCase());
 }
 
 function tournamentToTrending(t: Tournament): typeof TRENDING[0] {

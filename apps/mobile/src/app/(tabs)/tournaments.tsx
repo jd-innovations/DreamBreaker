@@ -12,6 +12,7 @@ import { StatusChip, FIND_GAMES_SKILL_RANGES } from '@/components';
 import { useSlideMenu } from '@/components/SlideMenu';
 import { type Tournament } from '@/lib/tournamentTypes';
 import { fetchTournaments } from '@/lib/supabase/tournaments';
+import { formatEventDayShort, humanizeFormat, formatSkillBand } from '@/lib/tournamentDisplay';
 import { fetchPlayerHolds, fetchPlayerRegistrations } from '@/lib/supabase/registrations';
 import { useSession } from '@/hooks/useSession';
 import {
@@ -58,6 +59,7 @@ function fmt(cents: number) { return `$${(cents / 100).toFixed(0)}`; }
 
 function TournamentCard({ t, playerStatus }: { t: Tournament; playerStatus?: PlayerRegStatusKey | null }) {
   const fillPct = Math.round((t.spotsFilled / t.drawSize) * 100);
+  const skillBand = formatSkillBand(t.skillMin, t.skillMax);
   const spotsLeft = t.drawSize - t.spotsFilled;
   const tStatus = getTournamentStatus(t);
   const st = getTournamentStatusInfo(tStatus);
@@ -79,7 +81,7 @@ function TournamentCard({ t, playerStatus }: { t: Tournament; playerStatus?: Pla
     >
       <View style={s2.cardHeader}>
         <View style={{ flex: 1, marginRight: 10 }}>
-          <Text style={s2.cardName} numberOfLines={1}>{t.name.toUpperCase()}</Text>
+          <Text style={s2.cardName} numberOfLines={2}>{t.name.toUpperCase()}</Text>
           <Text style={s2.cardSub}>{t.venue} · {t.city}, {t.state}</Text>
         </View>
         <View style={{ alignItems: 'flex-end', gap: 4 }}>
@@ -89,10 +91,16 @@ function TournamentCard({ t, playerStatus }: { t: Tournament; playerStatus?: Pla
       </View>
       <View style={s2.metaRow}>
         <Ionicons name="calendar-outline" size={12} color={colors.textSub} />
-        <Text style={s2.metaText}>{t.date}</Text>
-        <Text style={s2.dot}>·</Text>
-        <Ionicons name="speedometer-outline" size={12} color={colors.textSub} />
-        <Text style={s2.metaText}>{t.skillMin}–{t.skillMax} DUPR</Text>
+        <Text style={s2.metaText}>{formatEventDayShort(t.eventDate)}</Text>
+        {/* Omitted when no division declares a range -- printing "0-0 DUPR"
+            stated a skill level that was never set. */}
+        {!!skillBand && (
+          <>
+            <Text style={s2.dot}>·</Text>
+            <Ionicons name="speedometer-outline" size={12} color={colors.textSub} />
+            <Text style={s2.metaText}>{skillBand} DUPR</Text>
+          </>
+        )}
       </View>
       <View style={s2.divider} />
       <View style={s2.feeRow}>
@@ -113,7 +121,7 @@ function TournamentCard({ t, playerStatus }: { t: Tournament; playerStatus?: Pla
         <View style={{ flex: 1, alignItems: 'flex-end', flexDirection: 'row', gap: 4, justifyContent: 'flex-end' }}>
           {t.formats.map((f, i) => (
             <View key={`${f}-${i}`} style={s2.fmtChip}>
-              <Text style={s2.fmtText}>{f}</Text>
+              <Text style={s2.fmtText}>{humanizeFormat(f)}</Text>
             </View>
           ))}
         </View>
