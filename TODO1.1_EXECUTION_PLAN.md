@@ -2090,6 +2090,88 @@ Goal: no user can lose money or receive false purchase state.
 - Done when:
   - Stripe Dashboard events match database state.
 
+### Completion Notes - 3.2
+
+- Status: **Complete** (2026-08-24), with one event type still unobserved
+  (`payment_intent.canceled`) and one bug found and fixed along the way.
+
+#### The webhook is not where this item implies
+
+There is no Stripe webhook edge function, in the repo or deployed. The handler
+is a Next.js route on Vercel: `web/src/app/api/stripe/webhooks/route.ts`,
+dispatching into `web/src/lib/payments/finalizePayment.ts`. That reframes
+"reachable without SSO/auth wall" as a Vercel setting rather than a Supabase
+one.
+
+#### Endpoint reachability
+
+Vercel deployment protection is `ssoProtection: enabled` with
+`deploymentType: all_except_custom_domains`. Only `pickleballapp.app` and
+`www.pickleballapp.app` bypass the wall — **every `*.vercel.app` URL returns a
+login page**. Webhooks work because Stripe points at the custom domain. Pointing
+it at a preview or project URL breaks delivery silently, so that constraint
+needs to survive any future endpoint change.
+
+#### Verification results (production, live Stripe)
+
+| Item | Evidence |
+| --- | --- |
+| `payment_intent.succeeded` finalizes domain | 21 events; reservation `849cb29a` end to end in 423ms |
+| Failed event updates status | `evt_3U70XF…` 2026-08-21, left `b8b95b21` unconfirmed |
+| **Refund event updates refund state** | `evt_3U7uHx…` and `evt_3U5jhh…`, 2026-08-24 |
+| Duplicate ignored | mechanism verified by code + unique index; no real redelivery observed |
+| Domain finalizers for all three domains | all six `purpose_type` branches present and dispatched |
+| `payment_intent.canceled` | **never received** — handled in code, unexercised |
+
+The refund test used two real payments. `$10.00` refunded in 241ms, `$110.00`
+in 201ms; both `payments` rows moved to `refunded` with
+`refunded_amount_cents` matching in full.
+
+The `$110.00` case is the one worth keeping: that registration also carried a
+`$10.00` Hold My Spot deposit, and **the deposit was not refunded** — it stayed
+`succeeded` with `refunded_amount_cents = 0`. That is the non-refundable
+deposit policy holding on live money, not just in a test fixture.
+
+`compute_registration_refund` now reports `already_refunded` for both, so a
+second refund cannot be issued against them.
+
+#### Bug found and fixed: silently swallowed webhook events
+
+The idempotency insert treated any error as "already processed":
+
+```ts
+if (dedupeError) return NextResponse.json({ received: true, deduped: true });
+```
+
+A unique violation genuinely is a Stripe redelivery. A transient failure —
+connection blip, timeout, permission change — is not; it is a failure to record
+the event at all. Returning 200 tells Stripe the event was delivered, so it
+never retries, leaving a captured payment stuck at `requires_confirmation` with
+no reservation, registration or voucher created — permanently, and with no log
+line, since this was the one path that produced none.
+
+Fixed in `81efb2b`: only `23505` short-circuits to 200; anything else logs under
+the existing `PAYMENT_RECONCILIATION_REQUIRED` marker and returns 500 so Stripe
+redelivers. No evidence it ever fired — all 22 recorded events have
+`processed_at` set and 22 distinct event ids — but silent failure is precisely
+what this bug looks like from the outside.
+
+#### Measured latency
+
+Webhook round trips were 423ms, 241ms and 201ms. The plan elsewhere cites ~22s
+as typical, which drove widening `pollForReservationConfirmation()` to 30s. The
+30s window is still right — it costs nothing when the webhook is fast — but the
+~22s figure should not be treated as representative.
+
+#### Not done
+
+- `payment_intent.canceled` has never been received. Handled in code, untested.
+- No real duplicate delivery has been observed. The dedupe path is reasoned and
+  index-backed rather than exercised.
+- Refunds are still issued by hand in the Stripe Dashboard. `cancel-registration`
+  (deployed 2026-08-24) is the first code path that asks Stripe for a refund, and
+  nothing in the UI calls it yet.
+
 ### 3.3 Add Payment Reconciliation and Manual Review
 
 - Issue: Some edge cases are logged but not operationalized.
