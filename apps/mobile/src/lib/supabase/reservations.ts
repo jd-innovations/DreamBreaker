@@ -64,10 +64,24 @@ export type AssetAvailabilitySlot = {
 // Exported -- My Bookings needs to sort/bucket by start/end time from the
 // same raw reservations.time_range shape fetchMyReservations() already
 // returns, rather than re-deriving a second parser.
+// Postgres's own rendering is not valid ISO 8601: it separates date and time
+// with a space and writes the offset as `+00`, giving "2026-08-22 11:00:00+00".
+// V8 tolerates that, Hermes does not — `new Date(...)` on it returns Invalid
+// Date, which is what rendered "Invalid Date · Invalid Date – Invalid Date"
+// across My Bookings and Game Status. Normalizing here rather than at each call
+// site means every consumer gets a string `new Date()` can actually parse.
+function toIsoTimestamp(pg: string): string {
+  return pg
+    .trim()
+    .replace(' ', 'T')
+    .replace(/([+-]\d{2})$/, '$1:00')          // +00   -> +00:00
+    .replace(/([+-]\d{2})(\d{2})$/, '$1:$2');  // +0000 -> +00:00
+}
+
 export function parseTstzrange(raw: string): { startsAt: string; endsAt: string } {
   const inner = raw.slice(1, -1); // drop the leading [/( and trailing )/]
   const [startsAt, endsAt] = inner.split(',').map(s => s.replace(/^"|"$/g, ''));
-  return { startsAt, endsAt };
+  return { startsAt: toIsoTimestamp(startsAt), endsAt: toIsoTimestamp(endsAt) };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
