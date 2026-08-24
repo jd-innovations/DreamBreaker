@@ -268,9 +268,13 @@ async function finalizeTournamentRegistrationBalance(service: ServiceClient, pay
 async function ensureTeamObligation(
   service: ServiceClient,
   payment: PaymentRow,
-  input: { tournamentId: string; divisionId: string; playerId: string; partnerId: string | null; amountCents: number },
+  // playerId is nullable because registrations.player_id is: a guest entry
+  // records guest_player_id instead and has no profile behind it. There is no
+  // profile to hang a group membership on in that case, so bail rather than
+  // pass null into ensure_registration_group.
+  input: { tournamentId: string; divisionId: string; playerId: string | null; partnerId: string | null; amountCents: number },
 ) {
-  if (!input.partnerId || !input.tournamentId || !input.divisionId) return;
+  if (!input.playerId || !input.partnerId || !input.tournamentId || !input.divisionId) return;
   if (input.partnerId === input.playerId) return;
   if (!Number.isFinite(input.amountCents) || input.amountCents <= 0) return;
 
