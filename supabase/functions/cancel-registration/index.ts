@@ -121,13 +121,19 @@ async function cancelOne(
 
   if (!reg) return { ...base, error: "registration_not_found" };
 
-  // Already gone. Idempotent by design: a retried request must not produce a
-  // second refund, and the unique index on refunds would reject it anyway.
-  if (reg.status === "withdrawn") return { ...base, cancelled: true, ineligibleReason: "already_withdrawn" };
-
+  // Authorisation FIRST. This used to sit below the already-withdrawn check,
+  // which meant any signed-in caller could pass an arbitrary registration id
+  // and tell "does not exist" apart from "exists and is withdrawn" by the
+  // response shape -- an enumeration oracle over other people's registrations.
+  // Nothing was modifiable that way, but the status of a stranger's row is not
+  // ours to confirm either.
   if (!(await mayCancel(service, reg, actorId))) {
     return { ...base, error: "not_authorized" };
   }
+
+  // Already gone. Idempotent by design: a retried request must not produce a
+  // second refund, and the unique index on refunds would reject it anyway.
+  if (reg.status === "withdrawn") return { ...base, cancelled: true, ineligibleReason: "already_withdrawn" };
 
   // ── 1. What is owed, decided server-side ──────────────────────────────────
   const { data: quoteRows, error: quoteError } = await service
