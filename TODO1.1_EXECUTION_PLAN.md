@@ -1684,6 +1684,100 @@ regardless of when 1.3 ships.**
 - Done when:
   - Permission boundaries are covered by repeatable tests.
 
+### Completion Notes - 2.2
+
+- Status: **Complete** (2026-08-24). 53 assertions passing; two security fixes
+  applied to production via the dashboard SQL editor (the CLI could not reach
+  the database from this machine).
+
+#### The finding that mattered
+
+`v_mutual_matches` was readable by `anon`, exposing the entire mutual-match
+graph to anyone holding the anon key — which ships inside the mobile app.
+Verified against production before the fix:
+
+```sql
+set local role anon;
+select count(*) from public.matchmaking_swipes;  -- 0   RLS holds
+select count(*) from public.v_mutual_matches;    -- 6   RLS bypassed
+```
+
+The view was created without `security_invoker`, so on PG15+ it ran as its
+owner and the caller's RLS never applied. It had no `auth.uid()` predicate of
+its own — the only thing scoping rows was a client-supplied `.or(user_a.eq…)`
+filter that all four web call sites happen to add. A predicate the client is
+free to omit is not an access control.
+
+**Not fixed with `security_invoker = on`**, the usual remedy. The view must
+read `blocked_users` rows the caller cannot see; under invoker semantics a
+user would only see blocks they created, so blocks made *against* them would
+silently stop being honored — turning a safety feature one-directional. It
+stays SECURITY DEFINER (that is *why* it exists) and gained the row filter it
+should always have had, plus `REVOKE` from `anon`.
+
+Post-deploy verification against production: `anon` now gets permission-denied,
+a privileged caller with no JWT sees 0 rows (proving the predicate works
+independently of the grant), and all 6 pairs still exist.
+
+#### Also fixed
+
+- `search_path` pinned on the 6 remaining SECURITY DEFINER functions. Three
+  (`current_user_is_director`, `current_user_director_status`,
+  `is_approved_director`) are called from inside RLS policies, so they sit on
+  the authorization path itself. Production now reports 0 of 96 unpinned.
+
+#### Test suite
+
+`supabase/_rls_tests/20260824_rls_permission_matrix.sql` — 53 assertions over
+7 actors (anon, owner, unrelated user, director, coach, facility staff, admin)
+across all ten table groups the item lists, plus two hygiene sweeps
+(unpinned `search_path`; definer views reachable by anon/authenticated).
+Impersonates via `request.jwt.claims` + role, matching what PostgREST does.
+Exits non-zero on failure.
+
+Every test asserts **both** directions. A positive-only test passes just as
+happily against `USING (true)` — which is precisely how this bug survived.
+
+**The suite was verified to actually catch the bug**: restoring the vulnerable
+view locally fails `anon_sees_nothing` and `third_party_sees_nothing`, and
+passes again once the migration is applied. A suite that has only ever passed
+proves nothing.
+
+Highest-value assertions: `profiles.cannot_self_promote_to_admin` (paired with
+`can_still_edit_own_safe_fields`, so the guard cannot be "fixed" by blocking
+all self-updates), `payments.client_cannot_insert`, and
+`registrations.director_cannot_read_foreign_tournament` — a second tournament
+under a different director exists solely so "director reads own tournament"
+cannot pass by reading everything.
+
+Two tests deliberately **pin intentional exposure** rather than assert privacy:
+`profiles.anon_can_read_profiles_by_design` and
+`reservations.anon_reads_confirmed_by_design` (a confirmed reservation leaks
+organizer_id, facility and time slot to anon). If either should become
+private, those are the tests that fail and force the decision.
+
+#### Bugs the suite found in itself
+
+- The `auth.users` insert trigger creates the profile first, so
+  `on conflict do nothing` silently discarded every seeded role — the admin and
+  director actors were ordinary players, asserting nothing while reporting PASS.
+- An RLS `USING` clause denies an UPDATE by affecting **zero rows**, not by
+  raising. The denial helper had to check `row_count` as well as catching
+  42501, and re-raises anything else so a typo cannot masquerade as a denial.
+
+#### Not done
+
+- `play_participants_public` / `_authenticated` remain definer views readable by
+  anon. That is deliberate (curated public rosters with a documented
+  public/authenticated column split), but the joined `profiles` columns reaching
+  anon — avatar, city, state, self_rating for claimed participants — have not
+  been reviewed as a product decision.
+- Leaked-password protection is disabled in Supabase Auth. Dashboard toggle, not
+  code.
+- `anon`/`authenticated` hold blanket write grants on several views. Joins make
+  them non-auto-updatable so writes fail, but the grant pattern was not traced
+  to its source.
+
 ### 2.3 Remove Web Supabase Fallback Credentials
 
 - Issue: Web clients contain hardcoded public Supabase fallback URL/anon key.

@@ -2,14 +2,13 @@
 --
 -- Run against a LOCAL database only -- it seeds rows and rolls nothing back:
 --
---   supabase db reset --local --no-seed
+--   supabase db reset --local
 --   psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
 --     -f supabase/_rls_tests/20260824_rls_permission_matrix.sql
 --
--- --no-seed is not optional today: supabase/seed.sql fails with "Registration
--- for tournament 1000...0001 closed at 2026-03-07" because its registration
--- window is hardcoded and has since expired. This suite builds every row it
--- needs, so it does not depend on the seed either way.
+-- This suite builds every row it needs, so it works with or without the seed;
+-- --no-seed is a valid shortcut. Verified passing against both a seeded and an
+-- unseeded database.
 --
 -- Re-running without a reset is safe. Fixtures upsert, and the two mutating
 -- tests (self-withdrawal, renaming own profile) are idempotent.
