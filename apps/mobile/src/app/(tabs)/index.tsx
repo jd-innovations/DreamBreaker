@@ -864,6 +864,23 @@ export default function HomeScreen() {
   const featuredTournaments = tournaments.filter(t => t.featured);
   const featuredPool = featuredTournaments.length > 0 ? featuredTournaments : tournaments;
   const featuredData = tournaments.length > 0 ? featuredPool.slice(0, 3).map(tournamentToFeatured) : FEATURED;
+  // The two soonest tournaments — fetchTournaments() orders by event_date and
+  // expired ones are already filtered out. Nothing here is ranked, which is why
+  // the section is titled "Upcoming" rather than "Trending": a brand-new
+  // tournament with zero registrations would otherwise be presented as trending
+  // purely for being next on the calendar.
+  //
+  // A real ranking is deferred until there is traffic to rank. The signals
+  // exist — registrations.created_at, tournament_bookmarks.created_at — but at
+  // 19 registrations and 2 bookmarks across 9 tournaments any score is noise,
+  // and one registration would reorder the whole list. When it is worth doing,
+  // it belongs in a view or RPC rather than here, scoring roughly:
+  //
+  //   registrations(7d)*3 + bookmarks(7d)*1 + fill_ratio*5 - days_until*0.1
+  //
+  // Velocity over totals: 20 registrations this week is trending, 20 over three
+  // months is not. True trending would also want impressions, which nothing
+  // records today.
   const trendingData = tournaments.length > 0 ? tournaments.slice(0, 2).map(tournamentToTrending) : TRENDING;
 
   // Max-distance filter from the Customize sheet — items with no distance
@@ -1267,12 +1284,9 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {/* ── TRENDING TOURNAMENTS ── */}
+        {/* ── UPCOMING TOURNAMENTS ── */}
         <View style={[s.sectionHeader, { marginTop: 8 }]}>
-          <View style={s.sectionTitleRow}>
-            <Text style={s.sectionTitleEmoji}>🔥</Text>
-            <Text style={s.sectionTitle}>Trending Tournaments</Text>
-          </View>
+          <Text style={s.sectionTitle}>Upcoming Tournaments</Text>
           <TouchableOpacity style={s.viewAllBtn} onPress={() => router.push('/(tabs)/tournaments' as never)}>
             <Text style={s.viewAllText}>View All</Text>
             <Ionicons name="chevron-forward" size={14} color={L.gold} />
@@ -1398,8 +1412,6 @@ const s = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 16, marginBottom: 14,
   },
-  sectionTitleRow:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  sectionTitleEmoji: { fontSize: 18 },
   sectionTitle:      { color: L.navy, fontSize: 17, fontWeight: '900' },
   viewAllBtn:        { flexDirection: 'row', alignItems: 'center', gap: 2 },
   viewAllText:       { color: L.gold, fontSize: 13, fontWeight: '700' },
