@@ -65,42 +65,49 @@ async function notify(opts: {
 
 // ── Promote the next waitlisted player for a tournament ───────────────────────
 
+// The select-and-promote itself now lives in the database
+// (promote_next_waitlisted, migration 20260824160000) so that any code path
+// which frees a spot can promote -- registration cancellation could not call
+// a function defined inside this file. The RPC also takes FOR UPDATE SKIP
+// LOCKED, which the old read-then-write here did not: a sweep racing a
+// cancellation could both pick the same player and lose one promotion.
+//
+// Email stays here. The RPC writes the in-app notification and hands back the
+// promoted row; sending is this function's job.
 async function promoteNextWaitlisted(tournamentId: string) {
-  const { data: next } = await supabase
-    .from("registrations")
-    .select("id, player_id, waitlist_position, profiles!player_id(full_name, email)")
-    .eq("tournament_id", tournamentId)
-    .eq("status", "waitlisted")
-    .order("waitlist_position", { ascending: true })
-    .limit(1)
-    .single();
+  const { data, error } = await supabase.rpc("promote_next_waitlisted", {
+    p_tournament_id: tournamentId,
+  });
 
-  if (!next) return;
+  if (error) {
+    console.error(`[promoteNextWaitlisted] rpc failed for ${tournamentId} :: ${error.message}`);
+    return;
+  }
 
-  const offerExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-  await supabase
-    .from("registrations")
-    .update({ status: "waitlist_offered", waitlist_offer_expires_at: offerExpiry })
-    .eq("id", next.id);
+  const promoted = (Array.isArray(data) ? data[0] : data) as
+    | { registration_id: string; player_id: string | null; full_name: string | null; email: string | null; offer_expires_at: string }
+    | undefined;
 
-  const profile = next.profiles as { full_name: string; email: string } | null;
+  // No one waiting.
+  if (!promoted) return;
+
+  // A director-added guest has no account and no address; the RPC still
+  // promotes them so an account-holder cannot jump the queue, but there is
+  // nothing to send.
+  if (!promoted.email) return;
+
   const tournamentName = await getTournamentName(tournamentId);
 
-  await notify({
-    userId: next.player_id,
-    email: profile?.email ?? null,
-    type: "waitlist_spot_offered",
-    title: "A spot just opened up!",
-    body: `You have 24 hours to complete payment for ${tournamentName}. Don't miss it.`,
-    link: `/tournaments/${tournamentId}`,
-    templateKey: "waitlist_spot_offered",
-    variables: {
-      full_name: profile?.full_name ?? "there",
+  await sendTemplateEmail(
+    promoted.email,
+    "waitlist_spot_offered",
+    {
+      full_name: promoted.full_name ?? "there",
       tournament_name: tournamentName,
       link_url: `${APP_URL}/tournaments/${tournamentId}`,
     },
-    idempotencyKey: `waitlist-spot-offered/${next.id}/${offerExpiry}`,
-  });
+    `waitlist-spot-offered/${promoted.registration_id}/${promoted.offer_expires_at}`,
+  );
 }
 
 async function getTournamentName(tournamentId: string): Promise<string> {
