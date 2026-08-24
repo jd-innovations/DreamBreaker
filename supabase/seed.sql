@@ -7,6 +7,18 @@
 -- NOTE: In production, users are created via Supabase Auth signup.
 -- This seed creates users directly in auth.users for local dev testing only.
 
+-- Seeded registrations below are already paid (hold + entry fee), and
+-- fn_protect_registration_payment_fields refuses to let anyone but the payment
+-- webhook set those columns. Its escape hatch is auth.role() = 'service_role',
+-- which reads request.jwt.claims -- unset when psql runs this file, so the
+-- guard fired and `supabase db reset` failed outright.
+--
+-- Claiming the service role here is the same identity the real webhook handler
+-- runs as, so the seed writes those columns the same way production does
+-- rather than the trigger being weakened to accommodate it. Scoped to this
+-- session (third arg false), local dev only.
+select set_config('request.jwt.claims', '{"role":"service_role"}', false);
+
 -- =============================================================================
 -- AUTH USERS (local dev only — password: "Password123!")
 -- =============================================================================
@@ -150,9 +162,16 @@ insert into public.tournaments (
     'Austin', 'TX',
     'doubles', 'round_robin_to_single_elim', 3.5, 4.5, 64,
     6500, 1000, 72, 520000,
-    '2026-03-14',
-    '2025-12-01 00:00:00+00', '2026-03-07 23:59:59+00',
-    '2026-03-14 06:30:00+00', '2026-03-14 07:30:00+00',
+    -- Dates are relative to now(), not absolute. The original literals were in
+    -- the future when written and have since passed, which made `supabase db
+    -- reset` fail outright: status 'open' with a registration window that had
+    -- closed tripped the registration-closed trigger on the seeded
+    -- registrations below. Anything absolute here is a time bomb.
+    -- Spacing preserved from the original: registration closes 7 days before
+    -- the event, check-in opens on the day.
+    (now() + interval '21 days')::date,
+    now() - interval '105 days', now() + interval '14 days',
+    now() + interval '21 days', now() + interval '21 days' + interval '1 hour',
     'open', 41,
     now() - interval '2 months', '00000000-0000-0000-0000-000000000001',
     'The Sunset Slam Open is part of the Dream Breaker PB Pro Circuit. Doubles with players from across the region competing for $5,200 in cash + sponsor prizes.'
@@ -165,9 +184,9 @@ insert into public.tournaments (
     'Dallas', 'TX',
     'juniors', 'single_elim', null, null, 40,
     3000, 500, 72, 180000,
-    '2026-05-22',
-    '2026-02-01 00:00:00+00', '2026-05-15 23:59:59+00',
-    '2026-05-22 07:00:00+00', '2026-05-22 08:00:00+00',
+    (now() + interval '90 days')::date,
+    now() - interval '60 days', now() + interval '83 days',
+    now() + interval '90 days', now() + interval '90 days' + interval '1 hour',
     'open', 8,
     now() - interval '1 month', '00000000-0000-0000-0000-000000000001',
     'U18 junior singles bracket. Great entry point for the next generation of PB talent.'
@@ -180,8 +199,8 @@ insert into public.tournaments (
     'Denver', 'CO',
     'singles', 'single_elim', 3.0, 4.0, 32,
     5000, 1000, 72, 340000,
-    '2026-04-19',
-    '2026-01-15 00:00:00+00', '2026-04-12 23:59:59+00',
+    (now() + interval '56 days')::date,
+    now() - interval '40 days', now() + interval '49 days',
     null, null,
     'draft', 0,  -- Reid is pending director — tournament stays draft
     null, null,
