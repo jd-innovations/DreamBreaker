@@ -89,9 +89,25 @@ export async function POST(request: Request) {
       .insert({ event_id: event.id, type: event.type, payload: JSON.parse(JSON.stringify(event)) });
 
     if (dedupeError) {
-      // Unique violation (already processed) or any other insert failure —
-      // either way, do not act on this event a second time.
-      return NextResponse.json({ received: true, deduped: true });
+      // A unique violation means Stripe redelivered an event we already
+      // handled — acknowledge and stop.
+      if (dedupeError.code === "23505") {
+        return NextResponse.json({ received: true, deduped: true });
+      }
+
+      // Any OTHER insert failure is not a duplicate, it is a failure to record
+      // this event at all. Returning 200 here would tell Stripe the event was
+      // delivered, so it would never retry — leaving a captured payment with
+      // payments.status still 'requires_confirmation' and no reservation,
+      // registration or voucher created, permanently and with no log line.
+      // 500 makes Stripe redeliver, and the unique index still protects us if
+      // the row did land after all.
+      console.error(
+        `[stripe webhook] PAYMENT_RECONCILIATION_REQUIRED could not record event ` +
+          `${event.id} type=${event.type} :: ${dedupeError.message} (code ${dedupeError.code}) ` +
+          `— returning 500 so Stripe retries`,
+      );
+      return NextResponse.json({ error: "Could not record event" }, { status: 500 });
     }
 
     await handlePaymentEvent(service, event);
