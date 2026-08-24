@@ -131,9 +131,18 @@ async function cancelOne(
     return { ...base, error: "not_authorized" };
   }
 
-  // Already gone. Idempotent by design: a retried request must not produce a
-  // second refund, and the unique index on refunds would reject it anyway.
-  if (reg.status === "withdrawn") return { ...base, cancelled: true, ineligibleReason: "already_withdrawn" };
+  // Already withdrawn is NOT an early exit. This used to return here, which
+  // meant a registration cancelled by anything other than this function -- a
+  // stale client, an admin SQL fix, some other code path -- could never be
+  // refunded through the product afterwards. Withdrawn means the spot is
+  // released, not that the debt is settled. That is exactly how a real $10
+  // refund was stranded on 2026-08-24.
+  //
+  // Safe to continue: the partial unique index on refunds rejects a second live
+  // refund per payment, and compute_registration_refund reports already_refunded
+  // once the money is back, so a repeat call is a no-op rather than a second
+  // payout.
+  const alreadyWithdrawn = reg.status === "withdrawn";
 
   // ── 1. What is owed, decided server-side ──────────────────────────────────
   const { data: quoteRows, error: quoteError } = await service
@@ -195,33 +204,38 @@ async function cancelOne(
   }
 
   // ── 3. Cancel, before Stripe ──────────────────────────────────────────────
-  const { error: cancelError } = await service
-    .from("registrations")
-    .update({ status: "withdrawn", updated_at: new Date().toISOString() })
-    .eq("id", registrationId)
-    .eq("status", reg.status);
-
-  if (cancelError) {
-    // Nothing has been refunded yet. Void the intent so the row does not sit
-    // pending forever against a registration that is still active.
-    if (refundRowId) {
-      await service.from("refunds")
-        .update({ status: "canceled", failure_reason: `cancellation failed: ${cancelError.message}` })
-        .eq("id", refundRowId);
-    }
-    return { ...base, error: "cancellation_failed" };
-  }
-  base.cancelled = true;
-
-  // A partner left behind keeps their spot and needs a replacement, which is
-  // theirs to find.
-  if (reg.partner_id) {
-    await service
+  if (alreadyWithdrawn) {
+    base.cancelled = true;
+    base.ineligibleReason = base.ineligibleReason ?? "already_withdrawn";
+  } else {
+    const { error: cancelError } = await service
       .from("registrations")
-      .update({ needs_partner: true, partner_id: null, updated_at: new Date().toISOString() })
-      .eq("tournament_id", reg.tournament_id)
-      .eq("player_id", reg.partner_id)
-      .neq("status", "withdrawn");
+      .update({ status: "withdrawn", updated_at: new Date().toISOString() })
+      .eq("id", registrationId)
+      .eq("status", reg.status);
+
+    if (cancelError) {
+      // Nothing has been refunded yet. Void the intent so the row does not sit
+      // pending forever against a registration that is still active.
+      if (refundRowId) {
+        await service.from("refunds")
+          .update({ status: "canceled", failure_reason: `cancellation failed: ${cancelError.message}` })
+          .eq("id", refundRowId);
+      }
+      return { ...base, error: "cancellation_failed" };
+    }
+    base.cancelled = true;
+
+    // A partner left behind keeps their spot and needs a replacement, which is
+    // theirs to find.
+    if (reg.partner_id) {
+      await service
+        .from("registrations")
+        .update({ needs_partner: true, partner_id: null, updated_at: new Date().toISOString() })
+        .eq("tournament_id", reg.tournament_id)
+        .eq("player_id", reg.partner_id)
+        .neq("status", "withdrawn");
+    }
   }
 
   // ── 4. Ask Stripe ─────────────────────────────────────────────────────────
@@ -234,10 +248,18 @@ async function cancelOne(
   // ── 5. Promote, window met or not ─────────────────────────────────────────
   // A freed spot is a freed spot; whether the leaver got their money back has
   // nothing to do with whether someone else can take it.
-  const { error: promoteError } = await service
-    .rpc("promote_next_waitlisted", { p_tournament_id: reg.tournament_id });
-  if (promoteError) {
-    console.error(`[cancel-registration] promotion failed for ${reg.tournament_id} :: ${promoteError.message}`);
+  //
+  // Only when THIS call did the withdrawing. Promoting on an already-withdrawn
+  // row would offer a spot on every repeat call, and there is no way to tell
+  // "withdrawn and already promoted" from "withdrawn and never promoted".
+  // Offering a place that does not exist is worse than missing one, which is a
+  // reconciliation problem rather than an angry player.
+  if (!alreadyWithdrawn) {
+    const { error: promoteError } = await service
+      .rpc("promote_next_waitlisted", { p_tournament_id: reg.tournament_id });
+    if (promoteError) {
+      console.error(`[cancel-registration] promotion failed for ${reg.tournament_id} :: ${promoteError.message}`);
+    }
   }
 
   return base;
