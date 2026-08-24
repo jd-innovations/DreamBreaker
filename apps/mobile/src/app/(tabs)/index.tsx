@@ -632,10 +632,13 @@ const tc = StyleSheet.create({
   verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   verifiedText:{ color: '#3B82F6', fontSize: 11, fontWeight: '600' },
 
-  // Outlined block so the three figures read as one unit rather than floating
-  // in the card. Same border treatment as the card itself.
+  // Tinted block so the three figures read as one unit. The border alone was
+  // not enough separation: the card is L.bg, so an unfilled block was white on
+  // white with only a hairline holding it. L.page is the same tint the
+  // community card's chips use against the same background.
   statsRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: L.page,
     borderWidth: 1, borderColor: L.border, borderRadius: 12,
     paddingHorizontal: 8, paddingVertical: 10,
     marginBottom: 10,
