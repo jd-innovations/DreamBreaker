@@ -294,7 +294,34 @@ export default function DashboardPage() {
   // Captured once at mount; used to decide whether holds are still active.
   const [now] = useState(() => Date.now());
   const [cancelTarget, setCancelTarget] = useState<UpcomingEvent | null>(null);
+  // The authoritative refund breakdown for the open cancel dialog, fetched from
+  // compute_registration_refund. Never computed here: the browser knows the
+  // tournament's list price, not what this player actually paid, and those
+  // differ whenever a non-refundable Hold My Spot deposit was involved.
+  const [cancelQuote, setCancelQuote] = useState<{
+    registrationId: string;
+    eligible: boolean; refundable_cents: number; non_refundable_cents: number;
+    cutoff_days: number; days_until_event: number; ineligible_reason: string | null;
+  } | null>(null);
   const [cancelConfirming, setCancelConfirming] = useState(false);
+
+  useEffect(() => {
+    let stale = false;
+    (async () => {
+      if (!cancelTarget || cancelTarget.registration_id.startsWith("mock-")) return;
+      const registrationId = cancelTarget.registration_id;
+      const supabase = createClient();
+      const { data } = await supabase.rpc("compute_registration_refund", {
+        p_registration_id: registrationId,
+      });
+      const row = Array.isArray(data) ? data[0] : data;
+      // Tagged with the registration it describes. The dialog only uses a quote
+      // whose id matches the row it is showing, so reopening it for a different
+      // registration cannot briefly display the previous one's refund amount.
+      if (!stale && row) setCancelQuote({ registrationId, ...row });
+    })();
+    return () => { stale = true; };
+  }, [cancelTarget]);
   const [dmDirectorId, setDmDirectorId] = useState<string | null>(null);
   const [removingBookmarkId, setRemovingBookmarkId] = useState<string | null>(null);
   const [registerTarget, setRegisterTarget] = useState<SavedTournament | null>(null);
@@ -405,7 +432,12 @@ export default function DashboardPage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let recQuery = (supabase as any)
           .from("tournaments")
-          .select("id, name, city, state, event_date, format, entry_fee_cents, capacity, venue_name, skill_min, skill_max")
+          // capacity:draw_size -- there is no tournaments.capacity column. This
+          // selected a column that does not exist, so PostgREST returned 400 and
+          // the recommended strip rendered empty in production. The mock path
+          // below supplies `capacity` directly, which is why it looked fine
+          // locally. Aliased rather than renamed so the display code is untouched.
+          .select("id, name, city, state, event_date, format, entry_fee_cents, capacity:draw_size, venue_name, skill_min, skill_max")
           .neq("status", "draft")
           .order("event_date")
           .limit(12);
@@ -1166,22 +1198,34 @@ export default function DashboardPage() {
     {cancelTarget && (() => {
       const eventDate = new Date(cancelTarget.event_date);
       const daysUntil = Math.ceil((eventDate.getTime() - now) / (1000 * 60 * 60 * 24));
-      const feeCents = cancelTarget.entry_fee_cents ?? 0;
-      // Window comes from the tournament, not a constant here. The old
-      // hardcoded 7/3-day tiers disagreed with the policy text shown directly
-      // below them. Directors set this per tournament; 15 is the default.
-      const cutoffDays = cancelTarget.refund_cutoff_days ?? 15;
-      const refundEligible = daysUntil >= cutoffDays;
-      // Deliberately worded as a request, not a promise. Nothing in the product
-      // can issue a refund yet -- there is no code path that calls Stripe to
-      // return money, so a director or support agent does it by hand. Saying
-      // "Full refund — $65.00" here told users money was already on its way
-      // back when nothing had been initiated.
-      const refundLabel = refundEligible
-        ? feeCents > 0
-          ? `Eligible for a full refund — $${(feeCents / 100).toFixed(2)} — processed by the tournament director`
-          : "Eligible for a full refund, processed by the tournament director"
-        : `Not eligible for a refund (within ${cutoffDays} days of the event)`;
+      // Everything below prefers the server quote and only falls back to local
+      // arithmetic while it is still loading. The fallback deliberately shows
+      // no dollar figure: entry_fee_cents is the tournament's LIST price, and a
+      // player who paid a $10 deposit plus a $110 balance is owed $110, not
+      // $120. Quoting the wrong number is worse than quoting none.
+      const quote = cancelQuote?.registrationId === cancelTarget.registration_id ? cancelQuote : null;
+      const cutoffDays = quote?.cutoff_days ?? cancelTarget.refund_cutoff_days ?? 15;
+      const refundEligible = quote ? quote.eligible : daysUntil >= cutoffDays;
+      const refundableCents = quote?.refundable_cents ?? 0;
+      const depositCents = quote?.non_refundable_cents ?? 0;
+
+      const refundLabel = !quote
+        ? "Checking your refund eligibility…"
+        : refundEligible
+          ? refundableCents > 0
+            ? `Full refund — $${(refundableCents / 100).toFixed(2)} back to your original payment method`
+            : "Eligible for a full refund"
+          : quote.ineligible_reason === "already_refunded"
+            ? "Already refunded"
+            : quote.ineligible_reason === "no_entry_payment"
+              ? "No payment on file for this registration"
+              : `Not eligible for a refund (within ${cutoffDays} days of the event)`;
+
+      // Named explicitly rather than silently deducted. Someone who paid a
+      // deposit should see why they are getting back less than they paid.
+      const depositNote = depositCents > 0 && refundEligible
+        ? `Your $${(depositCents / 100).toFixed(2)} Hold My Spot deposit is non-refundable and is not included.`
+        : null;
       const refundColor = refundEligible ? "text-emerald-400" : "text-destructive";
       const policy = cancelTarget.cancellation_policy
         ?? `Full refund if cancelled ${cutoffDays} or more days before the event. No refund inside ${cutoffDays} days. Hold My Spot deposits are non-refundable and count toward your entry fee.`;
@@ -1210,6 +1254,9 @@ export default function DashboardPage() {
                 <div>
                   <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mb-0.5">REFUND STATUS</p>
                   <p className={`font-semibold text-sm ${refundColor}`}>{refundLabel}</p>
+                  {depositNote && (
+                    <p className="text-xs text-muted-foreground mt-1">{depositNote}</p>
+                  )}
                 </div>
                 <div className={`text-xs font-mono px-3 py-1.5 rounded-full border ${refundEligible ? "border-emerald-400/40 text-emerald-400 bg-emerald-400/10" : "border-destructive/40 text-destructive bg-destructive/10"}`}>
                   {daysUntil > 0 ? `${daysUntil}d away` : "Today"}
@@ -1261,28 +1308,43 @@ export default function DashboardPage() {
                   }
                   setCancelConfirming(true);
                   const supabase = createClient();
-                  // 'withdrawn', not 'cancelled'. registration_status has no
-                  // 'cancelled' member, so this update always failed with
-                  // "invalid input value for enum registration_status" — and
-                  // because the error was discarded and the row cleared from
-                  // local state regardless, the user watched their entry
-                  // disappear while staying registered on a paid spot. The
-                  // `as any` cast is what suppressed the type error that would
-                  // have caught it. Matches the withdrawal already used by
-                  // holds/page.tsx and tournaments/[id]/page.tsx.
-                  const { error: cancelError } = await supabase
-                    .from("registrations")
-                    .update({ status: "withdrawn", updated_at: new Date().toISOString() })
-                    .eq("id", cancelTarget.registration_id);
+                  // Goes through the cancel-registration edge function rather
+                  // than updating the row directly. Cancelling is no longer a
+                  // single write: it also decides and issues any refund owed,
+                  // and promotes the next waitlisted player. None of that can
+                  // happen from the client -- the refund amount must be derived
+                  // server-side from what was actually paid, and RLS rightly
+                  // forbids a browser writing to refunds or promoting anyone.
+                  const { data: result, error: fnError } = await supabase.functions.invoke(
+                    "cancel-registration",
+                    { body: { registrationIds: [cancelTarget.registration_id], reason: "Cancelled by player" } },
+                  );
                   setCancelConfirming(false);
-                  if (cancelError) {
-                    toast.error("Could not cancel your registration. Please try again or contact support.");
+
+                  const outcome = (result as { outcomes?: Array<{
+                    cancelled: boolean; refundStatus: string; refundedCents: number; error?: string;
+                  }> } | null)?.outcomes?.[0];
+
+                  if (fnError || !outcome || !outcome.cancelled) {
+                    toast.error(
+                      outcome?.error === "not_authorized"
+                        ? "You are not able to cancel this registration."
+                        : "Could not cancel your registration. Please try again or contact support.",
+                    );
                     return;
                   }
+
+                  // Reports what actually happened, not what was predicted. A
+                  // refund can fail after the cancellation succeeds -- the
+                  // refunds row records it for retry -- and telling someone
+                  // their money is on the way when it is not is the failure
+                  // this whole flow exists to avoid.
                   toast.success(
-                    refundEligible
-                      ? "Registration cancelled. Your refund will be processed by the tournament director."
-                      : "Registration cancelled.",
+                    outcome.refundStatus === "submitted"
+                      ? `Registration cancelled. $${(outcome.refundedCents / 100).toFixed(2)} has been refunded to your original payment method.`
+                      : outcome.refundStatus === "failed"
+                        ? "Registration cancelled. Your refund could not be processed automatically — support has been notified."
+                        : "Registration cancelled.",
                   );
                   setUpcoming((prev) => prev.filter((e) => e.id !== cancelTarget.id));
                   setCancelTarget(null);

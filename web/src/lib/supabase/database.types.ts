@@ -4064,6 +4064,92 @@ export type Database = {
           },
         ]
       }
+      refunds: {
+        Row: {
+          amount_cents: number
+          approved_by: string | null
+          completed_at: string | null
+          created_at: string
+          failure_reason: string | null
+          id: string
+          kind: string
+          payment_id: string
+          policy_snapshot: Json
+          provider: string
+          provider_refund_id: string | null
+          reason: string
+          registration_id: string | null
+          requested_by: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          kind: string
+          payment_id: string
+          policy_snapshot?: Json
+          provider?: string
+          provider_refund_id?: string | null
+          reason: string
+          registration_id?: string | null
+          requested_by: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          kind?: string
+          payment_id?: string
+          policy_snapshot?: Json
+          provider?: string
+          provider_refund_id?: string | null
+          reason?: string
+          registration_id?: string | null
+          requested_by?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refunds_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "registrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       registration_group_members: {
         Row: {
           amount_due_cents: number
@@ -5950,6 +6036,18 @@ export type Database = {
           session_participant_id: string
         }[]
       }
+      compute_registration_refund: {
+        Args: { p_registration_id: string }
+        Returns: {
+          cutoff_days: number
+          days_until_event: number
+          eligible: boolean
+          entry_payment_id: string
+          ineligible_reason: string
+          non_refundable_cents: number
+          refundable_cents: number
+        }[]
+      }
       confirm_reservation: {
         Args: { p_reservation_id: string }
         Returns: {
@@ -6686,6 +6784,16 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      promote_next_waitlisted: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          offer_expires_at: string
+          player_id: string
+          registration_id: string
+        }[]
       }
       recalculate_personal_session_par: {
         Args: { p_session_id: string }
