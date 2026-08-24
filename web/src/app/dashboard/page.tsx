@@ -62,6 +62,7 @@ type UpcomingEvent = {
   hold_expires_at?: string | null;
   director_id?: string | null;
   cancellation_policy?: string | null;
+  refund_cutoff_days?: number | null;
   entry_fee_cents?: number | null;
 };
 
@@ -349,17 +350,17 @@ export default function DashboardPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: regs } = await (supabase as any)
         .from("registrations")
-        .select("id, status, hold_expires_at, tournament:tournaments!tournament_id(id, name, city, state, event_date, status, director_id, cancellation_policy, entry_fee_cents)")
+        .select("id, status, hold_expires_at, tournament:tournaments!tournament_id(id, name, city, state, event_date, status, director_id, cancellation_policy, refund_cutoff_days, entry_fee_cents)")
         .eq("player_id", user.id)
         .in("status", ["held", "registered", "checked_in"])
         .order("created_at", { ascending: false })
         .limit(10);
 
       const liveUpcoming: UpcomingEvent[] = (regs ?? [])
-        .map((r: { id: string; status: string; hold_expires_at?: string | null; tournament: { id: string; name: string; city: string; state: string; event_date: string; status: string; director_id?: string | null; cancellation_policy?: string | null; entry_fee_cents?: number | null } | null }) => {
+        .map((r: { id: string; status: string; hold_expires_at?: string | null; tournament: { id: string; name: string; city: string; state: string; event_date: string; status: string; director_id?: string | null; cancellation_policy?: string | null; refund_cutoff_days?: number | null; entry_fee_cents?: number | null } | null }) => {
           const t = r.tournament;
           if (!t) return null;
-          return { id: t.id, registration_id: r.id, name: t.name, city: t.city, state: t.state, event_date: t.event_date, status: r.status, hold_expires_at: r.hold_expires_at, director_id: t.director_id, cancellation_policy: t.cancellation_policy, entry_fee_cents: t.entry_fee_cents };
+          return { id: t.id, registration_id: r.id, name: t.name, city: t.city, state: t.state, event_date: t.event_date, status: r.status, hold_expires_at: r.hold_expires_at, director_id: t.director_id, cancellation_policy: t.cancellation_policy, refund_cutoff_days: t.refund_cutoff_days, entry_fee_cents: t.entry_fee_cents };
         })
         .filter(Boolean) as UpcomingEvent[];
 
@@ -1165,14 +1166,24 @@ export default function DashboardPage() {
       const eventDate = new Date(cancelTarget.event_date);
       const daysUntil = Math.ceil((eventDate.getTime() - now) / (1000 * 60 * 60 * 24));
       const feeCents = cancelTarget.entry_fee_cents ?? 0;
-      const refundTier = daysUntil >= 7 ? "full" : daysUntil >= 3 ? "half" : "none";
-      const refundLabel = refundTier === "full"
-        ? feeCents > 0 ? `Full refund — $${(feeCents / 100).toFixed(2)}` : "Full refund eligible"
-        : refundTier === "half"
-          ? feeCents > 0 ? `50% refund — $${(feeCents / 200).toFixed(2)}` : "50% refund eligible"
-          : "No refund (within 72 hours)";
-      const refundColor = refundTier === "full" ? "text-emerald-400" : refundTier === "half" ? "text-amber-400" : "text-destructive";
-      const policy = cancelTarget.cancellation_policy ?? "Full refund if cancelled 7 or more days before the event. 50% refund if cancelled 3–6 days before. No refund within 72 hours of the event start.";
+      // Window comes from the tournament, not a constant here. The old
+      // hardcoded 7/3-day tiers disagreed with the policy text shown directly
+      // below them. Directors set this per tournament; 15 is the default.
+      const cutoffDays = cancelTarget.refund_cutoff_days ?? 15;
+      const refundEligible = daysUntil >= cutoffDays;
+      // Deliberately worded as a request, not a promise. Nothing in the product
+      // can issue a refund yet -- there is no code path that calls Stripe to
+      // return money, so a director or support agent does it by hand. Saying
+      // "Full refund — $65.00" here told users money was already on its way
+      // back when nothing had been initiated.
+      const refundLabel = refundEligible
+        ? feeCents > 0
+          ? `Eligible for a full refund — $${(feeCents / 100).toFixed(2)} — processed by the tournament director`
+          : "Eligible for a full refund, processed by the tournament director"
+        : `Not eligible for a refund (within ${cutoffDays} days of the event)`;
+      const refundColor = refundEligible ? "text-emerald-400" : "text-destructive";
+      const policy = cancelTarget.cancellation_policy
+        ?? `Full refund if cancelled ${cutoffDays} or more days before the event. No refund inside ${cutoffDays} days. Hold My Spot deposits are non-refundable and count toward your entry fee.`;
 
       return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
@@ -1199,7 +1210,7 @@ export default function DashboardPage() {
                   <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mb-0.5">REFUND STATUS</p>
                   <p className={`font-semibold text-sm ${refundColor}`}>{refundLabel}</p>
                 </div>
-                <div className={`text-xs font-mono px-3 py-1.5 rounded-full border ${refundTier === "full" ? "border-emerald-400/40 text-emerald-400 bg-emerald-400/10" : refundTier === "half" ? "border-amber-400/40 text-amber-400 bg-amber-400/10" : "border-destructive/40 text-destructive bg-destructive/10"}`}>
+                <div className={`text-xs font-mono px-3 py-1.5 rounded-full border ${refundEligible ? "border-emerald-400/40 text-emerald-400 bg-emerald-400/10" : "border-destructive/40 text-destructive bg-destructive/10"}`}>
                   {daysUntil > 0 ? `${daysUntil}d away` : "Today"}
                 </div>
               </div>

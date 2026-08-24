@@ -4907,6 +4907,7 @@ export type Database = {
           name: string
           pool_count: number | null
           prize_pool_cents: number | null
+          refund_cutoff_days: number
           registration_closes_at: string | null
           registration_opens_at: string | null
           rejected_reason: string | null
@@ -4952,6 +4953,7 @@ export type Database = {
           name: string
           pool_count?: number | null
           prize_pool_cents?: number | null
+          refund_cutoff_days?: number
           registration_closes_at?: string | null
           registration_opens_at?: string | null
           rejected_reason?: string | null
@@ -4997,6 +4999,7 @@ export type Database = {
           name?: string
           pool_count?: number | null
           prize_pool_cents?: number | null
+          refund_cutoff_days?: number
           registration_closes_at?: string | null
           registration_opens_at?: string | null
           rejected_reason?: string | null
