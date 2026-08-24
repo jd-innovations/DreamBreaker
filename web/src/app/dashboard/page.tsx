@@ -17,6 +17,7 @@ import {
 import { Logo } from "@/components/layout/logo";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
+import { toast } from "sonner";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile, MatchSummary } from "@/components/messaging/panel";
 import { NotificationBell } from "@/components/notifications/bell";
@@ -1260,11 +1261,31 @@ export default function DashboardPage() {
                   }
                   setCancelConfirming(true);
                   const supabase = createClient();
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  await (supabase as any).from("registrations").update({ status: "cancelled" }).eq("id", cancelTarget.registration_id);
+                  // 'withdrawn', not 'cancelled'. registration_status has no
+                  // 'cancelled' member, so this update always failed with
+                  // "invalid input value for enum registration_status" — and
+                  // because the error was discarded and the row cleared from
+                  // local state regardless, the user watched their entry
+                  // disappear while staying registered on a paid spot. The
+                  // `as any` cast is what suppressed the type error that would
+                  // have caught it. Matches the withdrawal already used by
+                  // holds/page.tsx and tournaments/[id]/page.tsx.
+                  const { error: cancelError } = await supabase
+                    .from("registrations")
+                    .update({ status: "withdrawn", updated_at: new Date().toISOString() })
+                    .eq("id", cancelTarget.registration_id);
+                  setCancelConfirming(false);
+                  if (cancelError) {
+                    toast.error("Could not cancel your registration. Please try again or contact support.");
+                    return;
+                  }
+                  toast.success(
+                    refundEligible
+                      ? "Registration cancelled. Your refund will be processed by the tournament director."
+                      : "Registration cancelled.",
+                  );
                   setUpcoming((prev) => prev.filter((e) => e.id !== cancelTarget.id));
                   setCancelTarget(null);
-                  setCancelConfirming(false);
                 }}
                 className="flex-1 h-9 rounded-full bg-destructive text-white text-sm font-display tracking-[0.15em] border border-white/20 hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
