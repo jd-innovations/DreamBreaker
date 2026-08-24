@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors, typography, radius } from '@/theme';
-import { StatusChip, FIND_GAMES_SKILL_RANGES } from '@/components';
+import { StatusChip, FIND_GAMES_SKILL_RANGES, FillBar } from '@/components';
 import { useSlideMenu } from '@/components/SlideMenu';
 import { type Tournament } from '@/lib/tournamentTypes';
 import { fetchTournaments } from '@/lib/supabase/tournaments';
@@ -58,9 +58,7 @@ function sortTournaments(list: Tournament[], sort: SortKey): Tournament[] {
 function fmt(cents: number) { return `$${(cents / 100).toFixed(0)}`; }
 
 function TournamentCard({ t, playerStatus }: { t: Tournament; playerStatus?: PlayerRegStatusKey | null }) {
-  const fillPct = Math.round((t.spotsFilled / t.drawSize) * 100);
   const skillBand = formatSkillBand(t.skillMin, t.skillMax);
-  const spotsLeft = t.drawSize - t.spotsFilled;
   const tStatus = getTournamentStatus(t);
   const st = getTournamentStatusInfo(tStatus);
   const ps = playerStatus ? getPlayerRegStatusInfo(playerStatus) : null;
@@ -125,15 +123,13 @@ function TournamentCard({ t, playerStatus }: { t: Tournament; playerStatus?: Pla
           ))}
         </View>
       </View>
-      <View style={s2.fillRow}>
-        <View style={s2.fillTrack}>
-          <View style={[s2.fillBar, {
-            width: `${fillPct}%` as `${number}%`,
-            backgroundColor: fillPct >= 90 ? colors.danger : fillPct >= 70 ? colors.gold : colors.success,
-          }]} />
-        </View>
-        <Text style={s2.fillLabel}>{t.status === 'full' ? 'WAITLIST' : `${spotsLeft} left`}</Text>
-      </View>
+      <FillBar
+        filled={t.spotsFilled}
+        capacity={t.drawSize}
+        waitlist={t.status === 'full'}
+        showLabel
+        style={s2.fillRow}
+      />
       <TouchableOpacity
         style={[s2.cta, ctaMuted && s2.ctaFull]}
         onPress={() => router.push(`/tournament/${t.id}` as never)}
@@ -482,10 +478,7 @@ const s2 = StyleSheet.create({
     backgroundColor: colors.page, borderRadius: 5, borderWidth: 1, borderColor: colors.border,
   },
   fmtText: { color: colors.textSub, fontSize: 9, fontWeight: '700' },
-  fillRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
-  fillTrack: { flex: 1, height: 4, backgroundColor: colors.page, borderRadius: 2, overflow: 'hidden' },
-  fillBar: { height: '100%', borderRadius: 2 },
-  fillLabel: { color: colors.textSub, fontSize: 10, fontWeight: '700' },
+  fillRow: { marginBottom: 14 },
   cta: {
     backgroundColor: colors.navy, borderRadius: radius.button, paddingVertical: 13,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,

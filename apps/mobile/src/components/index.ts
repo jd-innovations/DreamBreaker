@@ -39,3 +39,4 @@ export { AddToCalendarButton } from './AddToCalendarButton';
 export type { AddToCalendarButtonProps } from './AddToCalendarButton';
 export { DirectorOnly } from './DirectorOnly';
 export { ShimmerOverlay } from './ShimmerOverlay';
+export { FillBar } from './FillBar';

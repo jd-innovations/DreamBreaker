@@ -9,7 +9,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '@/theme';
-import { AppHeader, APP_HEADER_HEIGHT, AppIcon, GlassQuickAction, ProfileCompletionRing, FindGamesFilterModal, FIND_GAMES_DISTANCE_STEPS, FIND_GAMES_SKILL_RANGES, ShimmerOverlay, type AppIconName } from '@/components';
+import { AppHeader, APP_HEADER_HEIGHT, AppIcon, GlassQuickAction, ProfileCompletionRing, FindGamesFilterModal, FIND_GAMES_DISTANCE_STEPS, FIND_GAMES_SKILL_RANGES, ShimmerOverlay, FillBar, type AppIconName } from '@/components';
 import { DraggableQuickActions } from '@/components/DraggableQuickActions';
 import { useSession } from '@/hooks/useSession';
 import { useProfile } from '@/hooks/useProfile';
@@ -534,11 +534,19 @@ function TrendingCard({ item, onSave, saved }: {
           <Text style={tc.metaText}>{item.city}</Text>
         </View>
         {!!item.skill && (
-          <View style={[tc.metaRow, { marginBottom: 10 }]}>
+          <View style={tc.metaRow}>
             <Ionicons name="speedometer-outline" size={14} color={L.gold} />
             <Text style={tc.metaText}>{item.skill}</Text>
           </View>
         )}
+
+        {/* Fill bar, no label: Players / Hold Spots / % Filled sit in the stats
+            block directly above, so a trailing "N left" would restate two of
+            them. The bar is here for the colour, not the number. */}
+        {/* capacity is players + holdSpots: the mapper derives holdSpots as
+            drawSize - spotsFilled, so the two sum back to the draw size, which
+            the trending item does not carry directly. */}
+        <FillBar filled={item.players} capacity={item.players + item.holdSpots} style={tc.fillBar} />
 
         <View style={tc.btns}>
           <View style={tc.btnRow}>
@@ -637,6 +645,7 @@ const tc = StyleSheet.create({
   statLabel:   { color: L.textMuted, fontSize: 11 },
   statDivider: { width: 1, height: 20, backgroundColor: L.border, marginHorizontal: 8 },
 
+  fillBar: { marginTop: 4, marginBottom: 10 },
   formatPill: {
     alignSelf: 'flex-start',
     backgroundColor: colors.goldBg, borderRadius: 20,
