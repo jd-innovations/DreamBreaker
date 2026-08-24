@@ -79,9 +79,11 @@ export type FeatureKey =
 export const FEATURE_VISIBILITY: Record<FeatureKey, FeatureVisibility> = {
   // Paid booking is real end to end — PaymentSheet, webhook, and reservation
   // confirmation were verified on a dev-client build against live Stripe on
-  // 2026-08-24 across three real payments, including recovery when the app is
-  // killed mid-payment (see Completion Notes 3.1). Still `hidden` for one
-  // unexercised item: canceling PaymentSheet. Free reservations are unaffected.
+  // 2026-08-24 across three real payments, plus kill-mid-payment recovery and
+  // PaymentSheet cancel (see Completion Notes 3.1). All five of 3.1's
+  // verification items pass. Still `hidden` pending a deliberate beta-scope
+  // call, not pending evidence — promoting it means editing BETA_SCOPE.md in
+  // the same change. Free reservations are unaffected.
   paidBooking: 'hidden',
   // Filter/Sort buttons on booking results are unimplemented dead-end CTAs.
   bookingFilters: 'deferred',

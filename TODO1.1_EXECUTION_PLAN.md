@@ -1883,10 +1883,11 @@ Goal: no user can lose money or receive false purchase state.
 
 ### Completion Notes - 3.1
 
-- Status: **Code complete; verified on device 2026-08-24.** Implemented
-  2026-08-21. Four of the five Verification items are now evidenced end to end
-  across three real payments (see "Device verification" below). Only
-  PaymentSheet cancel behavior is unexercised, so the flag stays `hidden`.
+- Status: **Complete and device-verified 2026-08-24.** Implemented 2026-08-21.
+  All five Verification items are evidenced end to end across three real card
+  payments plus a cancel run (see "Device verification" below). The flag is
+  still `hidden` pending a deliberate beta-scope decision, not pending
+  evidence.
 
 - The documented blocker was web-target-specific and no longer binds. Metro's
   web bundler still refuses `@stripe/stripe-react-native` (transitive
@@ -1945,8 +1946,15 @@ Goal: no user can lose money or receive false purchase state.
   Two more clean runs the same session: `be4fe132` $30.00 at 12:29 and
   `849cb29a` $18.00 at 11:39.
 
-  Still unexercised: **canceling PaymentSheet leaves the reservation
-  held/pending**. That is the last open item on 3.1.
+  **Canceling PaymentSheet leaves the reservation held/pending** — verified at
+  12:44. Reservation `5176122f`, $30.00, `pi_3U7xF2ICYlWw8dgu1rbUAmQz`:
+  dismissing the sheet left `res_status = held` with the hold running to
+  12:54:35, the payment at `requires_confirmation`, no `confirmed_at`, and no
+  `failure_reason`. Nothing was charged and the Pay button stayed available.
+  That hold then lapses to `expired` on its own with the payment row still
+  unsettled — the same shape as any abandoned hold, not a leak.
+
+  **All five Verification items now pass.**
 
 - Webhook latency was 423ms end to end, not the ~22s recorded above. That
   earlier figure drove widening `pollForReservationConfirmation()` to 30s. The
@@ -1963,9 +1971,11 @@ Goal: no user can lose money or receive false purchase state.
   queue is meant to surface.
 
 - Done when (from the item): "real end to end or paid booking is hidden from
-  beta." The first half is now demonstrated. Flipping `paidBooking` to
-  `included` is a separate, deliberate call — it needs the two remaining
-  verification items and a matching `BETA_SCOPE.md` change.
+  beta." **Met** — paid booking is real end to end, on device, against live
+  Stripe. Flipping `paidBooking` from `hidden` to `included` is now a
+  beta-scope decision rather than a verification gap; it still requires a
+  matching `BETA_SCOPE.md` change, since that file and `FEATURE_VISIBILITY`
+  are meant to move together.
 
 ### 3.2 Verify Stripe Webhooks in Production
 
