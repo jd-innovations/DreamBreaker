@@ -77,8 +77,11 @@ export type FeatureKey =
   | 'devTools';
 
 export const FEATURE_VISIBILITY: Record<FeatureKey, FeatureVisibility> = {
-  // Booking creates a real reservation and a real Stripe PaymentIntent, but
-  // never presents PaymentSheet (see 3.1). Free reservations are unaffected.
+  // Paid booking is real end to end — PaymentSheet, webhook, and reservation
+  // confirmation were verified on a dev-client build against live Stripe on
+  // 2026-08-24 across three real payments, including recovery when the app is
+  // killed mid-payment (see Completion Notes 3.1). Still `hidden` for one
+  // unexercised item: canceling PaymentSheet. Free reservations are unaffected.
   paidBooking: 'hidden',
   // Filter/Sort buttons on booking results are unimplemented dead-end CTAs.
   bookingFilters: 'deferred',

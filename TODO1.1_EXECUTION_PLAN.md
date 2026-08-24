@@ -1883,9 +1883,10 @@ Goal: no user can lose money or receive false purchase state.
 
 ### Completion Notes - 3.1
 
-- Status: **Code complete, device verification outstanding.** Implemented
-  2026-08-21. The flag stays `hidden` until a real card payment has been run on
-  a dev-client device build.
+- Status: **Code complete; verified on device 2026-08-24.** Implemented
+  2026-08-21. Four of the five Verification items are now evidenced end to end
+  across three real payments (see "Device verification" below). Only
+  PaymentSheet cancel behavior is unexercised, so the flag stays `hidden`.
 
 - The documented blocker was web-target-specific and no longer binds. Metro's
   web bundler still refuses `@stripe/stripe-react-native` (transitive
@@ -1914,14 +1915,57 @@ Goal: no user can lose money or receive false purchase state.
   - `apps/mobile/src/lib/payments/useReservationPayment.ts` — header comment
     corrected; it is imported by a screen now.
 
-- Not done, and the reason: none of the Verification list has been exercised.
-  Real card payment, cancel behavior, failed-payment non-confirmation, webhook
-  confirmation, and kill-during-payment recovery all need a device build. That
-  build should also carry the Apple sign-in fix from step 20.
+- Device verification, 2026-08-24 (dev-client build, production Supabase +
+  live Stripe). Reservation `849cb29a-1b36-4033-876e-3089f2431176`, $18.00,
+  Lakewood Ranch, slot 2026-08-25 10:00-11:00 UTC. Full chain, from the
+  `payments` and `stripe_webhook_events` tables:
+
+  | Step | Timestamp (UTC) |
+  | --- | --- |
+  | Reservation held | 11:37:17.478 |
+  | PaymentIntent created (`pi_3U7wCTICYlWw8dgu06JWPN9m`) | 11:38:01.542 |
+  | Stripe `payment_intent.succeeded` (`evt_3U7wCTICYlWw8dgu0zrFkUjK`) | 11:39:01.137 |
+  | `payments.status` -> succeeded | 11:39:01.371 |
+  | Webhook handler finished | 11:39:01.560 |
+  | `reservations.status` -> confirmed | 11:39:01.500 |
+
+  Verification items now covered: **real card payment succeeds**, **webhook
+  confirmation updates reservation**, and **failed payment does not confirm
+  reservation** (the 2026-08-21 `payment_intent.payment_failed`
+  `evt_3U70XFICYlWw8dgu1YwdDajH` left `b8b95b21` unconfirmed until the retry
+  succeeded 30s later).
+
+  **App recovers if closed during payment** — verified separately at 12:33.
+  Reservation `99535448`, $15.00, `pi_3U7x4GICYlWw8dgu1s1HLiGM`: the app was
+  killed mid-PaymentSheet, the webhook settled the payment at 12:33:54.464 and
+  confirmed the reservation at 12:33:54.606 with the app closed, and the
+  booking was present under My Bookings on relaunch. Confirmation does not
+  depend on the client staying alive, which is the property that matters.
+
+  Two more clean runs the same session: `be4fe132` $30.00 at 12:29 and
+  `849cb29a` $18.00 at 11:39.
+
+  Still unexercised: **canceling PaymentSheet leaves the reservation
+  held/pending**. That is the last open item on 3.1.
+
+- Webhook latency was 423ms end to end, not the ~22s recorded above. That
+  earlier figure drove widening `pollForReservationConfirmation()` to 30s. The
+  30s window is still the right call — it costs nothing on a fast webhook and
+  is what prevents a false "still confirming" on a slow one — but the ~22s
+  number should not be treated as typical without more samples.
+
+- Pre-existing data anomaly, unrelated to this run: three confirmed
+  reservations have a `payments` row still at `requires_confirmation`
+  (`125dfa92` 2026-08-21, `c48399f0` and `53b81fc5` both 2026-08-15). All three
+  confirmed 2-15s after PI creation with no webhook ever settling them — the
+  signature of the removed "Continue in Test Mode" bypass. Nothing since 3.1
+  shipped shows the pattern. These are exactly the rows 3.3's reconciliation
+  queue is meant to surface.
 
 - Done when (from the item): "real end to end or paid booking is hidden from
-  beta." Both halves currently hold — the implementation is real, and the flag
-  keeps it out of production until it has been watched take money.
+  beta." The first half is now demonstrated. Flipping `paidBooking` to
+  `included` is a separate, deliberate call — it needs the two remaining
+  verification items and a matching `BETA_SCOPE.md` change.
 
 ### 3.2 Verify Stripe Webhooks in Production
 
