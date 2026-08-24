@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '@/theme';
 import { goBack } from '@/lib/navigation';
-import { StatusChip } from '@/components';
+import { StatusChip, AppIcon, type AppIconName } from '@/components';
 import {
   fetchReservationById, fetchReservationPlayersWithProfiles,
   playersNeeded, occupancyStatusLabel, parseTstzrange,
@@ -287,7 +287,7 @@ export default function ReviewScreen() {
         <View style={s.card}>
           <Row icon="business-outline" label="Facility" value={names.facility ?? '—'} />
           <Row
-            icon={isBallMachine ? 'disc-outline' : 'pickleball' as never}
+            icon={isBallMachine ? 'disc-outline' : 'pickleball'}
             label={isBallMachine ? 'Ball Machine' : 'Court'}
             value={names.asset ?? '—'}
           />
@@ -412,10 +412,14 @@ export default function ReviewScreen() {
   );
 }
 
-function Row({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
+// AppIcon rather than Ionicons: 'pickleball' is not an Ionicons glyph, so the
+// court row rendered the missing-glyph "?" until this went through AppIcon.
+// Typing icon as AppIconName also means a bad name is a type error at the call
+// site instead of needing an `as never` cast to compile.
+function Row({ icon, label, value }: { icon: AppIconName; label: string; value: string }) {
   return (
     <View style={rw.row}>
-      <Ionicons name={icon} size={16} color={L.gold} />
+      <AppIcon name={icon} size={16} color={L.gold} />
       <Text style={rw.label}>{label}</Text>
       <Text style={rw.value} numberOfLines={1}>{value}</Text>
     </View>
