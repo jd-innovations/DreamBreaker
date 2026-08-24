@@ -24,7 +24,7 @@ import { getUserId } from "@/lib/dev-user";
 // ── FAQ data ──────────────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
   { q: "Can I change my partner after registering?", a: "Yes — partner substitutions are allowed up to 72 hours before first match. Contact the director to make the change." },
-  { q: "What happens if my partner drops out?", a: "You may find a replacement partner or request a refund up to 7 days before the event date. Inside 7 days, hold fees are non-refundable." },
+  { q: "What happens if my partner drops out?", a: "You may find a replacement partner, or contact the tournament director about your entry. Hold My Spot deposits are non-refundable." },
   { q: "Is there a waitlist if the tournament fills?", a: "Yes. Once the draw is full you'll be placed on a waitlist automatically. We'll notify you if a spot opens." },
   { q: "What rating verification is required?", a: "DUPR rating is verified at registration. Self-rated players are welcome but may be re-rated post-event if scores warrant it." },
   { q: "Are there age restrictions?", a: "This is an open-age event. Juniors under 18 require a guardian signature on the waiver." },
@@ -780,7 +780,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                     <p>· USAPA official rules. Rally scoring to 11, win by 2.</p>
                     <p>· Players must check in 30 minutes prior to first match.</p>
                     <p>· DUPR rating verified at registration. Sandbagging results in disqualification.</p>
-                    <p>· Hold My Spot fees are refundable up to 7 days before play.</p>
+                    <p>· Hold My Spot deposits are non-refundable and count toward your entry fee.</p>
                     <p>· Tournament director&apos;s decisions are final.</p>
                   </>
                 }
@@ -1031,7 +1031,9 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
             {/* Trust badges */}
             <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border text-center">
-              <div className="text-[10px] font-mono text-muted-foreground"><ShieldCheck size={14} weight="bold" className="mx-auto mb-1 text-primary" /> REFUNDABLE</div>
+              {/* Was "REFUNDABLE" — a trust badge directly beside the Hold My
+                  Spot CTA promising the opposite of the actual policy. */}
+              <div className="text-[10px] font-mono text-muted-foreground"><ShieldCheck size={14} weight="bold" className="mx-auto mb-1 text-primary" /> COUNTS TO ENTRY</div>
               <div className="text-[10px] font-mono text-muted-foreground"><Clock size={14} weight="bold" className="mx-auto mb-1 text-primary" /> {t.hold_duration_hours}H HOLD</div>
               <div className="text-[10px] font-mono text-muted-foreground"><CurrencyDollar size={14} weight="bold" className="mx-auto mb-1 text-primary" /> SECURE</div>
             </div>

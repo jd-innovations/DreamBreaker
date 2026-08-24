@@ -69,7 +69,7 @@ const stats = [
 ];
 
 const features = [
-  { icon: Lightning, tag: "HOLD MY SPOT", title: "Reserve your slot in seconds", body: "Pay a small refundable fee to lock your tournament entry. Confirm later, no scramble." },
+  { icon: Lightning, tag: "HOLD MY SPOT", title: "Reserve your slot in seconds", body: "Pay a small non-refundable deposit to lock your tournament entry. It counts toward your entry fee. Confirm later, no scramble." },
   { icon: Heart, tag: "MATCHMAKING", title: "Tinder-style partner finder", body: "Swipe through verified players by DUPR, distance and play style. Match. Compete." },
   { icon: Trophy, tag: "BRACKETS", title: "Live brackets & rankings", body: "Auto-generated draws. Real-time scoring. Auto-updated DUPR after every event." },
 ];

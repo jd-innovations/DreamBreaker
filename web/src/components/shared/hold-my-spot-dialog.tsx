@@ -189,7 +189,7 @@ export function HoldMySpotDialog({ open, onOpenChange, tournament, onSuccess }: 
             </div>
 
             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-              <span className="flex items-center gap-1"><ShieldCheck size={13} weight="bold" /> Refundable up to 7 days before event</span>
+              <span className="flex items-center gap-1"><ShieldCheck size={13} weight="bold" /> Non-refundable · counts toward your entry fee</span>
               <span className="flex items-center gap-1"><Clock size={13} weight="bold" /> {tournament.hold_duration_hours}h to confirm</span>
             </div>
 
