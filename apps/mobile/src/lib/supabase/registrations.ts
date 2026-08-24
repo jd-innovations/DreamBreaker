@@ -291,11 +291,59 @@ export async function convertHoldToRegistration(
   return rowToRegistration(data as unknown as RegistrationRow);
 }
 
-export async function cancelRegistration(id: string): Promise<void> {
-  await supabase
-    .from('registrations')
-    .update({ status: 'withdrawn', updated_at: new Date().toISOString() })
-    .eq('id', id);
+/** What actually happened, so the caller can tell the user the truth. */
+export type CancelRegistrationResult = {
+  cancelled: boolean;
+  /** 'none' when no refund was owed (inside the window, or already refunded). */
+  refundStatus: 'none' | 'submitted' | 'failed';
+  refundedCents: number;
+  /** Hold My Spot deposit, reported so the deduction can be explained. */
+  nonRefundableCents: number;
+  error: string | null;
+};
+
+/**
+ * Cancels a registration through the cancel-registration edge function.
+ *
+ * Was a direct `update({ status: 'withdrawn' })` from the client, which is why
+ * cancelling on mobile silently skipped the refund and the waitlist promotion
+ * that cancelling on web performs -- the same person got a different financial
+ * outcome depending on which device they used. Neither step can happen from a
+ * client: the refund amount has to be derived server-side from what was
+ * actually paid, and RLS rightly forbids a client writing to refunds or
+ * promoting anyone off a waitlist.
+ *
+ * It also used to return void and discard the error, so a failed cancellation
+ * looked identical to a successful one.
+ */
+export async function cancelRegistration(id: string): Promise<CancelRegistrationResult> {
+  const failed = (error: string): CancelRegistrationResult => ({
+    cancelled: false, refundStatus: 'none', refundedCents: 0, nonRefundableCents: 0, error,
+  });
+
+  const { data, error } = await supabase.functions.invoke('cancel-registration', {
+    body: { registrationIds: [id], reason: 'Cancelled by player' },
+  });
+
+  if (error) return failed('request_failed');
+
+  const outcome = (data as { outcomes?: {
+    cancelled: boolean;
+    refundStatus: 'none' | 'submitted' | 'failed';
+    refundedCents: number;
+    nonRefundableCents: number;
+    error?: string;
+  }[] } | null)?.outcomes?.[0];
+
+  if (!outcome) return failed('no_outcome');
+
+  return {
+    cancelled: outcome.cancelled,
+    refundStatus: outcome.refundStatus,
+    refundedCents: outcome.refundedCents,
+    nonRefundableCents: outcome.nonRefundableCents,
+    error: outcome.error ?? null,
+  };
 }
 
 export async function cancelHold(id: string): Promise<void> {

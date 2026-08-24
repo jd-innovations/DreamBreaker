@@ -244,17 +244,44 @@ async function cancelOne(
 }
 
 /**
- * Own registration, or the person who actually paid for it. The payer rule is
+ * Own registration, the tournament's approved director, or the person who
+ * actually paid for it. The payer rule is
  * what lets one half of a team cancel the other: they funded that entry, so
  * they may release it — and since Stripe returns money to the original payment
  * method, the refund goes back to them.
  */
 async function mayCancel(
   service: ServiceClient,
-  reg: { id: string; player_id: string | null; stripe_entry_intent_id: string | null },
+  reg: { id: string; tournament_id: string; player_id: string | null; stripe_entry_intent_id: string | null },
   actorId: string,
 ): Promise<boolean> {
   if (reg.player_id && reg.player_id === actorId) return true;
+
+  // The tournament's own director. Directors cancel entries as a matter of
+  // course (the mobile director workspace has a "Cancel Registration" action),
+  // and those cancellations owe the same refund and free the same spot as a
+  // player's own. Mirrors the existing "registrations: director update own
+  // tournament" RLS policy, including its approved-director requirement, so
+  // this grants nothing that policy does not already allow.
+  const { data: tournament } = await service
+    .from("tournaments")
+    .select("director_id")
+    .eq("id", reg.tournament_id)
+    .maybeSingle();
+
+  if (tournament?.director_id === actorId) {
+    const { data: director } = await service
+      .from("profiles")
+      .select("role, is_director, director_status")
+      .eq("id", actorId)
+      .maybeSingle();
+    if (
+      director?.director_status === "approved" &&
+      (director?.role === "director" || director?.is_director === true)
+    ) {
+      return true;
+    }
+  }
 
   if (reg.stripe_entry_intent_id) {
     const { data: payment } = await service

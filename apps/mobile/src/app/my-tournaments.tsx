@@ -49,6 +49,10 @@ const L = {
 };
 
 function fmt(cents: number) { return `$${Math.round(cents / 100)}`; }
+// fmt() rounds to whole dollars, which is fine for advertising a fee but not
+// for telling someone how much money they are getting back -- "$6" for a $5.50
+// refund is simply wrong.
+function fmtExact(cents: number) { return `$${(cents / 100).toFixed(2)}`; }
 
 function relativeDate(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -580,6 +584,40 @@ export default function MyTournamentsScreen() {
     setLoading(false);
   }, [user?.id]);
 
+  // Reports what actually happened rather than assuming success. The previous
+  // call site was `cancelRegistrationSB(reg.id).then(() => refresh())` -- it
+  // discarded the error, so a failed cancellation refreshed the list and looked
+  // identical to a successful one.
+  const handleCancelRegistration = useCallback(async (registrationId: string) => {
+    const result = await cancelRegistrationSB(registrationId);
+
+    if (!result.cancelled) {
+      Alert.alert(
+        'Could not cancel',
+        result.error === 'not_authorized'
+          ? 'You are not able to cancel this registration.'
+          : 'Something went wrong cancelling your registration. Please try again or contact support.',
+      );
+      return;
+    }
+
+    await refresh();
+
+    const deposit = result.nonRefundableCents > 0
+      ? ` Your ${fmtExact(result.nonRefundableCents)} Hold My Spot deposit is non-refundable and is not included.`
+      : '';
+
+    if (result.refundStatus === 'submitted') {
+      Alert.alert('Registration cancelled', `${fmtExact(result.refundedCents)} has been refunded to your original payment method.${deposit}`);
+    } else if (result.refundStatus === 'failed') {
+      // Cancelled but the money did not move. Saying nothing here is how someone
+      // discovers it from a bank statement instead of from us.
+      Alert.alert('Registration cancelled', 'Your refund could not be processed automatically. Support has been notified and will follow up.');
+    } else {
+      Alert.alert('Registration cancelled', `Your spot has been released.${deposit}`);
+    }
+  }, [refresh]);
+
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   if (loading) {
@@ -664,7 +702,7 @@ export default function MyTournamentsScreen() {
                   reg={reg}
                   team={teamByRegistrationId.get(reg.id) ?? null}
                   userId={user?.id ?? ''}
-                  onCancel={() => { cancelRegistrationSB(reg.id).then(() => refresh()); }}
+                  onCancel={() => { void handleCancelRegistration(reg.id); }}
                 />
               ))}
             </>

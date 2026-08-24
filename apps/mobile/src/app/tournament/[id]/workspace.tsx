@@ -540,7 +540,29 @@ function DetailModal({
               style={[dm.cancelBtn, !canCancel && dm.actionBtnDisabled]}
               activeOpacity={canCancel ? 0.8 : 1}
               onPress={canCancel ? () => doAction(
-                () => cancelRegistration(reg.id),
+                // cancelRegistration now goes through the cancel-registration
+                // edge function, which also refunds and promotes off the
+                // waitlist. It reports failure instead of throwing, so surface
+                // it here — doAction only knows how to await a void promise,
+                // and a director silently failing to cancel someone looks
+                // exactly like success.
+                async () => {
+                  const result = await cancelRegistration(reg.id);
+                  if (!result.cancelled) {
+                    Alert.alert(
+                      'Could not cancel',
+                      result.error === 'not_authorized'
+                        ? 'You are not able to cancel this registration.'
+                        : 'Something went wrong. Please try again.',
+                    );
+                    return;
+                  }
+                  if (result.refundStatus === 'submitted') {
+                    Alert.alert('Registration cancelled', `$${(result.refundedCents / 100).toFixed(2)} has been refunded to the player's original payment method.`);
+                  } else if (result.refundStatus === 'failed') {
+                    Alert.alert('Registration cancelled', 'The refund could not be processed automatically and needs manual follow-up.');
+                  }
+                },
                 `Cancel ${reg.playerName}'s registration? This cannot be undone.`,
               ) : undefined}
             >
