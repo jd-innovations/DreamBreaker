@@ -2,9 +2,17 @@
 --
 -- Run against a LOCAL database only -- it seeds rows and rolls nothing back:
 --
---   supabase db reset
+--   supabase db reset --local --no-seed
 --   psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
 --     -f supabase/_rls_tests/20260824_rls_permission_matrix.sql
+--
+-- --no-seed is not optional today: supabase/seed.sql fails with "Registration
+-- for tournament 1000...0001 closed at 2026-03-07" because its registration
+-- window is hardcoded and has since expired. This suite builds every row it
+-- needs, so it does not depend on the seed either way.
+--
+-- Re-running without a reset is safe. Fixtures upsert, and the two mutating
+-- tests (self-withdrawal, renaming own profile) are idempotent.
 --
 -- Style follows supabase/_par_validation/*.sql: a temp results table, a
 -- pg_temp.ok() recorder, and a PASS/FAIL summary at the end. Exit is non-zero
@@ -201,6 +209,81 @@ begin
     ('aa000000-0000-0000-0000-000000000001','aa000000-0000-0000-0000-000000000002','like'),
     ('aa000000-0000-0000-0000-000000000002','aa000000-0000-0000-0000-000000000001','like')
   on conflict do nothing;
+end $$;
+
+-- Fixtures for messages, support tickets, coach purchases and registrations.
+-- Kept separate from the block above because these need the actors to exist
+-- first.
+do $$
+begin
+  -- Direct conversation between owner and other. director is deliberately NOT
+  -- a participant -- that is the negative case for messages.
+  insert into public.conversations(id, participant_a, participant_b, conversation_type, created_by)
+  values ('b2000000-0000-0000-0000-000000000001',
+          'aa000000-0000-0000-0000-000000000001','aa000000-0000-0000-0000-000000000002','direct',
+          'aa000000-0000-0000-0000-000000000001')
+  on conflict (id) do nothing;
+
+  insert into public.messages(id, conversation_id, sender_id, body)
+  values ('b3000000-0000-0000-0000-000000000001','b2000000-0000-0000-0000-000000000001',
+          'aa000000-0000-0000-0000-000000000001','hello from owner')
+  on conflict (id) do nothing;
+
+  -- Support ticket needs its own conversation (FK).
+  insert into public.conversations(id, conversation_type, created_by)
+  values ('b2000000-0000-0000-0000-000000000002','support','aa000000-0000-0000-0000-000000000001')
+  on conflict (id) do nothing;
+
+  insert into public.support_tickets(id, user_id, conversation_id, subject)
+  values ('b4000000-0000-0000-0000-000000000001','aa000000-0000-0000-0000-000000000001',
+          'b2000000-0000-0000-0000-000000000002','RLS test ticket')
+  on conflict (id) do nothing;
+
+  -- Two tournaments with different directors. Tournament B exists solely so
+  -- "director reads own tournament" cannot pass by reading everything.
+  -- registration_closes_at is in the future: seed.sql currently fails because
+  -- its window expired, and this suite must not inherit that trap.
+  insert into public.tournaments(id, director_id, name, city, state, format, draw_size,
+                                 event_date, entry_fee_cents, hold_fee_cents,
+                                 registration_opens_at, registration_closes_at, status)
+  values
+    ('b5000000-0000-0000-0000-000000000001','aa000000-0000-0000-0000-000000000003',
+     'RLS Tournament A','Austin','TX','doubles',16,(now() + interval '30 days')::date,
+     5000,1500, now() - interval '1 day', now() + interval '20 days','published'),
+    ('b5000000-0000-0000-0000-000000000002','aa000000-0000-0000-0000-000000000002',
+     'RLS Tournament B','Austin','TX','doubles',16,(now() + interval '30 days')::date,
+     5000,1500, now() - interval '1 day', now() + interval '20 days','published')
+  on conflict (id) do nothing;
+
+  insert into public.registrations(id, tournament_id, player_id, status, director_added)
+  values
+    ('b6000000-0000-0000-0000-000000000001','b5000000-0000-0000-0000-000000000001',
+     'aa000000-0000-0000-0000-000000000001','registered',false),
+    ('b6000000-0000-0000-0000-000000000002','b5000000-0000-0000-0000-000000000002',
+     'aa000000-0000-0000-0000-000000000002','registered',false)
+  on conflict (id) do nothing;
+
+  -- Coach offer + purchase: the only fixture here with two legitimate readers.
+  insert into public.coach_offers(id, coach_id, offer_type, title,
+                                  regular_price_cents, discounted_price_cents)
+  values ('b7000000-0000-0000-0000-000000000001','aa000000-0000-0000-0000-000000000004',
+          'private','RLS Private Lesson',8000,6000)
+  on conflict (id) do nothing;
+
+  insert into public.coach_offer_purchases(
+    id, offer_id, coach_id, buyer_id, offer_title, offer_type, participant_quantity,
+    regular_price_cents, selling_price_cents, discount_pct, gross_selling_price_cents,
+    buyer_total_charged_cents, commission_source, commission_pct,
+    platform_commission_amount_cents, coach_net_proceeds_cents,
+    inventory_hold_expires_at, expiration_policy, expiration_days)
+  values ('b8000000-0000-0000-0000-000000000001','b7000000-0000-0000-0000-000000000001',
+          'aa000000-0000-0000-0000-000000000004','aa000000-0000-0000-0000-000000000001',
+          -- Values satisfy the table's money formulas: gross = selling * qty,
+          -- buyer_total = gross + service_fee + tax (both 0 here),
+          -- net = gross - platform_commission - boost_commission.
+          'RLS Private Lesson','private',1,8000,6000,25,6000,6000,'platform_default',10,600,5400,
+          now() + interval '1 day','days_after_purchase',90)
+  on conflict (id) do nothing;
 end $$;
 
 -- ── profiles ─────────────────────────────────────────────────────────────────
@@ -450,6 +533,172 @@ begin
                      format('participant saw %s rows', n_owner_view));
   perform pg_temp.ok('v_mutual_matches.third_party_sees_nothing', n_third_party = 0,
                      format('uninvolved user saw %s rows', n_third_party));
+end $$;
+
+-- ── messages ─────────────────────────────────────────────────────────────────
+-- Readable by conversation participants only. is_conversation_participant() is
+-- SECURITY DEFINER, so this also exercises that helper on the auth path.
+
+do $$
+declare n_participant int; n_outsider int; forged boolean; marked boolean;
+begin
+  perform pg_temp.as_user('aa000000-0000-0000-0000-000000000002');
+  select count(*) into n_participant from public.messages
+   where id = 'b3000000-0000-0000-0000-000000000001';
+  -- sender_id must equal auth.uid(): you cannot post as someone else even in a
+  -- conversation you are legitimately in.
+  forged := pg_temp.denied(
+    $q$insert into public.messages(conversation_id, sender_id, body)
+       values ('b2000000-0000-0000-0000-000000000001',
+               'aa000000-0000-0000-0000-000000000001','forged as owner')$q$);
+  perform pg_temp.as_postgres();
+
+  -- director is not a participant in this conversation.
+  perform pg_temp.as_user('aa000000-0000-0000-0000-000000000003');
+  select count(*) into n_outsider from public.messages
+   where id = 'b3000000-0000-0000-0000-000000000001';
+  marked := pg_temp.denied(
+    $q$update public.messages set read_at = now()
+        where id = 'b3000000-0000-0000-0000-000000000001'$q$);
+  perform pg_temp.as_postgres();
+
+  perform pg_temp.ok('messages.participant_reads',        n_participant = 1, format('n=%s', n_participant));
+  perform pg_temp.ok('messages.outsider_cannot_read',     n_outsider = 0,    format('n=%s', n_outsider));
+  perform pg_temp.ok('messages.cannot_forge_sender',      forged,            null);
+  perform pg_temp.ok('messages.outsider_cannot_mark_read', marked,           null);
+end $$;
+
+-- ── support_tickets ──────────────────────────────────────────────────────────
+
+do $$
+declare n_owner int; n_other int; n_admin int; forged boolean;
+begin
+  perform pg_temp.as_user('aa000000-0000-0000-0000-000000000001');
+  select count(*) into n_owner from public.support_tickets
+   where id = 'b4000000-0000-0000-0000-000000000001';
+  perform pg_temp.as_postgres();
+
+  perform pg_temp.as_user('aa000000-0000-0000-0000-000000000002');
+  select count(*) into n_other from public.support_tickets
+   where id = 'b4000000-0000-0000-0000-000000000001';
+  -- WITH CHECK (user_id = auth.uid()): no filing tickets in someone else's name.
+  forged := pg_temp.denied(
+    $q$insert into public.support_tickets(user_id, conversation_id, subject)
+       values ('aa000000-0000-0000-0000-000000000001',
+               'b2000000-0000-0000-0000-000000000002','filed by someone else')$q$);
+  perform pg_temp.as_postgres();
+
+  perform pg_temp.as_user('aa000000-0000-0000-0000-000000000006');
+  select count(*) into n_admin from public.support_tickets
+   where id = 'b4000000-0000-0000-0000-000000000001';
+  perform pg_temp.as_postgres();
+
+  perform pg_temp.ok('support_tickets.owner_reads_own',      n_owner = 1, format('n=%s', n_owner));
+  perform pg_temp.ok('support_tickets.other_cannot_read',    n_other = 0, format('n=%s', n_other));
+  perform pg_temp.ok('support_tickets.admin_reads_any',      n_admin = 1, format('n=%s', n_admin));
+  perform pg_temp.ok('support_tickets.cannot_file_for_other', forged,     null);
+end $$;
+
+-- ── coach_offer_purchases ────────────────────────────────────────────────────
+-- The only table here with two legitimate readers: buyer and coach both see
+-- the same row, and nobody else does.
+
+do $$
+declare n_buyer int; n_coach int; n_third int; n_anon bigint; tampered boolean;
+begin
+  perform pg_temp.as_user('aa000000-0000-0000-0000-000000000001');
+  select count(*) into n_buyer from public.coach_offer_purchases
+   where id = 'b8000000-0000-0000-0000-000000000001';
+  perform pg_temp.as_postgres();
+
+  perform pg_temp.as_user('aa000000-0000-0000-0000-000000000004');
+  select count(*) into n_coach from public.coach_offer_purchases
+   where id = 'b8000000-0000-0000-0000-000000000001';
+  perform pg_temp.as_postgres();
+
+  perform pg_temp.as_user('aa000000-0000-0000-0000-000000000002');
+  select count(*) into n_third from public.coach_offer_purchases
+   where id = 'b8000000-0000-0000-0000-000000000001';
+  perform pg_temp.as_postgres();
+
+  perform pg_temp.as_anon();
+  n_anon := pg_temp.visible('select 1 from public.coach_offer_purchases');
+  perform pg_temp.as_postgres();
+
+  -- Money fields are server-authoritative: there is no UPDATE policy, so even
+  -- the buyer cannot rewrite what they were charged.
+  perform pg_temp.as_user('aa000000-0000-0000-0000-000000000001');
+  tampered := pg_temp.denied(
+    $q$update public.coach_offer_purchases set buyer_total_charged_cents = 1
+        where id = 'b8000000-0000-0000-0000-000000000001'$q$);
+  perform pg_temp.as_postgres();
+
+  perform pg_temp.ok('coach_purchases.buyer_reads_own',     n_buyer = 1, format('n=%s', n_buyer));
+  perform pg_temp.ok('coach_purchases.coach_reads_own',     n_coach = 1, format('n=%s', n_coach));
+  perform pg_temp.ok('coach_purchases.third_party_cannot_read', n_third = 0, format('n=%s', n_third));
+  perform pg_temp.ok('coach_purchases.anon_cannot_read',    n_anon <= 0, format('n=%s', n_anon));
+  perform pg_temp.ok('coach_purchases.buyer_cannot_alter_price', tampered, 'no UPDATE policy exists');
+end $$;
+
+-- ── registrations ────────────────────────────────────────────────────────────
+-- The only place the director actor is genuinely exercised. Directors read and
+-- update registrations for THEIR tournament -- tournament B exists so that
+-- claim cannot pass by reading everything.
+
+do $$
+declare n_player_own int; n_player_other int; n_dir_own int; n_dir_foreign int;
+begin
+  perform pg_temp.as_user('aa000000-0000-0000-0000-000000000001');
+  select count(*) into n_player_own from public.registrations
+   where id = 'b6000000-0000-0000-0000-000000000001';
+  select count(*) into n_player_other from public.registrations
+   where id = 'b6000000-0000-0000-0000-000000000002';
+  perform pg_temp.as_postgres();
+
+  perform pg_temp.as_user('aa000000-0000-0000-0000-000000000003');
+  select count(*) into n_dir_own from public.registrations
+   where id = 'b6000000-0000-0000-0000-000000000001';
+  select count(*) into n_dir_foreign from public.registrations
+   where id = 'b6000000-0000-0000-0000-000000000002';
+  perform pg_temp.as_postgres();
+
+  perform pg_temp.ok('registrations.player_reads_own',            n_player_own = 1,   format('n=%s', n_player_own));
+  perform pg_temp.ok('registrations.player_cannot_read_others',   n_player_other = 0, format('n=%s', n_player_other));
+  perform pg_temp.ok('registrations.director_reads_own_tournament', n_dir_own = 1,    format('n=%s', n_dir_own));
+  perform pg_temp.ok('registrations.director_cannot_read_foreign_tournament',
+                     n_dir_foreign = 0, format('director saw %s rows from another director''s tournament', n_dir_foreign));
+end $$;
+
+-- `registrations: player update own` has a WITH CHECK restricting players to
+-- withdrawing (or accepting a waiver) -- the same shape of self-escalation
+-- guard as the profiles role test, and worth pinning for the same reason.
+do $$
+declare self_promoted boolean; withdrew boolean; forged_insert boolean;
+begin
+  perform pg_temp.as_user('aa000000-0000-0000-0000-000000000001');
+  self_promoted := pg_temp.denied(
+    $q$update public.registrations set status = 'checked_in'
+        where id = 'b6000000-0000-0000-0000-000000000001'$q$);
+  -- director_added = false is forced by WITH CHECK: a player must not be able
+  -- to insert a registration that looks director-created.
+  -- Targets tournament B, where this player has no registration yet -- against
+  -- tournament A the single-division trigger fires first and the test would be
+  -- measuring that rule instead of the RLS one.
+  forged_insert := pg_temp.denied(
+    $q$insert into public.registrations(tournament_id, player_id, status, director_added)
+       values ('b5000000-0000-0000-0000-000000000002',
+               'aa000000-0000-0000-0000-000000000001','registered',true)$q$);
+  withdrew := pg_temp.denied(
+    $q$update public.registrations set status = 'withdrawn'
+        where id = 'b6000000-0000-0000-0000-000000000001'$q$);
+  perform pg_temp.as_postgres();
+
+  perform pg_temp.ok('registrations.player_cannot_self_check_in', self_promoted,
+                     'WITH CHECK allows only withdrawn / waiver-accepted');
+  perform pg_temp.ok('registrations.player_cannot_forge_director_added', forged_insert, null);
+  -- Guards against "fixing" the above by blocking all player updates.
+  perform pg_temp.ok('registrations.player_can_still_withdraw', not withdrew,
+                     'self-withdrawal must still succeed');
 end $$;
 
 -- ── SECURITY DEFINER hygiene ─────────────────────────────────────────────────
