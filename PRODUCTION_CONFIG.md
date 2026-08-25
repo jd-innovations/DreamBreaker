@@ -53,6 +53,8 @@ restart.
 | `NEXT_PUBLIC_APP_URL` | `web/src/lib/legal.ts`, Stripe Connect return URLs | all | no | Platform | Connect onboarding returns to the right host |
 | `APPLE_TEAM_ID` | `web/src/app/.well-known/apple-app-site-association/route.ts` | prod | no | Mobile | `curl https://pickleballapp.app/.well-known/apple-app-site-association` |
 | `DEV_TOOLS_SECRET` | `web/src/app/api/dev/**` | **dev only** | **YES** | Platform | see warning below |
+| `NEXT_PUBLIC_SENTRY_DSN` | `instrumentation-client.ts`, `sentry.*.config.ts` | all | no (public by design) | Platform | `/api/admin/sentry-test` as an admin |
+| `SENTRY_AUTH_TOKEN` | build-time source-map upload | all | **YES** | Platform | stack traces show filenames, not chunk offsets |
 
 **`DEV_TOOLS_SECRET` must be UNSET in production.** It gates the dev-only
 payment-simulation and test-fixture routes. Those routes already hard-404 when
@@ -169,6 +171,8 @@ node ./scripts/validate-eas-env.js
 | `EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY` | `app.config.js` → native Android config | all 3 | **YES** (restrict by package + SHA) | Platform | map renders on Android |
 | `EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY` | `app.config.js` → native iOS config | all 3 | **YES** (restrict by bundle id) | Platform | map renders on iOS |
 | `EXPO_PUBLIC_APP_ENV` | `src/lib/featureFlags.ts` | set in `eas.json`, not EAS env | no | Platform | `validate-eas-env.js` |
+| `EXPO_PUBLIC_SENTRY_DSN` | `src/lib/observability/sentry.ts` | all 3 | no (public by design) | Platform | a test crash reaches Sentry |
+| `SENTRY_AUTH_TOKEN` | Sentry Expo config plugin (source maps) | preview, production | **YES** | Platform | crash shows a filename, not `index.android.bundle:1:…` |
 
 **`EXPO_PUBLIC_APP_ENV` is declared in `eas.json` per build profile, not in the
 EAS environment store.** It drives every feature flag and beta-scope decision.
@@ -199,6 +203,7 @@ setup is unverified (gap G6).
 | **Apple Developer** | Team ID, bundle id, Sign in with Apple capability, APNs key, associated domains | Mobile | Universal Links open the app from a cold start |
 | **Google Play** | package name, signing, service account | Mobile | not yet verified — no Android hardware (gap G6) |
 | **Anthropic** | API key behind `CLAUDE_API` | Platform | "Improve listing" returns text |
+| **Sentry** | org `jd-innovations`; projects `react-native` (mobile) and `javascript-nextjs` (web); org auth token (`org:ci`) | Platform | events appear with correct release + environment tags |
 
 **Sending identity:** `Pickleball App <notifications@pickleballapp.app>`,
 hardcoded in `supabase/functions/send-transactional-email/index.ts`. Changing the
@@ -266,11 +271,18 @@ outright if the allowlist is wrong, so a successful native sign-in on a current
 build is the proof — the field itself cannot be read from tooling.
 **Action:** sign in with Apple on a current build. **Owner: Auth.**
 
-### G5 — No analytics or crash reporting
+### G5 — No product analytics *(crash reporting resolved 2026-08-25)*
 
-No Sentry, PostHog, Amplitude, Segment, or equivalent in either
-`package.json`. Nothing to configure yet. Plan items 4.1 and 4.2 will add
-entries to this document. **Owner: Platform.**
+Crash reporting is now wired: `@sentry/nextjs` on web, `@sentry/react-native`
+on mobile, with scrubbing, release and environment tags — see the entries above.
+**Analytics (4.2) is still unaddressed:** no PostHog, Amplitude or Segment.
+Sentry is an error sink, not an analytics one, and using it as such would burn
+the error quota. **Owner: Platform.**
+
+Note the two DSNs are marked public deliberately. A DSN only permits *sending*
+events to its project, never reading them, and both are inlined into client
+bundles at build time — marking them secret would hide them from your own
+dashboards while still shipping them to every user.
 
 ### G6 — Android push and Play Console unverified
 

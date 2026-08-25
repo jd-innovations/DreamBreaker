@@ -34,6 +34,17 @@ module.exports = {
   plugins: [
     'expo-router',
     [
+      // Uploads source maps at build time so a crash reports a filename and
+      // line instead of `index.android.bundle:1:284729`. Reads SENTRY_AUTH_TOKEN
+      // from the build environment -- set on EAS for preview/production, absent
+      // locally, where uploads are simply skipped.
+      '@sentry/react-native',
+      {
+        organization: 'jd-innovations',
+        project: 'react-native',
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         backgroundColor: '#07091A',

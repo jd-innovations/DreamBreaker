@@ -12,6 +12,7 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useExternalLinks } from '@/hooks/useExternalLinks';
 import { useFeatureRouteGuard } from '@/hooks/useFeatureRouteGuard';
 import { STRIPE_PUBLISHABLE_KEY } from '@/lib/payments/stripeConfig';
+import { initSentry, setSentryUser, withCrashReporting } from '@/lib/observability/sentry';
 import '../global.css';
 
 // StripeProvider requires a custom Expo dev client build — @stripe/stripe-react-native
@@ -22,12 +23,22 @@ import '../global.css';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-export default function RootLayout() {
+// At module scope, before any component renders: an error thrown during the
+// first render is exactly the kind worth catching, and initialising inside a
+// component would miss it.
+initSentry();
+
+function RootLayout() {
   const [fontsLoaded] = useFonts({ BebasNeue_400Regular });
   const { user, loading, isAuthenticated } = useSession();
   usePushNotifications(user?.id ?? null);
   useExternalLinks({ authLoading: loading, isAuthenticated });
   useFeatureRouteGuard();
+
+  // Attributes crashes to a user id only -- never a name or email. Clearing on
+  // sign-out matters on a shared device, where the next person's crashes would
+  // otherwise be filed under the previous account.
+  useEffect(() => { setSentryUser(user?.id ?? null); }, [user?.id]);
 
   useEffect(() => {
     // Fast Refresh can re-run this effect after the native splash screen has
@@ -232,3 +243,8 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+// Sentry.wrap adds the error boundary and native crash handlers around the
+// whole tree. It must wrap the ROOT export -- expo-router renders this default
+// export directly, so anything not inside it is outside the boundary.
+export default withCrashReporting(RootLayout);

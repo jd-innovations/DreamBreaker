@@ -2676,6 +2676,99 @@ Goal: beta issues should be visible without waiting for screenshots.
 - Done when:
   - Production crashes are actionable.
 
+### Completion Notes - 4.1
+
+- Status: **Wired on both platforms; NOT yet verified.** Verification needs a
+  production promote (web) and a new EAS build (mobile) — see "How to verify".
+
+#### What was built
+
+| Piece | Where |
+| --- | --- |
+| Web SDK (`@sentry/nextjs@10.71.0`) | `instrumentation.ts`, `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts` |
+| Web scrubbing + shared options | `web/src/lib/observability/scrub.ts` |
+| Root error boundary | `web/src/app/global-error.tsx` (**none existed before**) |
+| Source-map upload | `withSentryConfig` in `web/next.config.ts` |
+| Mobile SDK (`@sentry/react-native@7.2.0`) | `apps/mobile/src/lib/observability/sentry.ts`, plugin in `app.config.js`, `Sentry.wrap` on the root layout |
+| Verification hook | `web/src/app/api/admin/sentry-test` |
+
+Sentry org `jd-innovations`; projects `javascript-nextjs` (web) and
+`react-native` (mobile).
+
+#### Scrubbing was the actual work
+
+The SDK install is a few files. What needed thought is that Sentry's defaults
+would have shipped **working credentials** to a third party:
+
+- `/claim/<token>` — the path segment *is* the credential
+- `/auth/callback?code=…` — an OAuth authorization code
+- `Authorization` / `apikey` headers — Supabase JWTs
+
+Plus 4.2's forbidden list: names, emails, message bodies, support-ticket text,
+coordinates. So query strings are dropped wholesale rather than allowlisted (an
+allowlist has to be maintained against every future route; losing a query param
+costs debugging context, leaking one costs an account), request bodies are
+dropped entirely, sensitive keys are redacted recursively, emails are regexed
+out of free text, and user context is reduced to the uuid.
+
+Deliberately **kept**: Stripe identifiers. They are not credentials, and the
+reconciliation runbook is written around pasting them into Stripe — scrubbing
+them would leave payment errors that cannot be traced to a payment.
+
+Also disabled on purpose: Session Replay (web) and `attachScreenshot` /
+`attachViewHierarchy` (mobile). All three capture the rendered UI, which on this
+app means chat threads, support tickets and payment sheets. No `beforeSend`
+applied afterwards is as reliable as never recording it.
+
+The web scrubber is covered by 19 assertions run against it during
+development — claim tokens stripped, OAuth codes stripped, auth headers
+redacted, emails removed from messages/exceptions/breadcrumbs, user reduced to
+id, **and Stripe ids and amounts preserved**. All pass. They are not yet a
+committed test suite; see "Not done".
+
+#### Two version traps caught by the repo's own AGENTS.md files
+
+`web/AGENTS.md` says this Next.js is not the one in training data and to read
+`node_modules/next/dist/docs/`. Doing so caught a real bug: **Next 16 renamed
+`global-error`'s second prop from `reset` to `unstable_retry`.** The original
+file declared `reset`, which would have been `undefined` at runtime. Also
+confirmed `global-error` still exists at all — Next 16 adds `unstable_catchError`
+as an alternative to `error.js`, but does not replace the global boundary.
+
+`apps/mobile/AGENTS.md` points at **Expo v56** docs while the installed SDK is
+**54.0.36**. Followed the installed version; `expo install` correctly pinned
+`@sentry/react-native@7.2.0` from SDK 54's compatibility matrix rather than the
+latest 8.x. **That file should be reconciled** — it will send future work at the
+wrong docs.
+
+#### How to verify (the remaining work)
+
+1. **Web:** promote a deployment, then as an admin hit
+   `/api/admin/sentry-test?kind=capture` — returns the event id, environment and
+   release. Then `/api/admin/sentry-test` with no query for a genuinely
+   unhandled error through `onRequestError`. Confirm both appear with
+   `environment=production` and a release matching the commit sha, and that the
+   stack shows filenames rather than chunk offsets (proves source-map upload).
+2. **Mobile:** needs a new EAS build — the DSN is an `EXPO_PUBLIC_*` var baked
+   into the binary, so no existing build can report. Trigger a crash and confirm
+   `environment` matches the profile (`internal` for preview, `production` for
+   production).
+3. Check that no event contains an email, a claim token, or a query string.
+
+#### Not done
+
+- **Alerting is not configured.** 4.1 asks for crash-spike and payment/auth
+  failure alerts; those are Sentry-dashboard rules, not code, and are best set
+  once real events exist to shape thresholds against.
+- The scrubber assertions are not a committed test. Privacy invariants of this
+  kind belong in CI, but `web` has no test runner and adding one is its own
+  change.
+- The web and mobile scrubbers are near-duplicates in separate files. There is
+  no shared workspace between the two apps; a change to one is a prompt to
+  check the other, and that is written at the top of both.
+- `tracesSampleRate` is 0 on both. Performance tracing has its own quota cost
+  and is not what 4.1 asks for.
+
 ### 4.2 Add Product Analytics
 
 - Issue: No real analytics sink.
