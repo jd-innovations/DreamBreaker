@@ -17,6 +17,9 @@ Its `EXPO_PUBLIC_APP_ENV` is **`internal`**, so feature flags are in internal
 mode — some surfaces hidden in production are visible here. Note it if a screen
 looks unexpected.
 
+> **Status 2026-08-25:** 5.2 complete (all 11 pass). 5.3 partial — 12, 13, 14,
+> 27, 28 pass; 15-26 outstanding.
+
 **How to record:** write the result in the Result column — `pass`, `fail`, or a
 short note. Anything at all is better than nothing; a half-filled matrix is
 still evidence, an empty one is not. Send it back however is easiest and I will
@@ -30,17 +33,17 @@ The whole point is the cases a happy-path login never reaches.
 
 | # | Case | Steps | Expected | Result |
 | --- | --- | --- | --- | --- |
-| 1 | Apple — cancel | Tap Sign in with Apple, then dismiss the sheet | Returns to the sign-in screen. **No error alert**, no half-created account, not routed forward | |
-| 2 | Apple — Hide My Email | Sign in with Apple, choose **Hide My Email** | Account is created; the profile carries the `@privaterelay.appleid.com` address and the app works normally | |
-| 3 | Apple — **second login name** | Sign out, sign in with Apple again | **Name is still there.** Apple only returns the name on the *first* authorization ever — if the app relies on it each time, the name is blank now. This is the single most likely failure in this table | |
-| 4 | Apple — sign-out / re-login | Sign out, sign back in | Same account, same profile, no duplicate | |
-| 5 | Apple — cold start | Force-quit, reopen | Still signed in, lands on the normal home screen (not onboarding) | |
-| 6 | Google — regression | Sign out, sign in with Google | Works; profile name and avatar populate | |
-| 7 | Google — cancel | Start Google sign-in, dismiss the browser sheet | Stays on the screen, no error, no forward routing | |
-| 8 | Email — sign-up | Register with a fresh email | **Account works immediately without confirming the email.** That is the current (known, unwanted) behaviour — confirming it here is the point. See gap G2 in `PRODUCTION_CONFIG.md` | |
-| 9 | Email — password reset | Use forgot-password | Reset mail arrives from `notifications@pickleballapp.app`, link works, new password signs in | |
-| 10 | Account collision | Sign up by email, then sign in with Apple/Google using **that same address** | Record exactly what happens: same account, second account, or an error. There is no linking logic — this documents reality, it is not expected to pass | |
-| 11 | Sign-out cleanup | Sign out | Push token is removed for that device (a later push should not reach this install while signed out) | |
+| 1 | Apple — cancel | Tap Sign in with Apple, then dismiss the sheet | Returns to the sign-in screen. **No error alert**, no half-created account, not routed forward | pass (2026-08-25) |
+| 2 | Apple — Hide My Email | Sign in with Apple, choose **Hide My Email** | Account is created; the profile carries the `@privaterelay.appleid.com` address and the app works normally | pass (2026-08-25) |
+| 3 | Apple — **second login name** | Sign out, sign in with Apple again | **Name is still there.** Apple only returns the name on the *first* authorization ever — if the app relies on it each time, the name is blank now. This is the single most likely failure in this table | pass (2026-08-25) |
+| 4 | Apple — sign-out / re-login | Sign out, sign back in | Same account, same profile, no duplicate | pass (2026-08-25) |
+| 5 | Apple — cold start | Force-quit, reopen | Still signed in, lands on the normal home screen (not onboarding) | pass (2026-08-25) |
+| 6 | Google — regression | Sign out, sign in with Google | Works; profile name and avatar populate | pass (2026-08-25) |
+| 7 | Google — cancel | Start Google sign-in, dismiss the browser sheet | Stays on the screen, no error, no forward routing | pass (2026-08-25) |
+| 8 | Email — sign-up | Register with a fresh email | **Verification is required** — access refused until the email is confirmed. *(This row originally asserted the opposite, from gap G2. The test disproved it; G2 is closed. Do not "fix" it by disabling confirmation — case 10 depends on it.)* | pass (2026-08-25) |
+| 9 | Email — password reset | Use forgot-password | Reset mail arrives from `notifications@pickleballapp.app`, link works, new password signs in | pass (2026-08-25) |
+| 10 | Account collision | Sign up by email, then sign in with Apple/Google using **that same address** | Record exactly what happens: same account, second account, or an error. There is no linking logic — this documents reality, it is not expected to pass | pass (2026-08-25) |
+| 11 | Sign-out cleanup | Sign out | Push token is removed for that device (a later push should not reach this install while signed out) | pass (2026-08-25) |
 
 **Note for case 3:** if the name is blank on second login, that is a real bug
 and worth capturing a screenshot of. It is also the reason this row exists.
@@ -53,18 +56,18 @@ and worth capturing a screenshot of. It is also the reason this row exists.
 
 | # | Case | Steps | Expected | Result |
 | --- | --- | --- | --- | --- |
-| 12 | Permission denied | Deny camera when first asked | A clear explanation and a way to recover — **not** a blank screen or a crash | |
-| 13 | Permission granted | Allow, then scan | Scanner opens and reads | |
-| 14 | Invalid QR | Scan any unrelated QR (a website, a Wi-Fi code) | Rejected with a readable message, no crash | |
-| 15 | Wrong tournament | Scan a valid check-in QR from a *different* tournament | Refused, and says why | |
-| 16 | Duplicate check-in | Scan the same valid QR twice | Second scan says already checked in — **does not** double-record | |
+| 12 | Permission denied | Deny camera when first asked | A clear explanation and a way to recover — **not** a blank screen or a crash | **pass** — CTA to allow camera, recoverable |
+| 13 | Permission granted | Allow, then scan | Scanner opens and reads | pass (implied: 14 required a working scanner) |
+| 14 | Invalid QR | Scan any unrelated QR (a website, a Wi-Fi code) | Rejected with a readable message, no crash | **pass** — "unsupported QR" |
+| 15 | Wrong tournament | Scan a valid check-in QR from a *different* tournament | Refused, and says why | _not yet run_ |
+| 16 | Duplicate check-in | Scan the same valid QR twice | Second scan says already checked in — **does not** double-record | _not yet run_ |
 
 ### Calendar
 
 | # | Case | Steps | Expected | Result |
 | --- | --- | --- | --- | --- |
-| 17 | Add to calendar (iOS) | From a tournament, add to calendar | Permission prompt, then the event appears in Apple Calendar with the right date/time | |
-| 18 | Permission denied | Deny calendar access, retry | Explains, does not crash | |
+| 17 | Add to calendar (iOS) | From a tournament, add to calendar | Permission prompt, then the event appears in Apple Calendar with the right date/time | _not yet run_ |
+| 18 | Permission denied | Deny calendar access, retry | Explains, does not crash | _not yet run_ |
 
 *(Android calendar is blocked on hardware — open item D4.)*
 
@@ -77,22 +80,21 @@ Universal links (`https://pickleballapp.app/...`):
 
 | # | Link | Expected | Result |
 | --- | --- | --- | --- |
-| 19 | `/tournament/<id>` | Opens the tournament | |
-| 20 | `/conversation/<id>` | Opens that conversation | |
-| 21 | `/groups/<id>` | Opens the group | |
-| 22 | `/community/<id>` | Opens the community | |
-| 23 | `/marketplace/<id>` | Opens the listing | |
-| 24 | `/claim/<token>` | Opens the claim flow | |
-| 25 | **`/booking/<id>`** | ⚠️ **Expected to fail** — see below | |
-| 26 | **`/coach/offers/<id>`** | ⚠️ **Expected to fail** — see below | |
+| 19 | `/tournament/<id>` | Opens the tournament | _not yet run_ |
+| 20 | `/conversation/<id>` | Opens that conversation | _not yet run_ |
+| 21 | `/groups/<id>` | Opens the group | _not yet run_ |
+| 22 | `/community/<id>` | Opens the community | _not yet run_ |
+| 23 | `/marketplace/<id>` | Opens the listing | _not yet run_ |
+| 24 | `/claim/<token>` | Opens the claim flow | _not yet run_ |
+| 25 | **`/booking/<id>`** | ⚠️ **Expected to fail** — see below | _not yet run_ |
+| 26 | **`/coach/offers/<id>`** | ⚠️ **Expected to fail** — see below | _not yet run_ |
 
 Custom scheme (`pickleballapp://`), same routes, cold start:
 
 | # | Link | Expected | Result |
 | --- | --- | --- | --- |
-| 27 | `pickleballapp://tournament/<id>` | Opens the tournament | |
-| 28 | `pickleballapp://groups/<id>` | Opens the group | |
-
+| 27 | `pickleballapp://tournament/<id>` | Opens the tournament | **pass** — correct screen |
+| 28 | `pickleballapp://groups/<id>` | Opens the group | **pass** — correct screen |
 ---
 
 ## Two deep links that are already known to be broken

@@ -2925,6 +2925,55 @@ case that just passed.
 - Done when:
   - Native utility features are reliable or hidden.
 
+### Completion Notes - 5.3
+
+- Status: **INCOMPLETE.** 5 of 15 cases run (2026-08-25), all passing. Recorded
+  now so the results are not lost; this item is not closed.
+
+Run against `docs/DEVICE_QA_CHECKLIST.md` on the 2026-08-24 iOS preview build.
+
+| Case | Result |
+| --- | --- |
+| 12 — camera permission denied | **pass** — a CTA to allow the camera, so the state is recoverable rather than a dead end |
+| 13 — permission granted, scan | pass (implied — case 14 could not have produced a message without a working scanner) |
+| 14 — invalid QR | **pass** — rejected with "unsupported QR" |
+| 27 — `pickleballapp://tournament/<id>` cold start | **pass** — correct screen |
+| 28 — `pickleballapp://groups/<id>` cold start | **pass** — correct screen |
+
+27 and 28 are worth more than they look. The common failure for a cold-start
+deep link is that the app opens but *drops the route*, landing on home — which
+reads as success unless you are watching for it. Both landed on the right
+screen, so the custom scheme carries its route through a cold launch.
+
+#### Still to run
+
+- **15, 16 — wrong-tournament and duplicate check-in.** Deferred on setup cost:
+  they need a valid check-in QR for a tournament the tester is registered in,
+  *plus* one from a different tournament. These are the check-in **integrity**
+  cases — 16 in particular is the one that decides whether a double scan can
+  double-record — so they matter more than the four that have run.
+- **17, 18 — calendar.** No setup beyond a dated tournament.
+- **19-26 — universal links.** Including 25 and 26, already known broken (see
+  below); those only need confirming as *safe* failures.
+
+#### Known broken before testing began
+
+Comparing the production AASA against the app's routes found two advertised
+paths with no matching mobile route, neither of which needed a device:
+
+| Advertised | Gap |
+| --- | --- |
+| `/booking/*` | No `booking/[id]`. The "mismatched booking detail route" this item already names |
+| `/coach/offers/*` | No `coach/offers/[id]`. `create` and `[id]/edit` resolve; the plain detail link does not |
+
+Both exist on web, which is why the AASA lists them — that file was generated
+from the web routes rather than the app's.
+
+Fix options when back at a desktop: add the missing routes, or narrow the AASA
+paths so iOS never claims them and the links open the website instead. The
+second is smaller and probably right for beta — an unclaimed link degrading to
+the web page is a better outcome than an app that opens to nothing.
+
 ### 5.4 Add Offline and Poor-Network UX
 
 - Issue: No consistent offline behavior.
