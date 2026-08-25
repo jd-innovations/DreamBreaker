@@ -13,7 +13,17 @@
 // Stripe calls the webhook — this function only ever creates a payment in
 // 'requires_confirmation' status. Nothing here marks a payment "succeeded".
 
-import Stripe from "npm:stripe@18";
+// Pinned to the same exact SDK version the web app resolves (web/package.json
+// "stripe": "^22.2.1"), and to that SDK's OWN native API version below. Those
+// two must move together: this was on stripe@18, whose native version is
+// 2025-08-27.basil, while pinning a dahlia apiVersion -- so Stripe was
+// answering in dahlia shapes while the SDK's typings described basil, and
+// `deno check` failed on every function that imports this file.
+//
+// Exact rather than a range: this is money code deployed independently of the
+// web app, and "whatever npm resolved at deploy time" is not a property you
+// want a payment client to have.
+import Stripe from "npm:stripe@22.2.1";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 let _stripe: Stripe | null = null;
@@ -21,6 +31,10 @@ export function getStripe(): Stripe {
   if (_stripe) return _stripe;
   const key = Deno.env.get("STRIPE_SECRET_KEY");
   if (!key) throw new Error("STRIPE_SECRET_KEY is not set");
+  // Must equal the pinned SDK's own Stripe.ApiVersion. Setting a version the
+  // SDK does not know does not "upgrade" anything -- Stripe honours the header
+  // and answers in that version, while the client types keep describing the
+  // old one, which is divergence with no signal.
   _stripe = new Stripe(key, { apiVersion: "2026-05-27.dahlia" });
   return _stripe;
 }

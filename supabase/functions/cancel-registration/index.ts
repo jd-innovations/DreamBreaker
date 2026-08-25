@@ -26,7 +26,8 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import Stripe from "npm:stripe@18";
+// Version pinned to match ../_shared/payments.ts -- see the note there.
+import Stripe from "npm:stripe@22.2.1";
 import { getServiceClient, getStripe } from "../_shared/payments.ts";
 
 const CORS: HeadersInit = {

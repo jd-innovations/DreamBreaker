@@ -2414,6 +2414,107 @@ callers stopped sending the hardcoded string.
 - Done when:
   - Stripe versions are current or intentionally pinned with documented reason.
 
+### Completion Notes - 3.4
+
+- Status: **Complete** (2026-08-24). **One external action required:** redeploy
+  the eight Stripe edge functions (command below).
+
+#### The item's premise was inverted
+
+3.4 assumed the repo was pinned to an old API version and needed upgrading to
+current guidance. The opposite was true. Both planes already pinned
+`2026-05-27.dahlia`, and `stripe@22.2.1` — what web resolves — reports exactly
+that as its own `Stripe.ApiVersion`. **Web was already current and correct.**
+
+The real defect was a split: the edge functions imported `npm:stripe@18`, whose
+native version is `2025-08-27.basil`, while passing a **dahlia** `apiVersion`.
+The API version header is what Stripe honours, so those functions were
+receiving dahlia-shaped responses against typings that described basil — a
+silent divergence in payment code, surfaced only as a `deno check` failure
+nobody was running.
+
+#### Why this was invisible
+
+`tsc -p web` never covered it and has been green throughout. Edge functions are
+Deno, type-checked by `deno check`, which is not wired into any script or CI
+step. Nine of fifteen functions were failing it.
+
+**Type-check edge functions with `deno check`, not `tsc`.** Earlier notes in
+this plan (including mine, in 2.4) described this as a `tsc` error in `web`.
+That was wrong.
+
+#### Change
+
+`npm:stripe@18` -> `npm:stripe@22.2.1` in `_shared/payments.ts` and
+`cancel-registration/index.ts`. Exact, not a range: this is money code deployed
+independently of the web app, and "whatever npm resolved at deploy time" is not
+a property a payment client should have. Comments at all three pin sites now
+state that SDK version and `apiVersion` move together or not at all.
+
+**No runtime behaviour changes.** Stripe was already answering in dahlia,
+because the header already said dahlia. Only the client library and its typings
+moved. The edge functions' entire Stripe surface is four calls —
+`paymentIntents.create` / `.retrieve` / `.cancel`, `refunds.create` — plus
+`Stripe.errors.StripeError`, none of which changed shape across v18 -> v22.
+
+#### Verification
+
+The item asks for "Stripe tests pass before and after." **There is no Stripe
+test suite in this repo** — nothing under `tests/` touches Stripe. Substituted
+the strongest checks available:
+
+| Check | Before | After |
+| --- | --- | --- |
+| `deno check` on all 15 edge functions | 9 failing | **1 failing** (unrelated, below) |
+| `tsc --noEmit -p web` | pass | pass |
+| SDK native version == pinned `apiVersion` | **no** (basil vs dahlia) | **yes** (dahlia) |
+
+Plus a live read-only probe running the pinned SDK under Deno against test-mode
+Stripe — proving the module loads in the actual runtime, authenticates, and
+that Stripe accepts the pinned version:
+
+```
+SDK native ApiVersion  : 2026-05-27.dahlia
+paymentIntents.list    : ok
+paymentIntents.retrieve: ok (pi_3U7xF2..., requires_payment_method, 3000)
+refunds.list           : ok
+accounts.list (Connect): ok
+```
+
+That covers three of the item's four verification targets — PaymentIntent
+reads, refunds, and Connect accounts — against the real API. Webhook typings
+are covered by `tsc`, since the webhook handler is a Next.js route on the
+already-current v22.
+
+Nothing was created, charged, or refunded.
+
+#### Out of scope, left alone
+
+`waitlist-sweeper` still fails `deno check` with four `TS2352` errors casting
+Supabase join results (`reg.tournaments`, `reg.profiles`) from arrays to single
+objects. Unrelated to Stripe, pre-existing, and a correctness smell worth its
+own change — the casts may be lying about the row shape. Not touched here.
+
+#### Not done
+
+- `deno check` is still not wired into any script or CI step, so this can
+  regress silently exactly as it did before. Worth adding alongside 6.x.
+- `@stripe/stripe-react-native` (0.50.3) was not touched. It carries no API
+  version pin — the publishable key and the server's PaymentIntent decide
+  behaviour — and the item explicitly says not to combine this with PaymentSheet
+  work.
+- The G1 test-mode question from 2.4 is untouched and still open. It is a
+  key-and-environment decision, not a version one.
+
+#### Required action
+
+```
+npx supabase functions deploy cancel-registration create-booking-payment-intent create-coach-offer-purchase-payment-intent create-tournament-entry-balance-payment-intent create-tournament-entry-payment-intent create-tournament-hold-payment-intent create-tournament-team-entry-payment-intent create-tournament-team-member-payment-intent
+```
+
+Until then the deployed functions still run stripe@18. That is the status quo,
+not a regression — but the fix is not live until they are redeployed.
+
 ## Phase 4 - Observability, Analytics, and Support
 
 Goal: beta issues should be visible without waiting for screenshots.
