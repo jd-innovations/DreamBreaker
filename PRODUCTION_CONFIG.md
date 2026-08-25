@@ -249,11 +249,25 @@ Note this also reframes "live money" language elsewhere in the plan: payments
 verified during 3.1/3.2/3.3 were test-mode transactions unless Vercel production
 holds a live key. **Owner: Payments.**
 
-### G2 — Email signup requires no confirmation
+### G2 — ~~Email signup requires no confirmation~~ **RESOLVED — the gap was never real**
 
-`/auth/v1/settings` reports `mailer_autoconfirm: true`. An account works
-immediately with an unverified address, so anyone can register under someone
-else's email. Known since 2026-08-19, still open. **Owner: Auth.**
+Closed 2026-08-25 by device testing (item 5.2, case 8): a real sign-up on the
+iOS preview build **did** demand email verification and refused access until it
+was done. Confirmation is enforced.
+
+The gap was an artefact of how it was measured. `/auth/v1/settings` reports
+`mailer_autoconfirm: true` — and still does, today, while the flow plainly
+requires confirmation. That field reflects a GoTrue environment variable that
+does **not** track the hosted dashboard's "Confirm email" setting, so it is not
+evidence about signup behaviour either way.
+
+**Do not re-derive this gap from that endpoint.** The endpoint is fine for
+"which providers are enabled" (it lists `apple`, `email`, `google`, and that
+matches reality); it is not fine for confirmation policy. The only reliable
+check is signing up with a fresh address.
+
+Carried, uncorrected, from 2026-08-19 to 2026-08-25 — six days of a security
+gap on the books that did not exist.
 
 ### G3 — Vercel environment variables are unverified
 

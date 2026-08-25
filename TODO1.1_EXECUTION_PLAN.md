@@ -2842,6 +2842,57 @@ Goal: every native integration works on real devices.
 - Done when:
   - Auth is verified across providers and app lifecycle.
 
+### Completion Notes - 5.2
+
+- Status: **Complete** (2026-08-25). Matrix run on the iOS preview build from
+  2026-08-24. All eleven cases behaved as expected — and one long-standing
+  recorded gap turned out not to exist.
+
+#### Results
+
+Run against `docs/DEVICE_QA_CHECKLIST.md` cases 1-11. Apple cancel, Hide My
+Email, second-login name preservation, sign-out/re-login, cold start, Google
+sign-in and cancel, password reset, and sign-out push-token cleanup all passed.
+
+**Case 3 passed, which was not the expectation.** Apple returns the user's name
+only on the *first* authorization ever, so an app that reads it on every login
+shows a blank name the second time. That was flagged as the most likely failure
+in the matrix. It held — the name persisted, meaning the profile is written once
+from the first authorization rather than re-read each time (which is what
+`fn_handle_new_user()` does, per the 1.x notes).
+
+#### The finding: gap G2 was never real
+
+Case 8 asked for confirmation of a known defect — "an account works immediately
+with an unverified address." **It does not.** A real sign-up demanded email
+verification and refused access until it was completed.
+
+The gap came from reading `/auth/v1/settings`, which reports
+`mailer_autoconfirm: true` — and still reports it today, while the flow plainly
+requires confirmation. That field reflects a GoTrue environment variable that
+does not track the hosted dashboard's "Confirm email" setting. It was never
+evidence about signup behaviour.
+
+`PRODUCTION_CONFIG.md` G2 is now marked resolved with the reasoning. The
+endpoint remains fine for "which providers are enabled" — that part matched
+reality — and unfit for confirmation policy.
+
+Worth naming the shape of the mistake rather than just the fact: a security gap
+sat on the books from 2026-08-19 to 2026-08-25 because it was inferred from a
+settings endpoint instead of from the product. **Six days of an open security
+item that did not exist.** The five-minute device check that closed it was
+available the whole time.
+
+#### Outstanding
+
+- **Case 10 (account collision) needs its specific outcome recorded.** The
+  checklist framed it as "document reality, it is not expected to pass," so
+  "as expected" is ambiguous for that row. There is no account-linking logic, so
+  signing up by email and then using Apple/Google with the same address either
+  reuses the account, creates a second one, or errors — and which one it is
+  decides whether anything needs building.
+- Android auth is untested (no hardware — open item D4).
+
 ### 5.3 Verify Camera, QR, Calendar, Deep Links
 
 - Issue: Some native features are implemented but need broader validation.
