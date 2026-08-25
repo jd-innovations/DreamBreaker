@@ -2956,6 +2956,28 @@ screen, so the custom scheme carries its route through a cold launch.
 - **19-26 — universal links.** Including 25 and 26, already known broken (see
   below); those only need confirming as *safe* failures.
 
+#### Finding: a check-in QR scanned with the system camera 404s
+
+The check-in QR encodes `https://pickleballapp.app/q/<registration_id>`
+(`apps/mobile/src/lib/qrPayload.ts`). That path is handled **only inside the
+app's own scanner**. It is not in the AASA path list, and there is no web route
+for it — `https://pickleballapp.app/q/test` returns a genuine 404 in production,
+verified 2026-08-25.
+
+So the intended flow works (director opens the in-app scanner, which classifies
+the payload directly), but the instinctive one does not: at an event, a person
+pointing their **phone camera** at a check-in QR gets a 404 page and the app
+never opens.
+
+Whether that matters depends on who is meant to scan. If check-in is always
+director-driven from inside the app, this is cosmetic. If a player might ever
+scan their own or a partner's code, it is a dead end at exactly the wrong
+moment. Either way it should be a decision rather than an accident.
+
+Cheapest fix if it is wanted: a `/q/[token]` page on web that says "open this in
+the app", plus `/q/*` added to the AASA paths so iOS hands it to the app when
+installed. Neither requires touching the scanner.
+
 #### Known broken before testing began
 
 Comparing the production AASA against the app's routes found two advertised

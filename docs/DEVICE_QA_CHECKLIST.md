@@ -171,9 +171,14 @@ The check-in QR encodes a plain URL: `https://pickleballapp.app/q/<registration_
 The **player** shows it (`tournament/<id>/check-in-qr`); the **director** scans
 it (`tournament/<id>/check-in-scan`).
 
-You need a second screen to display the QR, since a phone cannot scan itself —
-any online QR generator on a laptop, tablet, or a second phone. Paste the URL in,
-scan the result.
+**These strings are QR payloads, not links to open.** Typing one into a browser
+returns 404 — `/q/*` has no web route and is not an advertised universal link
+(confirmed in production 2026-08-25). That is expected and is not the test.
+
+To run the cases: paste the string into any online QR generator on a **second
+screen** (laptop, tablet, second phone — a phone cannot scan itself), then scan
+the generated image with the app's **director** scanner at
+`tournament/<id>/check-in-scan`.
 
 Two registrations already sit in exactly the right states:
 
