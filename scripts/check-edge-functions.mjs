@@ -64,18 +64,28 @@ if (!quiet) {
 // checking them together is several times faster than looping.
 //
 // shell:true on Windows because Node refuses to spawnSync a .cmd shim directly
-// (EINVAL) since the 18.20/20.12 argument-injection fix. Paths are generated
-// from readdir here, not from user input, and contain no spaces or shell
-// metacharacters — but they are quoted anyway rather than relying on that.
+// (EINVAL) since the 18.20/20.12 argument-injection fix.
+//
+// Passed as ONE command string rather than a command plus an args array:
+// combining an args array with shell:true triggers DEP0190 on every run, and a
+// deprecation warning printed by a checker is noise that teaches people to skim
+// its output. Paths come from readdir on a repo directory, not from user input,
+// and are quoted regardless.
 const isWindows = process.platform === "win32";
-const args = ["--yes", "deno@2", "check", ...entrypoints.map((p) => (isWindows ? `"${p}"` : p))];
+const quoted = entrypoints.map((p) => `"${p}"`).join(" ");
 
-const result = spawnSync("npx", args, {
-  cwd: ROOT,
-  stdio: quiet ? "pipe" : "inherit",
-  encoding: "utf8",
-  shell: isWindows,
-});
+const result = isWindows
+  ? spawnSync(`npx --yes deno@2 check ${quoted}`, {
+      cwd: ROOT,
+      stdio: quiet ? "pipe" : "inherit",
+      encoding: "utf8",
+      shell: true,
+    })
+  : spawnSync("npx", ["--yes", "deno@2", "check", ...entrypoints], {
+      cwd: ROOT,
+      stdio: quiet ? "pipe" : "inherit",
+      encoding: "utf8",
+    });
 
 if (result.error) {
   console.error(`Could not run deno: ${result.error.message}`);
