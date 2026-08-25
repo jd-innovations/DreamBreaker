@@ -2927,8 +2927,8 @@ case that just passed.
 
 ### Completion Notes - 5.3
 
-- Status: **INCOMPLETE.** 5 of 15 cases run (2026-08-25), all passing. Recorded
-  now so the results are not lost; this item is not closed.
+- Status: **INCOMPLETE.** 9 of 17 cases run (2026-08-25), all passing. Only the
+  universal-link cases (19-26) remain. Not closed.
 
 Run against `docs/DEVICE_QA_CHECKLIST.md` on the 2026-08-24 iOS preview build.
 
@@ -2941,6 +2941,8 @@ Run against `docs/DEVICE_QA_CHECKLIST.md` on the 2026-08-24 iOS preview build.
 | 28 — `pickleballapp://groups/<id>` cold start | **pass** — correct screen |
 | 17 — add to calendar (iOS) | **pass** — event added |
 | 18 — calendar permission denied | **pass** — cancelled without adding, no crash |
+| 15 — wrong tournament | **pass** — refused, correct reason |
+| 16 — duplicate check-in | **pass** — reports already checked in, **no double-record** |
 
 27 and 28 are worth more than they look. The common failure for a cold-start
 deep link is that the app opens but *drops the route*, landing on home — which
@@ -2949,9 +2951,11 @@ screen, so the custom scheme carries its route through a cold launch.
 
 #### Still to run
 
-- **15, 16 — wrong-tournament and duplicate check-in.** Scannable codes for both
-  now exist at https://claude.ai/code/artifact/66a651ea-0638-4fbb-b29d-283aa8ee3957
-  (display on a second screen; a phone cannot scan itself). These are the check-in **integrity**
+**Case 16 is the result that mattered.** It is the only case in either item that
+could have exposed a data-integrity fault rather than a UX one: if a second scan
+recorded a second check-in, attendance counts would drift silently at exactly
+the moment they are relied on. It does not — the scanner reports the existing
+check-in and writes nothing. These are the check-in **integrity**
   cases — 16 in particular is the one that decides whether a double scan can
   double-record — so they matter more than the four that have run.
 - **19-26 — universal links.** Including 25 and 26, already known broken (see

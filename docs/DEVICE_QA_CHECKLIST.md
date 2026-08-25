@@ -17,11 +17,8 @@ Its `EXPO_PUBLIC_APP_ENV` is **`internal`**, so feature flags are in internal
 mode — some surfaces hidden in production are visible here. Note it if a screen
 looks unexpected.
 
-> **Status 2026-08-25:** 5.2 complete (all 11 pass). 5.3 partial — 12, 13, 14,
-> 17, 18, 27, 28 pass; 15, 16, 19-26 outstanding.
->
-> Scannable codes for cases 15 and 16:
-> https://claude.ai/code/artifact/66a651ea-0638-4fbb-b29d-283aa8ee3957
+> **Status 2026-08-25:** 5.2 complete (all 11 pass). 5.3 — 9 of 17 run, all
+> passing (12-18, 27, 28). Only the universal links (19-26) are outstanding.
 
 **How to record:** write the result in the Result column — `pass`, `fail`, or a
 short note. Anything at all is better than nothing; a half-filled matrix is
@@ -62,8 +59,8 @@ and worth capturing a screenshot of. It is also the reason this row exists.
 | 12 | Permission denied | Deny camera when first asked | A clear explanation and a way to recover — **not** a blank screen or a crash | **pass** — CTA to allow camera, recoverable |
 | 13 | Permission granted | Allow, then scan | Scanner opens and reads | pass (implied: 14 required a working scanner) |
 | 14 | Invalid QR | Scan any unrelated QR (a website, a Wi-Fi code) | Rejected with a readable message, no crash | **pass** — "unsupported QR" |
-| 15 | Wrong tournament | Scan a valid check-in QR from a *different* tournament | Refused, and says why | _not yet run_ |
-| 16 | Duplicate check-in | Scan the same valid QR twice | Second scan says already checked in — **does not** double-record | _not yet run_ |
+| 15 | Wrong tournament | Scan a valid check-in QR from a *different* tournament | Refused, and says why | **pass** |
+| 16 | Duplicate check-in | Scan the same valid QR twice | Second scan says already checked in — **does not** double-record | **pass** — no double-record |
 
 ### Calendar
 
