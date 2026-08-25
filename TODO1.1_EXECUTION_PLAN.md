@@ -2607,10 +2607,36 @@ found the same way.
 A check that is red on arrival gets ignored, which is the failure mode this is
 meant to prevent, so starting green was a precondition rather than a nicety.
 
-**Unverified:** the `web` and `mobile` jobs are the only ones running `npm ci`
-and could not be exercised on a GitHub runner from here. If either is red on the
-first run, suspect the runner environment before the code — and note that
-`edge-functions` is independent of both.
+**First run (2026-08-25): three of four jobs passed; `web` failed, and it was a
+real repo defect rather than a runner quirk.**
+
+- `npm ci` failed on an **internally inconsistent `web/package-lock.json`**:
+  *"lock file's @emnapi/wasi-threads@1.2.2 does not satisfy
+  @emnapi/wasi-threads@1.2.3."* Nobody could clean-install the web app; Vercel
+  builds survived because its install path is more forgiving. Repaired with
+  `npm install --package-lock-only` — 48 insertions, 3 deletions, `package.json`
+  untouched, and every changed entry is an optional Tailwind-oxide WASM fallback
+  that linux-x64 never uses. `mobile`, which also runs `npm ci`, passed
+  throughout, which is what showed this was web-specific.
+- `npx eslint` then failed with **4 errors**. My note above claiming "2 warnings
+  and 0 errors" was wrong: I had linted three specific files, not the project.
+  The repo's own `npm run lint` was already red.
+  - Two were `scripts/check-env.js` being told `require()` is forbidden. That
+    file is deliberately CommonJS — it runs as `prebuild`, before any bundler
+    exists. Fixed with a scoped `eslint.config.mjs` override rather than by
+    changing the script.
+  - Two were `setState`-called-synchronously-in-effect in
+    `admin/email-preview/page.tsx`, pre-existing and unrelated to any of this
+    work. Suppressed with scoped `eslint-disable-next-line` directives carrying
+    the reason, **not** silently refactored: `vars` there is user-editable state
+    seeded from the template, so a naive conversion to the
+    adjust-state-during-render pattern re-seeds every render and discards
+    whatever the operator typed. See below.
+
+**Open debt (from the above):** `web/src/app/admin/email-preview/page.tsx` has
+two suppressed lint errors. The real fix needs a "seeded for which template"
+guard plus a test of the edit-then-switch-template path. Small, but it is a
+behaviour change to an admin tool and deserves its own change.
 
 ## Phase 4 - Observability, Analytics, and Support
 

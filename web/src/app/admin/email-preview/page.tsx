@@ -83,11 +83,19 @@ export default function EmailPreviewPage() {
   }, []);
 
   // Seed the variable inputs whenever the chosen template changes.
+  //
+  // TODO(lint): this should use React's adjust-state-during-render pattern
+  // rather than an effect. Deferred deliberately: `vars` is user-editable and
+  // seeded from the template, so a naive conversion re-seeds on every render
+  // and silently discards whatever the operator typed. Fixing it properly
+  // needs a "seeded for which template" guard and a test of the edit-then-
+  // switch-template path. Tracked in TODO1.1_EXECUTION_PLAN.md (2.4 follow-on).
   useEffect(() => {
     const t = templates.find((x) => x.key === selected);
     if (!t) return;
     const next: Record<string, string> = {};
     for (const v of t.variables ?? []) next[v] = SAMPLE[v] ?? `[${v}]`;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVars(next);
   }, [selected, templates]);
 
@@ -111,6 +119,10 @@ export default function EmailPreviewPage() {
     setResult(data as DryRunResult);
   }, [selected, vars, withShell, supabase]);
 
+  // TODO(lint): same rule. `render()` sets loading/error synchronously before
+  // awaiting, which the cascading-render rule flags. Untangling it means
+  // reworking how this page reports in-flight state; deferred with the above.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void render(); }, [render]);
 
   const current = templates.find((t) => t.key === selected);
