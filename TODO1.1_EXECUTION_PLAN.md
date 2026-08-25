@@ -2381,6 +2381,68 @@ yet.
 Until step 2 lands, the three live refunds stay at `submitted` and would show as
 `refund_stuck` after 24 hours.
 
+#### First production run (2026-08-25)
+
+The queue found real things on its first look, which is the point, but two of
+them were its own false positives.
+
+**Refunds backfilled.** All three live refunds sat at `submitted` because the
+settlement code did not exist when they were issued. Their `payments` rows were
+already `refunded` in full and all three `charge.refunded` events had processed,
+so nothing was owed — the audit field was simply stale. Resending the events was
+not an option: they are already in `stripe_webhook_events` with `processed_at`
+set, so a redelivery is deduped, and forcing it would mean deleting idempotency
+records. Backfilled instead with `completed_at` set to each event's **actual**
+`processed_at`, not `now()` — stamping the correction time would have baked in a
+two-hour lie about when the money moved. `reason` and the missing
+`policy_snapshot.actor_role` were deliberately **not** rewritten: those rows are
+the honest record of what the system knew, and `requested_by` still identifies
+the actor.
+
+**A false-positive class in `payment_is_fulfilled`.** Eight payments reported
+`succeeded_not_fulfilled`. Six were genuine — duplicate charges where the
+finalizer's duplicate guard correctly refused a second registration after the
+money was already captured, matching the six `duplicate_payment` rows exactly.
+
+The other two were wrong. Fulfilment for tournament entries is proven by
+`registrations.stripe_entry_intent_id`, and **the finalizer did not write that
+column until 2026-08-18** (first linked registration 09:37 UTC; last
+paid-but-unlinked 2026-08-15 02:46 — the cutover matches the date the
+`create-tournament-*` edge functions were created). Both registrations existed,
+were paid, and were simply unlinked.
+
+That was not cosmetic: `compute_registration_refund` keys on the same column, so
+**both registrations could not be refunded through the product at all** — the
+same failure that stranded a $10 refund on 2026-08-24, sitting unnoticed in
+production.
+
+Fixed in the data rather than by loosening the check. Both matches were
+unambiguous (one candidate payment each, registration inserted 0.082s and 0.098s
+after `confirmed_at`), and the backfill required asserting `request.jwt.claims`
+for the transaction because the C7 trigger blocks writes to that column from
+anything but the service role. A heuristic fallback inside
+`payment_is_fulfilled` was considered and rejected: guessing which of five
+identical $10 charges paid for a spot is worse than an unlinked row, since that
+link decides refund amounts. Documented as a known false positive in the
+runbook instead.
+
+Result: `succeeded_not_fulfilled` 8 -> 6, all genuine; refunds fully terminal;
+`webhook_unprocessed` 0.
+
+**Left open deliberately:**
+
+- The six duplicate charges ($40 + $240, test mode) are real detections. Nobody
+  is out of pocket; refunding them in Stripe would clear both kinds if the
+  tidiness is wanted.
+- Sixteen `stuck_pending`, including the three known pre-3.1 reservations. They
+  will never resolve and there is no dismiss control, which is why the sidebar
+  badge counts criticals only.
+- **For item 6.1:** four seed registrations on "Lakewood Ranch Classic"
+  (player ids `11111111-...-11110{1,2,3,4}`, identical creation timestamp) carry
+  `entry_fee_paid_cents = 7500` with **no payment row at all**. They never reach
+  this queue, which starts from payments — but fixtures claiming money that was
+  never taken are exactly the production fakery 6.1 covers.
+
 #### Also fixed: the refund reason default (audit integrity)
 
 Separate from 3.3, and a defect in the 3.1/refund foundation work.

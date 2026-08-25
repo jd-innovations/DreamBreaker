@@ -60,6 +60,25 @@ written. It reports unfulfilled when:
    `purpose_type` with no branch means the web deployment is behind the edge
    function that created the payment.
 
+**Known false positive: tournament entries created before 2026-08-18.**
+Fulfilment for `tournament_registration_entry` / `_balance` is proven by
+`registrations.stripe_entry_intent_id` matching the payment's intent. The
+finalizer did not write that column until 2026-08-18 (first linked registration
+09:37 UTC; last paid-but-unlinked 2026-08-15 02:46), so older registrations look
+unfulfilled even though they exist and were paid.
+
+The two affected rows in production were backfilled on 2026-08-25, so this
+should not recur. If you meet it again, **check before assuming a false
+positive**: find a registration for that tournament and player whose
+`entry_fee_paid_cents` equals the payment amount and which was created within a
+second or two of `confirmed_at`. If exactly one payment can be the match, link
+it. If several identical charges exist, leave it unlinked — guessing which
+charge paid for the spot is worse than an unlinked row, because the link is what
+`compute_registration_refund` uses to decide how much to refund.
+
+This matters beyond the queue: an unlinked registration **cannot be refunded
+through the product at all**, because that function finds no payment.
+
 **Resolve.**
 - *Missing finalizer:* deploy the web app so it has that branch, then replay
   (below). This is a deployment-ordering bug, not a data bug — fix the deploy
