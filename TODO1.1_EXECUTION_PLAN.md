@@ -1952,6 +1952,92 @@ so treat it as unconfirmed and check the dashboard before deploying.
 - Done when:
   - A new deploy can be configured from the document without guessing.
 
+### Completion Notes - 2.4
+
+- Status: **Complete** (2026-08-24). `PRODUCTION_CONFIG.md` at the repo root.
+  Seven gaps found and tracked; **G1 needs a decision before public launch.**
+
+#### Method
+
+Every entry was derived from something authoritative, not from recall:
+
+| Source | Gave |
+| --- | --- |
+| `grep process.env` / `Deno.env.get` across `web`, `apps/mobile`, `supabase/functions` | the true consumer set, per file |
+| `npx supabase secrets list` | the six app secrets actually set, plus seven platform-injected ones |
+| `npx eas env:list {development,preview,production}` | mobile vars per environment — this is what found G1 |
+| `curl /auth/v1/settings` (anon key) | which auth providers are live on the hosted project |
+| `app.json` / `app.config.js` / `eas.json` | bundle id, scheme, associated domains, profile→env mapping |
+
+No secret values are in the document. `secrets list` prints digests; the EAS
+values were read to determine key *mode* only.
+
+#### Structure
+
+Organised by **config plane**, in the order someone configuring a deploy works
+through them — Vercel, Supabase secrets, Supabase Dashboard, EAS, third-party
+consoles — rather than alphabetically by variable. Each row carries consumer,
+environments, secret-or-not, owner and a verification step. A closing section
+lists every verification command in order; all five were exercised.
+
+Owners are **roles** (Platform / Payments / Auth / Comms / Mobile), not names,
+with an explicit note that they must become named people before anyone else
+gets deploy access. Inventing names would have been worse than admitting there
+is one maintainer.
+
+#### The finding that matters: G1
+
+`EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` is a **`pk_test_` key in all three EAS
+environments, including `production`**. Local web is `sk_test_`.
+
+That is defensible for a closed beta and possibly deliberate. The danger is the
+**mismatch**: if Vercel production is ever switched to a live secret key while
+the mobile production profile still ships `pk_test_`, every mobile payment
+breaks at once — and the mobile side cannot be hotfixed, it needs a new build.
+Both planes have to change in the same window.
+
+It also reframes language elsewhere in this plan. 3.1, 3.2 and 3.3 describe
+payments and refunds as "live money"; unless Vercel production holds a live key
+(not verifiable from this session — see G3), those were **test-mode
+transactions**. The engineering conclusions are unaffected — test mode exercises
+the identical webhook, refund and reconciliation paths — but the wording
+overstates what was proven.
+
+#### Other gaps tracked
+
+| ID | Gap | Owner |
+| --- | --- | --- |
+| G2 | `mailer_autoconfirm: true` — email signup needs no confirmation (known since 2026-08-19) | Auth |
+| G3 | Vercel env vars not enumerable from here; §1 is derived from consuming code, unconfirmed against the dashboard | Platform |
+| G4 | Apple provider's Authorized Client IDs may still hold the pre-rebrand bundle id (`com.dreambreakerpb.app` vs current `app.pickleballapp`) | Auth |
+| G5 | No analytics or crash reporting exists yet (4.1, 4.2) | Platform |
+| G6 | Android push / Play Console unverified, blocked on hardware (D4) | Mobile |
+| G7 | `web/.env.local.example` listed 4 of the 8 variables the app reads — fixed | Platform |
+
+#### Also fixed
+
+`web/.env.local.example` now lists all eight variables with the reason each
+exists, including the two that most obviously bite: `STRIPE_WEBHOOK_SECRET`
+(without it the webhook route rejects every delivery) and `NEXT_PUBLIC_APP_URL`
+(unset, it defaults to the production host, which is wrong locally). It also
+documents that `DEV_TOOLS_SECRET` must stay unset in production.
+
+#### Naming correction
+
+The Anthropic key is `CLAUDE_API`, not `ANTHROPIC_API_KEY`. It is set and
+working. Earlier notes recorded it as missing under the wrong name.
+
+#### Verification against the item
+
+- *Every runtime integration has a listed config owner* — ✅ all six services and
+  all five planes.
+- *Missing values are tracked* — ✅ seven gaps, each with an owner and an action.
+- *A new deploy can be configured from the document without guessing* — ✅ for
+  Supabase, EAS and the repo-side config, all read from live state. **Partially**
+  for Vercel: the variable list is complete (it is what the code reads) but was
+  not confirmed against the dashboard. G3 records that honestly rather than
+  implying otherwise.
+
 ## Phase 3 - Payments and Money Safety
 
 Goal: no user can lose money or receive false purchase state.
