@@ -2927,8 +2927,9 @@ case that just passed.
 
 ### Completion Notes - 5.3
 
-- Status: **INCOMPLETE.** 9 of 17 cases run (2026-08-25), all passing. Only the
-  universal-link cases (19-26) remain. Not closed.
+- Status: **All 17 cases run (2026-08-25).** 15 pass, 1 skipped, **2 failed**
+  and are fixed in the repo pending a promote, 1 needs a re-test. Not closed
+  until 25/26 are re-verified against the fix and 20 is resolved.
 
 Run against `docs/DEVICE_QA_CHECKLIST.md` on the 2026-08-24 iOS preview build.
 
@@ -2949,6 +2950,45 @@ deep link is that the app opens but *drops the route*, landing on home — which
 reads as success unless you are watching for it. Both landed on the right
 screen, so the custom scheme carries its route through a cold launch.
 
+#### The two known-broken links did NOT fail safely
+
+Cases 25 and 26 were expected to fail; the question was only *how*. The answer
+is worse than assumed: iOS claimed the link, opened the app, found no matching
+route, and left the user on **a blank branded screen with no way back**. A
+force-quit was the only exit.
+
+That reclassifies this from cleanup to a real defect. A shared booking or coach
+link — the kind a person sends a friend — bricks the app for whoever taps it,
+and there is nothing on screen to suggest what to do.
+
+**Fixed** by removing `/booking/*` and `/coach/offers/*` from the AASA path list
+(`web/src/app/.well-known/apple-app-site-association/route.ts`). iOS then never
+claims those URLs and they open in Safari, where both have working pages. That
+is a strictly better outcome than the app opening to nothing, and it is a
+smaller change than adding two mobile routes and their data fetching.
+
+Ships on the next production promote. **Re-run 25 and 26 afterwards** — iOS
+caches the AASA, so allow for a reinstall or a wait before re-testing.
+
+#### Case 20 needs a re-test
+
+`/conversation/<id>` reported *"This conversation isn't available."* The admin
+account **is** a participant in that conversation, so the message is wrong — but
+the phone had been through the whole 5.2 auth matrix, including sign-ups with
+fresh emails, so it may well have been signed in as a different account at the
+time, which would make the message correct.
+
+Two outcomes, and they are far apart: correct access control, or a deep link
+that cannot open a conversation the user is actually in. Re-test signed in as
+`Jesus Dominguez` before concluding anything.
+
+#### Case 22 — an earlier claim of mine was wrong
+
+I flagged `/community/*` as a probable third AASA mismatch on the grounds that
+there is no `communities` table. There is no such table, but the route reads
+`play_participants_public` — a "community" here is a **play event**. The link
+works. No mismatch.
+
 #### Still to run
 
 **Case 16 is the result that mattered.** It is the only case in either item that
@@ -2958,8 +2998,9 @@ the moment they are relied on. It does not — the scanner reports the existing
 check-in and writes nothing. These are the check-in **integrity**
   cases — 16 in particular is the one that decides whether a double scan can
   double-record — so they matter more than the four that have run.
-- **19-26 — universal links.** Including 25 and 26, already known broken (see
-  below); those only need confirming as *safe* failures.
+- **25, 26 — re-test after the AASA fix promotes.**
+- **20 — re-test as the admin account.**
+- **24 — `/claim/<token>`** skipped deliberately; tokens are credentials.
 
 #### Finding: a check-in QR scanned with the system camera 404s
 

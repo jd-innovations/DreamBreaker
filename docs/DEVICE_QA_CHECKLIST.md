@@ -17,8 +17,9 @@ Its `EXPO_PUBLIC_APP_ENV` is **`internal`**, so feature flags are in internal
 mode — some surfaces hidden in production are visible here. Note it if a screen
 looks unexpected.
 
-> **Status 2026-08-25:** 5.2 complete (all 11 pass). 5.3 — 9 of 17 run, all
-> passing (12-18, 27, 28). Only the universal links (19-26) are outstanding.
+> **Status 2026-08-25:** 5.2 complete. 5.3 — all 17 run. 15 pass, 1 skipped,
+> **2 fail (25, 26)** and 1 needs a re-test (20). The AASA fix for 25/26 is
+> committed and ships on the next promote.
 
 **How to record:** write the result in the Result column — `pass`, `fail`, or a
 short note. Anything at all is better than nothing; a half-filled matrix is
@@ -80,14 +81,14 @@ Universal links (`https://pickleballapp.app/...`):
 
 | # | Link | Expected | Result |
 | --- | --- | --- | --- |
-| 19 | `/tournament/<id>` | Opens the tournament | _not yet run_ |
-| 20 | `/conversation/<id>` | Opens that conversation | _not yet run_ |
-| 21 | `/groups/<id>` | Opens the group | _not yet run_ |
-| 22 | `/community/<id>` | Opens the community | _not yet run_ |
-| 23 | `/marketplace/<id>` | Opens the listing | _not yet run_ |
-| 24 | `/claim/<token>` | Opens the claim flow | _not yet run_ |
-| 25 | **`/booking/<id>`** | ⚠️ **Expected to fail** — see below | _not yet run_ |
-| 26 | **`/coach/offers/<id>`** | ⚠️ **Expected to fail** — see below | _not yet run_ |
+| 19 | `/tournament/<id>` | Opens the tournament | **pass** |
+| 20 | `/conversation/<id>` | Opens that conversation | ⚠️ "This conversation isn't available" — needs re-test, see note |
+| 21 | `/groups/<id>` | Opens the group | **pass** |
+| 22 | `/community/<id>` | Opens the community | **pass** |
+| 23 | `/marketplace/<id>` | Opens the listing | **pass** |
+| 24 | `/claim/<token>` | Opens the claim flow | skipped (token is a credential) |
+| 25 | **`/booking/<id>`** | ⚠️ **Expected to fail** — see below | ❌ **FAIL — blank branded screen, cannot navigate away** |
+| 26 | **`/coach/offers/<id>`** | ⚠️ **Expected to fail** — see below | ❌ **FAIL — blank branded screen, cannot navigate away** |
 
 Custom scheme (`pickleballapp://`), same routes, cold start:
 
