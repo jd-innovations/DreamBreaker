@@ -157,9 +157,9 @@ Goal: make the codebase measurable before changing behavior.
     list against `APP_ENV_VALUES` in `featureFlags.ts`. This catches the problem
     in the repo, where the information actually exists.
 
-    Residual: the check is not yet wired into CI or a prebuild hook, so it only
-    protects when someone runs it. Adding it to the release checklist or a CI
-    job is the remaining step.
+    Residual **closed 2026-08-24**: the check now runs in CI, in the
+    `repo-scripts` job of `.github/workflows/checks.yml`. It no longer depends
+    on someone remembering.
   - Dead-end "Coming Soon" alerts remain in included screens — inventoried in
     `BETA_SCOPE.md` and owned by item 6.2.
   - Facility pricing is not audited: if most facilities charge, the booking loop is
@@ -2497,8 +2497,8 @@ own change — the casts may be lying about the row shape. Not touched here.
 
 #### Not done
 
-- `deno check` is still not wired into any script or CI step, so this can
-  regress silently exactly as it did before. Worth adding alongside 6.x.
+- ~~`deno check` is still not wired into any script or CI step.~~ **Closed the
+  same day** — see "Follow-on" below.
 - `@stripe/stripe-react-native` (0.50.3) was not touched. It carries no API
   version pin — the publishable key and the server's PaymentIntent decide
   behaviour — and the item explicitly says not to combine this with PaymentSheet
@@ -2514,6 +2514,41 @@ npx supabase functions deploy cancel-registration create-booking-payment-intent 
 
 Until then the deployed functions still run stripe@18. That is the status quo,
 not a regression — but the fix is not live until they are redeployed.
+
+#### Follow-on: the check now runs (2026-08-24)
+
+The point of 3.4 was never the version number — it was that a real defect in
+payment code lived in the repo for weeks because nothing type-checked the edge
+functions. Fixing the version without fixing that would leave the next one to be
+found the same way.
+
+- **`scripts/check-edge-functions.mjs`** — runs `deno check` over every
+  function with an `index.ts`, in one invocation (shared module graph, so far
+  faster than looping). Exits non-zero if the directory is missing or empty,
+  rather than passing vacuously. Verified in both directions: green on a clean
+  tree, and red on an injected `TS2322`.
+- Deliberately **not** a `supabase/functions/deno.json` task. A config file in
+  that directory is read by the Supabase CLI at deploy time, and dev tooling has
+  no business in the deploy path of live payment functions.
+- **`.github/workflows/checks.yml`** — the repo's first CI. Four jobs:
+  `edge-functions` (installs nothing; `npx deno@2` only, so runner npm problems
+  cannot break it), `repo-scripts` (`validate-eas-env.js` and `check-env.js
+  --self-test`, both dependency-free), `web` (tsc + eslint), `mobile` (tsc).
+  Everything passes locally on a clean tree.
+- **`waitlist-sweeper` fixed** so the check starts green. Its four `TS2352`
+  errors cast many-to-one PostgREST embeds from array to object; the runtime
+  values really are objects, and supabase-js guesses array only because this
+  Deno client is created without generated `Database` types. Casting via
+  `unknown` — what the compiler prescribes — asserts over a wrong inference and
+  changes nothing at runtime.
+
+A check that is red on arrival gets ignored, which is the failure mode this is
+meant to prevent, so starting green was a precondition rather than a nicety.
+
+**Unverified:** the `web` and `mobile` jobs are the only ones running `npm ci`
+and could not be exercised on a GitHub runner from here. If either is red on the
+first run, suspect the runner environment before the code — and note that
+`edge-functions` is independent of both.
 
 ## Phase 4 - Observability, Analytics, and Support
 

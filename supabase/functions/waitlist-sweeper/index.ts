@@ -136,7 +136,14 @@ async function sweepExpiredHolds() {
 
   const now = Date.now();
   for (const reg of expiredHolds) {
-    const t = reg.tournaments as { name: string; event_date: string; hold_cutoff_days: number } | null;
+    // PostgREST returns a single object for these many-to-one embeds
+    // (profiles!player_id, tournaments!tournament_id), which is what this code
+    // reads. supabase-js's select-string inference guesses an array anyway,
+    // because this Deno client is created without generated Database types and
+    // so has no schema to tell it the cardinality. The double cast is what the
+    // compiler itself prescribes for that case -- it asserts over a wrong
+    // inference, it does not reshape anything at runtime.
+    const t = reg.tournaments as unknown as { name: string; event_date: string; hold_cutoff_days: number } | null;
     if (!t) continue;
 
     const cutoff = new Date(t.event_date);
@@ -150,7 +157,7 @@ async function sweepExpiredHolds() {
       .update({ status: "expired_hold", hold_expired_at: new Date().toISOString() })
       .eq("id", reg.id);
 
-    const profile = reg.profiles as { full_name: string; email: string } | null;
+    const profile = reg.profiles as unknown as { full_name: string; email: string } | null;
 
     // Notify the player whose hold expired
     await notify({
@@ -194,8 +201,8 @@ async function sweepExpiredWaitlistOffers() {
       .update({ status: "withdrawn", waitlist_offer_expires_at: null })
       .eq("id", reg.id);
 
-    const profile = reg.profiles as { full_name: string; email: string } | null;
-    const t = reg.tournaments as { name: string } | null;
+    const profile = reg.profiles as unknown as { full_name: string; email: string } | null;
+    const t = reg.tournaments as unknown as { name: string } | null;
 
     await notify({
       userId: reg.player_id,
