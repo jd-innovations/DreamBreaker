@@ -2745,6 +2745,40 @@ as an alternative to `error.js`, but does not replace the global boundary.
 latest 8.x. **That file should be reconciled** — it will send future work at the
 wrong docs.
 
+#### Root cause of the silent failure (2026-08-25)
+
+Web crash reporting was wired, deployed, and reporting nothing. Zero events ever
+reached the project.
+
+**Cause: `instrumentation.ts` sat at the project root while this project uses a
+`src` directory.** Next loads `src/instrumentation.ts` in that case and silently
+ignores the root file — no build warning, no runtime error. So
+`sentry.server.config.ts` was never imported and `Sentry.init` never ran.
+
+What made it expensive to find was the verification endpoint. It returned
+`ok: true` with a real event id, the right environment and the right release —
+because `captureException()` mints and returns an id whether or not the SDK
+exists. An entirely inert SDK was indistinguishable from a working one.
+
+What actually settled it: posting a synthetic envelope directly to the DSN
+embedded in the production bundle. HTTP 200, and the event appeared. That
+isolated the fault to the app rather than the DSN, the project, or ingestion,
+and pointed straight at init.
+
+The endpoint now reports `sdkInitialised` (from `getClient()` — undefined means
+init never ran) and whether the flush completed. Confirmed working:
+
+```
+sdkInitialised: true   flushed: true   sdkEnabled: true
+sdkEnvironment: production   sdkRelease === vercelSha
+```
+
+**Lesson worth more than the fix: a health check that cannot fail is not a
+health check.** The original returned `ok: true` unconditionally. Every field it
+reported was real and every one was irrelevant.
+
+Recorded in `web/AGENTS.md` so the file-location trap is not rediscovered.
+
 #### How to verify (the remaining work)
 
 1. **Web:** promote a deployment, then as an admin hit

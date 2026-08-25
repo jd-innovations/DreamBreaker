@@ -39,3 +39,23 @@ Also new in 16 and absent from older training data: `unstable_catchError`
 alternative to the `error.js` convention. It does **not** replace
 `global-error.js`, which still exists and still must render its own
 `<html>`/`<body>`.
+
+## Instrumentation files must be in `src/`, not the project root
+
+This project has a `src` directory, so `src/instrumentation.ts` and
+`src/instrumentation-client.ts` are the only locations Next loads. At the
+project root they are **silently ignored** — no warning at build, no error at
+runtime, nothing in the logs.
+
+The docs say "place the file in the root of your application **or** inside a
+`src` folder if using one", which reads as either/or. It is not: with a `src`
+folder, it is `src`.
+
+Cost of learning that, 2026-08-25: Sentry's server SDK never initialised. The
+DSN was correct, ingestion was verified working by posting an envelope straight
+to it, and the verification endpoint reported success — because
+`Sentry.captureException()` mints and returns an event id even when the SDK was
+never started. Zero events reached the project while everything looked healthy.
+
+**If something registered through instrumentation appears not to run, check the
+file location before anything else.**
