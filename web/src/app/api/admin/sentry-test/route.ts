@@ -42,15 +42,37 @@ export async function GET(request: Request) {
   // Captured rather than thrown, so the caller gets a readable confirmation
   // instead of a 500 page and has the event id to search for in Sentry.
   if (kind === "capture") {
+    // Report what the SDK is ACTUALLY doing, not what we hoped.
+    //
+    // The first version of this route returned `ok: true` and an event id and
+    // nothing else, which made it useless: captureException() mints an id and
+    // returns it even when Sentry was never initialised, so a completely inert
+    // SDK produced a response indistinguishable from a working one. That cost
+    // an afternoon on 2026-08-25 — the route looked healthy while zero events
+    // had ever reached the project.
+    //
+    // getClient() is the honest signal: undefined means init never ran.
+    const client = Sentry.getClient();
+    const options = client?.getOptions();
+
     const eventId = Sentry.captureException(
       new Error("Sentry verification: captured server-side event (4.1)"),
     );
-    await Sentry.flush(2000);
+    const flushed = await Sentry.flush(2000);
+
     return NextResponse.json({
-      ok: true,
+      // The only field that means anything. False = nothing was transmitted,
+      // whatever the event id says.
+      sdkInitialised: Boolean(client),
+      // False means the flush timed out: the event was queued and not delivered.
+      flushed,
       eventId,
-      environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
-      release: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
+      dsnConfigured: Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN),
+      sdkEnabled: options?.enabled ?? null,
+      sdkEnvironment: options?.environment ?? null,
+      sdkRelease: options?.release ?? null,
+      vercelEnv: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
+      vercelSha: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
     });
   }
 
