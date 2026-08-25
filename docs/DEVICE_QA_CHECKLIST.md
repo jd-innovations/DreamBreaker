@@ -150,3 +150,97 @@ Small dashboard chores, no desktop needed:
   Apple only works if the Supabase Apple provider's Authorized Client IDs
   contains the current bundle id `app.pickleballapp`, so a successful Apple
   login proves it.
+
+---
+
+## Ready-to-use test data (added 2026-08-25)
+
+Real IDs from production, so nothing below needs a placeholder filled in.
+
+### Tournaments
+
+| Name | ID | Event date |
+| --- | --- | --- |
+| Caledar Tournament Test | `d5b7e3c1-0640-4de6-837e-f9c8beba5a11` | 2026-12-14 |
+| Test payments | `57ee6e81-32b3-4543-b960-bbc7a23b8bef` | 2026-11-13 |
+| Test Small ❤️ | `598c8dcb-bd08-42e8-988f-bb77305cd438` | 2026-10-16 |
+
+### Cases 15 and 16 — the check-in integrity pair
+
+The check-in QR encodes a plain URL: `https://pickleballapp.app/q/<registration_id>`.
+The **player** shows it (`tournament/<id>/check-in-qr`); the **director** scans
+it (`tournament/<id>/check-in-scan`).
+
+You need a second screen to display the QR, since a phone cannot scan itself —
+any online QR generator on a laptop, tablet, or a second phone. Paste the URL in,
+scan the result.
+
+Two registrations already sit in exactly the right states:
+
+| Registration | Belongs to | State | Use for |
+| --- | --- | --- | --- |
+| `129415aa-d9a9-4e69-abc0-4f3165b63099` | Caledar Tournament Test | **already `checked_in`** | case 16 |
+| `ed036dc5-5b9d-40cb-ad2d-926a5ce78260` | Test payments | `registered` | case 15 |
+
+**Case 15 — wrong tournament.** Open the scanner inside **Caledar Tournament
+Test**, then scan:
+
+```
+https://pickleballapp.app/q/ed036dc5-5b9d-40cb-ad2d-926a5ce78260
+```
+
+Expected: *"Wrong Tournament — This registration belongs to a different
+tournament."* Changes nothing, so it is safe to run first.
+
+**Case 16 — duplicate check-in.** Open the scanner inside **Caledar Tournament
+Test**, then scan:
+
+```
+https://pickleballapp.app/q/129415aa-d9a9-4e69-abc0-4f3165b63099
+```
+
+Expected: *"Already checked in"*, with the player name and original time — and
+**no second check-in recorded**. That registration is already `checked_in`, so
+this is the duplicate path on the first scan.
+
+⚠️ **Do not** scan the `ed036dc5` QR while inside *Test payments* unless you
+intend to actually check that player in. That is the happy path, and it writes
+to production.
+
+### Cases 19–26 — universal links
+
+Message these to yourself and tap them after force-quitting the app.
+
+| # | Link |
+| --- | --- |
+| 19 | `https://pickleballapp.app/tournament/d5b7e3c1-0640-4de6-837e-f9c8beba5a11` |
+| 21 | `https://pickleballapp.app/groups/d45e2506-42fa-430a-bc51-340de37ec8af` |
+| 23 | `https://pickleballapp.app/marketplace/65e93c4a-5d2c-4bf8-b25d-c61f1aaf60c1` |
+| 25 | `https://pickleballapp.app/booking/b8b95b21-f168-4746-af37-ac3cf90002a5` ⚠️ known broken |
+| 26 | `https://pickleballapp.app/coach/offers/33333333-3333-3333-3333-333333330001` ⚠️ known broken |
+
+**Case 20** (`/conversation/<id>`) needs a conversation you are in — take the id
+from the app's own URL bar equivalent, or skip it; case 21 covers the same
+routing mechanism.
+
+**Case 22** (`/community/<id>`): there is **no `communities` table** in the
+database — the mobile `community/[id]` route appears to read groups. Treat this
+as a third possible AASA mismatch and record whatever happens.
+
+**Case 24** (`/claim/<token>`): needs a live claim token. Skipped deliberately —
+tokens are credentials and should not be written down here. Test it only if a
+real claim link is to hand.
+
+### Cases 17 and 18 — calendar
+
+Open **Caledar Tournament Test** (`d5b7e3c1…`, dated 2026-12-14) and use add-to-
+calendar. Run 18 first if you want to test the denial path, since iOS only
+prompts once — after granting, you must revoke in Settings → Privacy to see the
+prompt again.
+
+### An observation worth recording
+
+`/q/*` — the check-in QR path — is **not** in the AASA path list. So a phone's
+system camera scanning a check-in QR opens the website, not the app. That is
+probably intended (the director scans in-app, where the payload is handled
+directly), but it is worth a deliberate answer rather than an accident.
