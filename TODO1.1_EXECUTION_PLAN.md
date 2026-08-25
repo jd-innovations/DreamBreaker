@@ -2610,14 +2610,31 @@ meant to prevent, so starting green was a precondition rather than a nicety.
 **First run (2026-08-25): three of four jobs passed; `web` failed, and it was a
 real repo defect rather than a runner quirk.**
 
-- `npm ci` failed on an **internally inconsistent `web/package-lock.json`**:
-  *"lock file's @emnapi/wasi-threads@1.2.2 does not satisfy
-  @emnapi/wasi-threads@1.2.3."* Nobody could clean-install the web app; Vercel
-  builds survived because its install path is more forgiving. Repaired with
-  `npm install --package-lock-only` — 48 insertions, 3 deletions, `package.json`
-  untouched, and every changed entry is an optional Tailwind-oxide WASM fallback
-  that linux-x64 never uses. `mobile`, which also runs `npm ci`, passed
-  throughout, which is what showed this was web-specific.
+- `npm ci` failed on `web`. It took three attempts to get right, and the first
+  two diagnoses were wrong — recorded here because the wrong turns are the
+  useful part.
+  1. **"The lockfile is internally inconsistent."** Partly true —
+     `@emnapi/wasi-threads@1.2.2` did not satisfy a `1.2.3` requirement, and
+     `npm install --package-lock-only` repaired that. Kept, because it was a
+     genuine defect. **But it did not fix CI.**
+  2. **"Node 22 ships npm 10, Vercel uses Node 24."** Also true, and web is now
+     pinned to 24 to match Vercel's `nodeVersion` — testing a toolchain nobody
+     ships was its own bug. **Still did not fix CI.**
+  3. **The actual cause:** `npm ci` cannot install this tree on *any* npm major.
+     Verified locally across npm 10 and npm 11 against the committed lockfile, a
+     `--package-lock-only` regeneration, and a full `npm install` regeneration —
+     all six combinations fail identically on `@emnapi/runtime` and
+     `@emnapi/wasi-threads`. Those are nested `optionalDependencies` of
+     `@tailwindcss/oxide-wasm32-wasi`, Tailwind's WASM fallback, which a
+     linux-x64 runner never executes. It is an upstream npm/Tailwind
+     interaction, not fixable from this repo's lockfile. The job now uses
+     `npm install`, which resolves cleanly on both majors.
+
+  The tradeoff is real and stated in the workflow: the `web` job is no longer
+  lockfile-strict. Accepted because it exists to run tsc and eslint, and
+  Vercel's build does not use `npm ci` either — so this installs closer to how
+  production installs, not further from it. `mobile` still uses `npm ci` and
+  passes; only web's tree has the problem.
 - `npx eslint` then failed with **4 errors**. My note above claiming "2 warnings
   and 0 errors" was wrong: I had linted three specific files, not the project.
   The repo's own `npm run lint` was already red.
