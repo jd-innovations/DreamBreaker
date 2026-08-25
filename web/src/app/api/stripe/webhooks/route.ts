@@ -141,6 +141,33 @@ async function handlePaymentEvent(service: ServiceClient, event: Stripe.Event) {
       .from("payments")
       .update({ refunded_amount_cents: refundedAmount, status })
       .eq("id", payment.id);
+
+    // Settle the refunds row too. Nothing else ever did: cancel-registration
+    // leaves it at 'submitted' after the Stripe call returns, and this handler
+    // used to update only payments — so every refund the product has ever
+    // issued sat at 'submitted' permanently, indistinguishable from one Stripe
+    // never acknowledged. The reconciliation queue's `refund_stuck` check reads
+    // exactly that, and without this it would report every healthy refund as
+    // broken.
+    //
+    // Scoped to non-terminal rows so a redelivered charge.refunded cannot
+    // resurrect a refund someone marked failed or canceled by hand, and keyed
+    // on the payment rather than the Stripe refund id because a refund issued
+    // from the Stripe dashboard has no row here to match on.
+    const { error: settleError } = await service
+      .from("refunds")
+      .update({ status: "succeeded", completed_at: new Date().toISOString() })
+      .eq("payment_id", payment.id)
+      .in("status", ["pending", "submitted"]);
+
+    if (settleError) {
+      // The money is back — only the audit row is behind. Not worth a 500 and
+      // a redelivery, but it must not vanish: the queue will surface the row
+      // as refund_stuck until someone closes it.
+      console.error(
+        `[stripe webhook] could not settle refunds row for payment ${payment.id} :: ${settleError.message}`,
+      );
+    }
     return;
   }
 

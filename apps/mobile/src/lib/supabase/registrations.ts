@@ -321,8 +321,12 @@ export async function cancelRegistration(id: string): Promise<CancelRegistration
     cancelled: false, refundStatus: 'none', refundedCents: 0, nonRefundableCents: 0, error,
   });
 
+  // No reason sent. This used to pass a hardcoded 'Cancelled by player' on
+  // every call including the director workspace's, so the refunds audit row
+  // recorded a director's cancellation as the player's own. Who cancelled is
+  // now derived server-side from the rule that authorised the call.
   const { data, error } = await supabase.functions.invoke('cancel-registration', {
-    body: { registrationIds: [id], reason: 'Cancelled by player' },
+    body: { registrationIds: [id] },
   });
 
   if (error) return failed('request_failed');

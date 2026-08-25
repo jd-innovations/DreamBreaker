@@ -1317,7 +1317,11 @@ export default function DashboardPage() {
                   // forbids a browser writing to refunds or promoting anyone.
                   const { data: result, error: fnError } = await supabase.functions.invoke(
                     "cancel-registration",
-                    { body: { registrationIds: [cancelTarget.registration_id], reason: "Cancelled by player" } },
+                    // No reason sent: the audit row's "cancelled by" is derived
+                    // server-side from who authorised the call. This used to
+                    // pass a hardcoded "Cancelled by player", which the
+                    // director-side caller sent too.
+                    { body: { registrationIds: [cancelTarget.registration_id] } },
                   );
                   setCancelConfirming(false);
 

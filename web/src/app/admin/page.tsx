@@ -20,6 +20,7 @@ import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
 import { NotificationBell } from "@/components/notifications/bell";
 import { TicketPanel } from "@/components/support/ticket-panel";
+import { PaymentReconciliation, type ReconciliationItem } from "@/components/admin/payment-reconciliation";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -192,7 +193,7 @@ function RejectModal({ tournamentName, onConfirm, onClose }: { tournamentName: s
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type NavSection = "dashboard" | "approvals" | "directors" | "users" | "tournaments" | "finance" | "comms" | "messages" | "email_templates" | "settings" | "reports" | "support_tickets";
+type NavSection = "dashboard" | "approvals" | "directors" | "users" | "tournaments" | "finance" | "reconciliation" | "comms" | "messages" | "email_templates" | "settings" | "reports" | "support_tickets";
 
 interface UserReport {
   id: string;
@@ -255,6 +256,8 @@ export default function AdminPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [reports, setReports] = useState<UserReport[]>([]);
   const [actioningReport, setActioningReport] = useState<string | null>(null);
+  const [reconciliation, setReconciliation] = useState<ReconciliationItem[]>([]);
+  const [reconciliationLoading, setReconciliationLoading] = useState(false);
   const [openTicketCount, setOpenTicketCount] = useState(0);
 
   // Comms
@@ -265,6 +268,31 @@ export default function AdminPage() {
   const [composeBody, setComposeBody] = useState("");
   const [showEmailList, setShowEmailList] = useState(false);
   const [sendingComms, setSendingComms] = useState(false);
+
+  // Its own loader, not folded into load(): this is the one panel an operator
+  // refreshes repeatedly while working an incident, and re-running the entire
+  // admin bootstrap (every profile, every tournament, every report) to see
+  // whether one payment cleared would be absurd.
+  const loadReconciliation = useCallback(async () => {
+    setReconciliationLoading(true);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (createClient() as any).rpc("admin_payment_reconciliation", {
+        p_stuck_minutes: 30,
+        p_limit: 200,
+      });
+      if (error) {
+        // Silence here would read as "nothing is wrong", which is the single
+        // most expensive thing this panel could get wrong.
+        toast.error("Could not load the reconciliation queue.");
+        console.error(`[admin] admin_payment_reconciliation failed :: ${error.message}`);
+        return;
+      }
+      setReconciliation((data ?? []) as ReconciliationItem[]);
+    } finally {
+      setReconciliationLoading(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     // `loading` initializes to true; the spinner shows until this resolves.
@@ -385,10 +413,15 @@ export default function AdminPage() {
         .select("id", { count: "exact", head: true })
         .in("status", ["open", "in_progress"]);
       setOpenTicketCount(ticketCount ?? 0);
+
+      // Not awaited: the badge should appear as soon as it can, but a slow
+      // reconciliation scan must not hold the whole admin portal on its
+      // spinner.
+      void loadReconciliation();
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, loadReconciliation]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -667,6 +700,7 @@ export default function AdminPage() {
 
   const pendingTournaments = tournaments.filter((t) => t.status === "pending_approval");
   const pendingDirectors = profiles.filter((p) => p.director_status === "pending");
+  const reconciliationCritical = reconciliation.filter((r) => r.severity === "critical").length;
   const directors = profiles.filter((p) => ["director", "player_director"].includes(p.role));
   const totalRevenue = tournaments.reduce((s, t) => s + (t.spots_filled * t.entry_fee_cents), 0);
   const platformRevenue = Math.round(totalRevenue * 0.05);
@@ -724,6 +758,20 @@ export default function AdminPage() {
             {badge > 0 && <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === id ? "bg-white/20 text-white" : "bg-amber-400/20 text-amber-400"}`}>{badge}</span>}
           </button>
         ))}
+
+        <button onClick={() => { setNavSection("reconciliation"); setMobileSidebarOpen(false); }}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "reconciliation" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
+          <CurrencyDollar size={16} weight={navSection === "reconciliation" ? "fill" : "regular"} />
+          Reconciliation
+          {/* Criticals only. Abandoned checkouts are the bulk of the queue and
+              never resolve, so counting everything would leave a permanent
+              double-digit badge that nobody reads. */}
+          {reconciliationCritical > 0 && (
+            <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === "reconciliation" ? "bg-white/20 text-white" : "bg-destructive/20 text-destructive"}`}>
+              {reconciliationCritical}
+            </span>
+          )}
+        </button>
 
         <button onClick={() => { setNavSection("reports"); setMobileSidebarOpen(false); }}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "reports" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
@@ -860,6 +908,7 @@ export default function AdminPage() {
                 {navSection === "users" && "User Management"}
                 {navSection === "tournaments" && "All Tournaments"}
                 {navSection === "finance" && "Finance & Revenue"}
+                {navSection === "reconciliation" && "Payment Reconciliation"}
                 {navSection === "comms" && "Communications"}
                 {navSection === "email_templates" && "Email Templates"}
                 {navSection === "settings" && "Platform Settings"}
@@ -1403,6 +1452,14 @@ export default function AdminPage() {
                 ))}
               </div>
             </div>
+          )}
+
+          {navSection === "reconciliation" && (
+            <PaymentReconciliation
+              items={reconciliation}
+              loading={reconciliationLoading}
+              onRefresh={loadReconciliation}
+            />
           )}
 
           {/* ── Communications ── */}

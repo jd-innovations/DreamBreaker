@@ -19,7 +19,10 @@
 //
 // The amount is NEVER taken from the request. compute_registration_refund()
 // derives it from what the player actually paid; a client-supplied figure
-// would be a client deciding how much money to send itself.
+// would be a client deciding how much money to send itself. Neither is the
+// identity of the canceller: the refunds row's reason is composed from the
+// rule that authorised the call, so a director's cancellation cannot be
+// recorded as the player's.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -35,8 +38,16 @@ const CORS: HeadersInit = {
 
 type RequestBody = {
   registrationIds?: unknown;
+  /**
+   * Optional free-text note ("injury", "double booked"). NOT the identity of
+   * the canceller -- see reasonFor(): who acted is derived from the
+   * authorisation path, never from the request.
+   */
   reason?: unknown;
 };
+
+/** Which rule in mayCancel() let this caller through. */
+type ActorRole = "player" | "director" | "payer";
 
 type Outcome = {
   registrationId: string;
@@ -75,7 +86,10 @@ Deno.serve(async (req: Request) => {
   const registrationIds = Array.isArray(body.registrationIds)
     ? body.registrationIds.filter((v): v is string => typeof v === "string" && v.length > 0)
     : [];
-  const reason = typeof body.reason === "string" && body.reason.trim() ? body.reason.trim() : "Cancelled by player";
+  // A note only. The audit row's reason is composed server-side from the
+  // authorisation path in reasonFor(); a client that says "Cancelled by
+  // player" while a director is the one calling must not be believed.
+  const note = typeof body.reason === "string" && body.reason.trim() ? body.reason.trim() : null;
 
   if (registrationIds.length === 0) {
     return new Response(JSON.stringify({ error: "bad_request" }), { status: 400, headers: CORS });
@@ -90,7 +104,7 @@ Deno.serve(async (req: Request) => {
   const outcomes: Outcome[] = [];
 
   for (const registrationId of registrationIds) {
-    outcomes.push(await cancelOne(service, registrationId, user.id, reason));
+    outcomes.push(await cancelOne(service, registrationId, user.id, note));
   }
 
   return new Response(JSON.stringify({ outcomes }), { headers: CORS });
@@ -102,7 +116,7 @@ async function cancelOne(
   service: ServiceClient,
   registrationId: string,
   actorId: string,
-  reason: string,
+  note: string | null,
 ): Promise<Outcome> {
   const base: Outcome = {
     registrationId,
@@ -127,7 +141,8 @@ async function cancelOne(
   // response shape -- an enumeration oracle over other people's registrations.
   // Nothing was modifiable that way, but the status of a stranger's row is not
   // ours to confirm either.
-  if (!(await mayCancel(service, reg, actorId))) {
+  const actorRole = await mayCancel(service, reg, actorId);
+  if (!actorRole) {
     return { ...base, error: "not_authorized" };
   }
 
@@ -178,11 +193,15 @@ async function cancelOne(
         registration_id: registrationId,
         amount_cents: quote.refundable_cents,
         kind: "policy",
-        reason,
+        reason: reasonFor(actorRole, note),
         requested_by: actorId,
         // Frozen as evaluated. A director can change refund_cutoff_days later;
         // without this nobody can reconstruct why this amount was chosen.
         policy_snapshot: {
+          // Which rule authorised this, kept alongside requested_by: the actor
+          // id says who, this says in what capacity. A director who is also
+          // the payer is otherwise indistinguishable months later.
+          actor_role: actorRole,
           cutoff_days: quote.cutoff_days,
           days_until_event: quote.days_until_event,
           refundable_cents: quote.refundable_cents,
@@ -266,6 +285,29 @@ async function cancelOne(
 }
 
 /**
+ * The refunds row says who cancelled, in words, for whoever reads it later.
+ *
+ * Composed here rather than taken from the request because every caller sent
+ * the same hardcoded "Cancelled by player" -- including the mobile director
+ * workspace, so a director cancelling someone else's entry produced an audit
+ * row that blamed the player. The role comes from the rule that authorised the
+ * call; the client's text is kept as a note beside it, never as the identity.
+ */
+function reasonFor(role: ActorRole, note: string | null): string {
+  const who = role === "director"
+    ? "Cancelled by tournament director"
+    : role === "payer"
+    ? "Cancelled by the person who paid for this entry"
+    : "Cancelled by player";
+  return note ? `${who}: ${note}` : who;
+}
+
+/**
+ * Returns WHICH rule allowed the cancellation, not just whether one did --
+ * reasonFor() needs the capability, and the order below is the precedence:
+ * a director who also paid is recorded as the director, which is the role they
+ * were acting in.
+ *
  * Own registration, the tournament's approved director, or the person who
  * actually paid for it. The payer rule is
  * what lets one half of a team cancel the other: they funded that entry, so
@@ -276,8 +318,8 @@ async function mayCancel(
   service: ServiceClient,
   reg: { id: string; tournament_id: string; player_id: string | null; stripe_entry_intent_id: string | null },
   actorId: string,
-): Promise<boolean> {
-  if (reg.player_id && reg.player_id === actorId) return true;
+): Promise<ActorRole | null> {
+  if (reg.player_id && reg.player_id === actorId) return "player";
 
   // The tournament's own director. Directors cancel entries as a matter of
   // course (the mobile director workspace has a "Cancel Registration" action),
@@ -301,7 +343,7 @@ async function mayCancel(
       director?.director_status === "approved" &&
       (director?.role === "director" || director?.is_director === true)
     ) {
-      return true;
+      return "director";
     }
   }
 
@@ -311,7 +353,7 @@ async function mayCancel(
       .select("payer_user_id")
       .eq("provider_payment_intent_id", reg.stripe_entry_intent_id)
       .maybeSingle();
-    if (payment?.payer_user_id === actorId) return true;
+    if (payment?.payer_user_id === actorId) return "payer";
   }
 
   // Team obligations settled through the group model record the payment
@@ -329,10 +371,10 @@ async function mayCancel(
       .select("payer_user_id")
       .eq("id", member.payment_id)
       .maybeSingle();
-    if (payment?.payer_user_id === actorId) return true;
+    if (payment?.payer_user_id === actorId) return "payer";
   }
 
-  return false;
+  return null;
 }
 
 /**

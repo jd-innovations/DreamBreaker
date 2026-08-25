@@ -2189,6 +2189,132 @@ as typical, which drove widening `pollForReservationConfirmation()` to 30s. The
 - Done when:
   - Payment support has an operational dashboard/runbook.
 
+### Completion Notes - 3.3
+
+- Status: **Complete in the repo** (2026-08-24). **Two external actions are
+  required** before it is live — see "What you have to run" below.
+
+#### What this turned out to be
+
+Every state 3.3 asks for was already *detected*. finalizePayment.ts screams
+`PAYMENT_RECONCILIATION_REQUIRED` into stderr whenever money moves and the
+domain side does not follow; `cancel-registration` does the same when a Stripe
+refund fails. All of it went to a log line nobody reads. The work was not
+building detection — it was turning states that already existed into rows
+someone can work.
+
+So the queue derives everything from **live table state**, never from a flag a
+writer had to remember to set. A reconciliation queue that depends on the
+failing code path correctly reporting its own failure is exactly as reliable as
+the code path that just failed.
+
+#### What was built
+
+| Piece | Where |
+| --- | --- |
+| `admin_payment_reconciliation(minutes, limit)` | `supabase/migrations/20260824190000_payment_reconciliation.sql` |
+| `payment_is_fulfilled(payment_id)` | same migration |
+| Admin → Reconciliation panel | `web/src/components/admin/payment-reconciliation.tsx` |
+| Runbook | `docs/PAYMENT_RECONCILIATION_RUNBOOK.md` |
+
+Six checks, mapped to the item's five bullets:
+
+| Kind | Severity | Covers |
+| --- | --- | --- |
+| `succeeded_not_fulfilled` | critical | succeeded payment, nothing delivered |
+| `webhook_unprocessed` | critical | failed webhook processing |
+| `refund_failed` | critical | refund needed (Stripe rejected it) |
+| `refund_stuck` | critical | refund needed (authorised, never sent/acked) |
+| `stuck_pending` | warning | pending PaymentIntent past threshold |
+| `duplicate_payment` | warning | duplicate payment attempts |
+
+`payment_is_fulfilled()` mirrors `dispatchPaymentSucceeded()` one branch per
+`purpose_type`, and returns **false for an unrecognised purpose** — the exact
+shape of the incident where a deployment missing the
+`tournament_registration_hold` branch banked a real $10 and created nothing.
+That case gets its own wording in the queue, because "no handler for purpose X
+in this deployment" means *every* payment of that purpose is failing, not just
+the one on screen.
+
+`SECURITY DEFINER` and gated on `is_admin()`, not a view: `stripe_webhook_events`
+has RLS on and no policies at all, so "webhook recorded but never processed" is
+invisible to an admin's own session no matter how the query is written.
+
+#### Bug found and fixed: refunds were never marked succeeded
+
+Nothing in the codebase ever moved a `refunds` row off `submitted`.
+`cancel-registration` sets it when Stripe accepts the call; the `charge.refunded`
+webhook then updated **only** `payments`. So all three of today's real refunds
+were sitting at `submitted` permanently, indistinguishable from a refund Stripe
+never acknowledged.
+
+Found by building the `refund_stuck` check and realising it would report every
+healthy refund in the system as broken. Fixed in the webhook handler: on
+`charge.refunded`, non-terminal `refunds` rows for that payment move to
+`succeeded` with `completed_at`. Scoped to `pending`/`submitted` so a redelivery
+cannot resurrect a refund someone marked failed by hand, and keyed on the
+payment rather than the Stripe refund id so a dashboard-issued refund still
+settles.
+
+#### Deliberately not built
+
+**No dismiss/acknowledge control.** An item leaves the queue when the underlying
+state is fixed and not before. A dismiss button would let a real incident be
+tidied away — which is how a stranded $10 refund stayed invisible for hours on
+2026-08-24. The cost is that a few genuinely-fine rows (one player entered in
+two divisions of the same tournament shares a `purpose_id`) sit there
+permanently. That is the right trade, and the runbook says so explicitly.
+
+**No auto-remediation.** Nothing here retries a refund or replays a webhook on
+its own. Every repair is a documented human procedure. Automatic money movement
+triggered by a heuristic is how you send a refund twice.
+
+#### Verified
+
+Applied against the local Postgres and exercised with synthetic rows for each
+kind:
+
+| Check | Result |
+| --- | --- |
+| All six kinds fire on matching state | ✅ |
+| Unknown `purpose_type` reports unfulfilled, with its own wording | ✅ |
+| Non-admin session | ✅ `ERROR: not_authorized` |
+| Real local data | 2 rows (`refund_failed`, `refund_stuck`) |
+| `tsc --noEmit` on `web` | ✅ exit 0 |
+| eslint on changed files | ✅ 0 errors (2 pre-existing warnings) |
+
+Not verified against production data — the function has not been applied there
+yet.
+
+#### What you have to run
+
+1. `npx supabase functions deploy cancel-registration` — the reason fix below.
+2. Apply `20260824190000_payment_reconciliation.sql` to production, then deploy
+   web so the webhook settles refunds rows and the admin panel appears.
+
+Until step 2 lands, the three live refunds stay at `submitted` and would show as
+`refund_stuck` after 24 hours.
+
+#### Also fixed: the refund reason default (audit integrity)
+
+Separate from 3.3, and a defect in the 3.1/refund foundation work.
+
+`cancel-registration` defaulted `refunds.reason` to the literal
+`"Cancelled by player"` — and **every caller passed that same hardcoded string**,
+including the mobile director workspace, which shares
+`cancelRegistration()` in `apps/mobile/src/lib/supabase/registrations.ts`. A
+director cancelling someone else's entry therefore wrote an audit row blaming
+the player.
+
+Fixed by deriving the actor from the authorisation path rather than the request.
+`mayCancel()` now returns *which rule* let the caller through
+(`player` | `director` | `payer`) instead of a boolean, `reasonFor()` composes
+the reason from it, and the role is also frozen into `policy_snapshot.actor_role`
+— `requested_by` says who, that says in what capacity, which matters when a
+director is also the payer. A client-supplied `reason` is now treated as a note
+appended after the derived phrase, never as the identity of the canceller. Both
+callers stopped sending the hardcoded string.
+
 ### 3.4 Align Stripe Versions and Config
 
 - Issue: Repo uses Stripe API `2026-05-27.dahlia`; current guidance is newer.
