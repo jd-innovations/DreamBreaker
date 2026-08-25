@@ -2883,14 +2883,27 @@ settings endpoint instead of from the product. **Six days of an open security
 item that did not exist.** The five-minute device check that closed it was
 available the whole time.
 
+#### Case 10: no collision, and it is the same fact as case 8
+
+Signing up by email and then authenticating with Apple/Google on that same
+address produced **no collision** — one account, no duplicate, no error. Nothing
+needs building.
+
+That is not luck, and it is worth writing down why, because it is load-bearing.
+Supabase links an OAuth identity to an existing user when the addresses match
+**and are verified**. Verification being enforced (case 8) is what makes that
+linking safe. Under the `mailer_autoconfirm: true` behaviour this plan wrongly
+believed in, the same flow is a hijack path: an unverified address could be
+attached to an account belonging to someone else.
+
+So the two most interesting rows in the matrix are one finding. The setting that
+was recorded as a gap is in fact the thing preventing a worse one.
+
+**Do not "fix" G2 by disabling email confirmation.** It would open the collision
+case that just passed.
+
 #### Outstanding
 
-- **Case 10 (account collision) needs its specific outcome recorded.** The
-  checklist framed it as "document reality, it is not expected to pass," so
-  "as expected" is ambiguous for that row. There is no account-linking logic, so
-  signing up by email and then using Apple/Google with the same address either
-  reuses the account, creates a second one, or errors — and which one it is
-  decides whether anything needs building.
 - Android auth is untested (no hardware — open item D4).
 
 ### 5.3 Verify Camera, QR, Calendar, Deep Links
