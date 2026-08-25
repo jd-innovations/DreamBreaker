@@ -2682,8 +2682,9 @@ Goal: beta issues should be visible without waiting for screenshots.
 
 ### Completion Notes - 4.1
 
-- Status: **Wired on both platforms; NOT yet verified.** Verification needs a
-  production promote (web) and a new EAS build (mobile) — see "How to verify".
+- Status: **Web verified in production (2026-08-25). Mobile wired but unverified**
+  — it needs an EAS build, since the DSN is baked into the binary. Alerting
+  rules are not configured. Not closed.
 
 #### What was built
 
@@ -2779,7 +2780,41 @@ reported was real and every one was irrelevant.
 
 Recorded in `web/AGENTS.md` so the file-location trap is not rediscovered.
 
-#### How to verify (the remaining work)
+#### Web: verified end to end (2026-08-25)
+
+Confirmed on production `d0c3633`, event `737b0f3a…`:
+
+| Check | Result |
+| --- | --- |
+| SDK initialises server-side | `sdkInitialised: true` |
+| Event actually transmitted | `flushed: true`, event visible in Sentry |
+| Environment tag | `production` |
+| Release tag | matches the deployed commit sha |
+| **Source maps** | stack resolves to `…/api/admin/sentry-test/route.ts:59:11`, marked In App |
+| Runtime context | node v24.18.0, Linux — a real server event |
+| Scrubbing | `url` empty on the event |
+
+The source-map line is the one that mattered. Without it a production stack is
+`.next/server/chunks/0aq__0d09xei._.js:210:31040` — which is what the Vercel log
+shows for the same error, and which is not something anyone can act on.
+
+Both server paths work: a manual `captureException`, and an unhandled throw
+routed through `onRequestError`.
+
+#### Still to verify
+
+1. **Mobile.** Needs a new EAS build — `EXPO_PUBLIC_SENTRY_DSN` is baked into the
+   binary, so no existing install can report. Confirm `environment` matches the
+   profile (`internal` for preview, `production` for production) and that a
+   crash resolves to a filename rather than `index.android.bundle:1:284729`.
+2. **Alerting.** 4.1 asks for crash-spike and payment/auth failure rules. Sentry
+   created a default "high priority issues" rule; it has not been tuned.
+3. **A scrubbing pass over a real event payload.** `url` was empty on the
+   verification event, which is a good sign but a weak one — that event carried
+   little to scrub. Worth checking a genuine error with request context before
+   trusting it.
+
+#### Original verification plan (superseded for web)
 
 1. **Web:** promote a deployment, then as an admin hit
    `/api/admin/sentry-test?kind=capture` — returns the event id, environment and
