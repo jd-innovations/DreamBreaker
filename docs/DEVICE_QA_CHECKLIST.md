@@ -18,7 +18,10 @@ mode — some surfaces hidden in production are visible here. Note it if a scree
 looks unexpected.
 
 > **Status 2026-08-25:** 5.2 complete (all 11 pass). 5.3 partial — 12, 13, 14,
-> 27, 28 pass; 15-26 outstanding.
+> 17, 18, 27, 28 pass; 15, 16, 19-26 outstanding.
+>
+> Scannable codes for cases 15 and 16:
+> https://claude.ai/code/artifact/66a651ea-0638-4fbb-b29d-283aa8ee3957
 
 **How to record:** write the result in the Result column — `pass`, `fail`, or a
 short note. Anything at all is better than nothing; a half-filled matrix is
@@ -66,8 +69,8 @@ and worth capturing a screenshot of. It is also the reason this row exists.
 
 | # | Case | Steps | Expected | Result |
 | --- | --- | --- | --- | --- |
-| 17 | Add to calendar (iOS) | From a tournament, add to calendar | Permission prompt, then the event appears in Apple Calendar with the right date/time | _not yet run_ |
-| 18 | Permission denied | Deny calendar access, retry | Explains, does not crash | _not yet run_ |
+| 17 | Add to calendar (iOS) | From a tournament, add to calendar | Permission prompt, then the event appears in Apple Calendar with the right date/time | **pass** — added |
+| 18 | Permission denied | Deny calendar access, retry | Explains, does not crash | **pass** — cancelled without adding, no crash |
 
 *(Android calendar is blocked on hardware — open item D4.)*
 

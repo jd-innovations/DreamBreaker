@@ -2939,6 +2939,8 @@ Run against `docs/DEVICE_QA_CHECKLIST.md` on the 2026-08-24 iOS preview build.
 | 14 — invalid QR | **pass** — rejected with "unsupported QR" |
 | 27 — `pickleballapp://tournament/<id>` cold start | **pass** — correct screen |
 | 28 — `pickleballapp://groups/<id>` cold start | **pass** — correct screen |
+| 17 — add to calendar (iOS) | **pass** — event added |
+| 18 — calendar permission denied | **pass** — cancelled without adding, no crash |
 
 27 and 28 are worth more than they look. The common failure for a cold-start
 deep link is that the app opens but *drops the route*, landing on home — which
@@ -2947,12 +2949,11 @@ screen, so the custom scheme carries its route through a cold launch.
 
 #### Still to run
 
-- **15, 16 — wrong-tournament and duplicate check-in.** Deferred on setup cost:
-  they need a valid check-in QR for a tournament the tester is registered in,
-  *plus* one from a different tournament. These are the check-in **integrity**
+- **15, 16 — wrong-tournament and duplicate check-in.** Scannable codes for both
+  now exist at https://claude.ai/code/artifact/66a651ea-0638-4fbb-b29d-283aa8ee3957
+  (display on a second screen; a phone cannot scan itself). These are the check-in **integrity**
   cases — 16 in particular is the one that decides whether a double scan can
   double-record — so they matter more than the four that have run.
-- **17, 18 — calendar.** No setup beyond a dated tournament.
 - **19-26 — universal links.** Including 25 and 26, already known broken (see
   below); those only need confirming as *safe* failures.
 
