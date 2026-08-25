@@ -2,6 +2,81 @@
 
 Purpose: turn `TODO1.1.md` into an ordered, one-issue-at-a-time production readiness plan. Work through this file from top to bottom. Do not start broad feature work until the current item is complete or explicitly deferred.
 
+## Current State — 2026-08-25
+
+**16 of 27 items closed.** Two more (4.1, 5.3) have Completion Notes but are
+explicitly *not* closed — read their notes, not this table, for detail.
+
+An item is done iff it has a `### Completion Notes - X.Y` section that does not
+say INCOMPLETE. Grep for those rather than trusting any summary, including this
+one.
+
+| | Items |
+| --- | --- |
+| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 5.2 |
+| **Partial** | **4.1** (web verified, mobile unverified), **5.3** (15/17 cases) |
+| **Untouched** | 4.2, 4.3, 5.1, 5.4, 6.1, 6.2, 6.3, 7.1, 7.2, 7.3 |
+
+Phases 0-3 are complete and deployed to production.
+
+### Blocked on one EAS build
+
+Both need a new mobile build and nothing else:
+
+1. **4.1 mobile.** `EXPO_PUBLIC_SENTRY_DSN` is baked into the binary, so no
+   existing install can report a crash.
+2. **5.3 cases 25 and 26.** The AASA fix is live in production; iOS caches that
+   file, so re-testing needs a **reinstall**, not just a new build.
+
+⚠️ **Before committing any `npm install` or `npx expo install` in
+`apps/mobile`:** regenerate the lockfile with npm 10, or CI and the EAS builders
+(npm 10.8.2) both break. See `project-eas-npm-lockfile` in memory. This has
+already happened once.
+
+### Recommended next item: 6.1
+
+The only remaining **Critical**, and it needs no device, no vendor account and
+no external input. There is already a confirmed instance: four seed
+registrations on "Lakewood Ranch Classic" (player ids
+`11111111-...-11110{1,2,3,4}`) carry `entry_fee_paid_cents = 7500` with **no
+payment row at all**. Fake paid registrations in production data quietly corrupt
+every revenue figure derived from them.
+
+### Only the human can do these
+
+- **Legal placeholders (1.4).** Entity name, mailing address and governing law
+  are still placeholders in `web/src/lib/legal.ts` and Terms §16, and
+  `privacy@` must exist and be monitored — the policy commits to a 30-day
+  response. **This gates 7.1**, which needs a working privacy URL for store
+  submission.
+- **Android hardware (D4).** Blocks 5.1's Android half and 5.3's Android
+  calendar case.
+- **`/q/*` decision.** A check-in QR scanned with a phone camera 404s today; the
+  in-app scanner is unaffected. See 5.3's notes for the two options.
+- **G3.** Vercel environment variables have never been confirmed against the
+  dashboard; `PRODUCTION_CONFIG.md` §1 is derived from the code that reads them.
+
+### Smaller leftovers
+
+- 4.1: alerting rules are untuned, and the scrubber has only been observed
+  against an event carrying little to scrub.
+- 5.3: case 20 (`/conversation/<id>`) needs a re-test signed in as the admin
+  account — the earlier result is ambiguous.
+- Six duplicate test-mode charges sit in the reconciliation queue. Refunding
+  them in Stripe would clear both `duplicate_payment` and
+  `succeeded_not_fulfilled`.
+
+### Operational facts that are easy to get wrong
+
+- **Web production is a manually promoted preview** of
+  `feature/expo-mobile-foundation`. Pushing does not deploy. `main` is 140+
+  commits stale and is not the deploy path.
+- **Stripe is in test mode everywhere by decision** (G1), until App Store
+  launch. Going live is not a key swap — see `PRODUCTION_CONFIG.md` G1.
+- Config inventory lives in `PRODUCTION_CONFIG.md`; payment incident procedures
+  in `docs/PAYMENT_RECONCILIATION_RUNBOOK.md`; device QA in
+  `docs/DEVICE_QA_CHECKLIST.md`.
+
 ## Rules of Execution
 
 1. Fix blockers in order unless a dependency makes that impossible.
