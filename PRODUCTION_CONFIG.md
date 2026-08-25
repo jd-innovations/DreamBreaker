@@ -228,26 +228,42 @@ sending domain means editing that file, not a config value.
 Tracked here rather than fixed silently. Each has an owner and a decision to
 make.
 
-### G1 — Stripe is in test mode in every mobile build profile, including `production`
+### G1 — Stripe stays in test mode until App Store launch **(decided 2026-08-25)**
 
-`EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` is a **`pk_test_`** key in all three EAS
-environments (`development`, `preview`, **`production`**). The local web
-`.env.local` likewise holds `sk_test_`.
+`EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` is a `pk_test_` key in all three EAS
+environments including `production`, and web uses `sk_test_`. **This is
+deliberate.** Beta runs entirely in test mode; the switch to live happens as
+part of going live on the App Store, not before.
 
-This is fine — correct, even — for a closed beta where no real money should
-move. It is **not** fine at public launch, and the risk is the mismatch: if
-Vercel's production `STRIPE_SECRET_KEY` is ever switched to live while the
-mobile production profile still ships `pk_test_`, PaymentSheet will fail against
-a live PaymentIntent and every mobile payment breaks at once.
+That means payments and refunds described as "live money" elsewhere in the plan
+(items 3.1-3.3) were test-mode transactions. The engineering conclusions stand —
+test mode exercises the identical webhook, refund and reconciliation paths — but
+the wording overstates what was proven.
 
-**Action:** decide deliberately whether beta runs in test mode (recommended),
-and write that decision down. When switching to live, **both planes must change
-in the same window**, and the mobile side needs a new build — it cannot be
-hotfixed.
+#### The switch is not a key swap — read this before doing it
 
-Note this also reframes "live money" language elsewhere in the plan: payments
-verified during 3.1/3.2/3.3 were test-mode transactions unless Vercel production
-holds a live key. **Owner: Payments.**
+Stripe keeps test and live as **separate worlds**. Nothing carries over.
+
+| What changes | Consequence |
+| --- | --- |
+| Secret + publishable keys | New `sk_live_` / `pk_live_` in Vercel and EAS |
+| **Webhook endpoint** | Live mode needs its **own** endpoint registered against `pickleballapp.app`, with a **different signing secret**. The current `STRIPE_WEBHOOK_SECRET` will silently reject every live event |
+| **Connect accounts** | Test-mode connected accounts **do not exist in live mode**. Every director must re-onboard Stripe Connect from scratch, or payouts fail |
+| Customers, products, payments | None of the existing rows exist in live mode. The `payments`, `refunds` and `stripe_webhook_events` tables will hold test-mode ids forever — they are history, not something to migrate |
+
+Ordering, because two of these cannot be hotfixed:
+
+1. Register the live webhook endpoint and get its signing secret **first** —
+   otherwise the first live payment succeeds at Stripe and is never finalized.
+2. Set Vercel's `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` and promote.
+3. Set EAS `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` and **cut a new build** —
+   mobile bakes this in, so it cannot be changed by an OTA update.
+4. Have every director re-onboard Connect before taking real entry fees.
+
+Steps 2 and 3 must land in the same window. A live secret key with a
+`pk_test_` app means every mobile payment fails at once.
+
+**Owner: Payments.**
 
 ### G2 — ~~Email signup requires no confirmation~~ **RESOLVED — the gap was never real**
 

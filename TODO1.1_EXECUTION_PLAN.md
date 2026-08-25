@@ -2565,8 +2565,12 @@ own change — the casts may be lying about the row shape. Not touched here.
   version pin — the publishable key and the server's PaymentIntent decide
   behaviour — and the item explicitly says not to combine this with PaymentSheet
   work.
-- The G1 test-mode question from 2.4 is untouched and still open. It is a
-  key-and-environment decision, not a version one.
+- ~~The G1 test-mode question from 2.4 is untouched and still open.~~
+  **Decided 2026-08-25: Stripe stays in test mode until App Store launch.** The
+  switch is not a key swap — live mode needs its own webhook endpoint and
+  signing secret, and every director must re-onboard Connect because test-mode
+  connected accounts do not exist in live mode. Sequence and reasoning in
+  `PRODUCTION_CONFIG.md` G1.
 
 #### Required action
 
