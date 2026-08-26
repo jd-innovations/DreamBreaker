@@ -9,7 +9,38 @@
 // layout and much too heavy for "the tournaments query threw": the user loses
 // the whole page instead of the one section that failed.
 //
-// The prop contract is verified against the installed Next 16 docs
+// ── Shared vocabulary with mobile ────────────────────────────────────────────
+//
+// Counterpart: `apps/mobile/src/components/states/ScreenState.tsx`, which holds
+// `LoadingState`, `EmptyState` and `ErrorState`. The two files are written
+// against different renderers and deliberately share no code, but they share
+// prop names so the same idea is not called two things
+// (alignment plan, task C3):
+//
+//   title       headline, both platforms
+//   message     the supporting line. NOT `description` — mobile uses `message`
+//               in both EmptyState and ErrorState, so it is the established name
+//   onRetry     the retry callback, following the React `onX` convention
+//   retryLabel  button text, default "Try again"
+//
+// Web has no `EmptyState`/`LoadingState` component yet; its empty states are
+// still written inline per page. When they are extracted, they should adopt
+// these names and mobile's contract rather than inventing a third vocabulary.
+//
+// ── Empty and Error are not interchangeable ──────────────────────────────────
+//
+// An empty state means "this succeeded and there is nothing here."
+// An error state means "this did not succeed and we do not know what is here."
+//
+// Collapsing the two hides real bugs behind a plausible sentence. That is not
+// hypothetical on this project: `/conversation/<id>` reported "This
+// conversation isn't available" — an empty state — for a defect that made 25 of
+// 33 conversations unreachable. It read as normal for weeks. An error state
+// with a retry would have looked wrong immediately.
+//
+// ── Next 16 prop contract ────────────────────────────────────────────────────
+//
+// Verified against the installed docs
 // (`node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/error.md`),
 // not from memory:
 //
@@ -31,14 +62,16 @@ import * as Sentry from "@sentry/nextjs";
 
 export function RouteError({
   error,
-  retry,
+  onRetry,
   title = "Something went wrong",
-  description = "This section failed to load. The error has been reported.",
+  message = "This section failed to load. The error has been reported.",
+  retryLabel = "TRY AGAIN",
 }: {
   error: Error & { digest?: string };
-  retry: () => void;
+  onRetry: () => void;
   title?: string;
-  description?: string;
+  message?: string;
+  retryLabel?: string;
 }) {
   useEffect(() => {
     Sentry.captureException(error);
@@ -48,7 +81,7 @@ export function RouteError({
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
       <div className="font-mono text-[11px] tracking-[0.3em] text-destructive mb-3">ERROR</div>
       <h2 className="font-display text-3xl tracking-wide mb-3">{title}</h2>
-      <p className="text-sm text-muted-foreground mb-6">{description}</p>
+      <p className="text-sm text-muted-foreground mb-6">{message}</p>
 
       {error.digest && (
         <p className="font-mono text-[11px] text-muted-foreground/60 mb-6">{error.digest}</p>
@@ -56,10 +89,10 @@ export function RouteError({
 
       <div className="flex items-center justify-center gap-3">
         <button
-          onClick={() => retry()}
+          onClick={() => onRetry()}
           className="h-11 px-8 rounded-full bg-primary text-primary-foreground font-display tracking-[0.2em] text-sm hover:bg-primary/90 transition-colors"
         >
-          TRY AGAIN
+          {retryLabel}
         </button>
       </div>
     </div>

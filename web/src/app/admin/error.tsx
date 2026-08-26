@@ -9,5 +9,5 @@ export default function AdminError({
   error: Error & { digest?: string };
   unstable_retry: () => void;
 }) {
-  return <RouteError error={error} retry={unstable_retry} title="Couldn't load the admin console" />;
+  return <RouteError error={error} onRetry={unstable_retry} title="Couldn't load the admin console" />;
 }

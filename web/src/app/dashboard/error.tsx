@@ -23,9 +23,9 @@ export default function DashboardError({
   return (
     <RouteError
       error={error}
-      retry={unstable_retry}
+      onRetry={unstable_retry}
       title="Couldn't load your dashboard"
-      description="The error has been reported. Try again, and if it keeps happening please contact support."
+      message="The error has been reported. Try again, and if it keeps happening please contact support."
     />
   );
 }

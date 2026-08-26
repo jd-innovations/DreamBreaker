@@ -22,6 +22,23 @@
  * immediately.
  *
  * So: only render EmptyState when the fetch actually resolved.
+ *
+ * ── Shared vocabulary with web ───────────────────────────────────────────────
+ *
+ * Counterpart: `web/src/components/shared/route-error.tsx`. The two files are
+ * written against different renderers and deliberately share no code, but they
+ * share prop names so the same idea is not called two things (alignment plan,
+ * task C3):
+ *
+ *   title       headline
+ *   message     the supporting line
+ *   onRetry     the retry callback
+ *   retryLabel  button text
+ *
+ * Web has no EmptyState/LoadingState yet — its empty states are still inline
+ * per page. When they are extracted they should adopt this contract. If you
+ * change a prop name here, change it there in the same commit; there is no
+ * shared package to enforce it yet (that is task B1).
  */
 
 import React from 'react';

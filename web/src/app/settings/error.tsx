@@ -9,5 +9,5 @@ export default function SettingsError({
   error: Error & { digest?: string };
   unstable_retry: () => void;
 }) {
-  return <RouteError error={error} retry={unstable_retry} title="Couldn't load settings" />;
+  return <RouteError error={error} onRetry={unstable_retry} title="Couldn't load settings" />;
 }
