@@ -1239,13 +1239,25 @@ function groupColor(seed: string): string {
   return GROUP_AVATAR_COLORS[hash % GROUP_AVATAR_COLORS.length];
 }
 
-function RealTournamentGroupChat({ tournamentId }: { tournamentId: string }) {
+// Works for any Supabase-backed group conversation. Everything below the
+// `convId` lookup is already generic -- only resolving that id and the header
+// title were tournament-specific -- so `group` and `support` conversations
+// render here too rather than needing a second implementation.
+function RealGroupChat({
+  tournamentId,
+  conversationId,
+  initialTitle,
+}: {
+  tournamentId?: string;
+  conversationId?: string;
+  initialTitle?: string;
+}) {
   const insets    = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const { user }  = useSession();
 
   const [convId, setConvId]     = useState<string | null>(null);
-  const [title, setTitle]       = useState('Tournament Chat');
+  const [title, setTitle]       = useState(initialTitle ?? 'Tournament Chat');
   const [messages, setMessages] = useState<DbMessage[]>([]);
   const [senders, setSenders]   = useState<Record<string, string>>({});
   const [draft, setDraft]       = useState('');
@@ -1259,8 +1271,10 @@ function RealTournamentGroupChat({ tournamentId }: { tournamentId: string }) {
   const messageIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => { messageIdsRef.current = new Set(messages.map(m => m.id)); }, [messages]);
 
-  // Tournament name for the header.
+  // Tournament name for the header. Skipped when the screen was opened from a
+  // conversation id, which supplies its own title.
   useEffect(() => {
+    if (!tournamentId) return;
     let cancelled = false;
     (async () => {
       const { data } = await supabase
@@ -1278,7 +1292,8 @@ function RealTournamentGroupChat({ tournamentId }: { tournamentId: string }) {
     setLoading(true);
     setError(null);
     try {
-      const cid = await getOrCreateTournamentConversation(tournamentId, user.id);
+      const cid = conversationId
+        ?? await getOrCreateTournamentConversation(tournamentId!, user.id);
       setConvId(cid);
       const data = await fetchMessages(cid);
       setMessages(data);
@@ -1616,6 +1631,88 @@ function ConversationUnavailable({ insetsTop = 0 }: { insetsTop?: number }) {
   );
 }
 
+
+// ─── Resolver for a bare /conversation/<uuid> ────────────────────────────────
+//
+// A bare UUID used to go straight to RealDMScreen, which assumes a 1-to-1 chat
+// and reads participant_a/participant_b. Every other conversation type leaves
+// both columns null, so the screen computed a null partner and rendered
+// "This conversation isn't available" -- for conversations the user is a member
+// of. At the time of writing that was 25 of 33 rows in production: 15
+// play_event, 6 group, 3 support, 1 tournament. Only the 8 `direct` ones worked
+// (item 5.3 case 20).
+//
+// The dispatch mirrors what the Chat tab already does when it has the related
+// ids to hand ((tabs)/chat.tsx), so a deep link and an in-app tap land on the
+// same screen instead of diverging.
+function ConversationResolver({ conversationId }: { conversationId: string }) {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { user } = useSession();
+  const [state, setState] = useState<
+    | { kind: 'loading' }
+    | { kind: 'unavailable' }
+    | { kind: 'direct' }
+    | { kind: 'tournament'; tournamentId: string }
+    | { kind: 'group'; title: string }
+  >({ kind: 'loading' });
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+
+    (async () => {
+      const { data: conv, error } = await supabase
+        .from('conversations')
+        .select('participant_a, participant_b, conversation_type, related_play_event_id, related_tournament_id, title')
+        .eq('id', conversationId)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      // RLS already hides conversations the user cannot see, so a null row here
+      // means "no such conversation, or not yours" -- both are unavailable.
+      if (error || !conv) { setState({ kind: 'unavailable' }); return; }
+
+      // A play event has a purpose-built chat surface at /community/[id]. Send
+      // the user there rather than rendering a second, lesser copy of it.
+      if (conv.related_play_event_id) {
+        router.replace({
+          pathname: '/community/[id]',
+          params: { id: conv.related_play_event_id, tab: 'chat' },
+        } as never);
+        return;
+      }
+
+      if (conv.related_tournament_id) {
+        setState({ kind: 'tournament', tournamentId: conv.related_tournament_id });
+        return;
+      }
+
+      if (conv.participant_a && conv.participant_b) { setState({ kind: 'direct' }); return; }
+
+      setState({
+        kind: 'group',
+        title: conv.title ?? (conv.conversation_type === 'support' ? 'Support' : 'Group Chat'),
+      });
+    })();
+
+    return () => { cancelled = true; };
+  }, [conversationId, user?.id]);
+
+  if (state.kind === 'loading') {
+    return (
+      <View style={[rd.centered, { flex: 1, backgroundColor: L.bg, paddingTop: insets.top + 80 }]}>
+        <ActivityIndicator color={L.navy} />
+      </View>
+    );
+  }
+  if (state.kind === 'unavailable') return <ConversationUnavailable insetsTop={insets.top} />;
+  if (state.kind === 'direct')      return <RealDMScreen conversationId={conversationId} />;
+  if (state.kind === 'tournament')  return <RealGroupChat tournamentId={state.tournamentId} />;
+  return <RealGroupChat conversationId={conversationId} initialTitle={state.title} />;
+}
+
 // ─── Root router ──────────────────────────────────────────────────────────────
 
 export default function ConversationScreen() {
@@ -1627,7 +1724,7 @@ export default function ConversationScreen() {
   if (chatId?.startsWith('tournament-')) {
     const tournamentId = chatId.slice('tournament-'.length);
     if (UUID_RE.test(tournamentId)) {
-      return <RealTournamentGroupChat tournamentId={tournamentId} />;
+      return <RealGroupChat tournamentId={tournamentId} />;
     }
     const fallback = EVENT_CHATS['event-1'];
     if (fallback) return <EventGroupChat chatData={fallback} />;
@@ -1644,7 +1741,8 @@ export default function ConversationScreen() {
   }
 
   if (UUID_RE.test(chatId ?? '')) {
-    return <RealDMScreen conversationId={chatId} />;
+    // Which screen depends on the conversation's shape, which needs a query.
+    return <ConversationResolver conversationId={chatId} />;
   }
 
   return <ConversationUnavailable />;
