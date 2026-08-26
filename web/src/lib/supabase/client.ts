@@ -16,9 +16,9 @@ export function createClient() {
   });
 }
 
-// Password recovery must NOT use PKCE.
+// Emailed auth links must NOT use PKCE.
 //
-// `resetPasswordForEmail` sends a code challenge only when the client's flowType
+// `resetPasswordForEmail` and `signUp` send a code challenge only when flowType
 // is 'pkce' (auth-js: `if (this.flowType === 'pkce')`). The emailed link then
 // carries a `?code=` redeemable solely with the verifier saved in the requesting
 // browser's storage — routinely missing or stale by the time the link is opened:
@@ -42,7 +42,7 @@ export function createClient() {
 // while claiming to be implicit; the emailed links kept arriving with a `pkce_`
 // token prefix and nothing changed. Plain supabase-js honours the option.
 //
-// No session is involved in requesting a reset, so this client stores nothing:
+// No session is involved in requesting either link, so this client stores nothing:
 // persistSession off keeps it from touching the cookie storage the real client
 // owns, and detectSessionInUrl off keeps it from racing that client for the URL.
 //
@@ -55,7 +55,7 @@ export function createClient() {
 //
 // OAuth stays on PKCE: it works, it is stronger, and the server-side callback
 // route depends on exchangeCodeForSession.
-export function createRecoveryClient() {
+export function createEmailLinkClient() {
   return createSupabaseClient<Database>(getSupabaseUrl(), getSupabaseAnonKey(), {
     auth: {
       flowType: "implicit",

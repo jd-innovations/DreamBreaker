@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Logo } from "@/components/layout/logo";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { createClient, createRecoveryClient } from "@/lib/supabase/client";
+import { createClient, createEmailLinkClient } from "@/lib/supabase/client";
 import { LEGAL_ROUTES } from "@/lib/legal";
 
 const ROLE_OPTIONS = [
@@ -109,10 +109,10 @@ export default function AuthPage() {
 
     setLoading(true);
     try {
-      // Implicit flow on purpose — see createRecoveryClient. Asking with the
+      // Implicit flow on purpose — see createEmailLinkClient. Asking with the
       // ordinary PKCE client produces a link that only works in the browser that
       // requested it, which is not where people open their email.
-      const supabase = createRecoveryClient();
+      const supabase = createEmailLinkClient();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         // Straight to /auth/reset, NOT through /auth/callback: the recovery link
         // hands the session back in a URL **fragment**, and a fragment is never
@@ -160,11 +160,21 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    // Implicit flow, and an explicit destination — both matter.
+    //
+    // Without `emailRedirectTo` GoTrue falls back to the project Site URL, so
+    // confirmation links landed on the marketing homepage: /auth/callback never
+    // ran, no routing decision was made, and the onboarding draft never flushed.
+    //
+    // Implicit rather than the ordinary PKCE client because a `?code=` link is
+    // redeemable only in the browser that requested it, and people open their
+    // email in a mail app's WebView. See createEmailLinkClient.
+    const emailClient = createEmailLinkClient();
+    const { error } = await emailClient.auth.signUp({
       email: fd.get("email") as string,
       password: fd.get("password") as string,
       options: {
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
         data: {
           full_name: `${fd.get("firstName")} ${fd.get("lastName")}`.trim(),
           role: resolveRole(selectedRoles),
