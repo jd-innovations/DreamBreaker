@@ -4,7 +4,7 @@ Purpose: turn `TODO1.1.md` into an ordered, one-issue-at-a-time production readi
 
 ## Current State — 2026-08-25
 
-**18 of 27 items closed.** Two more (4.1, 5.3) have Completion Notes but are
+**19 of 27 items closed.** Two more (4.1, 5.3) have Completion Notes but are
 explicitly *not* closed — read their notes, not this table, for detail.
 
 An item is done iff it has a `### Completion Notes - X.Y` section that does not
@@ -13,9 +13,9 @@ one.
 
 | | Items |
 | --- | --- |
-| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 5.2, **6.1**, **6.2** |
+| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 5.2, **6.1**, **6.2**, **6.3** |
 | **Partial** | **4.1** (web verified, mobile unverified), **5.3** (17/17 run and resolved; fix awaits a build) |
-| **Untouched** | 4.2, 4.3, 5.1, 5.4, 6.3, 7.1, 7.2, 7.3 |
+| **Untouched** | 4.2, 4.3, 5.1, 5.4, 7.1, 7.2, 7.3 |
 
 Phases 0-3 are complete and deployed to production.
 
@@ -50,33 +50,40 @@ Both of these need a new build and nothing else:
 (npm 10.8.2) both break. See `project-eas-npm-lockfile` in memory. This has
 already happened once.
 
-### Recommended next item: 6.3
+### Recommended next item: 4.2 (analytics), or the tournament lifecycle bug
 
-6.1 and 6.2 both closed 2026-08-25. 6.3 (empty/loading/error states) follows
-naturally: 6.1 removed the mock fallbacks that were standing in for those
-states, and several screens now show an empty state that was written ad hoc in
-the same change. It is also mostly mobile, which suits the window — the iOS
-build quota is exhausted until 2026-09-01, so mobile code written now rides the
-same build that verifies 4.1, 5.3's last two cases, and 6.1/6.2's gating.
+**Phase 6 is complete** — 6.1, 6.2 and 6.3 all closed 2026-08-25. What remains
+splits into work that is blocked and work that is a decision.
 
-Carried forward, each needing a decision rather than more discovery:
+**Blocked on the 2026-09-01 iOS build** (quota exhausted, see above): 4.1
+mobile, 5.3 case 20's fix, and device-verification of 6.1/6.2/6.3's mobile
+changes. These verify together in one pass — do not cut a build for one of them.
+
+**Blocked on a dashboard only the human can reach:**
+
+- 🔴 **Supabase Site URL is `http://localhost:3000`** and the redirect allowlist
+  is missing `https://pickleballapp.app/**`. Password reset and Google/Apple
+  sign-in are both wired (6.2) and both **fail on the round trip** until this is
+  set. It also affects *every* auth email, not just those flows — a real beta
+  signup confirming their address lands on localhost. Verified broken by
+  following a reset link 2026-08-25. Add `pickleballapp://**` at the same time
+  so mobile keeps working.
+
+**Open decisions, each recorded in the notes above:**
 
 - **Nothing moves a tournament out of `open` when its event date passes.** The
-  backlog was cleared 2026-08-25, but "First Strike - SRQ Dink District" is
-  already in that state again. This is the version with real user risk — a
-  player registering for an event that has already happened — and it wants its
-  own item.
-- **`First Strike - SRQ Dink District`** is past-dated and still `open`. Not
-  seed data (created the day before its event, $0 prize), so whether it belongs
-  in `completed` or `cancelled` depends on whether it ran. Human call.
-- **`marketplace_listings` exposes `location_lat`/`location_lng` on active
-  listings to `anon`.** Its policy is `status = 'active' OR seller_id =
-  auth.uid()`, so it is not literally `USING (true)` and the column-grant guard
-  added in 2.2's suite does not flag it. Arguably the point of a marketplace;
-  a decision if sellers are private individuals.
-- **`authenticated` can still read every user's email.** See the security
-  finding under 6.1. Needs a restricted view plus client changes, so it is
-  gated on a build.
+  backlog was cleared, but "First Strike - SRQ Dink District" is already back in
+  that state. This is the one with real user risk — a player registering for an
+  event that already happened — and it wants its own item.
+- **`marketplace_listings` exposes seller `location_lat`/`location_lng` to
+  `anon`**, not caught by the column-grant guard because its policy is not
+  literally `USING (true)`.
+- **`authenticated` can still read every user's email** (see the security
+  finding under 6.1). Needs a restricted view plus client changes.
+
+**Unblocked and unstarted:** 4.2 (product analytics — still no PostHog/Amplitude
+/Segment; Sentry is an error sink, not an analytics one), 4.3, 5.1, 5.4, and
+Phase 7 (store readiness), which is gated on 1.4's legal placeholders.
 
 ### Only the human can do these
 
@@ -3677,6 +3684,101 @@ confirm it before trusting either. Worth adding to `PRODUCTION_CONFIG.md` §3.
   - QA can force loading/error/empty states.
 - Done when:
   - No major route falls back to blank screens or fake data.
+
+### Completion Notes - 6.3
+
+- Status: **Complete 2026-08-25.** Shared state components on both platforms,
+  adopted on the highest-traffic screens, and **six screens fixed that
+  presented a failure as an empty result**. The remaining ~34 mobile empty
+  states and ~98 spinners are deliberately left — see "What was not done".
+  Mobile is not device-verifiable until the EAS iOS quota resets 2026-09-01;
+  web needs a promote.
+
+#### The rule this item is really about
+
+`EmptyState` means "this succeeded and there is nothing here."
+`ErrorState` means "this did not succeed and we do not know what is here."
+
+Collapsing the two hides real bugs behind a plausible sentence, and this
+project already had a worked example: `/conversation/<id>` reported "This
+conversation isn't available" — an *empty* state — for a defect that made 25 of
+33 conversations unreachable (5.3 case 20). It read as normal for weeks. An
+error state with a Retry would have looked wrong immediately.
+
+That rule is documented in the component file itself, not just here.
+
+#### Mobile (`01307cd`)
+
+`components/states/ScreenState.tsx` — `LoadingState`, `EmptyState`,
+`ErrorState`, exported from the `@/components` barrel. The shape is taken from
+`(tabs)/chat.tsx`, which already had the most complete version of the pattern.
+They use the real theme tokens rather than the local `L` palette every screen
+declares — which `theme/colors.ts` explicitly says no screen should do — and
+keep `paddingTop: 60`, so adoption shifts no layout.
+
+Auditing for the empty-vs-error conflation specifically (rather than converting
+spinners) found **five screens doing it**, all `.catch(() => {})` on a
+*primary* data load:
+
+| Screen | What a failed request looked like |
+| --- | --- |
+| `support/index.tsx` | "No tickets yet — questions or issues you report will show up here", to a user with open tickets |
+| `lessons/index.tsx` | "No lesson offers yet" — a broken request as an empty catalogue |
+| `coach/offers/index.tsx` | "No offers yet", to a coach with live offers |
+| `round-robin/[id]/roster.tsx` | an empty roster, which to an organiser reads as "nobody has joined" |
+| `mini-tournament/[id]/results.tsx` | an event that appears to have recorded no results |
+
+`support` is the worst of them: that screen is where someone goes *because*
+something is already wrong, and it told them nothing was.
+
+The first three now have a real error state with Retry. The last two are logged
+so they reach Sentry rather than vanishing; their render structure needs more
+than a branch swap.
+
+Adopted in chat, lessons, support and coach/offers. `chat` also gained distinct
+"No results" (search) and "No conversations yet" states, which were one message
+before. `support` keeps its bespoke empty state — it carries a styled primary
+CTA the shared component would flatten into a text link.
+
+#### Web (`5bca3de`)
+
+The app had **one** route boundary (`dashboard/error.tsx`) plus the root
+`global-error.tsx`. Everything else that threw fell through to the global one,
+which **replaces the entire document** — correct for a broken root layout, far
+too heavy for "the tournaments query threw". Added
+`components/shared/route-error.tsx` plus `error.tsx` for tournaments,
+matchmaking, profile, director, play, settings, admin and holds.
+
+**The one boundary that existed was quietly broken.** `dashboard/error.tsx`
+used `reset`, which re-renders *without re-fetching* — so for a failed data
+load "TRY AGAIN" re-rendered the same failure. It also printed `error.message`
+into a `<pre>` (a generic string in production; the raw message for Client
+Component errors) and only `console.error`'d, so nothing reached Sentry. All
+three fixed.
+
+**No `loading.tsx` files.** Of the 13 server-rendered routes, all but the
+landing page are `MobileLinkFallback` stubs that fetch nothing — a loading
+boundary would add a flash and no information. The web gap was error handling.
+
+#### A correction to `web/AGENTS.md`
+
+Reading the installed docs as that file insists turned up an inaccuracy **in
+that file**: it claimed Next 16 "renamed" `reset` to `unstable_retry` and that
+`reset` "was simply never provided", so a retry button would call `undefined`.
+
+Both props exist. `unstable_retry()` re-fetches and re-renders; `reset()` is
+still passed but only clears error state and re-renders without re-fetching.
+The hazard is therefore not an inert button but a **plausible** one — which is
+exactly how `dashboard/error.tsx` shipped. `web/AGENTS.md` now carries the real
+contract and a note to check the reference doc rather than the summary of it.
+
+#### What was not done, and why
+
+~34 mobile empty states and ~98 `ActivityIndicator` sites remain unconverted.
+That is a large, mechanical, low-risk diff with no user-visible change, and it
+cannot be device-verified before 2026-09-01 either. The value in this item was
+the components, the documented rule, and the six bugs — not uniform spinners.
+Convert opportunistically when touching a screen for another reason.
 
 ## Phase 7 - Store Readiness
 
