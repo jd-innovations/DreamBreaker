@@ -554,7 +554,11 @@ export default function RRRosterScreen() {
   useFocusEffect(useCallback(() => {
     if (isSupabase) {
       setLoading(true);
-      fetchSb().catch(() => {}).finally(() => setLoading(false));
+      // Was swallowed: a failed load showed an empty roster, which to an
+      // organiser reads as "nobody has joined" (item 6.3).
+      fetchSb()
+        .catch((err) => console.error('[round-robin/roster] load failed', err))
+        .finally(() => setLoading(false));
     } else {
       setPlayers(getRoster(tournamentId));
     }

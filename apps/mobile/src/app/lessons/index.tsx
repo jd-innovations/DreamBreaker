@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { colors, radius } from '@/theme';
 import { fetchActiveCoachOffersBrowse, type CoachOfferBrowseCard } from '@/lib/coach/offers';
+import { LoadingState, EmptyState, ErrorState } from '@/components';
 import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent } from '@/lib/coach/constants';
 
 // Minimal player-facing browse surface for Coach Marketplace offers.
@@ -22,16 +23,25 @@ export default function LessonMarketplaceScreen() {
   const insets = useSafeAreaInsets();
   const [offers, setOffers] = useState<CoachOfferBrowseCard[]>([]);
   const [loading, setLoading] = useState(true);
+  // The catch here used to be `() => {}`, so a failed fetch left `offers` empty
+  // and the screen said "No lesson offers yet" — a broken request presented as
+  // an empty catalogue (item 6.3).
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useFocusEffect(useCallback(() => {
     let active = true;
     setLoading(true);
+    setError(false);
     fetchActiveCoachOffersBrowse()
       .then((data) => { if (active) setOffers(data); })
-      .catch(() => {})
+      .catch((err) => {
+        console.error('[lessons] failed to load coach offers', err);
+        if (active) setError(true);
+      })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []));
+  }, [reloadKey]));
 
   const typeLabel = (t: CoachOfferBrowseCard['offer_type']) => OFFER_TYPE_OPTIONS.find((o) => o.value === t)?.label ?? t;
 
@@ -46,12 +56,18 @@ export default function LessonMarketplaceScreen() {
       </View>
 
       {loading ? (
-        <View style={s.center}><ActivityIndicator size="large" color={L.gold} /></View>
+        <LoadingState />
+      ) : error ? (
+        <ErrorState
+          message="We couldn't load lesson offers."
+          onRetry={() => setReloadKey((k) => k + 1)}
+        />
       ) : offers.length === 0 ? (
-        <View style={s.center}>
-          <Ionicons name="school-outline" size={40} color={L.textSub} />
-          <Text style={s.emptyTitle}>No lesson offers yet</Text>
-        </View>
+        <EmptyState
+          icon="school-outline"
+          title="No lesson offers yet"
+          message="Coaches post sessions and clinics here — check back soon."
+        />
       ) : (
         <FlatList
           data={offers}

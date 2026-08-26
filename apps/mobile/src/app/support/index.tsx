@@ -8,6 +8,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/theme';
 import { goBack } from '@/lib/navigation';
+import { LoadingState, ErrorState } from '@/components';
 import { useSession } from '@/hooks/useSession';
 import { fetchMyTickets, type SupportTicket, type SupportTicketStatus } from '@/lib/supportTicketService';
 
@@ -55,16 +56,26 @@ export default function MyTicketsScreen() {
   const { user } = useSession();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
+  // The catch was `() => {}`, so a failed load rendered "No tickets yet —
+  // questions or issues you report will show up here" to a user who has open
+  // tickets. On the support screen specifically, that is the worst possible
+  // place to imply nothing is wrong (item 6.3).
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       if (!user?.id) { setLoading(false); return; }
       setLoading(true);
+      setError(false);
       fetchMyTickets(user.id)
         .then(setTickets)
-        .catch(() => {})
+        .catch((err) => {
+          console.error('[support] failed to load tickets', err);
+          setError(true);
+        })
         .finally(() => setLoading(false));
-    }, [user?.id]),
+    }, [user?.id, reloadKey]),
   );
 
   return (
@@ -81,9 +92,12 @@ export default function MyTicketsScreen() {
       </View>
 
       {loading ? (
-        <View style={s.centered}>
-          <ActivityIndicator size="large" color={L.gold} />
-        </View>
+        <LoadingState />
+      ) : error ? (
+        <ErrorState
+          message="We couldn't load your tickets."
+          onRetry={() => setReloadKey((k) => k + 1)}
+        />
       ) : tickets.length === 0 ? (
         <View style={s.centered}>
           <Ionicons name="chatbubbles-outline" size={48} color={L.textMuted} />

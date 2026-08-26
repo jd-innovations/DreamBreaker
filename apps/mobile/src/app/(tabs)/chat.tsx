@@ -28,7 +28,7 @@ import {
   unarchiveConversation,
 } from '@/lib/conversationService';
 import { fetchStoryCategories, type StoryCategory, type StoryCategoryKey } from '@/lib/storyService';
-import { AppIcon, type AppIconName } from '@/components';
+import { AppIcon, type AppIconName, LoadingState, EmptyState, ErrorState } from '@/components';
 import { useSlideMenu } from '@/components/SlideMenu';
 
 // Theme-backed alias — brand values resolve from @/theme.
@@ -540,17 +540,9 @@ export default function ChatScreen() {
 
       {/* ── LIST ── */}
       {loading ? (
-        <View style={s.empty}>
-          <ActivityIndicator size="large" color={L.gold} />
-        </View>
+        <LoadingState />
       ) : error ? (
-        <View style={s.empty}>
-          <Ionicons name="alert-circle-outline" size={44} color={L.textMuted} />
-          <Text style={s.emptyText}>{error}</Text>
-          <TouchableOpacity onPress={load} style={{ marginTop: 8 }}>
-            <Text style={{ color: L.gold, fontWeight: '600' }}>Retry</Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorState message={error} onRetry={load} />
       ) : (
         <FlatList
           data={visible}
@@ -568,12 +560,19 @@ export default function ChatScreen() {
           style={s.list}
           contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
           ListEmptyComponent={
-            <View style={s.empty}>
-              <Ionicons name="chatbubbles-outline" size={44} color={L.textMuted} />
-              <Text style={s.emptyText}>
-                {search ? 'No results' : 'No conversations yet'}
-              </Text>
-            </View>
+            search ? (
+              <EmptyState
+                icon="search-outline"
+                title="No results"
+                message={`Nothing matches "${search}".`}
+              />
+            ) : (
+              <EmptyState
+                icon="chatbubbles-outline"
+                title="No conversations yet"
+                message="Message a player from their profile to start one."
+              />
+            )
           }
         />
       )}

@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LoadingState, ErrorState } from '@/components';
 import { router, useFocusEffect } from 'expo-router';
 import { colors, radius } from '@/theme';
 import { useSession } from '@/hooks/useSession';
@@ -33,10 +34,21 @@ export default function CoachOffersScreen() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  // Was `.catch(() => {})`: a failed load left the list empty, so a coach with
+  // live offers was told they had none (item 6.3).
+  const [error, setError] = useState(false);
+
   const load = useCallback(() => {
     if (!user?.id) return;
     setLoading(true);
-    fetchCoachOffers(user.id).then(setOffers).catch(() => {}).finally(() => setLoading(false));
+    setError(false);
+    fetchCoachOffers(user.id)
+      .then(setOffers)
+      .catch((err) => {
+        console.error('[coach/offers] failed to load offers', err);
+        setError(true);
+      })
+      .finally(() => setLoading(false));
   }, [user?.id]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -81,7 +93,9 @@ export default function CoachOffersScreen() {
       </View>
 
       {loading ? (
-        <View style={s.center}><ActivityIndicator size="large" color={L.gold} /></View>
+        <LoadingState />
+      ) : error ? (
+        <ErrorState message="We couldn't load your offers." onRetry={load} />
       ) : offers.length === 0 ? (
         <View style={s.center}>
           <Ionicons name="pricetag-outline" size={40} color={L.textSub} />

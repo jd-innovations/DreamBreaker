@@ -137,12 +137,16 @@ export default function ResultsScreen() {
   useEffect(() => {
     if (!isSupabase) return;
     setLoadingResults(true);
-    fetchSb().catch(() => {}).finally(() => setLoadingResults(false));
+    // Was swallowed: a failed load rendered as "no results yet" rather than as
+    // a failure (item 6.3). Logged so it reaches Sentry at minimum.
+    fetchSb()
+      .catch((err) => console.error('[mini-tournament/results] load failed', err))
+      .finally(() => setLoadingResults(false));
   }, [id, isSupabase]);
 
   useFocusEffect(useCallback(() => {
     if (!isSupabase) return;
-    fetchSb().catch(() => {});
+    fetchSb().catch((err) => console.error('[mini-tournament/results] refresh failed', err));
   }, [id, isSupabase]));
 
   // ── Local state (non-UUID path) ──
