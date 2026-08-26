@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import type { Session } from "@supabase/supabase-js";
 import { Sun, Moon, List, X, ShieldStar } from "@phosphor-icons/react";
 import { Logo } from "./logo";
 import { useTheme } from "./theme-provider";
@@ -25,6 +26,7 @@ export function Header() {
   const [isDirector, setIsDirector] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -34,40 +36,89 @@ export function Header() {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
+  // Session state only, and deliberately synchronous.
+  //
+  // Nothing awaited belongs in an onAuthStateChange callback. auth-js awaits
+  // subscriber callbacks in order and runs them while holding its auth lock, so
+  // a slow callback delays every later event — and blocks signOut(), which waits
+  // on that same lock. This callback used to run a `profiles` query on every
+  // event, including TOKEN_REFRESHED and the SIGNED_IN that fires on tab focus.
+  // That is what made Log Out feel dead: the tap was queued behind a database
+  // round trip it had no visible relationship to.
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return;
-      setAuthed(true);
-      setUserId(session.user.id);
-      const name = session.user.user_metadata?.full_name as string | undefined;
-      setInitials(name ? toInitials(name) : (session.user.email?.split("@")[0] ?? "").slice(0, 2).toUpperCase() || null);
-      const { data: prof } = await supabase.from("profiles").select("director_status").eq("id", session.user.id).single();
-      setIsDirector((prof as { director_status?: string | null } | null)?.director_status === "approved");
-    });
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const applySession = (session: Session | null) => {
       setAuthed(!!session);
-      if (session) {
-        setUserId(session.user.id);
-        const name = session.user.user_metadata?.full_name as string | undefined;
-        setInitials(name ? toInitials(name) : (session.user.email?.split("@")[0] ?? "").slice(0, 2).toUpperCase() || null);
-        const { data: prof } = await supabase.from("profiles").select("director_status").eq("id", session.user.id).single();
-        setIsDirector((prof as { director_status?: string | null } | null)?.director_status === "approved");
-      } else {
+      if (!session) {
         setUserId(null);
         setInitials(null);
-        setIsDirector(false);
+        return;
       }
-    });
+      setUserId(session.user.id);
+      const name = session.user.user_metadata?.full_name as string | undefined;
+      setInitials(
+        name
+          ? toInitials(name)
+          : (session.user.email?.split("@")[0] ?? "").slice(0, 2).toUpperCase() || null,
+      );
+    };
+
+    void supabase.auth.getSession().then(({ data: { session } }) => applySession(session));
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) =>
+      applySession(session),
+    );
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  // Director lookup, kept out of the auth callback on purpose — see above.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      if (!userId) {
+        if (!cancelled) setIsDirector(false);
+        return;
+      }
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("profiles")
+        .select("director_status")
+        .eq("id", userId)
+        .single();
+      if (cancelled) return;
+      setIsDirector(
+        (data as { director_status?: string | null } | null)?.director_status === "approved",
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  // Sign out of THIS browser only.
+  //
+  // The default scope is 'global', which revokes every refresh token on the
+  // account — logging out on the web would also sign the user out of the phone
+  // app. That is not what "Log Out" means to anyone, and it makes the whole
+  // action hostage to a network round trip.
+  //
+  // Navigation happens in `finally`. A signOut that throws has usually still
+  // cleared local storage, and stranding someone on a page that visibly did
+  // nothing is the worse failure — it is what makes people tap repeatedly.
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/");
-    router.refresh();
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      /* fall through and navigate anyway */
+    } finally {
+      setLoggingOut(false);
+      router.push("/");
+      router.refresh();
+    }
   };
 
   return (
@@ -114,10 +165,11 @@ export function Header() {
             <>
               <button
                 onClick={handleLogout}
-                className="hidden sm:inline-flex h-10 px-5 rounded-full font-semibold text-sm border border-border hover:bg-secondary/60 transition-colors items-center"
+                disabled={loggingOut}
+                className="hidden sm:inline-flex h-10 px-5 rounded-full font-semibold text-sm border border-border hover:bg-secondary/60 transition-colors items-center disabled:opacity-60"
                 data-testid="header-logout-btn"
               >
-                Log Out
+                {loggingOut ? "Signing out…" : "Log Out"}
               </button>
               <Link
                 href="/dashboard"
@@ -188,11 +240,12 @@ export function Header() {
             ))}
             {authed ? (
               <button
-                onClick={() => { setOpen(false); handleLogout(); }}
-                className="px-4 py-3 rounded-lg text-sm font-semibold text-muted-foreground text-left"
+                onClick={() => { setOpen(false); void handleLogout(); }}
+                disabled={loggingOut}
+                className="px-4 py-3 rounded-lg text-sm font-semibold text-muted-foreground text-left disabled:opacity-60"
                 data-testid="mobile-logout-btn"
               >
-                Log Out
+                {loggingOut ? "Signing out…" : "Log Out"}
               </button>
             ) : (
               <Link
