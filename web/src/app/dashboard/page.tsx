@@ -23,7 +23,7 @@ import type { UserProfile as MessagingUserProfile, MatchSummary } from "@/compon
 import { NotificationBell } from "@/components/notifications/bell";
 import { MatchSettingsPanel } from "@/components/shared/match-settings-panel";
 import { ProfileSettings } from "@/components/dashboard/profile-settings";
-import { playerStats, tournaments as mockTournaments, recentMatches as mockMatches, COURT_IMG } from "@/data/mock-data";
+import { COURT_IMG } from "@/lib/stock-images";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Profile = {
@@ -275,6 +275,7 @@ export default function DashboardPage() {
   const [matches, setMatches] = useState<DisplayMatch[]>([]);
   const [stats, setStats] = useState({ wins: 0, losses: 0, tournaments: 0, duprDelta: 0 });
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [navSection, setNavSection] = useState<NavSection>("dashboard");
 
   // Open a specific section when linked with ?section= (e.g. from the mobile nav).
@@ -308,7 +309,7 @@ export default function DashboardPage() {
   useEffect(() => {
     let stale = false;
     (async () => {
-      if (!cancelTarget || cancelTarget.registration_id.startsWith("mock-")) return;
+      if (!cancelTarget) return;
       const registrationId = cancelTarget.registration_id;
       const supabase = createClient();
       const { data } = await supabase.rpc("compute_registration_refund", {
@@ -335,14 +336,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function load() {
+      // Misconfigured environment used to render a fully populated dashboard
+      // from sample data. Fail visibly instead (item 6.1).
       if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        setUpcoming(mockTournaments.slice(0, 2).map((t, i) => { const [city, state] = t.location.split(", "); return { id: t.id, registration_id: `mock-reg-${i}`, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" }; }));
-        setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
-        setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments, duprDelta: playerStats.duprDelta });
-        setRecommended(mockTournaments.slice(2).map((t) => {
-          const [city, state] = t.location.split(", ");
-          return { id: t.id, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, format: t.format.split(" · ")[0].toLowerCase().replace(/ /g, "_"), entry_fee_cents: t.entryFee * 100, capacity: t.spots, venue_name: t.venue, skill_min: null, skill_max: null, registeredCount: t.filled, partnerSeekers: 0, proximityScore: 3 };
-        }));
+        console.error("[dashboard] Supabase environment variables are missing");
+        setLoadFailed(true);
         setLoading(false);
         return;
       }
@@ -392,10 +390,9 @@ export default function DashboardPage() {
         })
         .filter(Boolean) as UpcomingEvent[];
 
-      setUpcoming(liveUpcoming.length > 0 ? liveUpcoming : mockTournaments.slice(0, 2).map((t, i) => {
-        const [city, state] = t.location.split(", ");
-        return { id: t.id, registration_id: `mock-reg-${i}`, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" };
-      }));
+      // A player with no upcoming events sees none. This used to invent two
+      // registrations they never made.
+      setUpcoming(liveUpcoming);
 
       const { data: matchRows } = await supabase
         .from("bracket_matches")
@@ -410,8 +407,7 @@ export default function DashboardPage() {
         setMatches(processed);
         setStats((s) => ({ ...s, wins: processed.filter((m) => m.result === "W").length, losses: processed.filter((m) => m.result === "L").length }));
       } else {
-        setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
-        setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments, duprDelta: playerStats.duprDelta });
+        setMatches([]);
       }
 
       const { count } = await supabase.from("registrations").select("tournament_id", { count: "exact", head: true }).eq("player_id", user.id).in("status", ["registered", "checked_in"]);
@@ -428,7 +424,7 @@ export default function DashboardPage() {
 
       // Recommended tournaments — ordered by proximity then date
       {
-        const validRegisteredIds = liveUpcoming.filter((e) => !e.id.startsWith("mock-")).map((e) => e.id);
+        const validRegisteredIds = liveUpcoming.map((e) => e.id);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let recQuery = (supabase as any)
           .from("tournaments")
@@ -471,11 +467,10 @@ export default function DashboardPage() {
             );
           setRecommended(rec);
         } else {
-          // No live tournaments yet — show mock data so the section is always visible
-          setRecommended(mockTournaments.slice(2).map((t) => {
-            const [city, state] = t.location.split(", ");
-            return { id: t.id, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, format: t.format.split(" · ")[0].toLowerCase().replace(/ /g, "_"), entry_fee_cents: t.entryFee * 100, capacity: t.spots, venue_name: t.venue, skill_min: null, skill_max: null, registeredCount: t.filled, partnerSeekers: 0, proximityScore: 3 };
-          }));
+          // Was: "show mock data so the section is always visible". A section
+          // that is always visible because it invents its contents is worse
+          // than one that hides when there is nothing to recommend.
+          setRecommended([]);
         }
       }
 
@@ -508,14 +503,12 @@ export default function DashboardPage() {
       setLoading(false);
     }
 
-    load().catch(() => {
-      setUpcoming(mockTournaments.slice(0, 2).map((t, i) => { const [city, state] = t.location.split(", "); return { id: t.id, registration_id: `mock-reg-${i}`, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" }; }));
-      setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
-      setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments, duprDelta: playerStats.duprDelta });
-      setRecommended(mockTournaments.slice(2).map((t) => {
-        const [city, state] = t.location.split(", ");
-        return { id: t.id, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, format: t.format.split(" · ")[0].toLowerCase().replace(/ /g, "_"), entry_fee_cents: t.entryFee * 100, capacity: t.spots, venue_name: t.venue, skill_min: null, skill_max: null, registeredCount: t.filled, partnerSeekers: 0, proximityScore: 3 };
-      }));
+    load().catch((err) => {
+      console.error("[dashboard] failed to load dashboard", err);
+      setUpcoming([]);
+      setMatches([]);
+      setRecommended([]);
+      setLoadFailed(true);
       setLoading(false);
     });
   }, []);
@@ -668,6 +661,16 @@ export default function DashboardPage() {
                   {stats.tournaments > 0 ? ` · ${stats.tournaments} tournament${stats.tournaments > 1 ? "s" : ""} this season` : ""}
                 </p>
               </div>
+
+              {loadFailed && (
+                <div className="border border-destructive/40 bg-destructive/10 rounded-2xl px-5 py-4 text-sm">
+                  <span className="font-semibold">We couldn&apos;t load your dashboard.</span>{" "}
+                  <span className="text-muted-foreground">
+                    The figures below are incomplete, not zero.{" "}
+                    <button onClick={() => window.location.reload()} className="text-primary hover:underline">Try again</button>.
+                  </span>
+                </div>
+              )}
 
               {/* Stat cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1301,11 +1304,6 @@ export default function DashboardPage() {
               <button
                 disabled={cancelConfirming}
                 onClick={async () => {
-                  if (cancelTarget.registration_id.startsWith("mock-")) {
-                    setUpcoming((prev) => prev.filter((e) => e.id !== cancelTarget.id));
-                    setCancelTarget(null);
-                    return;
-                  }
                   setCancelConfirming(true);
                   const supabase = createClient();
                   // Goes through the cancel-registration edge function rather

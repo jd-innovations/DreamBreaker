@@ -17,7 +17,6 @@ import { ensureFreshSession } from "@/lib/ensure-session";
 import { toast } from "sonner";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
-import { playerStats, matchPartners, recentMatches as mockMatches, tournaments as mockTournaments } from "@/data/mock-data";
 import type { Tables } from "@/lib/supabase/database.types";
 
 type Profile = Pick<
@@ -336,8 +335,9 @@ export default function ProfilePage() {
         setMatches(processed);
         setStats((s) => ({ ...s, wins: processed.filter((m) => m.result === "W").length, losses: processed.filter((m) => m.result === "L").length }));
       } else {
-        setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
-        setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments });
+        // No completed matches is a real state, not a hole to fill. The tab
+        // renders its own "NO MATCHES YET" panel and the W-L tile renders "—".
+        setMatches([]);
       }
 
       // Tournament registrations
@@ -398,16 +398,21 @@ export default function ProfilePage() {
         const { data: pp } = await supabase.from("profiles").select("id,full_name,avatar_url,dupr,skill_level,location_city,location_state,play_style").in("id", ids);
         setPartners((pp ?? []).map((p) => ({ id: p.id, name: p.full_name, avatar: p.avatar_url, dupr: p.dupr, skill_level: p.skill_level, location: [p.location_city, p.location_state].filter(Boolean).join(", ") || "—", badges: [p.play_style].filter(Boolean) as string[] })));
       } else {
-        setPartners(matchPartners.slice(0, 4).map((p) => ({ id: p.id, name: p.name, avatar: p.img, dupr: p.dupr, skill_level: null, location: p.location, badges: p.badges })));
+        // Ditto: the Partners tab has its own "NO PARTNERS YET" panel.
+        setPartners([]);
       }
 
       setLoading(false);
     }
 
-    load().catch(() => {
-      setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
-      setPartners(matchPartners.slice(0, 4).map((p) => ({ id: p.id, name: p.name, avatar: p.img, dupr: p.dupr, skill_level: null, location: p.location, badges: p.badges })));
-      setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments });
+    load().catch((err) => {
+      // A failed load used to render an invented 38-14 record and four
+      // fabricated opponents, which is indistinguishable from a real profile.
+      // Say the load failed and show nothing instead.
+      console.error("[profile] failed to load profile data", err);
+      toast.error("Could not load your profile data. Please refresh the page.");
+      setMatches([]);
+      setPartners([]);
       setLoading(false);
     });
   }, []);

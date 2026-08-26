@@ -16,7 +16,6 @@ import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
-import { matchPartners } from "@/data/mock-data";
 import { PlayerProfileSheet } from "@/components/shared/player-profile-sheet";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -124,29 +123,6 @@ function profileToPartner(
   };
 }
 
-function mockToPartner(p: (typeof matchPartners)[0], myDupr: number | null, myAvail: string | null): Partner {
-  const { pct, reasons } = computeMatch({ dupr: p.dupr, availability: p.availability, distance: p.distance }, myDupr, myAvail);
-  return {
-    id: p.id,
-    name: p.name,
-    handle: null,
-    dupr: p.dupr,
-    skill_level: null,
-    location: p.location,
-    distance: p.distance,
-    availability: p.availability,
-    play_style: p.style,
-    badges: [p.style],
-    img: p.img,
-    bio: p.bio,
-    matchPct: pct,
-    matchReasons: reasons,
-    tournamentOverlap: pct > 70 ? "Austin Open" : null,
-    mutuals: Math.floor(pct / 20),
-    isTopRated: p.dupr >= 4.5,
-    isVerified: false,
-  };
-}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -310,8 +286,11 @@ function MatchmakingInner() {
         .order("dupr", { ascending: false })
         .limit(20);
 
+      // An empty deck shows the "ALL CAUGHT UP" panel. It used to deal five
+      // invented players instead — swipeable, likeable, and indistinguishable
+      // from real people (item 6.1).
       const partners = (profiles ?? []).filter((p) => !swipedIds.has(p.id)).map((p) => profileToPartner(p, meDupr, meAvail));
-      setDeck(partners.length > 0 ? [...partners].reverse() : matchPartners.map((p) => mockToPartner(p, meDupr, meAvail)));
+      setDeck([...partners].reverse());
 
       const { data: userProfiles } = await supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name");
       setAllUsers((userProfiles ?? []) as MessagingUserProfile[]);
@@ -371,8 +350,9 @@ function MatchmakingInner() {
 
       setLoading(false);
     }
-    load().catch(() => {
-      setDeck(matchPartners.map((p) => mockToPartner(p, null, null)));
+    load().catch((err) => {
+      console.error("[matchmaking] failed to load candidates", err);
+      setDeck([]);
       setLoading(false);
     });
   }, [tournamentIdParam]);

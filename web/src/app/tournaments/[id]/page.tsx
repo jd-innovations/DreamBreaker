@@ -17,8 +17,7 @@ import { PickleballAppInsights } from "@/components/shared/pickleball-app-insigh
 import { BookmarkButton } from "@/components/shared/bookmark-button";
 import { ShareButton } from "@/components/shared/share-button";
 import { createClient } from "@/lib/supabase/client";
-import { computeInsight, buildMockInsightInput, type InsightResult } from "@/lib/insights";
-import { tournaments as mockTournaments, matchPartners } from "@/data/mock-data";
+import { computeInsight, type InsightResult } from "@/lib/insights";
 import { getUserId } from "@/lib/dev-user";
 
 // ── FAQ data ──────────────────────────────────────────────────────────────────
@@ -124,39 +123,6 @@ type LiveTournament = {
   } | null;
 };
 
-// Normalise mock tournament to the same display shape
-function mockToLive(t: typeof mockTournaments[0]) {
-  const [city, state] = t.location.split(", ");
-  return {
-    id: t.id,
-    name: t.name,
-    city: city ?? t.location,
-    state: state ?? "",
-    venue_name: t.venue,
-    venue_address: null,
-    cover_img_url: t.img,
-    format: t.format.split("·")[0].trim(),
-    bracket_type: "single_elim",
-    skill_min: null,
-    skill_max: null,
-    draw_size: t.spots,
-    spots_filled: t.filled,
-    entry_fee_cents: t.entryFee * 100,
-    hold_fee_cents: t.holdFee * 100,
-    hold_duration_hours: 72,
-    hold_cutoff_days: 7,
-    prize_pool_cents: parseInt(t.prize.replace(/[^0-9]/g, ""), 10) * 100,
-    event_date: t.dateISO,
-    registration_opens_at: null,
-    registration_closes_at: new Date(Date.now() + 3 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 14 * 86400000).toISOString(),
-    status: t.status.toLowerCase().replace(/ /g, "_"),
-    description: null,
-    rules: null,
-    director: { id: "mock", full_name: t.director, director_events_hosted: 8, director_rating: 4.6 },
-  } satisfies LiveTournament;
-}
-
 // ── Page ───────────────────────────────────────────────────────────────────────
 // ── DivisionCard ──────────────────────────────────────────────────────────────
 function DivisionHoldExpiry({ expiry }: { expiry: Date | null }) {
@@ -245,6 +211,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const { id } = use(params);
 
   const [tournament, setTournament] = useState<LiveTournament | null>(null);
+  const [loadError, setLoadError] = useState<"not_found" | "error" | null>(null);
   const [insight, setInsight] = useState<InsightResult | null>(null);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [divisions, setDivisions] = useState<Division[]>([]);
@@ -286,29 +253,25 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
         .eq("id", id)
         .single();
 
-      let t: LiveTournament;
-      let regDates: string[] = [];
-
-      if (live) {
-        t = live as unknown as LiveTournament;
-
-        // Registration timestamps for velocity signal
-        const { data: regs } = await supabase
-          .from("registrations")
-          .select("created_at")
-          .eq("tournament_id", id)
-          .in("status", ["held", "registered", "checked_in"])
-          .order("created_at", { ascending: false });
-
-        regDates = (regs ?? []).map((r) => r.created_at);
-      } else {
-        // Fall back to mock
-        const mock = mockTournaments.find((x) => x.id === id) ?? mockTournaments[0];
-        t = mockToLive(mock);
-        // Build synthetic registration dates from mock data
-        const mockInput = buildMockInsightInput(mock);
-        regDates = mockInput.recentRegistrationDates;
+      // "No such tournament" is a real answer. This used to substitute a
+      // different, invented tournament — so a dead link rendered a convincing
+      // event page with an entry fee and a Register button (item 6.1).
+      if (!live) {
+        setLoadError("not_found");
+        return;
       }
+
+      const t = live as unknown as LiveTournament;
+
+      // Registration timestamps for velocity signal
+      const { data: regs } = await supabase
+        .from("registrations")
+        .select("created_at")
+        .eq("tournament_id", id)
+        .in("status", ["held", "registered", "checked_in"])
+        .order("created_at", { ascending: false });
+
+      const regDates = (regs ?? []).map((r) => r.created_at);
 
       setTournament(t);
       setSpotsFilled(t.spots_filled);
@@ -399,21 +362,9 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
         });
       }
 
-      if (liveAttendees.length > 0) {
-        setAttendees(liveAttendees);
-      } else {
-        // Mock fallback: first 4 matchPartners as attendees
-        setAttendees(
-          matchPartners.slice(0, 5).map((p, i) => ({
-            id: p.id,
-            name: p.name,
-            avatar: p.img,
-            ratingLabel: `${p.dupr} DUPR`,
-            kind: (["going", "going", "holding", "interested", "going"] as Attendee["kind"][])[i],
-            isFriend: i < 2,
-          })),
-        );
-      }
+      // An event with no attendees yet shows none. It used to show five
+      // invented players, two of them labelled as the viewer's friends.
+      setAttendees(liveAttendees);
 
       // Only show insights banner for open/filling events
       const showInsights = ["open", "filling_fast"].includes(t.status);
@@ -437,22 +388,12 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       }
     }
 
-    load().catch(() => {
-      // Network failure — show mock data so the page never hangs
-      const mock = mockTournaments.find((x) => x.id === id) ?? mockTournaments[0];
-      setTournament(mockToLive(mock));
-      const mockInput = buildMockInsightInput(mock);
-      setInsight(computeInsight(mockInput));
-      setAttendees(
-        matchPartners.slice(0, 5).map((p, i) => ({
-          id: p.id,
-          name: p.name,
-          avatar: p.img,
-          ratingLabel: `${p.dupr} DUPR`,
-          kind: (["going", "going", "holding", "interested", "going"] as Attendee["kind"][])[i],
-          isFriend: i < 2,
-        })),
-      );
+    load().catch((err) => {
+      // A network failure used to render a mock tournament "so the page never
+      // hangs" — which meant the page showed a plausible event, and a
+      // Register button, for something that may not exist.
+      console.error("[tournament] failed to load tournament", err);
+      setLoadError("error");
     });
   }, [id]);
 
@@ -565,6 +506,26 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   };
 
   // Loading skeleton
+  if (loadError) {
+    return (
+      <PageShell>
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+          <h1 className="font-display text-4xl tracking-wide mb-3">
+            {loadError === "not_found" ? "TOURNAMENT NOT FOUND" : "COULDN'T LOAD THIS TOURNAMENT"}
+          </h1>
+          <p className="text-muted-foreground mb-8">
+            {loadError === "not_found"
+              ? "This event may have been removed, or the link may be wrong."
+              : "Something went wrong on our end. Please try again."}
+          </p>
+          <Link href="/tournaments" className="font-display tracking-[0.2em] text-sm text-primary hover:underline">
+            BROWSE ALL TOURNAMENTS
+          </Link>
+        </div>
+      </PageShell>
+    );
+  }
+
   if (!tournament) {
     return (
       <PageShell>
