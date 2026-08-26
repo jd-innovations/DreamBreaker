@@ -11,6 +11,41 @@ blocked by the iOS build quota and by sequencing.
 
 ---
 
+## ⏸️ PROGRESS — paused 2026-08-26
+
+**Workstream A complete (bar A3), C3 complete.** Everything committed and pushed
+to `feature/expo-mobile-foundation`. Nothing half-finished in the working tree.
+
+| Task | Status | Commit |
+| --- | --- | --- |
+| A1 · web no longer registers paid entries for free | ✅ done | `c657aef` |
+| A2 · web honours `is_discoverable` | ✅ done | `c657aef` |
+| A3 · server-side waitlist position | ⏸️ deferred — lands better after B1 | — |
+| A4 · deleted `frontend/` and `backend/` | ✅ done (86 files) | `c657aef` |
+| A5 · removed dead dependencies | ✅ done | `c657aef` |
+| C3 · one vocabulary for state components | ✅ done | `526a6ce` |
+
+**🔴 Two things are waiting on a human, and one is live in production.**
+
+1. **Promote a Vercel preview.** A1's fix is committed but not deployed — the
+   priced button that charges nothing is still live until you promote.
+2. **Fix the Supabase URL configuration.** Site URL is still
+   `http://localhost:3000` and the redirect allowlist is missing
+   `https://pickleballapp.app/**`. Password reset and OAuth are shipped and
+   broken. Dashboard-only, no redeploy. Add `pickleballapp://**` at the same
+   time so mobile keeps working.
+
+**Everything else is parked on the 2026-09-01 iOS build.** B1 is the next real
+move and its *timing* matters more than its content — it is the highest-risk
+task here and the one most likely to break the EAS builders, so it lands
+immediately after that build verifies, never before one you depend on.
+
+**Left on disk deliberately:** `frontend/node_modules`, 599 MB. `git rm` removed
+the 86 tracked files; the untracked directory remains and is safe to delete by
+hand.
+
+---
+
 ## 0. Constraints That Shape the Order
 
 Facts about this project, not general advice. They change what can be sequenced
@@ -73,7 +108,7 @@ call sites — B4 should be written with that in mind.
 Small, independent, all now unblocked. Every task reduces active harm or removes
 noise. **Start here.**
 
-### A1 — Stop web registering paid entries for free
+### A1 — Stop web registering paid entries for free ✅ `c657aef`
 `Web` · `P0` · `S` · **Gate: D1 — ANSWERED (no web payments)**
 
 Gate `completeRegistration` on the entry fee. Where a fee is owed, replace the
@@ -86,7 +121,7 @@ behaviour, which is correct.
 - **Ship:** promote
 - **Risk:** low — narrows an action, removes none
 
-### A2 — Honour `is_discoverable` on web
+### A2 — Honour `is_discoverable` on web ✅ `c657aef`
 `Web` · `P0` · `XS` · **Gate: none**
 
 Add the filter mobile already applies. A user who opted out of discovery is
@@ -97,8 +132,8 @@ currently still listed to other users on web.
 - **Ship:** promote
 - **Risk:** very low
 
-### A3 — Move waitlist position server-side
-`Web` · `P2` · `M` · **Gate: none, but better after B1**
+### A3 — Move waitlist position server-side ⏸️ DEFERRED
+`Web` · `P2` · `M` · **Deferred to after B1**
 
 Web computes `max(position) + 1` in the browser then inserts. Two concurrent
 joiners race. Wrap in an RPC both platforms can call.
@@ -108,8 +143,8 @@ joiners race. Wrap in an RPC both platforms can call.
 - **Ship:** migration + promote
 - **Risk:** medium — touches registration writes
 
-### A4 — Delete `frontend/` and `backend/`
-`Repo` · `S` · **Gate: confirm nothing deploys from them**
+### A4 — Delete `frontend/` and `backend/` ✅ `c657aef`
+`Repo` · `S` · **Done — verified unreferenced by CI and both apps**
 
 A predecessor CRA app and a Python server, last touched in June, still carrying
 `node_modules`.
@@ -118,11 +153,13 @@ A predecessor CRA app and a Python server, last touched in June, still carrying
 - **Ship:** commit only
 - **Risk:** low — recoverable from git
 
-### A5 — Remove dead dependencies and duplicate icon library
-`Web` · `S` · **Gate: none**
+### A5 — Remove dead dependencies ✅ `c657aef`
+`Web` · `S` · **Done**
 
-`@tanstack/react-query` has zero call sites. Lucide and Phosphor both ship;
-Phosphor is dominant.
+`@tanstack/react-query` has zero call sites. **So does `lucide-react`** — the
+plan expected an icon-library consolidation and there was nothing to
+consolidate, since Phosphor (37 files) was already the only one in use. Both
+removed; lockfile updated with `--package-lock-only`.
 
 - **Verify:** `next build` clean; no visual diff
 - **Ship:** promote
@@ -235,12 +272,20 @@ per-platform.
 - **Verify:** every status has exactly one label and colour across both apps
 - **Risk:** low
 
-### C3 — Align the state-component contracts
-`Both` · `S` · **Gate: none — do this before B1 if B1 slips**
+### C3 — Align the state-component contracts ✅ `526a6ce`
+`Both` · `S` · **Done**
 
 Mobile's `ScreenState.tsx` and web's `route-error.tsx` were written days apart
-for the same purpose. Agree prop names and the empty-versus-error rule now,
-while both are new.
+for the same purpose and had already picked different names for the same things.
+Web aligned onto mobile's vocabulary (`description` → `message`, `retry` →
+`onRetry`, `retryLabel` added), across nine `error.tsx` call sites. Both files
+now carry the empty-versus-error rule and point at each other.
+
+**Not done, deliberately:** web still has no `EmptyState`/`LoadingState`
+component and 43 inline empty/error states across 14 files. Extracting them is
+6.3's deferred tail rather than alignment work, and building them before B3
+means styling against the current palette and restyling after. They belong in
+workstream D.
 
 - **Verify:** prop names match; the rule is stated in both files
 - **Risk:** very low. Cheapest today it will ever be.
@@ -299,8 +344,9 @@ months.
 TODO 1.1 still has eight open items and is the programme gating a beta release.
 This work does not replace it, and running both at full speed will stall both.
 
-**Until the Sep 1 build:** workstream A, now fully unblocked. It is small, mostly
-web-only, and needs no build. C3 can go too — it is repo-only.
+**Until the Sep 1 build:** ~~workstream A~~ — **done 2026-08-26**, along with C3.
+What is left before that build is not engineering: promote the web changes, and
+fix the Supabase URL configuration.
 
 **Immediately after the Sep 1 build verifies:** B1, while there is maximum
 distance to the next build you depend on. It is the highest-risk task here and
@@ -311,9 +357,9 @@ keeps beta on track; alignment stops the divergence widening while it does.
 
 | Order | Work | Gate | Needs build | Needs promote |
 | --- | --- | --- | --- | --- |
-| 1 | Fix the Supabase URL config | — | No | No |
-| 2 | A2, A4, A5, C3 | None | No | Yes |
-| 3 | A1 | — | No | Yes |
+| ~~1~~ | ~~A2, A4, A5, C3~~ ✅ done 2026-08-26 | — | No | **Promote pending** |
+| ~~2~~ | ~~A1~~ ✅ done 2026-08-26 | — | No | **Promote pending** |
+| **3** | **Fix the Supabase URL config** — outstanding | — | No | No |
 | 4 | Sep 1 build — verify the five queued items | — | **Yes** | No |
 | 5 | B1 → B2 → C1, C2 | B1 | Yes, to confirm | Yes |
 | 6 | B3, B4 | — | Yes | Yes |
