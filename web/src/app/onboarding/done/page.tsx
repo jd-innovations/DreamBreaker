@@ -13,12 +13,33 @@
 
 import { Suspense } from "react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle, EnvelopeSimple } from "@phosphor-icons/react";
+import { loadDraft } from "@/lib/onboarding/persistence";
 
 function DoneContent() {
   const params = useSearchParams();
   const deferred = params.get("status") === "deferred";
+
+  // What is actually being held for you.
+  //
+  // On the deferred path this screen is a promise — "your answers are saved" —
+  // made about data this page never looked at. A signup on 2026-08-26 completed
+  // all six steps, saw this message, and had only two of fourteen answers
+  // written on confirmation: the promise was false and nothing surfaced that.
+  //
+  // So the claim is now backed by a read of the stored draft. Field names only,
+  // never values.
+  const [held, setHeld] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (!deferred) return;
+    const stored = loadDraft();
+    // Reading an external store (localStorage) that does not exist during
+    // render, which is what this rule permits in prose and flags in code.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHeld(stored ? [...stored.touched].sort() : []);
+  }, [deferred]);
 
   return (
     <div className="py-12 text-center max-w-md mx-auto">
@@ -39,6 +60,17 @@ function DoneContent() {
           ? "Confirm your address and we'll finish setting up your profile automatically — your answers are saved."
           : "Your profile is ready. Let's find you some games."}
       </p>
+
+      {deferred && held !== null && (
+        <p
+          className="font-mono text-[10px] tracking-widest text-muted-foreground/60 mb-8 break-words"
+          data-testid="onboarding-held-answers"
+        >
+          {held.length > 0
+            ? `HOLDING ${held.length} ANSWERS — ${held.join(", ")}`
+            : "NO ANSWERS STORED — TELL SUPPORT BEFORE CONFIRMING"}
+        </p>
+      )}
 
       {deferred ? (
         <Link
