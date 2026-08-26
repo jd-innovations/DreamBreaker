@@ -8,7 +8,7 @@ import { Logo } from "@/components/layout/logo";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { createClient, createEmailLinkClient } from "@/lib/supabase/client";
-import { saveSignupSeed } from "@/lib/onboarding/persistence";
+import { saveSignupSeed, clearDraft, clearSignupSeed } from "@/lib/onboarding/persistence";
 import { LEGAL_ROUTES } from "@/lib/legal";
 
 const ROLE_OPTIONS = [
@@ -161,6 +161,29 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     const fd = new FormData(e.currentTarget);
+
+    // Start from a clean slate. Signing up is a claim to be a NEW person, and
+    // any leftover state in this browser belongs to a different one.
+    //
+    // signUp() does not clear an existing session. Observed 2026-08-26: a user
+    // still signed in as account A signed up as account B, and the onboarding
+    // profile step's getUser() returned A — so it prefilled A's name and, far
+    // worse, stamped the draft with A's user id. On confirmation draftBelongsTo
+    // then correctly refused to write B's answers onto A, and discarded all of
+    // them. The guard held; the data did not.
+    //
+    // Clearing the draft here is deliberate: a draft in this browser was
+    // answered by whoever was here before, and must not follow a new account.
+    try {
+      const existing = createClient();
+      const { data: { session } } = await existing.auth.getSession();
+      if (session) await existing.auth.signOut({ scope: "local" });
+    } catch {
+      // Never block a signup on tidying up.
+    }
+    clearDraft();
+    clearSignupSeed();
+
     // Implicit flow, and an explicit destination — both matter.
     //
     // Without `emailRedirectTo` GoTrue falls back to the project Site URL, so
@@ -177,7 +200,10 @@ export default function AuthPage() {
       options: {
         emailRedirectTo: `${window.location.origin}/auth/confirm`,
         data: {
-          full_name: `${fd.get("firstName")} ${fd.get("lastName")}`.trim(),
+          full_name: [fd.get("firstName"), fd.get("lastName")]
+            .map((v) => String(v ?? "").trim())
+            .filter(Boolean)
+            .join(" "),
           role: resolveRole(selectedRoles),
         },
       },
