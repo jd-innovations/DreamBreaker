@@ -216,16 +216,26 @@ export async function updatePassword(newPassword: string) {
 }
 
 export async function signOut() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user?.id) {
-    try {
-      await deleteCurrentDevicePushToken(user.id);
-    } catch (err) {
-      if (__DEV__) console.warn('[auth] push token cleanup failed before sign-out', err);
-    }
+  // Best-effort cleanup, while a session still exists to authorize it.
+  //
+  // The getUser() call used to sit outside this try, so a failure there — an
+  // expired token, no connectivity — threw before signOut() was ever reached,
+  // and the user could not sign out at all. A stale push token is the far
+  // cheaper failure: the next registration overwrites it.
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id) await deleteCurrentDevicePushToken(user.id);
+  } catch (err) {
+    if (__DEV__) console.warn('[auth] push token cleanup failed before sign-out', err);
   }
 
-  const { error } = await supabase.auth.signOut();
+  // Sign out THIS device only.
+  //
+  // The default scope is 'global', which revokes every refresh token on the
+  // account — signing out on the phone also signed the user out on the web.
+  // That is not what "Sign out" means to anyone. Web uses 'local' for the same
+  // reason, and delete-account.tsx already did.
+  const { error } = await supabase.auth.signOut({ scope: 'local' });
   if (error) throw error;
 }
 
