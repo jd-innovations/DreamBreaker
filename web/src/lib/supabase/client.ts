@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
 import { getSupabaseUrl, getSupabaseAnonKey } from "./env";
 
@@ -18,33 +19,49 @@ export function createClient() {
 // Password recovery must NOT use PKCE.
 //
 // `resetPasswordForEmail` sends a code challenge only when the client's flowType
-// is 'pkce' (auth-js GoTrueClient: `if (this.flowType === 'pkce')`). The emailed
-// link then carries a `?code=` redeemable only with the verifier saved in the
-// requesting browser's storage — and that verifier is routinely missing or stale
-// by the time the link is opened: another PKCE flow in the same browser
-// overwrites it, and a mail app's in-app WebView is a different storage context
-// entirely. Confirmed in production 2026-08-26 — `/verify` succeeded, then
-// `/token` returned "code challenge does not match previously saved code
-// verifier", and the user saw a link that looked expired but was perfectly good.
+// is 'pkce' (auth-js: `if (this.flowType === 'pkce')`). The emailed link then
+// carries a `?code=` redeemable solely with the verifier saved in the requesting
+// browser's storage — routinely missing or stale by the time the link is opened:
+// another PKCE flow in the same browser overwrites it, and a mail app's in-app
+// WebView is a different storage context entirely. Confirmed in production
+// 2026-08-26 — `/verify` succeeded, then `/token` returned "code challenge does
+// not match previously saved code verifier", and the user saw a link that looked
+// expired but was perfectly good.
 //
 // With implicit flow no challenge is sent, so GoTrue hands the tokens back in a
-// URL fragment. That is self-contained: no stored verifier, so it works in any
+// URL fragment: self-contained, nothing to match against storage, works in any
 // browser on any device. auth-js checks `_isImplicitGrantCallback` before
-// `_isPKCECallback` and gates neither on the configured flowType, so the normal
-// PKCE client on /auth/reset picks the fragment up with no special handling.
+// `_isPKCECallback` and gates neither on flowType, so the ordinary client on
+// /auth/reset picks the fragment up with no special handling.
+//
+// ⚠️ This deliberately does NOT use `createBrowserClient` from @supabase/ssr.
+// That wrapper hardcodes `flowType: "pkce"` *after* spreading `options.auth`
+// (createBrowserClient.js), so a passed-in flowType is silently discarded —
+// note the adjacent keys use `options?.auth?.X ?? default` and this one does
+// not. An earlier version of this function used it and produced a PKCE client
+// while claiming to be implicit; the emailed links kept arriving with a `pkce_`
+// token prefix and nothing changed. Plain supabase-js honours the option.
+//
+// No session is involved in requesting a reset, so this client stores nothing:
+// persistSession off keeps it from touching the cookie storage the real client
+// owns, and detectSessionInUrl off keeps it from racing that client for the URL.
 //
 // Tradeoff, stated plainly: a fragment puts real tokens in the URL, where
-// history and referrers can see them, whereas PKCE does not. That is the
-// standard Supabase implicit flow and is acceptable for a single-use recovery
-// link. The stronger option is a `token_hash` link (stateless AND no tokens in
-// the URL), which needs an email-template change in the dashboard —
-// /auth/reset already redeems that shape via verifyOtp, so switching the
-// template later is a drop-in upgrade that requires no code change.
+// history and referrers can see them. PKCE does not. This is the standard
+// Supabase implicit flow and is acceptable for a single-use recovery link. The
+// stronger option is a `token_hash` email template — stateless AND no tokens in
+// the URL — which /auth/reset already redeems via verifyOtp, so changing the
+// template from a desktop later is a drop-in upgrade needing no code change.
 //
-// OAuth stays on PKCE: it works, it is more secure, and the server-side callback
+// OAuth stays on PKCE: it works, it is stronger, and the server-side callback
 // route depends on exchangeCodeForSession.
 export function createRecoveryClient() {
-  return createBrowserClient<Database>(getSupabaseUrl(), getSupabaseAnonKey(), {
-    auth: { flowType: "implicit" },
+  return createSupabaseClient<Database>(getSupabaseUrl(), getSupabaseAnonKey(), {
+    auth: {
+      flowType: "implicit",
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
   });
 }
