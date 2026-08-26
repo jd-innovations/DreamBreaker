@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Logo } from "@/components/layout/logo";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, createRecoveryClient } from "@/lib/supabase/client";
 import { LEGAL_ROUTES } from "@/lib/legal";
 
 const ROLE_OPTIONS = [
@@ -109,19 +109,16 @@ export default function AuthPage() {
 
     setLoading(true);
     try {
-      const supabase = createClient();
+      // Implicit flow on purpose — see createRecoveryClient. Asking with the
+      // ordinary PKCE client produces a link that only works in the browser that
+      // requested it, which is not where people open their email.
+      const supabase = createRecoveryClient();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        // Straight to /auth/reset, NOT through /auth/callback.
-        //
-        // GoTrue's recovery link verifies the token on its side and redirects
-        // with the session in a URL **fragment** (`#access_token=…`). A fragment
-        // is never sent to the server, so the callback route — which is a server
-        // route — saw no `code` and no `token_hash` and bounced the user to
-        // /auth?error=auth_callback_failed. OAuth works there because it really
-        // does use `?code=`.
-        //
-        // /auth/reset is a client page, so the browser client's
-        // detectSessionInUrl picks up either shape.
+        // Straight to /auth/reset, NOT through /auth/callback: the recovery link
+        // hands the session back in a URL **fragment**, and a fragment is never
+        // sent to the server, so a server route structurally cannot complete
+        // this. It bounced users to /auth?error=auth_callback_failed — the
+        // sign-in screen. OAuth is unaffected; it genuinely uses `?code=`.
         redirectTo: `${window.location.origin}/auth/reset`,
       });
       if (error) {
