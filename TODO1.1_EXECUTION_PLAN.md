@@ -14,7 +14,7 @@ one.
 | | Items |
 | --- | --- |
 | **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 5.2, **6.1**, **6.2** |
-| **Partial** | **4.1** (web verified, mobile unverified), **5.3** (15/17 cases) |
+| **Partial** | **4.1** (web verified, mobile unverified), **5.3** (17/17 run and resolved; fix awaits a build) |
 | **Untouched** | 4.2, 4.3, 5.1, 5.4, 6.3, 7.1, 7.2, 7.3 |
 
 Phases 0-3 are complete and deployed to production.
@@ -39,8 +39,11 @@ Both of these need a new build and nothing else:
    existing install can report a crash. Verified 2026-08-25 that the app
    *bundles* cleanly for iOS (`npx expo export --platform ios` succeeds,
    11.8 MB), so the SDK is not a build risk — only the quota is.
-2. **5.3 cases 25 and 26.** The AASA fix is live in production; iOS caches that
-   file, so re-testing needs a **reinstall**, not just a new build.
+2. ~~**5.3 cases 25 and 26.**~~ **Re-tested and passing 2026-08-25** after a
+   delete-and-reinstall — both links now open in Safari. What 5.3 still needs
+   from a build is **case 20's fix** (`852bcd3`, every non-DM conversation type
+   was unreachable), and the regression to watch there is that direct DMs still
+   behave exactly as before.
 
 ⚠️ **Before committing any `npm install` or `npx expo install` in
 `apps/mobile`:** regenerate the lockfile with npm 10, or CI and the EAS builders
@@ -3104,9 +3107,48 @@ case that just passed.
 
 ### Completion Notes - 5.3
 
-- Status: **All 17 cases run (2026-08-25).** 15 pass, 1 skipped, **2 failed**
-  and are fixed in the repo pending a promote, 1 needs a re-test. Not closed
-  until 25/26 are re-verified against the fix and 20 is resolved.
+- Status: **All 17 cases run and resolved (2026-08-25).** Cases 25 and 26
+  **re-tested and pass** against the promoted AASA fix; case 20's re-test turned
+  a suspected ambiguity into a **confirmed defect, now fixed** in `852bcd3`.
+  Not closed only because that fix cannot be device-verified until the EAS iOS
+  build quota resets **2026-09-01**.
+
+#### Re-test results (2026-08-25, later the same day)
+
+**25 and 26 pass.** The AASA fix is live — `curl` on
+`/.well-known/apple-app-site-association` shows `/booking` and `/coach` gone
+from the claimed paths — and both links now open in Safari instead of bricking
+the app on a blank branded screen. Re-tested after a **delete-and-reinstall**,
+which is required: iOS caches the AASA, so installing over the top re-tests the
+old behaviour and reports a false pass. The 2026-08-24 build was fine for this
+— AASA is server-side, so the fix applies to any build.
+
+**Case 20 was a real defect, and much larger than one link.** Signed in as the
+right account, `/conversation/db9de430-…` still reported "This conversation
+isn't available". The database settles it: that row has **both participant
+columns null**, `related_play_event_id` set, and exactly one
+`conversation_participants` row — the reporting user. Access control was never
+wrong; the screen's shape assumption was.
+
+`RealDMScreen` reads `participant_a`/`participant_b` and treats a null partner
+as "unavailable". Every non-DM conversation type leaves both null, so **25 of
+33 production conversations were unreachable**: 15 `play_event`, 6 `group`, 3
+`support`, 1 `tournament`. Only the 8 `direct` ones worked.
+
+Not just deep links: `(tabs)/chat.tsx` routes by related id and falls back to
+`/conversation/<id>` when it has none, so the `group` and `support`
+conversations were unreachable **from inside the app** too.
+
+Fixed by a `ConversationResolver` that dispatches on the conversation's actual
+shape, mirroring the Chat tab's own mapping so a deep link and an in-app tap
+land on the same screen. No second group-chat UI was written —
+`RealTournamentGroupChat` was already generic below its `convId` lookup and now
+takes either a `tournamentId` or a `conversationId`.
+
+**Re-test on the 2026-09-01 build:** the deep link above should open the
+community event chat; a `group`/`support` conversation should open the group
+view; and **direct DMs must behave exactly as before** — that is the regression
+risk in this change.
 
 Run against `docs/DEVICE_QA_CHECKLIST.md` on the 2026-08-24 iOS preview build.
 
