@@ -1,5 +1,84 @@
 # TODO 1.1 Execution Plan
 
+## ⏸️ START HERE — paused 2026-08-25
+
+Work stopped deliberately at a clean point. **Nothing is half-finished in the
+working tree**: everything is committed and pushed to
+`feature/expo-mobile-foundation` (head `5aef50f`).
+
+**Two things are waiting on a human, and one of them is breaking production.**
+
+### 🔴 1. Supabase URL configuration — breaks live auth
+
+Dashboard → Authentication → **URL Configuration**:
+
+```
+Site URL:       https://pickleballapp.app        (currently http://localhost:3000)
+Redirect URLs:  https://pickleballapp.app/**
+                http://localhost:3000/**         (keep, for local dev)
+                pickleballapp://**               (mobile — add so it keeps working)
+```
+
+Password reset and Google/Apple sign-in both shipped in 6.2 and **both fail on
+the round trip** until this is set — verified by following a real reset link,
+which landed on `localhost:3000`. It also affects **every** auth email, not just
+those flows: a beta signup confirming their address lands on localhost too.
+Server-side setting, no redeploy needed.
+
+### 2. Promote a Vercel preview
+
+Production web is on `79d707c`. The route error boundaries (`5bca3de`) and the
+6.3 docs are not live. Low urgency — they only matter when something else
+breaks. Remember: **promote, never push** — see `project-vercel-deploy-model`.
+
+### 🚫 Blocked until 2026-09-01 — the iOS build quota
+
+Free-plan iOS builds are exhausted. **A quota rejection creates no build
+record**, so a blocked build is invisible in `eas build:list` under every
+status — two attempts vanished that way before anyone worked it out. Suspect
+quota before the lockfile.
+
+These verify together in **one** build, so do not cut a build for any one of
+them:
+
+| Waiting on that build |
+| --- |
+| 4.1 mobile — the Sentry DSN is baked into the binary |
+| 5.3 case 20 — every non-DM conversation type was unreachable (`852bcd3`) |
+| 6.1 — "Add Test Players" gating, `community/[id]` demo events removed |
+| 6.2 — Coming Soon CTAs wired or hidden |
+| 6.3 — shared state components, five screens that reported failures as empty |
+
+**Regression to watch first:** direct DMs must behave exactly as before — that
+is the risk in the conversation-router change.
+
+⚠️ **Do not run `npm install` in `apps/mobile` before that build.** The
+committed lockfile was regenerated with npm 10; local npm is 11 and rewriting it
+breaks `npm ci` on the builders. See `project-eas-npm-lockfile`.
+
+### Where to resume
+
+Phase 6 is complete. **Phases 4 and 5 were leapfrogged**, not finished — their
+items were blocked on a Sentry account, on hardware, or on a vendor decision, so
+this session took the only work that needed none of those. "Phase 6 complete"
+is a column in the table below, not sequential progress.
+
+Unblocked and unstarted, in the order recommended:
+
+1. **The tournament lifecycle bug** — nothing moves a tournament out of `open`
+   when its event date passes. The only open defect with real user risk: a
+   player can register for an event that already happened. Needs its own item.
+2. **5.4 Offline and Poor-Network UX** — the natural follow-on from 6.3, and it
+   can reuse the `LoadingState`/`ErrorState` components that item created.
+3. **4.2 Product Analytics** — highest priority on paper, but **needs a vendor
+   decision first** (PostHog / Amplitude / Segment). Cannot be started cold.
+4. **4.3 Harden Support and Moderation.**
+
+Phase 7 is gated on 1.4's legal placeholders, which only the maintainer can
+supply.
+
+---
+
 Purpose: turn `TODO1.1.md` into an ordered, one-issue-at-a-time production readiness plan. Work through this file from top to bottom. Do not start broad feature work until the current item is complete or explicitly deferred.
 
 ## Current State — 2026-08-25
