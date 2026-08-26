@@ -19,11 +19,26 @@ node -p "require('next/package.json').version"
 ## The instruction above is not boilerplate
 
 A worked example, 2026-08-25: adding `app/global-error.tsx` from memory produced
-a file declaring the prop `reset`. **Next 16 renamed it to `unstable_retry`.**
-The code type-checked and lint-passed — `reset` was simply never provided, so
-the retry button would have called `undefined` at runtime. Reading
+a file declaring the prop `reset`. **Next 16 added `unstable_retry`, and it is
+the one you almost always want.** Reading
 `node_modules/next/dist/docs/01-app/01-getting-started/10-error-handling.md`
 caught it before it shipped.
+
+**Correction (2026-08-25, item 6.3):** this section previously said Next 16
+"renamed" `reset` and that it "was simply never provided", so a retry button
+would call `undefined`. The installed docs say otherwise —
+`03-api-reference/03-file-conventions/error.md` documents **both**:
+
+| Prop | What it does |
+| --- | --- |
+| `unstable_retry()` | re-fetches **and** re-renders the boundary's children. Prefer it. |
+| `reset()` | still provided; clears error state and re-renders **without re-fetching**. |
+
+So a `reset` button is not inert — it is worse than that, because it looks
+like it works. For the usual case (the boundary fired because a data fetch
+threw) it re-renders the same failure, so the user presses "Try again" and
+nothing changes. `dashboard/error.tsx` shipped in exactly that state until 6.3.
+Check the reference doc, not this summary of it.
 
 Useful entry points under `node_modules/next/dist/docs/`:
 

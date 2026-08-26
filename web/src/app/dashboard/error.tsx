@@ -1,31 +1,31 @@
 "use client";
 
-import { useEffect } from "react";
+import { RouteError } from "@/components/shared/route-error";
 
+// Was the only route boundary in the app, and diverged from global-error.tsx in
+// three ways that mattered (item 6.3):
+//
+//   * it used `reset`, which re-renders without re-fetching. The dashboard's
+//     realistic failure is a failed data load, so "TRY AGAIN" re-rendered the
+//     same failure. `unstable_retry` actually re-fetches.
+//   * it printed `error.message` into a <pre>. In production a Server Component
+//     error is replaced with a generic string, so that block showed the user
+//     nothing useful — and for Client Component errors it showed them the raw
+//     message.
+//   * it only console.error'd, so nothing reached Sentry.
 export default function DashboardError({
   error,
-  reset,
+  unstable_retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  unstable_retry: () => void;
 }) {
-  useEffect(() => {
-    console.error("Dashboard error:", error);
-  }, [error]);
-
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-background text-foreground">
-      <div className="font-mono text-[11px] tracking-[0.3em] text-destructive mb-3">DASHBOARD ERROR</div>
-      <h2 className="font-display text-2xl tracking-wide mb-4">Something went wrong</h2>
-      <pre className="text-xs bg-secondary p-4 rounded-xl max-w-lg w-full overflow-auto mb-6 text-left">
-        {error.message || "Unknown error"}
-      </pre>
-      <button
-        onClick={reset}
-        className="rounded-full h-11 px-8 bg-primary text-primary-foreground font-display tracking-[0.2em] text-sm"
-      >
-        TRY AGAIN
-      </button>
-    </div>
+    <RouteError
+      error={error}
+      retry={unstable_retry}
+      title="Couldn't load your dashboard"
+      description="The error has been reported. Try again, and if it keeps happening please contact support."
+    />
   );
 }
