@@ -4,7 +4,7 @@ Purpose: turn `TODO1.1.md` into an ordered, one-issue-at-a-time production readi
 
 ## Current State — 2026-08-25
 
-**17 of 27 items closed.** Two more (4.1, 5.3) have Completion Notes but are
+**18 of 27 items closed.** Two more (4.1, 5.3) have Completion Notes but are
 explicitly *not* closed — read their notes, not this table, for detail.
 
 An item is done iff it has a `### Completion Notes - X.Y` section that does not
@@ -13,9 +13,9 @@ one.
 
 | | Items |
 | --- | --- |
-| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 5.2, **6.1** |
+| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 5.2, **6.1**, **6.2** |
 | **Partial** | **4.1** (web verified, mobile unverified), **5.3** (15/17 cases) |
-| **Untouched** | 4.2, 4.3, 5.1, 5.4, 6.2, 6.3, 7.1, 7.2, 7.3 |
+| **Untouched** | 4.2, 4.3, 5.1, 5.4, 6.3, 7.1, 7.2, 7.3 |
 
 Phases 0-3 are complete and deployed to production.
 
@@ -47,29 +47,33 @@ Both of these need a new build and nothing else:
 (npm 10.8.2) both break. See `project-eas-npm-lockfile` in memory. This has
 already happened once.
 
-### Recommended next item: 6.2
+### Recommended next item: 6.3
 
-6.1 closed 2026-08-25. **6.2 is mostly mobile**, which suits the window: the
-iOS build quota is exhausted until 2026-09-01, so mobile code written now costs
-nothing extra and rides the same build that finally verifies 4.1 and 5.3's two
-remaining cases. Batching them means one verification pass rather than three.
+6.1 and 6.2 both closed 2026-08-25. 6.3 (empty/loading/error states) follows
+naturally: 6.1 removed the mock fallbacks that were standing in for those
+states, and several screens now show an empty state that was written ad hoc in
+the same change. It is also mostly mobile, which suits the window — the iOS
+build quota is exhausted until 2026-09-01, so mobile code written now rides the
+same build that verifies 4.1, 5.3's last two cases, and 6.1/6.2's gating.
 
-Carried out of 6.1, needing a decision rather than more discovery:
+Carried forward, each needing a decision rather than more discovery:
 
-- **Four public tournaments are past-dated and still `open` for registration** —
-  Paddletek (Jul 11), Summer Slam (Aug 14), Lakewood Ranch (Aug 16), First
-  Strike (Aug 22). Nothing moves a tournament out of `open` when its date
-  passes. That is a missing lifecycle rule, not mock data, so it was left out
-  of 6.1's cleanup and wants its own item.
-- **Three of them advertise prize pools with zero entrants** — Summer Slam
-  $5,000, Lakewood Ranch $2,500, Paddletek $1,500. Summer Slam's fabricated
-  82/112 fill count used to make its $5,000 look plausible; with honest counts
-  the pairing reads oddly. May be real intent for real events — a product call.
+- **Nothing moves a tournament out of `open` when its event date passes.** The
+  backlog was cleared 2026-08-25, but "First Strike - SRQ Dink District" is
+  already in that state again. This is the version with real user risk — a
+  player registering for an event that has already happened — and it wants its
+  own item.
+- **`First Strike - SRQ Dink District`** is past-dated and still `open`. Not
+  seed data (created the day before its event, $0 prize), so whether it belongs
+  in `completed` or `cancelled` depends on whether it ran. Human call.
 - **`marketplace_listings` exposes `location_lat`/`location_lng` on active
   listings to `anon`.** Its policy is `status = 'active' OR seller_id =
-  auth.uid()`, so it is not literally `USING (true)` and the new column-grant
-  guard does not flag it. Arguably the point of a marketplace; worth a decision
-  if sellers are private individuals.
+  auth.uid()`, so it is not literally `USING (true)` and the column-grant guard
+  added in 2.2's suite does not flag it. Arguably the point of a marketplace;
+  a decision if sellers are private individuals.
+- **`authenticated` can still read every user's email.** See the security
+  finding under 6.1. Needs a restricted view plus client changes, so it is
+  gated on a build.
 
 ### Only the human can do these
 
@@ -3528,6 +3532,96 @@ the rest of that file is legitimate static option lists, just misnamed.
   - No core screen shows a dead-end action.
 - Done when:
   - Every visible CTA does something real or is clearly non-blocking.
+
+### Completion Notes - 6.2
+
+- Status: **Complete 2026-08-25.** 40 `comingSoon()` call sites on mobile plus
+  three dead ends on web. **Two caveats, both external:** the mobile gating is
+  only observable in a real production build, so it cannot be device-verified
+  until the EAS iOS quota resets 2026-09-01; and the Supabase redirect
+  allowlist could not be checked from here (see the end of this section).
+
+#### The audit
+
+`comingSoon()` is defined locally in six mobile files (duplicated, not shared)
+and called 40 times across 25 distinct features. Sorted into three groups:
+
+**Dead ends for features that already ship** — wired to the real thing:
+
+| Where | Was | Now |
+| --- | --- | --- |
+| `round-robin-created`, `mini-tournament-created` | "Open Chat" → alert | `/community/[id]?tab=chat` |
+| `round-robin/[id]/results` ×2 | "Create New Round Robin" → alert | `/create-round-robin` |
+| `round-robin/[id]/roster` | "Invite Players" → alert | `/community/[id]/invite-players` |
+| `round-robin/[id]/roster` | "View Profile" → alert | `/players/<profileId>`, or omitted |
+
+The chat one was the clearest: `quick-game-created.tsx` renders the identical
+"Open Chat" button and **already navigated to real chat**. Same feature, one
+screen wired and two not.
+
+**"View Profile" needed a data change, not a navigation.** The roster's `id` is
+the `play_participants` row id, not a profile id, and organizer-added guests
+have no account at all — wiring it to `player.id` would have opened a broken
+profile screen for every guest. `RRPlayer` gained an optional `profileId` from
+`play_participants.claimed_by`, and the menu entry is omitted when there is
+nothing to open.
+
+**Actions with nothing behind them** — hidden in production, kept in internal
+builds so the gap stays visible to QA: all five Exports, Archive Event ×2,
+Duplicate ×2, Regenerate Schedule, Share/Export Bracket, and mini-tournament's
+Full Roster / Player Roster. Menu entries are filtered out of `MENU_ITEMS`
+rather than left answering with an alert, since the item's bar is that a
+visible CTA does something real.
+
+Share Bracket was first triaged as "already exists" and moved on a second look:
+`createCommunityShareMessage` takes a `PlayEvent` and a bracket is not one, so
+there was no share path to point at.
+
+**Guarded fall-throughs** (~10) of the shape `isOrganizer && status === 'open'
+? handleOpenEdit : comingSoon(...)` were left alone — the real path runs when
+available and the alert fires only where the feature genuinely does not apply.
+37 `comingSoon` bodies remain but none is reachable in a production build
+except these.
+
+#### Web had worse than a "coming soon"
+
+- **Google and Apple sign-in** were `toast.info("... coming soon")` while both
+  providers were live and mobile used them. Only the client half was missing —
+  `/auth/callback` already implemented `exchangeCodeForSession`.
+- **"Forgot?" had no `onClick` at all.** An inert button in the sign-in flow,
+  while mobile has had password reset all along. Now real: `/auth` sends the
+  recovery email, `/auth/callback` also accepts the `token_hash` + `type` link
+  shape (**GoTrue sends recovery links in two shapes** — taken from
+  `apps/mobile/src/lib/auth.ts`, which hit this first), and a new `/auth/reset`
+  sets the password with a distinct "LINK EXPIRED" state.
+
+  The reply is identical whether or not the address has an account. "No account
+  with that email" would make a public form an account-enumeration oracle.
+
+#### A 6.1 leftover, found in the same file
+
+The auth sidebar carried **the same fabricated stats as the landing page** —
+"184 active tournaments", "3,210 partners matched", "$1.2M in prizes awarded".
+6.1 fixed one copy and missed this one, because it is a different file.
+
+Rather than fix the second copy the same way, the query moved to
+`web/src/lib/platform-stats.ts`, read by both: the landing page imports it
+directly, the auth page (a client component, which must never touch the
+service-role client) goes through a new `/api/platform-stats`. One
+implementation means the next surface cannot drift again.
+
+Verified against a **running production build**, not just a compile:
+`GET /api/platform-stats` → `{"activePlayers":11,"liveTournaments":2,
+"partnersMatched":3}`. `liveTournaments = 2` is the correct count after the
+tournament cleanup earlier the same day.
+
+#### ⚠️ Not verifiable from here
+
+`https://pickleballapp.app/auth/callback` must be in the project's
+**Auth → URL Configuration** redirect allowlist. **Both** OAuth and password
+reset route through it, and that field is dashboard-only — same class as gap
+G4. If it is missing, both fail on the round trip rather than at build time, so
+confirm it before trusting either. Worth adding to `PRODUCTION_CONFIG.md` §3.
 
 ### 6.3 Standardize Empty, Loading, and Error States
 
