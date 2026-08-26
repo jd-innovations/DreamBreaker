@@ -3,6 +3,7 @@ import { Bebas_Neue, Manrope, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/theme-provider";
+import { OnboardingNudgeHost } from "@/components/onboarding/onboarding-nudge-host";
 import { Toaster } from "sonner";
 
 const manrope = Manrope({
@@ -54,6 +55,12 @@ export default function RootLayout({
         <script id="app-config" type="application/json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "", supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "" }) }} />
         <ThemeProvider>
           {children}
+          {/* Flushes an onboarding draft once a session exists (email signup has
+              none while the flow runs), and nudges thin profiles. Mounted here
+              rather than in PageShell because /dashboard and /admin roll their
+              own layouts and would miss it. It renders nothing unless it has
+              something to do. */}
+          <OnboardingNudgeHost />
           <Toaster position="top-right" richColors closeButton />
         </ThemeProvider>
       </body>
