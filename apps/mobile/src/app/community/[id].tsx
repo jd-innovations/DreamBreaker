@@ -67,7 +67,22 @@ const HERO_HEIGHT = 324;
 
 // ─── Mock: events ─────────────────────────────────────────────────────────────
 
-const EVENTS: Record<string, {
+// Every route into this screen passes a UUID from the database: the home and
+// nearby feeds, saved events, chat's relatedPlayEventId, a player's profile,
+// and quick-game-created (which only navigates here when `isSupabase`).
+//
+// There was previously a table of four hardcoded demo events plus
+// `const FALLBACK = EVENTS['1']`, and the render read
+// `liveEvent ?? (EVENTS[id] ?? FALLBACK)`. So any id that was not a UUID --
+// a stray deep link, a typo, a stale push payload -- rendered "Wednesday
+// Round Robin" at Lakewood Ranch Courts, with a fictional organizer, invented
+// weather, and six fake attendees, indistinguishable from a real event
+// (item 6.1). Non-UUID ids are now treated as not found.
+//
+// EMPTY_EVENT exists only to satisfy the type between the hooks and the
+// early return; it is never rendered, and it is deliberately blank rather
+// than plausible so that a regression looks broken instead of looking real.
+type EventShape = {
   id: string; name: string; badge: string; badgeGold: boolean;
   datetime: string; date: string; time: string; endTime: string;
   venue: string; address: string; city: string;
@@ -78,78 +93,21 @@ const EVENTS: Record<string, {
   about: string;
   participants: { initials: string; bg: string }[];
   weather: { temp: number; high: number; low: number; condition: string; icon: string; wind: number; humidity: number; };
-}> = {
-  '1': {
-    id: '1', name: 'Wednesday Round Robin', badge: 'OPEN', badgeGold: true,
-    datetime: 'Wed, May 21 • 6:00 PM', date: 'Wednesday, May 21, 2025',
-    time: '6:00 PM', endTime: '8:30 PM',
-    venue: 'Lakewood Ranch Courts', address: '9300 Tournament Blvd', city: 'Bradenton, FL 34202',
-    players: 12, maxPlayers: 16, spots: 4, pctFilled: 75,
-    heroPhoto: 'https://images.unsplash.com/photo-1543941948-60b9490a4414?w=800&h=500&fit=crop&q=80',
-    format: 'Round Robin', skillLevel: '3.0 – 4.0', courtType: 'Outdoor Hard', fee: 'Free',
-    organizer: { name: 'Anna Rodriguez', initials: 'AR', bg: '#4A8C6F', rating: '4.1 DUPR', events: 14, userId: null },
-    about: 'Join us for a fun Wednesday evening round robin! All matches are played to 11, win by 2. Players rotate partners each round. Great way to meet new players and get some games in during the week.',
-    participants: [
-      { initials: 'JD', bg: L.navy }, { initials: 'SM', bg: '#4A8C6F' },
-      { initials: 'JR', bg: '#3A6B9A' }, { initials: 'MK', bg: '#7A4F3A' },
-      { initials: 'LP', bg: '#2D5A3D' }, { initials: 'TC', bg: '#5A3A7A' },
-    ],
-    weather: { temp: 82, high: 86, low: 74, condition: 'Partly Cloudy', icon: 'partly-sunny-outline', wind: 8, humidity: 62 },
-  },
-  '2': {
-    id: '2', name: 'Friday Morning Play', badge: 'SPOTS LEFT', badgeGold: false,
-    datetime: 'Fri, May 23 • 8:30 AM', date: 'Friday, May 23, 2025',
-    time: '8:30 AM', endTime: '10:30 AM',
-    venue: 'Nathan Benderson Park', address: '5851 Nathan Benderson Cir', city: 'Sarasota, FL 34235',
-    players: 8, maxPlayers: 16, spots: 8, pctFilled: 50,
-    heroPhoto: 'https://images.unsplash.com/photo-1529832393073-e362750f78b3?w=800&h=500&fit=crop&q=80',
-    format: 'Open Play', skillLevel: 'All Levels', courtType: 'Outdoor Hard', fee: 'Free',
-    organizer: { name: 'Mike Chen', initials: 'MC', bg: '#3A6B9A', rating: '3.8 DUPR', events: 7, userId: null },
-    about: 'Casual Friday morning open play at Nathan Benderson Park. All skill levels welcome! Come get some games in before the weekend.',
-    participants: [
-      { initials: 'MC', bg: '#3A6B9A' }, { initials: 'TP', bg: '#4A8C6F' },
-      { initials: 'RG', bg: '#7A4F3A' }, { initials: 'LM', bg: '#2D3A5A' },
-    ],
-    weather: { temp: 78, high: 83, low: 71, condition: 'Sunny', icon: 'sunny-outline', wind: 5, humidity: 55 },
-  },
-  '3': {
-    id: '3', name: 'Sunday Social Play', badge: 'OPEN', badgeGold: true,
-    datetime: 'Sun, May 25 • 9:00 AM', date: 'Sunday, May 25, 2025',
-    time: '9:00 AM', endTime: '12:00 PM',
-    venue: 'Premier Sports Campus', address: '5895 Dovetail Dr', city: 'Sarasota, FL 34238',
-    players: 16, maxPlayers: 18, spots: 2, pctFilled: 89,
-    heroPhoto: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&h=500&fit=crop&q=80',
-    format: 'Social Play', skillLevel: '3.5 – 4.5', courtType: 'Indoor', fee: '$5',
-    organizer: { name: 'Lisa Park', initials: 'LP', bg: '#7A4F3A', rating: '4.3 DUPR', events: 22, userId: null },
-    about: 'Sunday social play at Premier Sports Campus indoor courts. Structured matches with rotating partners. Light snacks provided. Weekly recurring event.',
-    participants: [
-      { initials: 'LP', bg: '#7A4F3A' }, { initials: 'JD', bg: L.navy },
-      { initials: 'SM', bg: '#4A8C6F' }, { initials: 'TC', bg: '#5A3A7A' },
-      { initials: 'RG', bg: '#3A6B9A' }, { initials: 'MK', bg: '#2D5A3D' },
-    ],
-    weather: { temp: 85, high: 89, low: 77, condition: 'Sunny', icon: 'sunny-outline', wind: 6, humidity: 58 },
-  },
-  '4': {
-    id: '4', name: 'Thursday Evening Play', badge: 'SPOTS LEFT', badgeGold: false,
-    datetime: 'Thu, May 22 • 7:00 PM', date: 'Thursday, May 22, 2025',
-    time: '7:00 PM', endTime: '9:00 PM',
-    venue: 'Waterside Sports Ctr', address: '7800 Lakewood Ranch Blvd', city: 'Lakewood Ranch, FL 34202',
-    players: 20, maxPlayers: 32, spots: 12, pctFilled: 63,
-    heroPhoto: 'https://images.unsplash.com/photo-1477525218966-c4a4c7ee6e56?w=800&h=500&fit=crop&q=80',
-    format: 'Round Robin', skillLevel: '2.5 – 3.5', courtType: 'Outdoor Hard', fee: 'Free',
-    organizer: { name: 'Tom Bradley', initials: 'TB', bg: '#2D3A5A', rating: '3.5 DUPR', events: 5, userId: null },
-    about: 'Thursday evening round robin for beginner to intermediate players. Supportive environment to improve your game. All matches to 11, rotate every round.',
-    participants: [
-      { initials: 'TB', bg: '#2D3A5A' }, { initials: 'AR', bg: '#4A8C6F' },
-      { initials: 'KC', bg: '#7A4F3A' }, { initials: 'PW', bg: '#3A6B9A' },
-    ],
-    weather: { temp: 79, high: 84, low: 72, condition: 'Mostly Cloudy', icon: 'cloudy-outline', wind: 12, humidity: 68 },
-  },
 };
 
-const FALLBACK = EVENTS['1'];
+const EMPTY_EVENT: EventShape = {
+  id: '', name: '', badge: '', badgeGold: false,
+  datetime: '', date: '', time: '', endTime: '',
+  venue: '', address: '', city: '',
+  players: 0, maxPlayers: 0, spots: 0, pctFilled: 0,
+  heroPhoto: '',
+  format: '', skillLevel: '', courtType: '', fee: '',
+  organizer: { name: '', initials: '', bg: L.navy, rating: '', events: 0, userId: null },
+  about: '',
+  participants: [],
+  weather: { temp: 0, high: 0, low: 0, condition: '', icon: 'help-outline', wind: 0, humidity: 0 },
+};
 
-type EventShape = typeof FALLBACK;
 
 function fmtTime(t: string | null): string {
   if (!t) return '';
@@ -240,7 +198,9 @@ function mapPlayEvent(data: PlayEventWithOrganizer, participantCount: number): E
     },
     about: data.notes ?? '',
     participants: [],
-    weather: FALLBACK.weather,
+    // Real weather is fetched separately into `weather` state; this field
+    // used to carry the demo event's invented forecast on every live event.
+    weather: EMPTY_EVENT.weather,
   };
 }
 
@@ -613,7 +573,9 @@ export default function CommunityEventScreen() {
   const isUUID = UUID_RE.test(id as string ?? '');
   const [liveEvent,    setLiveEvent]    = useState<EventShape | null>(null);
   const [pageLoading,  setPageLoading]  = useState(isUUID);
-  const [pageError,    setPageError]    = useState<string | null>(null);
+  const [pageError,    setPageError]    = useState<string | null>(
+    isUUID ? null : 'Event not found.'
+  );
   const [weather,      setWeather]      = useState<EventWeatherResult | 'loading' | null>(null);
   const [facilityDetail, setFacilityDetail] = useState<FacilityDetail | null>(null);
   // Add to Calendar needs the raw event_date/start_time/duration_minutes —
@@ -673,7 +635,7 @@ export default function CommunityEventScreen() {
     return () => { cancelled = true; };
   }, [id, isUUID]);
 
-  const event = liveEvent ?? (EVENTS[id as string] ?? FALLBACK);
+  const event: EventShape = liveEvent ?? EMPTY_EVENT;
   const isPastEvent = event.badge === 'COMPLETED' || event.badge === 'CANCELLED';
 
   // Add to Calendar: only for a real fetched event (not the mock fallback)
@@ -722,8 +684,10 @@ export default function CommunityEventScreen() {
   const [sending,      setSending]      = useState(false);
   const [accepted,     setAccepted]     = useState(INITIAL_ACCEPTED);
   const [pending,      setPending]      = useState(INITIAL_PENDING);
-  const [joinedCount,  setJoinedCount]  = useState(FALLBACK.players);
-  const [spotsLeft,    setSpotsLeft]    = useState(FALLBACK.spots);
+  // Was FALLBACK.players / FALLBACK.spots -- a real event flashed the demo
+  // event's "12 players, 4 spots" until its own counts loaded.
+  const [joinedCount,  setJoinedCount]  = useState(0);
+  const [spotsLeft,    setSpotsLeft]    = useState(0);
   const [msgingId,       setMsgingId]       = useState<string | null>(null);
   const [joiningEvent,   setJoiningEvent]   = useState(false);
   const [showGuestForm,  setShowGuestForm]  = useState(false);

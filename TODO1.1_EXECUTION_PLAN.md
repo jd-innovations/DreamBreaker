@@ -4,8 +4,8 @@ Purpose: turn `TODO1.1.md` into an ordered, one-issue-at-a-time production readi
 
 ## Current State — 2026-08-25
 
-**16 of 27 items closed.** Three more (4.1, 5.3, 6.1) have Completion Notes but
-are explicitly *not* closed — read their notes, not this table, for detail.
+**17 of 27 items closed.** Two more (4.1, 5.3) have Completion Notes but are
+explicitly *not* closed — read their notes, not this table, for detail.
 
 An item is done iff it has a `### Completion Notes - X.Y` section that does not
 say INCOMPLETE. Grep for those rather than trusting any summary, including this
@@ -13,18 +13,32 @@ one.
 
 | | Items |
 | --- | --- |
-| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 5.2 |
-| **Partial** | **4.1** (web verified, mobile unverified), **5.3** (15/17 cases), **6.1** (audited in full; 3 of 7 fixes applied) |
+| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 5.2, **6.1** |
+| **Partial** | **4.1** (web verified, mobile unverified), **5.3** (15/17 cases) |
 | **Untouched** | 4.2, 4.3, 5.1, 5.4, 6.2, 6.3, 7.1, 7.2, 7.3 |
 
 Phases 0-3 are complete and deployed to production.
 
 ### Blocked on one EAS build
 
-Both need a new mobile build and nothing else:
+🚫 **iOS build quota exhausted — Free plan, resets Tue 2026-09-01** (confirmed
+2026-08-25). `eas build --platform ios` fails at "Computed project fingerprint"
+with a quota message and **creates no build record**, so a blocked attempt
+leaves no trace in `eas build:list` under any status, including `canceled`. Two
+attempts (2026-08-24 evening and 2026-08-25) vanished this way before anyone
+worked out why. If a build seems to have disappeared, suspect quota before
+suspecting the lockfile.
+
+The most recent successful iOS build is `333fdff2` (2026-08-24 06:14, `preview`,
+build number 3) from commit `48e6622` — which **predates the Sentry commit**, so
+it cannot verify 4.1 no matter how it is installed.
+
+Both of these need a new build and nothing else:
 
 1. **4.1 mobile.** `EXPO_PUBLIC_SENTRY_DSN` is baked into the binary, so no
-   existing install can report a crash.
+   existing install can report a crash. Verified 2026-08-25 that the app
+   *bundles* cleanly for iOS (`npx expo export --platform ios` succeeds,
+   11.8 MB), so the SDK is not a build risk — only the quota is.
 2. **5.3 cases 25 and 26.** The AASA fix is live in production; iOS caches that
    file, so re-testing needs a **reinstall**, not just a new build.
 
@@ -33,17 +47,29 @@ Both need a new mobile build and nothing else:
 (npm 10.8.2) both break. See `project-eas-npm-lockfile` in memory. This has
 already happened once.
 
-### Recommended next item: finish 6.1
+### Recommended next item: 6.2
 
-Started 2026-08-25 — read its Completion Notes, which are the real status. The
-audit is complete and was much larger than the four documented registrations:
-**17 of 29 production profiles were fake**, and they were reaching every real
-user's partner deck regardless of radius. Three fixes are applied; four remain,
-and each is a decision rather than a discovery. The web half of fix 1 is **not
-live until a Vercel preview is promoted**.
+6.1 closed 2026-08-25. **6.2 is mostly mobile**, which suits the window: the
+iOS build quota is exhausted until 2026-09-01, so mobile code written now costs
+nothing extra and rides the same build that finally verifies 4.1 and 5.3's two
+remaining cases. Batching them means one verification pass rather than three.
 
-Also open from that audit: `web/src/app/matchmaking/page.tsx` never checks
-`is_discoverable`, which is a live privacy defect independent of mock data.
+Carried out of 6.1, needing a decision rather than more discovery:
+
+- **Four public tournaments are past-dated and still `open` for registration** —
+  Paddletek (Jul 11), Summer Slam (Aug 14), Lakewood Ranch (Aug 16), First
+  Strike (Aug 22). Nothing moves a tournament out of `open` when its date
+  passes. That is a missing lifecycle rule, not mock data, so it was left out
+  of 6.1's cleanup and wants its own item.
+- **Three of them advertise prize pools with zero entrants** — Summer Slam
+  $5,000, Lakewood Ranch $2,500, Paddletek $1,500. Summer Slam's fabricated
+  82/112 fill count used to make its $5,000 look plausible; with honest counts
+  the pairing reads oddly. May be real intent for real events — a product call.
+- **`marketplace_listings` exposes `location_lat`/`location_lng` on active
+  listings to `anon`.** Its policy is `status = 'active' OR seller_id =
+  auth.uid()`, so it is not literally `USING (true)` and the new column-grant
+  guard does not flag it. Arguably the point of a marketplace; worth a decision
+  if sellers are private individuals.
 
 ### Only the human can do these
 
@@ -3228,9 +3254,12 @@ Goal: users only see real, working product.
 
 ### Completion Notes - 6.1
 
-- Status: **INCOMPLETE.** Audited in full 2026-08-25; five of seven fixes
-  applied, and `web/src/data/mock-data.ts` no longer exists. The remaining two
-  are listed under "Not done" below and each is a decision, not a discovery.
+- Status: **Complete 2026-08-25.** Audited in full, all seven fixes applied
+  across web, mobile and production data. `web/src/data/mock-data.ts` no longer
+  exists. **One caveat:** the two mobile fixes are type-checked and verified to
+  bundle (`npx expo export --platform ios`), but cannot be *device*-verified
+  until the EAS iOS build quota resets on 2026-09-01 — a gating change is only
+  observable in a real production build.
 
 #### The audit found far more than the four documented registrations
 
@@ -3322,34 +3351,65 @@ Verification: `tsc --noEmit` clean, `next build` succeeds with `/brackets` and
 same 8 pre-existing warnings on `matchmaking/page.tsx` as before the change —
 no new ones anywhere.
 
-#### Not done — each needs a decision
+#### The last three fixes (2026-08-25)
 
-1. **The 4 sample players' money rows.** Recommended approach changed after
-   checking `supabase/functions/delete-account`: it *anonymizes* the profile to
-   a tombstone and never touches `registrations` or `reservations`, and it
-   derives its target from the caller's JWT so it cannot be pointed at these
-   accounts anyway. **Deleting the accounts would leave the $300 of phantom
-   registration revenue and ~$123 of phantom reservation revenue exactly where
-   they are, attached to opaque tombstones.** Fix the money rows directly
-   instead — zero `entry_fee_paid_cents` on the four registrations (needs the
-   `set_config` service_role wrapper; the C7 trigger guards that column) and
-   cancel the five seed reservations. The profiles are already hidden.
+**5. The sample players' money rows** — `scripts/clear-phantom-revenue-6-1.sql`,
+run against production. Zeroed `entry_fee_paid_cents` on the four fabricated
+registrations (**$300.00**), withdrew them, cancelled the five seed court
+reservations (**$123.40**), and recomputed `spots_filled` from actual
+registrations.
 
-   None of this is visible to the reconciliation tooling:
-   `admin_payment_reconciliation()` has exactly three categories
-   (`succeeded_not_fulfilled`, `stuck_pending`, `duplicate_payment`) and **all
-   three key off the `payments` table**, so a registration marked paid with no
-   payment row at all matches none of them.
+Deleting the accounts was considered and rejected: `delete-account` anonymizes
+the profile to a tombstone and never touches `registrations` or `reservations`,
+and derives its target from the caller's JWT so it cannot be aimed at these
+accounts anyway. It would have left every figure above in place under opaque
+identities. **The money was the problem, not the names.**
 
-2. **Mobile "Add Test Players"** in `quick-game/[id]/roster.tsx` and
-   `round-robin/[id]/roster.tsx` — visible in production builds. Gated on
-   `!isUUID(gameId)` so it never writes to Supabase, but it is a QA affordance
-   real users can see. Gate behind `IS_INTERNAL_BUILD`. Needs an EAS build to
-   reach users, so it should ride along with the next mobile change.
+None of it was visible to the tooling built to catch this:
+`admin_payment_reconciliation()` has three categories
+(`succeeded_not_fulfilled`, `stuck_pending`, `duplicate_payment`) and **all
+three key off the `payments` table**, so a registration marked paid with no
+payment row at all matches none of them.
 
-3. **`community/[id].tsx` `FALLBACK`** — real UUID events are safe (loading and
-   error early-returns), but any non-UUID id renders "Wednesday Round Robin"
-   with a fictional organizer, fake weather and fake attendees.
+Step 1 lives in a `DO` block rather than a bare `begin/commit`: the role
+assertion is `set_config(..., true)`, which is transaction-scoped, and a DO
+block is guaranteed to be one transaction however the runner batches loose
+statements. It raises unless it matches exactly 4 rows, so it cannot
+half-apply.
+
+The recompute also corrected **Summer Slam Showdown, which advertised
+`spots_filled = 82` of 112 with zero registrations** on a publicly browsable
+tournament — fabricated scarcity, and the same class of problem as the rest of
+6.1. `spots_filled` is a stored counter maintained incrementally by
+`fn_sync_spots_filled`, so it can drift from reality and nothing notices.
+
+Verified after the run: phantom paid registrations 0, seed entry fees $0.00,
+active seed registrations 0, active seed reservations 0, tournaments with count
+drift 0, and `payments` (36) / `refunds` (3) **unchanged** — nothing real was
+touched.
+
+**6. Mobile "Add Test Players" is now internal-only.** Both
+`quick-game/[id]/roster.tsx` and `round-robin/[id]/roster.tsx` gate on
+`canAddTestPlayers = !isSupabase && IS_INTERNAL_BUILD` at all five render sites.
+`!isSupabase` alone kept seeded rosters out of the database but still showed
+real users the button. The `!isSupabase` guard on "Clear Roster" was left alone
+— different feature, same condition by coincidence.
+
+**7. `community/[id].tsx` no longer invents events.** The four hardcoded demo
+events and `FALLBACK` are deleted; a non-UUID id now resolves to the existing
+"Event not found" state. Every route in passes a DB-sourced UUID — including
+`quick-game-created`, which only navigates here when `isSupabase` — so nothing
+legitimate relied on them. `EMPTY_EVENT` remains only to satisfy the type
+between the hooks and the early return, and is deliberately blank rather than
+plausible so a regression looks broken instead of looking real.
+
+Two worse things surfaced in that file while removing the reported one:
+
+- `mapPlayEvent` set `weather: FALLBACK.weather` — **every real event carried
+  the demo event's invented forecast** (82°F, partly cloudy) as its default.
+- `joinedCount` / `spotsLeft` initialised from `FALLBACK.players` /
+  `FALLBACK.spots`, so a real event **flashed "12 players, 4 spots"** until its
+  own counts loaded.
 
 **Downgraded: the coach seed is hygiene, not exposure.** `featureRoutes.ts`
 gates `/coach` *and* `/lessons` including deep links, and

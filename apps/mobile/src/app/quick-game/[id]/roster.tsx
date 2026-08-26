@@ -14,6 +14,7 @@ import { SecondaryButton } from '@/components/SecondaryButton';
 import { StatusChip } from '@/components/StatusChip';
 import { useSession } from '@/hooks/useSession';
 import { useSupportContext } from '@/lib/support/supportContext';
+import { IS_INTERNAL_BUILD } from '@/lib/featureFlags';
 import {
   fetchPlayParticipants,
   addPlayParticipant,
@@ -417,6 +418,11 @@ export default function QuickGameRosterScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const gameId     = id ?? '';
   const supabase   = isUUID(gameId);
+  // Seeded test players are a QA affordance, not a product feature. They were
+  // gated only on `!supabase` (local, non-Supabase games), which kept the fake
+  // roster out of the database but still showed real users an "Add Test
+  // Players" button in a production build (item 6.1).
+  const canAddTestPlayers = !supabase && IS_INTERNAL_BUILD;
 
   const [players,       setPlayers]       = useState<RosterPlayer[]>([]);
   const [playersNeeded, setPlayersNeeded] = useState(8);
@@ -758,7 +764,7 @@ export default function QuickGameRosterScreen() {
               : setShowAdd(true)
             }
           />
-          {!supabase && (
+          {canAddTestPlayers && (
             <SecondaryButton
               label="Add Test Players"
               icon="people-outline"
@@ -775,7 +781,7 @@ export default function QuickGameRosterScreen() {
         onAdd={handleAdd}
         isFull={isFull}
       />
-      {!supabase && (
+      {canAddTestPlayers && (
         <TestPlayerModal
           visible={showTest}
           onClose={() => setShowTest(false)}

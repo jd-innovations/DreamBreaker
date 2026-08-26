@@ -13,6 +13,7 @@ import { StatusChip } from '@/components/StatusChip';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SecondaryButton } from '@/components/SecondaryButton';
 import { useSession } from '@/hooks/useSession';
+import { IS_INTERNAL_BUILD } from '@/lib/featureFlags';
 import { getRoundRobin, updateCurrentPlayers } from '@/lib/roundRobinStore';
 import {
   getRoster, addPlayer, removePlayer, clearRoster,
@@ -507,6 +508,9 @@ export default function RRRosterScreen() {
   const { user } = useSession();
   const tournamentId = id ?? '';
   const isSupabase   = UUID_RE.test(tournamentId);
+  // See quick-game/[id]/roster.tsx: `!isSupabase` alone kept seeded players out
+  // of the database but still surfaced the button to real users (item 6.1).
+  const canAddTestPlayers = !isSupabase && IS_INTERNAL_BUILD;
 
   // ── State ──
   const [sbMaxPlayers, setSbMaxPlayers] = useState(12);
@@ -766,7 +770,7 @@ export default function RRRosterScreen() {
             </Text>
             <View style={s.emptyActions}>
               <PrimaryButton label="Add Player" icon="person-add-outline" onPress={() => setAddVisible(true)} />
-              {!isSupabase && (
+              {canAddTestPlayers && (
                 <SecondaryButton label="Add Test Players" icon="flask-outline" onPress={() => setTestVisible(true)} />
               )}
             </View>
@@ -820,7 +824,7 @@ export default function RRRosterScreen() {
 
       {/* ── STICKY FOOTER ── */}
       <View style={[s.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-        {players.length > 0 && !isSupabase && (
+        {players.length > 0 && canAddTestPlayers && (
           <SecondaryButton label="Add Test Players" icon="flask-outline"
             onPress={() => setTestVisible(true)} style={s.footerSecondary} />
         )}
@@ -840,7 +844,7 @@ export default function RRRosterScreen() {
         onAdd={handleAddPlayer}
         requireEmail={isSupabase}
       />
-      {!isSupabase && (
+      {canAddTestPlayers && (
         <TestPlayerModal
           visible={testVisible}
           onClose={() => setTestVisible(false)}
