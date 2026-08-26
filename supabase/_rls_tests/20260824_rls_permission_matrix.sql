@@ -752,6 +752,120 @@ begin
                      format('%s definer view(s) exposed: %s', n_views, view_names));
 end $$;
 
+-- ── Column-level grants ──────────────────────────────────────────────────────
+--
+-- Everything above this point tests which ROWS a role can see. That is only
+-- half of "what can this role read", and the other half went unnoticed until
+-- 2026-08-25, when an unauthenticated request carrying nothing but the
+-- publishable anon key returned real users' email addresses from `profiles`.
+--
+-- Nothing in the row model was wrong. `profiles: public read` is `USING (true)`
+-- on purpose -- profiles are a discovery surface. The leak came from `anon`
+-- holding **table-level** SELECT (Supabase grants `ALL ON ALL TABLES IN SCHEMA
+-- public` by default), so "every row" silently meant every *column* too:
+-- email, date_of_birth, precise home coordinates, Stripe identifiers.
+--
+-- RLS cannot express a column restriction, so no row-level test can catch this
+-- class. These two do.
+
+-- 1. Regression: the specific columns closed by
+--    20260825_restrict_anon_profile_columns.sql must stay closed.
+--
+--    Asserted by behaviour, not by reading the catalog -- a grant that exists
+--    but is unreachable, or a catalog query that quietly matches nothing, both
+--    pass a catalog check while proving nothing. pg_temp.visible() returns -1
+--    when the read raises insufficient_privilege, which is the denial we want.
+do $$
+declare
+  col    text;
+  leaked text[] := '{}';
+begin
+  perform pg_temp.as_anon();
+  foreach col in array array[
+    'email', 'date_of_birth', 'gender',
+    'location_lat', 'location_lng', 'location_coords',
+    'stripe_customer_id', 'stripe_connect_account_id', 'stripe_connect_onboarded_at',
+    'coach_commission_override_pct', 'marketplace_listing_limit',
+    'notif_new_match', 'notif_liked_you', 'notif_hold_expiry', 'notif_tournaments',
+    'availability_schedule', 'deleted_at', 'director_approved_by'
+  ] loop
+    if pg_temp.visible(format('select %I from public.profiles', col)) <> -1 then
+      leaked := leaked || col;
+    end if;
+  end loop;
+  perform pg_temp.as_postgres();
+
+  perform pg_temp.ok('grants.anon_cannot_read_profile_pii',
+                     cardinality(leaked) = 0,
+                     format('%s column(s) readable by anon: %s',
+                            cardinality(leaked), array_to_string(leaked, ', ')));
+end $$;
+
+-- 2. The other direction, per this file's opening rule: a revoke broad enough
+--    to break signed-out browsing must fail too. These are the columns public
+--    profile pages and tournament director blocks actually select.
+do $$
+declare n bigint;
+begin
+  perform pg_temp.as_anon();
+  n := pg_temp.visible(
+    'select id, full_name, handle, avatar_url, bio, dupr, skill_level,'
+    || ' location_city, location_state, play_style, role, director_status,'
+    || ' director_events_hosted, director_rating from public.profiles');
+  perform pg_temp.as_postgres();
+
+  perform pg_temp.ok('grants.anon_can_still_read_public_profile_columns', n >= 0,
+                     case when n = -1
+                          then 'anon lost SELECT on a column public pages need'
+                          else format('%s row(s) visible', n) end);
+end $$;
+
+-- 3. Generic guard, so the NEXT table to acquire this shape is caught rather
+--    than the last one. Fires only where a sensitive-looking column meets a
+--    literal `USING (true)` SELECT policy readable by anon -- i.e. exactly the
+--    profiles bug -- so row-restricted tables holding the same grants
+--    (payments, registrations, push_tokens, play_participants,
+--    personal_guest_players, transactions) stay quiet and this does not become
+--    noise that gets ignored.
+do $$
+declare
+  n_unexpected int;
+  found        text;
+begin
+  select count(*), coalesce(string_agg(x.exposed, ', ' order by x.exposed), '')
+    into n_unexpected, found
+  from (
+    select p.tablename || '.' || cp.column_name as exposed
+    from pg_policies p
+    join information_schema.column_privileges cp
+      on cp.table_schema = p.schemaname and cp.table_name = p.tablename
+    join information_schema.tables t
+      on t.table_schema = cp.table_schema and t.table_name = cp.table_name
+     and t.table_type = 'BASE TABLE'
+    where p.schemaname = 'public'
+      and p.cmd in ('SELECT', 'ALL')
+      and p.permissive = 'PERMISSIVE'
+      and p.qual = 'true'
+      and cp.grantee = 'anon'
+      and cp.privilege_type = 'SELECT'
+      and (cp.column_name in ('email', 'date_of_birth', 'gender', 'phone', 'phone_number',
+                              'ip_address', 'location_lat', 'location_lng', 'location_coords',
+                              'contact_email', 'payer_email')
+           or cp.column_name like 'stripe_%'
+           or cp.column_name like '%_token'
+           or cp.column_name like '%secret%'
+           or cp.column_name like '%_intent_id'
+           or cp.column_name like 'notif_%')
+  ) x
+  -- Known and accepted: `facilities` is a venue directory. A venue's phone
+  -- number and address are the point of it, not personal data.
+  where x.exposed not in ('facilities.address_line_2', 'facilities.phone');
+
+  perform pg_temp.ok('grants.no_sensitive_columns_under_public_read',
+                     n_unexpected = 0,
+                     format('%s unexpected anon-readable column(s): %s', n_unexpected, found));
+end $$;
+
 -- ── Summary ──────────────────────────────────────────────────────────────────
 
 select test_name,
