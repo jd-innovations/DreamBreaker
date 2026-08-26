@@ -176,9 +176,16 @@ function DivisionCard({
         <div className="text-[10px] font-mono text-primary tracking-widest">✓ REGISTERED</div>
       ) : isHeld ? (
         <div className="flex gap-2">
-          <button onClick={onComplete} disabled={completing} className="flex-1 h-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50">
-            <Lightning size={12} weight="fill" /> {completing ? "CONFIRMING…" : `CONFIRM · $${fee - hold}`}
-          </button>
+          {/* A balance means payment, and payment happens in the app (D1). */}
+          {fee - hold > 0 ? (
+            <div className="flex-1 h-9 rounded-full border border-amber-500/40 bg-amber-500/5 text-[10px] font-mono tracking-wider text-muted-foreground flex items-center justify-center px-3 text-center">
+              ${(fee - hold).toFixed(2)} DUE · PAY IN THE APP
+            </div>
+          ) : (
+            <button onClick={onComplete} disabled={completing} className="flex-1 h-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50">
+              <Lightning size={12} weight="fill" /> {completing ? "CONFIRMING…" : "CONFIRM"}
+            </button>
+          )}
           <button onClick={onCancel} disabled={cancelling} className="h-9 px-3 rounded-full border border-border hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive font-mono text-[10px] transition-colors disabled:opacity-50">
             {cancelling ? "…" : "CANCEL"}
           </button>
@@ -408,8 +415,34 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     : null;
   const holdCountdown = useCountdown(holdExpireDate);
 
+  // Web does not take entry fees (alignment decision D1, 2026-08-26). This
+  // action converts a hold to a registration and writes entry_fee_paid_cents: 0,
+  // which is only truthful when nothing is owed.
+  //
+  // It used to run for every event, behind a button labelled with the balance
+  // due — so a player on web completed a paid registration without being
+  // charged, and the row left behind was indistinguishable from the phantom
+  // revenue cleared under TODO 1.1 item 6.1. Paid events now hand off to the
+  // mobile app, which takes payment through PaymentSheet and the Stripe webhook.
+  //
+  // The UI already hides the button when a balance is owed; this is the guard
+  // behind it, so a stale render or a direct call cannot slip through.
+  const balanceOwedCents = (divisionId: string | null) => {
+    const div = divisionId ? divisions.find((d) => d.id === divisionId) : null;
+    const feeCents = div?.entry_fee_cents ?? tournament?.entry_fee_cents ?? 0;
+    return Math.max(0, feeCents - (tournament?.hold_fee_cents ?? 0));
+  };
+
   const completeRegistration = async (divisionId: string | null) => {
     const key = divisionId ?? "legacy";
+
+    if (balanceOwedCents(divisionId) > 0) {
+      toast.error("Finish this registration in the app", {
+        description: "There's a balance to pay, and payments are handled in the Pickleball App.",
+      });
+      return;
+    }
+
     setCompleting(key);
     try {
       const userId = await getUserId();
@@ -941,9 +974,16 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                       )}
                     </div>
                     {holdCountdown && (
-                      <button onClick={() => completeRegistration(null)} disabled={completing !== null} className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors disabled:opacity-50" data-testid="complete-registration-btn">
-                        <Lightning size={16} weight="fill" /> {completing ? "CONFIRMING…" : `COMPLETE · $${entryFee - holdFee}`}
-                      </button>
+                      entryFee - holdFee > 0 ? (
+                        /* Balance due — payment lives in the app (D1). */
+                        <div className="w-full h-12 rounded-full border border-amber-500/40 bg-amber-500/5 flex items-center justify-center px-4 text-center font-mono text-xs tracking-widest text-muted-foreground" data-testid="complete-registration-handoff">
+                          ${(entryFee - holdFee).toFixed(2)} DUE · FINISH IN THE APP
+                        </div>
+                      ) : (
+                        <button onClick={() => completeRegistration(null)} disabled={completing !== null} className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors disabled:opacity-50" data-testid="complete-registration-btn">
+                          <Lightning size={16} weight="fill" /> {completing ? "CONFIRMING…" : "COMPLETE REGISTRATION"}
+                        </button>
+                      )
                     )}
                     <button onClick={() => cancelHold(null)} className="w-full h-10 rounded-full border border-border hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive font-mono text-xs tracking-widest transition-colors" data-testid="cancel-hold-btn">
                       CANCEL HOLD

@@ -278,10 +278,16 @@ function MatchmakingInner() {
       const { data: alreadySwiped } = await supabase.from("matchmaking_swipes").select("target_id").eq("requester_id", user.id);
       const swipedIds = new Set((alreadySwiped ?? []).map((s) => s.target_id));
 
+      // `is_discoverable` is the user's own "show me in matchmaking" switch,
+      // set from Match Settings on either platform. Mobile's finder has always
+      // honoured it (useFinderCandidates); web did not, so someone who opted
+      // out was hidden on one platform and still listed on the other
+      // (alignment audit, workstream A2).
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability")
         .eq("role", "player")
+        .eq("is_discoverable", true)
         .neq("id", user.id)
         .order("dupr", { ascending: false })
         .limit(20);
