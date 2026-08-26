@@ -4,7 +4,7 @@ import { ArrowRight, Plus, Heart, Lightning, Trophy, Users, MapPin, Calendar } f
 import { PageShell } from "@/components/layout/page-shell";
 import { HERO_IMG } from "@/lib/stock-images";
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { getPlatformStats } from "@/lib/platform-stats";
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&q=80";
 
@@ -62,52 +62,23 @@ async function getFeaturedTournaments(): Promise<FeaturedCard[]> {
   }
 }
 
-// Live platform counts. These were hardcoded — "12,480 ACTIVE PLAYERS",
-// "184 LIVE TOURNAMENTS", "3,210 PARTNERS MATCHED", "$1.2M PRIZE PAID '25" —
-// against a database holding 29 profiles and 5 open tournaments (item 6.1).
+// Landing-page presentation of the shared counts. The query itself lives in
+// lib/platform-stats.ts so the auth page renders the same numbers rather than
+// its own copy — the fabricated figures existed in both files, and 6.1
+// originally only fixed this one.
 //
 // "PRIZE PAID '25" is gone rather than zeroed: no payouts table exists in this
-// schema at all, so there is nothing to count. A hardcoded "$0" would be just
-// as invented as "$1.2M", and would silently stay $0 after payouts ship.
-//
-// PARTNERS MATCHED is counted with the service-role client rather than the
-// anon one, deliberately: `partner_matches` is restricted by RLS to its own
-// participants, so an anonymous count would return 0 forever no matter how
-// many matches existed. A statistic wired to a query that can only ever answer
-// zero is worse than no statistic. Only integers cross back here — no row
-// reaches the page.
-async function getPlatformStats(): Promise<{ label: string; value: string }[]> {
-  const fmt = (n: number | null) => (n ?? 0).toLocaleString();
+// schema at all, so a hardcoded "$0" would be just as invented as "$1.2M", and
+// would silently stay $0 after payouts ship.
+async function getStatTiles(): Promise<{ label: string; value: string }[]> {
+  const stats = await getPlatformStats();
+  const fmt = (n: number | undefined) => (n === undefined ? "—" : n.toLocaleString());
 
-  try {
-    const supabase = await createClient();
-    const service = createServiceClient();
-
-    const [players, tournaments, matches] = await Promise.all([
-      // "Active" = discoverable in the partner finder. Deliberately
-      // conservative: it undercounts (a user who opts out of discovery is not
-      // counted) and never overcounts.
-      supabase.from("profiles").select("id", { count: "exact", head: true }).eq("is_discoverable", true),
-      supabase
-        .from("tournaments")
-        .select("id", { count: "exact", head: true })
-        .in("status", ["open", "filling_fast", "registration_closed"]),
-      service.from("partner_matches").select("id", { count: "exact", head: true }),
-    ]);
-
-    return [
-      { label: "ACTIVE PLAYERS", value: fmt(players.count) },
-      { label: "LIVE TOURNAMENTS", value: fmt(tournaments.count) },
-      { label: "PARTNERS MATCHED", value: fmt(matches.count) },
-    ];
-  } catch {
-    // Never invent numbers to cover a failed read.
-    return [
-      { label: "ACTIVE PLAYERS", value: "—" },
-      { label: "LIVE TOURNAMENTS", value: "—" },
-      { label: "PARTNERS MATCHED", value: "—" },
-    ];
-  }
+  return [
+    { label: "ACTIVE PLAYERS", value: fmt(stats?.activePlayers) },
+    { label: "LIVE TOURNAMENTS", value: fmt(stats?.liveTournaments) },
+    { label: "PARTNERS MATCHED", value: fmt(stats?.partnersMatched) },
+  ];
 }
 
 const features = [
@@ -117,7 +88,7 @@ const features = [
 ];
 
 export default async function LandingPage() {
-  const stats = await getPlatformStats();
+  const stats = await getStatTiles();
   // Real open tournaments only. This used to fall back to three invented
   // events, complete with entry fees, prize pools and director names, on a
   // public marketing page (item 6.1).

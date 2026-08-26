@@ -6,9 +6,16 @@ import { getSupabaseUrl, getSupabaseAnonKey } from "@/lib/supabase/env";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  // Password-recovery links do not always arrive as `?code=`. Depending on
+  // project auth settings GoTrue sends `token_hash` + `type` instead, and a
+  // handler that only looks for `code` silently bounces the user back to
+  // /auth with a generic failure. apps/mobile/src/lib/auth.ts learned this the
+  // same way and handles both shapes; this route now does too.
+  const tokenHash = searchParams.get("token_hash");
+  const type = searchParams.get("type");
   const next = searchParams.get("next") ?? "/dashboard";
 
-  if (code) {
+  if (code || tokenHash) {
     const cookieStore = await cookies();
     // Validated accessors rather than `!` assertions: a missing variable is
     // inlined by Next as the string "undefined", which would have produced a
@@ -28,7 +35,13 @@ export async function GET(request: Request) {
       },
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { error } = code
+      ? await supabase.auth.exchangeCodeForSession(code)
+      : await supabase.auth.verifyOtp({
+          type: (type as "recovery" | "email" | "invite" | "magiclink") ?? "recovery",
+          token_hash: tokenHash!,
+        });
+
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
     }

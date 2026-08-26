@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { GoogleLogo, AppleLogo, Eye, EyeSlash, Lightning, Trophy, Heart, X } from "@phosphor-icons/react";
@@ -26,6 +26,31 @@ export default function AuthPage() {
   const [showPw, setShowPw] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<Set<string>>(new Set(["player"]));
   const [loading, setLoading] = useState(false);
+  // Controlled so "Forgot?" can read the address the user already typed
+  // instead of asking for it twice.
+  const [loginEmail, setLoginEmail] = useState("");
+
+  // These three lines used to read "184 active tournaments", "3,210 partners
+  // matched" and "$1.2M in prizes awarded" — hardcoded, against a database of
+  // 29 profiles. Item 6.1 replaced the same figures on the landing page and
+  // missed this copy. Both now read from lib/platform-stats.ts; this page is a
+  // client component, so it goes through /api/platform-stats.
+  //
+  // "prizes awarded" is dropped rather than zeroed: no payouts table exists, so
+  // "$0 in prizes awarded" would be as invented as "$1.2M" and would silently
+  // stay $0 after payouts ship.
+  const [stats, setStats] = useState<
+    { activePlayers: number; liveTournaments: number; partnersMatched: number } | null
+  >(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/platform-stats")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled) setStats(d); })
+      .catch(() => { if (!cancelled) setStats(null); });
+    return () => { cancelled = true; };
+  }, []);
 
   const toggleRole = (id: string) => {
     setSelectedRoles((prev) => {
@@ -38,6 +63,69 @@ export default function AuthPage() {
       }
       return next;
     });
+  };
+
+  // Google and Apple sign-in used to be two buttons that showed
+  // `toast.info("... coming soon")`, while both providers were live on the
+  // Supabase project and the mobile app signed in with them (item 6.2).
+  //
+  // Only the client half was missing: /auth/callback already exchanges the
+  // code for a session. `redirectTo` must be present in the project's
+  // Auth -> URL Configuration redirect allowlist, or Supabase refuses the
+  // round trip — that field is dashboard-only and cannot be read from here.
+  const handleOAuth = async (provider: "google" | "apple") => {
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+      // A successful call navigates away, so reaching here at all means it
+      // failed. Surface it rather than leaving the button looking inert.
+      if (error) {
+        toast.error(error.message);
+        setLoading(false);
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Sign-in failed");
+      setLoading(false);
+    }
+  };
+
+  // "Forgot?" had no onClick at all — it was an inert button in the sign-in
+  // flow, while mobile has had password reset all along
+  // (apps/mobile/src/lib/auth.ts). It now sends the real recovery email.
+  //
+  // The reply is deliberately identical whether or not the address has an
+  // account: telling an anonymous visitor "no account with that email" turns
+  // this box into an account-enumeration oracle.
+  const handleForgotPassword = async () => {
+    const email = loginEmail.trim();
+    if (!email) {
+      toast.error("Enter your email address first, then tap Forgot.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        // Routed through /auth/callback so the recovery token is exchanged for
+        // a session before /auth/reset renders; that route handles both the
+        // `code` and `token_hash` link shapes.
+        redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset`,
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("If that email has an account, a reset link is on its way.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Could not send the reset email.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -95,7 +183,11 @@ export default function AuthPage() {
           <h2 className="font-display text-5xl lg:text-7xl tracking-wide leading-[0.9] max-w-sm">COMPETE.<br />CONNECT.<br /><span className="text-primary">CONQUER.</span></h2>
         </div>
         <div className="space-y-3">
-          {[{ icon: Trophy, label: "184 active tournaments" }, { icon: Heart, label: "3,210 partners matched" }, { icon: Lightning, label: "$1.2M in prizes awarded" }].map((s) => (
+          {[
+            { icon: Lightning, label: `${stats ? stats.activePlayers.toLocaleString() : "—"} active players` },
+            { icon: Trophy,    label: `${stats ? stats.liveTournaments.toLocaleString() : "—"} live tournaments` },
+            { icon: Heart,     label: `${stats ? stats.partnersMatched.toLocaleString() : "—"} partners matched` },
+          ].map((s) => (
             <div key={s.label} className="flex items-center gap-3 text-sm text-muted-foreground">
               <s.icon size={16} weight="fill" className="text-primary" />{s.label}
             </div>
@@ -123,10 +215,10 @@ export default function AuthPage() {
               <form onSubmit={handleLogin} method="post" className="space-y-4">
                 <div>
                   <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">EMAIL</label>
-                  <input name="email" type="email" required placeholder="you@example.com" data-testid="auth-email" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                  <input name="email" type="email" required value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} placeholder="you@example.com" data-testid="auth-email" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-1.5"><label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground">PASSWORD</label><button type="button" className="text-xs text-primary hover:underline" data-testid="auth-forgot-pw">Forgot?</button></div>
+                  <div className="flex items-center justify-between mb-1.5"><label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground">PASSWORD</label><button type="button" disabled={loading} onClick={handleForgotPassword} className="text-xs text-primary hover:underline disabled:opacity-60" data-testid="auth-forgot-pw">Forgot?</button></div>
                   <div className="relative">
                     <input name="password" type={showPw ? "text" : "password"} required placeholder="••••••••" data-testid="auth-password" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 pr-12 text-sm outline-none focus:ring-2 focus:ring-ring" />
                     <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">{showPw ? <EyeSlash size={18} /> : <Eye size={18} />}</button>
@@ -136,8 +228,8 @@ export default function AuthPage() {
               </form>
               <div className="flex items-center gap-3 my-5"><div className="flex-1 h-px bg-border" /><span className="text-xs text-muted-foreground font-mono">OR</span><div className="flex-1 h-px bg-border" /></div>
               <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => toast.info("Google sign-in coming soon")} className="h-12 rounded-full border border-border flex items-center justify-center gap-2 text-sm hover:bg-secondary/60 transition-colors" data-testid="auth-google-btn"><GoogleLogo size={18} />Google</button>
-                <button onClick={() => toast.info("Apple sign-in coming soon")} className="h-12 rounded-full border border-border flex items-center justify-center gap-2 text-sm hover:bg-secondary/60 transition-colors" data-testid="auth-apple-btn"><AppleLogo size={18} />Apple</button>
+                <button type="button" disabled={loading} onClick={() => handleOAuth("google")} className="h-12 rounded-full border border-border flex items-center justify-center gap-2 text-sm hover:bg-secondary/60 transition-colors disabled:opacity-60" data-testid="auth-google-btn"><GoogleLogo size={18} />Google</button>
+                <button type="button" disabled={loading} onClick={() => handleOAuth("apple")} className="h-12 rounded-full border border-border flex items-center justify-center gap-2 text-sm hover:bg-secondary/60 transition-colors disabled:opacity-60" data-testid="auth-apple-btn"><AppleLogo size={18} />Apple</button>
               </div>
             </TabsContent>
 
