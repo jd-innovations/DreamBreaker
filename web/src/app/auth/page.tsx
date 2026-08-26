@@ -111,10 +111,18 @@ export default function AuthPage() {
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        // Routed through /auth/callback so the recovery token is exchanged for
-        // a session before /auth/reset renders; that route handles both the
-        // `code` and `token_hash` link shapes.
-        redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset`,
+        // Straight to /auth/reset, NOT through /auth/callback.
+        //
+        // GoTrue's recovery link verifies the token on its side and redirects
+        // with the session in a URL **fragment** (`#access_token=…`). A fragment
+        // is never sent to the server, so the callback route — which is a server
+        // route — saw no `code` and no `token_hash` and bounced the user to
+        // /auth?error=auth_callback_failed. OAuth works there because it really
+        // does use `?code=`.
+        //
+        // /auth/reset is a client page, so the browser client's
+        // detectSessionInUrl picks up either shape.
+        redirectTo: `${window.location.origin}/auth/reset`,
       });
       if (error) {
         toast.error(error.message);

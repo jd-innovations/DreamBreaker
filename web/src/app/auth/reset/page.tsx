@@ -11,11 +11,14 @@ import { createClient } from "@/lib/supabase/client";
 
 // Completes a password reset started from /auth ("Forgot?").
 //
-// The emailed link points at /auth/callback?next=/auth/reset, so by the time a
-// user lands here the recovery token has already been exchanged for a session
-// by that route — which is why this page only needs `updateUser`. Reaching it
-// without a session means the link was never followed, or it expired, and the
-// page says so instead of showing a form that cannot work.
+// The emailed link points **directly here**, not through /auth/callback.
+// GoTrue verifies the recovery token on its side and hands the session back in
+// the URL — usually as a `#access_token=…` fragment, which a server route can
+// never see. This page is a client component, so the browser client picks it up.
+//
+// Reaching it with no session after the grace period below means the link was
+// already used or expired, and the page says so instead of showing a form that
+// cannot work.
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -23,12 +26,47 @@ export default function ResetPasswordPage() {
   const [saving, setSaving] = useState(false);
   const [sessionState, setSessionState] = useState<"checking" | "ready" | "missing">("checking");
 
+  // Establishing the session here is a race, so this waits rather than asking
+  // once.
+  //
+  // The recovery link lands with the session in the URL — a `#access_token=…`
+  // fragment, or `?code=` under PKCE. The browser client parses that on init
+  // (detectSessionInUrl), but asynchronously, so a bare getSession() on mount
+  // frequently returns null before the parse finishes and would show
+  // "LINK EXPIRED" to someone holding a perfectly good link.
+  //
+  // So: listen for the auth event, ask once in case it already happened, and
+  // only conclude the link is dead after a grace period with neither.
   useEffect(() => {
     const supabase = createClient();
+    let settled = false;
+
+    const markReady = () => {
+      if (settled) return;
+      settled = true;
+      setSessionState("ready");
+    };
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) markReady();
+    });
+
     supabase.auth
       .getSession()
-      .then(({ data }) => setSessionState(data.session ? "ready" : "missing"))
-      .catch(() => setSessionState("missing"));
+      .then(({ data }) => { if (data.session) markReady(); })
+      .catch(() => { /* the timeout below is the fallback */ });
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        setSessionState("missing");
+      }
+    }, 3000);
+
+    return () => {
+      sub.subscription.unsubscribe();
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
