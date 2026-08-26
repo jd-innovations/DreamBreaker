@@ -34,10 +34,26 @@ import { createClient } from "@/lib/supabase/client";
 type SessionState =
   | { status: "checking" }
   | { status: "ready" }
-  | { status: "failed"; message: string };
+  | { status: "failed"; message: string; received: string };
 
 const DEFAULT_FAILURE =
   "This password reset link is no longer valid. Reset links can only be used once, and they expire after a while.";
+
+// What the link actually carried, by key name only.
+//
+// Never the values: an implicit fragment holds a live access token, and this
+// string is rendered on screen. Key names alone separate the cases that matter —
+// `code` means PKCE, `access_token` means implicit, `token_hash` means stateless,
+// and nothing at all means the tokens never reached the browser.
+function describeLinkParams(): string {
+  const keys = (qs: string) => Array.from(new URLSearchParams(qs).keys());
+  const search = keys(window.location.search);
+  const hash = keys(window.location.hash.replace(/^#/, ""));
+  const parts: string[] = [];
+  if (search.length) parts.push(`query: ${search.join(", ")}`);
+  if (hash.length) parts.push(`fragment: ${hash.join(", ")}`);
+  return parts.length ? parts.join(" · ") : "no parameters";
+}
 
 // GoTrue puts errors in the query string on some paths and the fragment on
 // others, so check both rather than assuming.
@@ -63,6 +79,10 @@ export default function ResetPasswordPage() {
   // asynchronously — a bare getSession() on mount frequently returns null before
   // it finishes, which would report a failure to someone holding a good link.
   useEffect(() => {
+    // Read this BEFORE constructing the client: on a successful implicit parse
+    // supabase-js sets `window.location.hash = ''`, erasing the evidence.
+    const received = describeLinkParams();
+
     const supabase = createClient();
     let settled = false;
 
@@ -76,7 +96,7 @@ export default function ResetPasswordPage() {
     // already said why. Don't wait three seconds to report something else.
     const linkError = readLinkError();
     if (linkError) {
-      settle({ status: "failed", message: linkError });
+      settle({ status: "failed", message: linkError, received });
       return;
     }
 
@@ -97,7 +117,7 @@ export default function ResetPasswordPage() {
           });
           settle(
             error
-              ? { status: "failed", message: error.message }
+              ? { status: "failed", message: error.message, received }
               : { status: "ready" },
           );
           return;
@@ -112,7 +132,7 @@ export default function ResetPasswordPage() {
     })();
 
     const timer = setTimeout(
-      () => settle({ status: "failed", message: DEFAULT_FAILURE }),
+      () => settle({ status: "failed", message: DEFAULT_FAILURE, received }),
       3000,
     );
 
@@ -184,6 +204,9 @@ export default function ResetPasswordPage() {
             >
               REQUEST A NEW ONE
             </Link>
+            <p className="font-mono text-[10px] tracking-widest text-muted-foreground/60 pt-2">
+              LINK CONTAINED — {sessionState.received}
+            </p>
           </div>
         )}
 
