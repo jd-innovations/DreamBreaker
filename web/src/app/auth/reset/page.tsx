@@ -79,9 +79,11 @@ export default function ResetPasswordPage() {
   // asynchronously — a bare getSession() on mount frequently returns null before
   // it finishes, which would report a failure to someone holding a good link.
   useEffect(() => {
-    // Read this BEFORE constructing the client: on a successful implicit parse
-    // supabase-js sets `window.location.hash = ''`, erasing the evidence.
+    // Read the fragment BEFORE constructing the client: a successful parse sets
+    // `window.location.hash = ''`, erasing the evidence.
     const received = describeLinkParams();
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const searchParams = new URLSearchParams(window.location.search);
 
     const supabase = createClient();
     let settled = false;
@@ -106,13 +108,41 @@ export default function ResetPasswordPage() {
 
     void (async () => {
       try {
-        // Shape 2. Stateless, so it must be redeemed explicitly —
-        // detectSessionInUrl does not touch `token_hash`.
-        const params = new URLSearchParams(window.location.search);
-        const tokenHash = params.get("token_hash");
+        // ── Implicit fragment: redeem it by hand ──────────────────────────────
+        //
+        // This CANNOT be left to detectSessionInUrl. auth-js refuses to consume
+        // an implicit URL with a PKCE client — `_getSessionFromURL` throws
+        // "Not a valid PKCE flow url." on the flowType mismatch, before it ever
+        // validates the token — and @supabase/ssr hardcodes flowType 'pkce', so
+        // this client cannot be anything else. Diagnosed 2026-08-26: GoTrue
+        // granted the session and the fragment arrived intact, yet no GET /user
+        // was ever issued, because the mismatch check threw first.
+        //
+        // setSession has no such gate. It takes the tokens directly, validates
+        // them against /user, and persists through this client's cookie storage
+        // — which is what updateUser below and the rest of the app read from.
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+        if (accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (error) {
+            settle({ status: "failed", message: error.message, received });
+            return;
+          }
+          // Don't leave live tokens sitting in the address bar or in history.
+          window.history.replaceState(null, "", window.location.pathname);
+          settle({ status: "ready" });
+          return;
+        }
+
+        // ── token_hash: stateless, must be redeemed explicitly ────────────────
+        const tokenHash = searchParams.get("token_hash");
         if (tokenHash) {
           const { error } = await supabase.auth.verifyOtp({
-            type: (params.get("type") as "recovery" | "email" | "invite" | "magiclink") ?? "recovery",
+            type: (searchParams.get("type") as "recovery" | "email" | "invite" | "magiclink") ?? "recovery",
             token_hash: tokenHash,
           });
           settle(
@@ -123,17 +153,21 @@ export default function ResetPasswordPage() {
           return;
         }
 
-        // Shapes 1 and 3 land in the session store on their own.
+        // ── PKCE, or an already-established session ───────────────────────────
         const { data } = await supabase.auth.getSession();
         if (data.session) settle({ status: "ready" });
-      } catch {
-        /* the timeout below is the fallback */
+      } catch (err: unknown) {
+        settle({
+          status: "failed",
+          message: err instanceof Error ? err.message : DEFAULT_FAILURE,
+          received,
+        });
       }
     })();
 
     const timer = setTimeout(
       () => settle({ status: "failed", message: DEFAULT_FAILURE, received }),
-      3000,
+      5000,
     );
 
     return () => {
