@@ -8,6 +8,7 @@ import { Logo } from "@/components/layout/logo";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { createClient, createEmailLinkClient } from "@/lib/supabase/client";
+import { saveSignupSeed } from "@/lib/onboarding/persistence";
 import { LEGAL_ROUTES } from "@/lib/legal";
 
 const ROLE_OPTIONS = [
@@ -183,6 +184,19 @@ export default function AuthPage() {
     });
     setLoading(false);
     if (error) { toast.error(error.message); return; }
+
+    // Hand the name and email to onboarding.
+    //
+    // With confirmations on, signUp() returns no session, so the onboarding
+    // profile step cannot read the `profiles` row it would normally prefill the
+    // name from — it asked for a name the user had just typed on this screen.
+    // The email also lets the draft carry an identity stamp with no session.
+    saveSignupSeed({
+      firstName: String(fd.get("firstName") ?? "").trim(),
+      lastName: String(fd.get("lastName") ?? "").trim(),
+      email: String(fd.get("email") ?? "").trim() || null,
+    });
+
     toast.success("Account created! Check your email to confirm.");
     router.push("/onboarding");
     router.refresh();

@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { loadSignupSeed } from "@/lib/onboarding/persistence";
 import { useOnboarding } from "@/lib/onboarding/state";
 import { GENDER_OPTIONS, HANDEDNESS_OPTIONS } from "@/lib/onboarding/options";
 import { StepFrame } from "@/components/onboarding/step-frame";
@@ -32,7 +33,24 @@ export default function ProfileStep() {
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user || cancelled) { setPrefilled(true); return; }
+
+        if (!user) {
+          // No session — the normal case while confirmations are on. Fall back
+          // to what the signup form captured, so the user is not asked for a
+          // name they typed one screen ago. The email stamps the draft so it
+          // still cannot be flushed onto somebody else's account.
+          const seed = loadSignupSeed();
+          if (seed && !cancelled) {
+            stampIdentity({ email: seed.email });
+            if (!draft.firstName && !draft.lastName) {
+              if (seed.firstName) update("firstName", seed.firstName);
+              if (seed.lastName) update("lastName", seed.lastName);
+            }
+          }
+          if (!cancelled) setPrefilled(true);
+          return;
+        }
+        if (cancelled) { setPrefilled(true); return; }
 
         // Stamp identity so this draft can only ever be flushed onto this
         // account, even if someone else uses the browser later.

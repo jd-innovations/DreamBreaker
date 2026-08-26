@@ -109,3 +109,58 @@ export function draftBelongsTo(
   }
   return true;
 }
+
+// ── Signup seed ──────────────────────────────────────────────────────────────
+//
+// The name and email captured by the signup form, held for the onboarding flow
+// that runs immediately after.
+//
+// This exists because of `enable_confirmations`. With it on, `signUp()` returns
+// no session, so onboarding runs unauthenticated — and the profile step's
+// prefill, which reads `full_name` from the `profiles` row, has no session to
+// read it with. It bailed silently and asked the user to type a name they had
+// entered on the previous screen.
+//
+// Kept separate from the draft rather than folded into it: the draft is the
+// user's answers and is cleared once written, while this is signup context and
+// must survive a draft reset. It also carries the email, which lets the identity
+// stamp work with no session — without it a draft is unattributable and cannot
+// be defended against being flushed onto the wrong account.
+
+const SEED_KEY = "dbpb.onboarding.seed.v1";
+
+export type SignupSeed = { firstName: string; lastName: string; email: string | null };
+
+export function saveSignupSeed(seed: SignupSeed): void {
+  try {
+    window.localStorage.setItem(SEED_KEY, JSON.stringify(seed));
+  } catch {
+    // Storage blocked. The user types their name again — annoying, not broken.
+  }
+}
+
+export function loadSignupSeed(): SignupSeed | null {
+  try {
+    const raw = window.localStorage.getItem(SEED_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) return null;
+    const s = parsed as Record<string, unknown>;
+    if (typeof s.firstName !== "string" || typeof s.lastName !== "string") return null;
+    return {
+      firstName: s.firstName,
+      lastName: s.lastName,
+      email: typeof s.email === "string" ? s.email : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function clearSignupSeed(): void {
+  try {
+    window.localStorage.removeItem(SEED_KEY);
+  } catch {
+    /* nothing useful to do */
+  }
+}
