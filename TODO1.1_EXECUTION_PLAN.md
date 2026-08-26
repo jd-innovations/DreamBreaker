@@ -4,8 +4,8 @@ Purpose: turn `TODO1.1.md` into an ordered, one-issue-at-a-time production readi
 
 ## Current State — 2026-08-25
 
-**16 of 27 items closed.** Two more (4.1, 5.3) have Completion Notes but are
-explicitly *not* closed — read their notes, not this table, for detail.
+**16 of 27 items closed.** Three more (4.1, 5.3, 6.1) have Completion Notes but
+are explicitly *not* closed — read their notes, not this table, for detail.
 
 An item is done iff it has a `### Completion Notes - X.Y` section that does not
 say INCOMPLETE. Grep for those rather than trusting any summary, including this
@@ -14,8 +14,8 @@ one.
 | | Items |
 | --- | --- |
 | **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 5.2 |
-| **Partial** | **4.1** (web verified, mobile unverified), **5.3** (15/17 cases) |
-| **Untouched** | 4.2, 4.3, 5.1, 5.4, 6.1, 6.2, 6.3, 7.1, 7.2, 7.3 |
+| **Partial** | **4.1** (web verified, mobile unverified), **5.3** (15/17 cases), **6.1** (audited in full; 3 of 7 fixes applied) |
+| **Untouched** | 4.2, 4.3, 5.1, 5.4, 6.2, 6.3, 7.1, 7.2, 7.3 |
 
 Phases 0-3 are complete and deployed to production.
 
@@ -33,14 +33,17 @@ Both need a new mobile build and nothing else:
 (npm 10.8.2) both break. See `project-eas-npm-lockfile` in memory. This has
 already happened once.
 
-### Recommended next item: 6.1
+### Recommended next item: finish 6.1
 
-The only remaining **Critical**, and it needs no device, no vendor account and
-no external input. There is already a confirmed instance: four seed
-registrations on "Lakewood Ranch Classic" (player ids
-`11111111-...-11110{1,2,3,4}`) carry `entry_fee_paid_cents = 7500` with **no
-payment row at all**. Fake paid registrations in production data quietly corrupt
-every revenue figure derived from them.
+Started 2026-08-25 — read its Completion Notes, which are the real status. The
+audit is complete and was much larger than the four documented registrations:
+**17 of 29 production profiles were fake**, and they were reaching every real
+user's partner deck regardless of radius. Three fixes are applied; four remain,
+and each is a decision rather than a discovery. The web half of fix 1 is **not
+live until a Vercel preview is promoted**.
+
+Also open from that audit: `web/src/app/matchmaking/page.tsx` never checks
+`is_discoverable`, which is a live privacy defect independent of mock data.
 
 ### Only the human can do these
 
@@ -3222,6 +3225,237 @@ Goal: users only see real, working product.
   - Production mode shows no fake user/event/payment success data.
 - Done when:
   - Demo data cannot be confused for real data.
+
+### Completion Notes - 6.1
+
+- Status: **INCOMPLETE.** Audited in full 2026-08-25; five of seven fixes
+  applied, and `web/src/data/mock-data.ts` no longer exists. The remaining two
+  are listed under "Not done" below and each is a decision, not a discovery.
+
+#### The audit found far more than the four documented registrations
+
+**17 of the 29 profiles in production were fake** (59%), in two blocks:
+
+| Block | What | Origin |
+| --- | --- | --- |
+| `11111111-…-1111111101..04` | 4 sample players (`*.sample@dreambreaker.test`, `sofia@mockplayer.pb`) | inserted ad hoc; **no seed file, no reset script** |
+| `c0ac0000-…-000000000001..13` | 13 coaches + **30 `coach_offers`, 24 of them `active`** | `supabase/seed/coach_marketplace_dev_seed.sql`, 2026-08-10 |
+
+The four sample players also carried, in production: the 4 documented fake paid
+registrations ($300 phantom entry-fee revenue, no `payments` row), **5 confirmed
+court reservations with prices and no payment rows** (~$123 more), 13
+`reservation_players`, 4 `bracket_seeds`, conversations, messages, swipes,
+likes and notifications.
+
+Every real counterparty to that graph is one of the maintainer's own accounts,
+so nobody else's data is entangled in it.
+
+#### The flag did not protect the finder
+
+`FEATURE_VISIBILITY.coachMarketplace` is `hidden`, so the 30 offers are
+unreachable in a production mobile build. **The profiles were not.**
+`useFinderCandidates.ts` selects all profiles filtered by `is_discoverable`,
+`actively_looking`, skill and distance. All 17 seeds had `actively_looking =
+null` (not excluded) and **null coordinates** — and line 244 passes
+`distance == null` through deliberately, so they appeared in every real user's
+partner deck *regardless of radius* and could not be filtered out.
+
+#### Done
+
+**1. Web profile showed every user a fabricated win/loss record.**
+`web/src/app/profile/page.tsx` fell back to `playerStats` — "38 wins, 14
+losses, 11 tournaments" — plus four invented match results whenever the user
+had no completed matches. Production has **zero** completed `bracket_matches`,
+so this was firing for every user, every visit. A second fallback invented four
+"partners", and the `load().catch()` path rendered the same fake profile on any
+error.
+
+Removed all three. It was a pure deletion: `NO MATCHES YET` and `NO PARTNERS
+YET` panels already existed and the stat tiles already rendered `—` at zero —
+the mock data was suppressing UI that was already built. The error path now
+logs and shows a toast instead of a fake profile. `tsc` and `eslint` clean.
+
+⚠️ **Not live until a Vercel preview is promoted.**
+
+**2. Seed profiles hidden from discovery** — `is_discoverable = false` on all
+17. Chosen over a code-side exclusion because `useFinderCandidates.ts` already
+honours that flag, so the change reached **every install already in the field**;
+a client-side filter would have needed an EAS build, which was unavailable.
+
+**A4. Four test tournaments cancelled** — `Test payments`, `Caledar Tournament
+Test`, `Test Small ❤️`, `Yes SRQ`. Cancelled rather than deleted: the first two
+hold real test-mode Stripe intents (4 and 3) and refund rows (1 and 2) that
+3.3's reconciliation queue reads. `cancelled` is outside `VISIBLE_STATUSES` on
+mobile and the web browse filter, so they left both public lists with history
+intact. `trg_notify_tournament_status` was read first — it inserts in-app
+notifications on cancel and sends **no** email on that branch.
+
+Both database halves: `scripts/gate-seed-data-6-1.sql` (reversible, no
+deletes). Run against production 2026-08-25.
+
+Verified after the run: 0 discoverable seed profiles, 11 real discoverable
+profiles untouched, 5 legitimate tournaments still public, `payments` (36) and
+`refunds` (3) intact.
+
+**3. `mock-data.ts` deleted, and every fallback that fed from it.** Seven files.
+
+| File | Was | Now |
+| --- | --- | --- |
+| `tournaments/page.tsx` | 6 invented tournaments on empty **or query error** | empty state; distinct "couldn't load" state with a retry |
+| `tournaments/[id]/page.tsx` | unknown id → a *different*, invented tournament with a Register button; 5 fake attendees | `TOURNAMENT NOT FOUND` / error state; real attendees only |
+| `dashboard/page.tsx` | 2 invented registrations, fake W-L, fake recommendations, on empty **and** on error **and** on missing env vars | empty states; a banner saying the figures are incomplete, not zero |
+| `matchmaking/page.tsx` | 5 invented swipeable people | existing `ALL CAUGHT UP` panel |
+| `(public)/landing-page.tsx` | 3 invented featured events on the public marketing page | `NO OPEN EVENTS RIGHT NOW` |
+| `brackets/page.tsx` | a whole fake bracket + day schedule, no DB call | **deleted** |
+| `registration-success/page.tsx` | confirmation for a fictional tournament | **deleted** |
+
+The error paths mattered more than the empty ones: the tournaments list
+invented events *precisely when the database was unreachable*. Every fallback
+now logs to console (and so to Sentry) instead of papering over the failure.
+
+`HERO_IMG` and `COURT_IMG` were genuinely used decoration, not sample data;
+they moved to `web/src/lib/stock-images.ts`. The `mock-`-prefixed id guards in
+the dashboard's cancel flow went with the data that needed them.
+
+Verification: `tsc --noEmit` clean, `next build` succeeds with `/brackets` and
+`/registration-success` gone from the route table, and `eslint` reports the
+same 8 pre-existing warnings on `matchmaking/page.tsx` as before the change —
+no new ones anywhere.
+
+#### Not done — each needs a decision
+
+1. **The 4 sample players' money rows.** Recommended approach changed after
+   checking `supabase/functions/delete-account`: it *anonymizes* the profile to
+   a tombstone and never touches `registrations` or `reservations`, and it
+   derives its target from the caller's JWT so it cannot be pointed at these
+   accounts anyway. **Deleting the accounts would leave the $300 of phantom
+   registration revenue and ~$123 of phantom reservation revenue exactly where
+   they are, attached to opaque tombstones.** Fix the money rows directly
+   instead — zero `entry_fee_paid_cents` on the four registrations (needs the
+   `set_config` service_role wrapper; the C7 trigger guards that column) and
+   cancel the five seed reservations. The profiles are already hidden.
+
+   None of this is visible to the reconciliation tooling:
+   `admin_payment_reconciliation()` has exactly three categories
+   (`succeeded_not_fulfilled`, `stuck_pending`, `duplicate_payment`) and **all
+   three key off the `payments` table**, so a registration marked paid with no
+   payment row at all matches none of them.
+
+2. **Mobile "Add Test Players"** in `quick-game/[id]/roster.tsx` and
+   `round-robin/[id]/roster.tsx` — visible in production builds. Gated on
+   `!isUUID(gameId)` so it never writes to Supabase, but it is a QA affordance
+   real users can see. Gate behind `IS_INTERNAL_BUILD`. Needs an EAS build to
+   reach users, so it should ride along with the next mobile change.
+
+3. **`community/[id].tsx` `FALLBACK`** — real UUID events are safe (loading and
+   error early-returns), but any non-UUID id renders "Wednesday Round Robin"
+   with a fictional organizer, fake weather and fake attendees.
+
+**Downgraded: the coach seed is hygiene, not exposure.** `featureRoutes.ts`
+gates `/coach` *and* `/lessons` including deep links, and
+`web/src/app/coach/offers/[id]` is a `MobileLinkFallback` that renders no offer
+data at all. The 30 seeded offers were never reachable by anyone; the only real
+exposure was the 13 profiles in the finder, now fixed. Run
+`supabase/seed/coach_marketplace_dev_seed_reset.sql` before beta so production
+is not carrying dev fixtures, but it is not urgent.
+
+#### ⚠️ Security finding — anon could read every user's email — **FIXED 2026-08-25**
+
+Found while checking what the landing page could count anonymously, confirmed
+exploitable against production, and closed the same day. Not a 6.1 item; kept
+here because this is where the trail started.
+
+`profiles` carries a SELECT policy `profiles: public read` whose `USING` clause
+is literally `true`, and the `anon` role holds column-level SELECT on **`email`,
+`date_of_birth`, `location_lat` and `location_lng`** among others. The
+publishable anon key is inlined into every web bundle and every mobile binary
+by design, so the qualifying reader is *anyone on the internet*:
+
+```
+curl -H "apikey: <anon key>" \
+  'https://fbzetvkbhneptvfruilw.supabase.co/rest/v1/profiles?select=email,date_of_birth,location_lat,location_lng'
+```
+
+**That request was run against production and returned real user email
+addresses** — `jesus@goldluxehomes.com`, `dhjesus122@gmail.com`,
+`support@pickleballgripdoctor.com` — to an unauthenticated caller. All **49
+columns** were readable, not just the four tested: 29 emails (11 real), 3 dates
+of birth, 3 sets of precise home coordinates, 1 Stripe Connect account id,
+plus gender and notification preferences.
+
+**Two things had to line up, and both did:**
+
+1. RLS policy `profiles: public read` has a `USING` clause of literally `true`.
+   That is intentional — profiles are a discovery surface.
+2. `anon` held **table-level** `SELECT` (Supabase's default
+   `GRANT ALL ON ALL TABLES IN SCHEMA public`), so "every row" also meant every
+   *column*.
+
+Item 2.2's RLS matrix passed because it models which **rows** each role can
+see. This is a **column-grant** problem, which that suite does not cover —
+**it should gain an assertion for this class.**
+
+**Fix:** `supabase/migrations/20260825120000_restrict_anon_profile_columns.sql`,
+applied to production 2026-08-25 via `supabase db push --linked`. A column-level
+grant cannot be carved out of a table-level one, so it revokes `SELECT` from
+`anon` and grants back 31 safe display columns.
+
+Verified after applying — `anon` table-level SELECT `0`, `anon` columns `31`,
+sensitive columns readable by `anon` `0`, `authenticated` unchanged at `49` —
+and end-to-end from outside: the sensitive select now 401s while
+`select=id,full_name,avatar_url,dupr,skill_level` still returns rows. Same key,
+same header, only the column list differs.
+
+**It took effect immediately on web and mobile**, with no deploy and no EAS
+build, because it is a database-side grant.
+
+**Still open:** `authenticated` was deliberately left untouched, so **any
+signed-in user can still read all 29 emails.** The mobile finder legitimately
+reads other users' `date_of_birth` (age) and `location_lat/lng` (distance), so
+narrowing that role needs a restricted view plus client changes, and client
+changes need a build. Smaller blast radius than the open internet, still real
+for a public beta.
+
+#### Found while checking the above, not yet fixed
+
+- **Four of the five still-public tournaments have event dates in the past and
+  are still `open` for registration** — Paddletek Classic (Jul 11), Summer Slam
+  Showdown (Aug 14), Lakewood Ranch Classic (Aug 16), First Strike (Aug 22). A
+  beta user can register for events that already happened. Nothing moves a
+  tournament out of `open` when its date passes.
+- **`Summer Slam Showdown` advertises `spots_filled = 82` of 112 with zero
+  active registrations**, plus a $5,000 prize pool. `spots_filled` is a stored
+  counter, not derived, so it can disagree with reality arbitrarily —
+  fabricated scarcity on a public tournament. Lakewood Ranch Classic and
+  Paddletek carry $2,500 and $1,500 prize pools with no real entrants.
+- ~~The public landing page states "12,480 ACTIVE PLAYERS" …~~ **Fixed
+  2026-08-25.** The four hardcoded figures are now live counts: active players
+  (profiles discoverable in the finder — deliberately conservative, it
+  undercounts and never overcounts), open tournaments, and partner matches.
+  Today that renders 11 / 5 / 3 against the former 12,480 / 184 / 3,210.
+  A failed read renders `—`, never a number.
+
+  **"PRIZE PAID '25" was removed rather than zeroed.** No payouts table exists
+  in the schema at all, so a hardcoded `$0` would be exactly as invented as
+  `$1.2M` — and would silently stay `$0` after payouts ship. `PARTNERS MATCHED`
+  is counted with the service-role client because `partner_matches` is
+  RLS-restricted to its own participants: an anonymous count would return 0
+  forever regardless of reality. Only integers cross back to the page.
+
+#### Separate defect found on the way, not fixed
+
+`web/src/app/matchmaking/page.tsx:306-311` filters candidates by `role =
+'player'` only — it **never checks `is_discoverable`**. Two consequences: the
+seeds still appear on web matchmaking, and — independent of mock data — **a
+user who turns discovery off in Match Settings is still shown to other users on
+web.** One-line fix, outside 6.1's approved scope, so flagged not applied.
+
+#### Left alone deliberately
+
+Six tournaments not named as test data, including `Lakewood Ranch Classic`,
+which still holds the four fake paid registrations. `ACTIVITY_MOCKS` in
+`apps/mobile/src/lib/onboarding/mockData.ts` is dead code with zero consumers;
+the rest of that file is legitimate static option lists, just misnamed.
 
 ### 6.2 Replace Coming Soon Buttons
 
