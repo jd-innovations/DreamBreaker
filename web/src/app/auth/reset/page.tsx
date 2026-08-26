@@ -11,57 +11,110 @@ import { createClient } from "@/lib/supabase/client";
 
 // Completes a password reset started from /auth ("Forgot?").
 //
-// The emailed link points **directly here**, not through /auth/callback.
-// GoTrue verifies the recovery token on its side and hands the session back in
-// the URL — usually as a `#access_token=…` fragment, which a server route can
-// never see. This page is a client component, so the browser client picks it up.
+// The emailed link points **directly here**, not through /auth/callback: a
+// recovery link can hand the session back in a URL fragment, and a fragment is
+// never sent to the server, so a server route structurally cannot complete this.
 //
-// Reaching it with no session after the grace period below means the link was
-// already used or expired, and the page says so instead of showing a form that
-// cannot work.
+// Four link shapes reach this page, and it handles all of them:
+//
+//   1. `#access_token=…`         GoTrue verified server-side. detectSessionInUrl
+//                                picks it up on its own.
+//   2. `?token_hash=…&type=…`    Stateless. Needs an explicit verifyOtp, and is
+//                                the only shape that survives being opened in a
+//                                different browser than requested it.
+//   3. `?code=…`                 PKCE. detectSessionInUrl handles it, but ONLY in
+//                                the browser that requested the reset — the code
+//                                verifier lives in that browser's storage. Tapped
+//                                from a mail app's in-app WebView, it cannot work.
+//   4. `?error=…` / `#error=…`   GoTrue rejected the token and said why.
+//
+// Shape 4 is why this does not just say "expired" and stop. A page that reports
+// one cause for every failure is telling the user something it does not know.
+
+type SessionState =
+  | { status: "checking" }
+  | { status: "ready" }
+  | { status: "failed"; message: string };
+
+const DEFAULT_FAILURE =
+  "This password reset link is no longer valid. Reset links can only be used once, and they expire after a while.";
+
+// GoTrue puts errors in the query string on some paths and the fragment on
+// others, so check both rather than assuming.
+function readLinkError(): string | null {
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const code = search.get("error_code") ?? hash.get("error_code");
+  const description = search.get("error_description") ?? hash.get("error_description");
+  const error = search.get("error") ?? hash.get("error");
+  if (!code && !description && !error) return null;
+  // error_description is URL-encoded prose written for humans; prefer it.
+  return description ? description.replace(/\+/g, " ") : (code ?? error ?? DEFAULT_FAILURE);
+}
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [showPw, setShowPw] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [sessionState, setSessionState] = useState<"checking" | "ready" | "missing">("checking");
+  const [sessionState, setSessionState] = useState<SessionState>({ status: "checking" });
 
-  // Establishing the session here is a race, so this waits rather than asking
-  // once.
-  //
-  // The recovery link lands with the session in the URL — a `#access_token=…`
-  // fragment, or `?code=` under PKCE. The browser client parses that on init
-  // (detectSessionInUrl), but asynchronously, so a bare getSession() on mount
-  // frequently returns null before the parse finishes and would show
-  // "LINK EXPIRED" to someone holding a perfectly good link.
-  //
-  // So: listen for the auth event, ask once in case it already happened, and
-  // only conclude the link is dead after a grace period with neither.
+  // Establishing the session is a race against the client's own URL parse, so
+  // this waits rather than asking once. detectSessionInUrl runs at client init,
+  // asynchronously — a bare getSession() on mount frequently returns null before
+  // it finishes, which would report a failure to someone holding a good link.
   useEffect(() => {
     const supabase = createClient();
     let settled = false;
 
-    const markReady = () => {
+    const settle = (next: SessionState) => {
       if (settled) return;
       settled = true;
-      setSessionState("ready");
+      setSessionState(next);
     };
 
+    // An error in the link itself is decisive: no session is coming, and GoTrue
+    // already said why. Don't wait three seconds to report something else.
+    const linkError = readLinkError();
+    if (linkError) {
+      settle({ status: "failed", message: linkError });
+      return;
+    }
+
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) markReady();
+      if (session) settle({ status: "ready" });
     });
 
-    supabase.auth
-      .getSession()
-      .then(({ data }) => { if (data.session) markReady(); })
-      .catch(() => { /* the timeout below is the fallback */ });
+    void (async () => {
+      try {
+        // Shape 2. Stateless, so it must be redeemed explicitly —
+        // detectSessionInUrl does not touch `token_hash`.
+        const params = new URLSearchParams(window.location.search);
+        const tokenHash = params.get("token_hash");
+        if (tokenHash) {
+          const { error } = await supabase.auth.verifyOtp({
+            type: (params.get("type") as "recovery" | "email" | "invite" | "magiclink") ?? "recovery",
+            token_hash: tokenHash,
+          });
+          settle(
+            error
+              ? { status: "failed", message: error.message }
+              : { status: "ready" },
+          );
+          return;
+        }
 
-    const timer = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        setSessionState("missing");
+        // Shapes 1 and 3 land in the session store on their own.
+        const { data } = await supabase.auth.getSession();
+        if (data.session) settle({ status: "ready" });
+      } catch {
+        /* the timeout below is the fallback */
       }
-    }, 3000);
+    })();
+
+    const timer = setTimeout(
+      () => settle({ status: "failed", message: DEFAULT_FAILURE }),
+      3000,
+    );
 
     return () => {
       sub.subscription.unsubscribe();
@@ -111,16 +164,19 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8"><Logo /></div>
 
-        {sessionState === "checking" && (
+        {sessionState.status === "checking" && (
           <p className="text-sm text-muted-foreground">Checking your reset link…</p>
         )}
 
-        {sessionState === "missing" && (
+        {sessionState.status === "failed" && (
           <div className="space-y-4">
-            <h1 className="font-display text-3xl tracking-wide">LINK EXPIRED</h1>
+            <h1 className="font-display text-3xl tracking-wide">LINK NOT VALID</h1>
+            <p className="text-sm text-muted-foreground" data-testid="reset-error">
+              {sessionState.message}
+            </p>
             <p className="text-sm text-muted-foreground">
-              This password reset link is no longer valid. Reset links can only be used once, and
-              they expire after a while.
+              If you opened this link on a different device or browser than the one you requested it
+              from, request a new one and open it there.
             </p>
             <Link
               href="/auth"
@@ -131,7 +187,7 @@ export default function ResetPasswordPage() {
           </div>
         )}
 
-        {sessionState === "ready" && (
+        {sessionState.status === "ready" && (
           <>
             <h1 className="font-display text-3xl tracking-wide mb-2">SET A NEW PASSWORD</h1>
             <p className="text-sm text-muted-foreground mb-6">
