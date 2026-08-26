@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { IS_INTERNAL_BUILD } from '@/lib/featureFlags';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -129,12 +130,20 @@ const ar = StyleSheet.create({
 
 // ─── Context menu items ──────────────────────────────────────────────────────────
 
-const MENU_ITEMS = [
+const ALL_MENU_ITEMS = [
   { id: 'share',     label: 'Share Event',      icon: 'share-outline' },
   { id: 'invite',    label: 'Invite Players',   icon: 'person-add-outline' },
   { id: 'duplicate', label: 'Duplicate Event',  icon: 'copy-outline' },
   { id: 'edit',      label: 'Edit Event',       icon: 'pencil-outline' },
 ];
+
+// `duplicate` has no implementation behind it; it answered with a "coming
+// soon" alert. Hidden in production builds, kept in internal ones so the gap
+// stays visible to QA (item 6.2).
+const UNBUILT_MENU_IDS = new Set(['duplicate']);
+const MENU_ITEMS = ALL_MENU_ITEMS.filter(
+  (i) => IS_INTERNAL_BUILD || !UNBUILT_MENU_IDS.has(i.id),
+);
 const MENU_DANGER = { id: 'cancel', label: 'Cancel Round Robin', icon: 'trash-outline' };
 
 // ─── Screen ─────────────────────────────────────────────────────────────────────
@@ -1011,7 +1020,10 @@ export default function RoundRobinCreatedScreen() {
             <Ionicons name="chatbubbles-outline" size={28} color={L.border} />
             <Text style={s.chatEmptyText}>Chat becomes active when another player joins.</Text>
           </View>
-          <TouchableOpacity style={s.chatCta} onPress={() => comingSoon('Round Robin Chat')} activeOpacity={0.8}>
+          <TouchableOpacity style={s.chatCta} onPress={() => isSupabase
+              ? router.push({ pathname: '/community/[id]', params: { id: id!, tab: 'chat' } } as never)
+              : comingSoon('Round Robin Chat')
+            } activeOpacity={0.8}>
             <Text style={s.chatCtaText}>Open Chat</Text>
             <Ionicons name="chevron-forward" size={15} color={L.gold} />
           </TouchableOpacity>

@@ -6,6 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { IS_INTERNAL_BUILD } from '@/lib/featureFlags';
 import { StatusBar } from 'expo-status-bar';
 import { colors, radius } from '@/theme';
 import { StatusChip } from '@/components';
@@ -531,9 +532,15 @@ function ContextMenu({
 }) {
   if (!visible) return null;
 
+  // Share/Export Bracket have no implementation behind them -- there is no
+  // bracket share helper (createCommunityShareMessage takes a PlayEvent) and no
+  // export path. They answered with a "coming soon" alert; in a production
+  // build they are simply not offered (item 6.2).
   const items = [
-    { label: 'Share Bracket',      icon: 'share-outline' as const,       onPress: () => { onClose(); comingSoon('Share Bracket'); } },
-    { label: 'Export Bracket',     icon: 'download-outline' as const,     onPress: () => { onClose(); comingSoon('Export Bracket'); } },
+    ...(IS_INTERNAL_BUILD ? [
+      { label: 'Share Bracket',      icon: 'share-outline' as const,       onPress: () => { onClose(); comingSoon('Share Bracket'); } },
+      { label: 'Export Bracket',     icon: 'download-outline' as const,     onPress: () => { onClose(); comingSoon('Export Bracket'); } },
+    ] : []),
     { label: 'View Results',       icon: 'trophy-outline' as const,       onPress: () => { onClose(); router.push(`/tournament/${tournamentId}/results` as never); } },
     { label: 'Regenerate Bracket', icon: 'refresh-outline' as const,      onPress: () => { onClose(); onRegenerate(); }, danger: true },
     { label: 'Return to Brackets', icon: 'arrow-back-outline' as const,   onPress: () => { onClose(); router.back(); } },
@@ -732,9 +739,11 @@ function DivisionBracketScreen() {
           <Text style={s.sub}>Bracket Management</Text>
         </View>
         <View style={s.headerRight}>
-          <TouchableOpacity style={s.iconBtn} activeOpacity={0.7} onPress={() => comingSoon('Share')}>
-            <Ionicons name="share-outline" size={20} color={L.navy} />
-          </TouchableOpacity>
+          {IS_INTERNAL_BUILD && (
+            <TouchableOpacity style={s.iconBtn} activeOpacity={0.7} onPress={() => comingSoon('Share')}>
+              <Ionicons name="share-outline" size={20} color={L.navy} />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={s.iconBtn} activeOpacity={0.7} onPress={() => setMenuOpen(v => !v)}>
             <Ionicons name="ellipsis-vertical" size={20} color={L.navy} />
           </TouchableOpacity>

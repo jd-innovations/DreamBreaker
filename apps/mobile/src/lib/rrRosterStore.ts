@@ -2,6 +2,13 @@
 
 export type RRPlayer = {
   id: string;
+  /**
+   * Profile id when this participant has claimed their spot with a real
+   * account (`play_participants.claimed_by`); null/undefined for guests and
+   * for locally-created rosters. `id` above is the participant row id, not a
+   * profile id -- they are not interchangeable.
+   */
+  profileId?: string | null;
   name: string;
   dupr?: string;
   city?: string;

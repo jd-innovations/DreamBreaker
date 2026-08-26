@@ -4,6 +4,7 @@ import {
   Alert, Animated, Easing, Share,
 } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { IS_INTERNAL_BUILD } from '@/lib/featureFlags';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -250,13 +251,22 @@ const ar = StyleSheet.create({
 
 // ─── Context menu ─────────────────────────────────────────────────────────────
 
-const MENU_ITEMS = [
+const ALL_MENU_ITEMS = [
   { id: 'share',     label: 'Share Results',    icon: 'share-outline' },
   { id: 'export',    label: 'Export Results',   icon: 'download-outline' },
   { id: 'standings', label: 'View Standings',   icon: 'podium-outline' },
   { id: 'schedule',  label: 'View Schedule',    icon: 'calendar-outline' },
   { id: 'archive',   label: 'Archive Event',    icon: 'archive-outline' },
 ];
+
+// Actions with no implementation behind them. They used to sit in the menu
+// and answer with a "coming soon" alert; item 6.2's bar is that a visible CTA
+// does something real, so in a production build they are simply not offered.
+// Internal builds keep them visible so the gap stays obvious to QA.
+const UNBUILT_MENU_IDS = new Set(['export', 'archive']);
+const MENU_ITEMS = ALL_MENU_ITEMS.filter(
+  (i) => IS_INTERNAL_BUILD || !UNBUILT_MENU_IDS.has(i.id),
+);
 const MENU_DANGER = { id: 'delete', label: 'Delete Event', icon: 'trash-outline' };
 
 // ─── UUID detection ──────────────────────────────────────────────────────────
@@ -727,7 +737,7 @@ export default function RRResultsScreen() {
         <SecondaryButton
           label="Create New Round Robin"
           icon="refresh-outline"
-          onPress={() => comingSoon('Create New Round Robin')}
+          onPress={() => router.push('/create-round-robin' as never)}
         />
 
         {/* ── SECTION 11: MANAGEMENT ACTIONS ── */}
@@ -752,14 +762,16 @@ export default function RRResultsScreen() {
           <ActionRow
             icon="refresh-outline"
             label="Create New Round Robin"
-            onPress={() => comingSoon('Create New Round Robin')}
+            onPress={() => router.push('/create-round-robin' as never)}
           />
-          <ActionRow
-            icon="archive-outline"
-            label="Archive Event"
-            onPress={() => comingSoon('Archive Event')}
-            last
-          />
+          {IS_INTERNAL_BUILD && (
+            <ActionRow
+              icon="archive-outline"
+              label="Archive Event"
+              onPress={() => comingSoon('Archive Event')}
+              last
+            />
+          )}
         </View>
 
       </ScrollView>

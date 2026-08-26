@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { IS_INTERNAL_BUILD } from '@/lib/featureFlags';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -158,12 +159,20 @@ const ar = StyleSheet.create({
 
 // ─── Context menu config ─────────────────────────────────────────────────────────
 
-const MENU_ITEMS = [
+const ALL_MENU_ITEMS = [
   { id: 'share',     label: 'Share Tournament',    icon: 'share-outline' },
   { id: 'invite',    label: 'Invite Players',      icon: 'person-add-outline' },
   { id: 'duplicate', label: 'Duplicate Tournament',icon: 'copy-outline' },
   { id: 'edit',      label: 'Edit Tournament',     icon: 'pencil-outline' },
 ];
+
+// `duplicate` has no implementation behind it; it answered with a "coming
+// soon" alert. Hidden in production builds, kept in internal ones so the gap
+// stays visible to QA (item 6.2).
+const UNBUILT_MENU_IDS = new Set(['duplicate']);
+const MENU_ITEMS = ALL_MENU_ITEMS.filter(
+  (i) => IS_INTERNAL_BUILD || !UNBUILT_MENU_IDS.has(i.id),
+);
 
 // ─── Screen ─────────────────────────────────────────────────────────────────────
 
@@ -724,10 +733,14 @@ export default function MiniTournamentCreatedScreen() {
               <Ionicons name="people-outline" size={15} color={L.navy} />
               <Text style={s.rosterTitle}>Players ({currentPlayers} / {g.maxPlayers})</Text>
             </View>
+            {/* mini-tournament/[id]/ has bracket, results and score-entry --
+                there is no roster screen to open (item 6.2). */}
+            {IS_INTERNAL_BUILD && (
             <TouchableOpacity style={s.viewAllBtn} activeOpacity={0.7} onPress={() => comingSoon('Full Roster')}>
               <Text style={s.viewAllText}>View Full Roster</Text>
               <Ionicons name="chevron-forward" size={13} color={L.gold} />
             </TouchableOpacity>
+            )}
           </View>
 
           <View style={[s.playerRow, s.playerRowBorder]}>
@@ -915,7 +928,10 @@ export default function MiniTournamentCreatedScreen() {
             <Ionicons name="chatbubbles-outline" size={28} color={L.border} />
             <Text style={s.chatEmptyText}>Chat becomes active when another player joins.</Text>
           </View>
-          <TouchableOpacity style={s.chatCta} activeOpacity={0.8} onPress={() => comingSoon('Tournament Chat')}>
+          <TouchableOpacity style={s.chatCta} activeOpacity={0.8} onPress={() => isSupabase
+              ? router.push({ pathname: '/community/[id]', params: { id: id!, tab: 'chat' } } as never)
+              : comingSoon('Tournament Chat')
+            }>
             <Text style={s.chatCtaText}>Open Chat</Text>
             <Ionicons name="chevron-forward" size={15} color={L.gold} />
           </TouchableOpacity>
@@ -931,12 +947,14 @@ export default function MiniTournamentCreatedScreen() {
             disabled={isPastEvent}
             disabledSub="This tournament has ended"
           />
-          <ActionRow
-            icon="people-outline"
-            label="View Players"
-            sub="See who's registered and spots remaining"
-            onPress={() => comingSoon('Player Roster')}
-          />
+          {IS_INTERNAL_BUILD && (
+            <ActionRow
+              icon="people-outline"
+              label="View Players"
+              sub="See who's registered and spots remaining"
+              onPress={() => comingSoon('Player Roster')}
+            />
+          )}
           <ActionRow
             icon="settings-outline"
             label="Tournament Settings"

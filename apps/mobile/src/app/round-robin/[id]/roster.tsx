@@ -39,6 +39,7 @@ function sbToRRPlayer(p: PlayParticipant): RRPlayer {
   const name = p.last_initial ? `${p.first_name} ${p.last_initial}.` : p.first_name;
   return {
     id:             p.id,
+    profileId:      p.claimed_by ?? null,
     name,
     dupr:           p.self_rating ?? undefined,
     city:           undefined,
@@ -114,11 +115,20 @@ function PlayerCard({
 }) {
   function handleLongPress() {
     if (isOrganizer) return; // organizer cannot be removed
+    // "View Profile" used to alert "coming soon" for every player, including
+    // ones whose profile screen exists and works. It is now a real navigation,
+    // and is omitted entirely for guests -- a participant added by the
+    // organizer has no account to open (item 6.2).
     Alert.alert(
       player.name,
       'What would you like to do?',
       [
-        { text: 'View Profile', onPress: () => comingSoon('Player Profile') },
+        ...(player.profileId
+          ? [{
+              text: 'View Profile',
+              onPress: () => router.push(`/players/${player.profileId}` as never),
+            }]
+          : []),
         {
           text: 'Remove Player',
           style: 'destructive',
@@ -492,12 +502,21 @@ const tp = StyleSheet.create({
 
 // ─── Context Menu ─────────────────────────────────────────────────────────────
 
-const MENU_ITEMS = [
+const ALL_MENU_ITEMS = [
   { id: 'share',   label: 'Share Roster',            icon: 'share-outline' },
   { id: 'export',  label: 'Export Players',           icon: 'download-outline' },
   { id: 'invite',  label: 'Invite Players',           icon: 'person-add-outline' },
   { id: 'command', label: 'Return to Command Center', icon: 'arrow-back-outline' },
 ];
+
+// Actions with no implementation behind them. They used to sit in the menu
+// and answer with a "coming soon" alert; item 6.2's bar is that a visible CTA
+// does something real, so in a production build they are simply not offered.
+// Internal builds keep them visible so the gap stays obvious to QA.
+const UNBUILT_MENU_IDS = new Set(['export']);
+const MENU_ITEMS = ALL_MENU_ITEMS.filter(
+  (i) => IS_INTERNAL_BUILD || !UNBUILT_MENU_IDS.has(i.id),
+);
 const MENU_DANGER = { id: 'clear', label: 'Clear Roster', icon: 'trash-outline' };
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -682,7 +701,14 @@ export default function RRRosterScreen() {
     switch (menuId) {
       case 'share':   closeMenu(handleShare); break;
       case 'export':  closeMenu(() => comingSoon('Export Players')); break;
-      case 'invite':  closeMenu(() => comingSoon('Invite Players')); break;
+      // Was an unconditional "coming soon" even though
+      // community/[id]/invite-players exists and round-robin-created.tsx
+      // already navigates to it (item 6.2). Local rosters have nobody to
+      // invite through the server, so those still fall through.
+      case 'invite':  closeMenu(() => isSupabase
+                        ? router.push({ pathname: '/community/[id]/invite-players' as never,
+                                        params: { id: tournamentId } } as never)
+                        : comingSoon('Invite Players')); break;
       case 'command': closeMenu(() => router.back()); break;
       case 'clear':   closeMenu(handleClear); break;
       default: closeMenu();

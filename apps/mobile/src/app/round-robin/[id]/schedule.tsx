@@ -5,6 +5,7 @@ import {
   Share, ActivityIndicator,
 } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { IS_INTERNAL_BUILD } from '@/lib/featureFlags';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -349,12 +350,21 @@ const rs = StyleSheet.create({
 
 // ─── Context Menu ─────────────────────────────────────────────────────────────
 
-const MENU_ITEMS = [
+const ALL_MENU_ITEMS = [
   { id: 'share',       label: 'Share Schedule',          icon: 'share-outline' },
   { id: 'export',      label: 'Export Schedule',         icon: 'download-outline' },
   { id: 'command',     label: 'Return to Command Center', icon: 'arrow-back-outline' },
   { id: 'regenerate',  label: 'Regenerate Schedule',     icon: 'refresh-outline' },
 ];
+
+// Actions with no implementation behind them. They used to sit in the menu
+// and answer with a "coming soon" alert; item 6.2's bar is that a visible CTA
+// does something real, so in a production build they are simply not offered.
+// Internal builds keep them visible so the gap stays obvious to QA.
+const UNBUILT_MENU_IDS = new Set(['export', 'regenerate']);
+const MENU_ITEMS = ALL_MENU_ITEMS.filter(
+  (i) => IS_INTERNAL_BUILD || !UNBUILT_MENU_IDS.has(i.id),
+);
 const MENU_DANGER = { id: 'cancel', label: 'Cancel Round Robin', icon: 'trash-outline' };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
