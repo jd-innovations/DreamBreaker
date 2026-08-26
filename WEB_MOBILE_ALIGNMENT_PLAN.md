@@ -5,9 +5,9 @@ Companion to `WEB_MOBILE_ALIGNMENT_AUDIT.md`. Written 2026-08-26.
 
 Rendered version: https://claude.ai/code/artifact/6ecb0225-2f4d-4db0-8285-bb56ad74b4eb
 
-Four product decisions gate roughly two-thirds of this work. The plan is built so
-the ungated third can start immediately and the rest is unambiguous once the
-gates are answered.
+**All four gating decisions were answered 2026-08-26** — recorded in §1. Nothing
+in this plan is blocked on a product decision any more; what remains blocked is
+blocked by the iOS build quota and by sequencing.
 
 ---
 
@@ -27,69 +27,54 @@ when.
 
 ---
 
-## 1. Decisions Required
+## 1. Decisions — ANSWERED 2026-08-26
 
-Each carries a recommendation with reasoning. **Taking the recommendation
-unchanged is a valid answer** — the point is that the choice gets made and
-recorded.
+All four gates are closed. Recorded here until workstream F moves them into
+`WEB_MOBILE_PRODUCT_ALIGNMENT.md`.
 
-### D1 — Does web take tournament payments? 🔴 *Blocks A1, workstream D*
+### D1 — Does web take tournament payments? → **No, for now**
 
-Today it does not, but it presents a priced button and registers the player
-anyway. The one finding actively producing bad data.
+Web never takes entry fees. Paid registration hands off to mobile; free events
+(3 of 10 today) complete on web. Web payments may be built later as a deliberate
+project, not as a divergence fix.
 
-- **Option A** — Web never takes entry fees. Paid registration hands off to
-  mobile; free events complete on web.
-- **Option B** — Build Stripe Checkout into web. Full parity, new payment
-  surface to secure and reconcile.
+**Unblocks A1.**
 
-> **Recommend Option A.** Mobile's paid path is verified end to end and the
-> webhook already finalises it. Option B adds a second money path to a system
-> where the first was only proven a few days ago — and 3 of 10 tournaments are
-> free, so Option A leaves web fully functional for them.
+### D2 — Gold-on-navy, or lime? → **Gold on navy, matching the app**
 
-### D2 — Gold-on-navy, or lime? 🔴 *Blocks B3, workstream D*
+Web adopts mobile's palette. **Additionally: the token set must carry light *and*
+dark from the start** — web already has both, and mobile is expected to gain dark
+mode later. This expands B3; see the task for what it now includes.
 
-Web is `hsl(84 81% 56%)`; mobile is `#C9A84C` on `#0A1228`. No token work can
-begin until one wins.
+**Unblocks B3.**
 
-> **Recommend mobile's gold on navy.** Mobile is the consumer product — the
-> installed app, five times the surface, and its palette is already a documented
-> token system with semantic colours. Web's lime lives in a Tailwind config that
-> can be re-pointed in one file. Migrating the smaller, more centralised system
-> is cheaper.
->
-> **Caveat:** this is an aesthetic and brand call, not a technical one. If lime
-> is the brand, say so — the plan is unchanged apart from direction of travel.
+### D3 — Are web's six stubs permanent? → **Yes, except `marketplace/[id]`**
 
-### D3 — Are web's six stubs permanent? *Blocks workstream D scope*
+Five stay handoffs. `marketplace/[id]` becomes a real web surface, because a
+listing is the one link a seller pastes somewhere the recipient may not have the
+app. **Adds task D1 in workstream D.**
 
-`booking/[id]`, `groups/[id]`, `marketplace/[id]`, `coach/offers/[id]`,
-`conversation/[id]`, `claim/[token]` currently say "open this in the app".
+### D4 — Does web get feature flags? → **A shared flag map, not a vendor service**
 
-> **Recommend permanent handoffs, with one exception: `marketplace/[id]`.** A
-> listing is the one of the six a seller will paste into a group chat or social
-> post, where the recipient may have no app installed. The other five are only
-> reached by someone already in the product.
+A minimal mirror of mobile's `FEATURE_VISIBILITY` in `packages/shared`, imported
+by both apps. No hosted flag provider.
 
-### D4 — Does web get feature flags? *Blocks B4*
+**Consequence worth knowing:** mobile flags are compiled into the binary, so
+changing one still requires an EAS build. That is accepted. If it becomes
+painful, a remote provider can back the same interface later without touching
+call sites — B4 should be written with that in mind.
 
-Mobile stages unfinished work behind `FEATURE_VISIBILITY`. Web has no
-equivalent, so anything half-built there must be deleted or shipped.
-
-> **Recommend yes** — a minimal mirror of mobile's map, not a flag service.
-> Without it, aligning web to a mobile feature that is itself flagged off has no
-> correct outcome. Four mobile capabilities are hidden today.
+**Unblocks B4.**
 
 ---
 
 ## 2. Workstream A · Containment
 
-Small, independent, mostly ungated. Every task reduces active harm or removes
-noise. **Start here regardless of what the gates decide.**
+Small, independent, all now unblocked. Every task reduces active harm or removes
+noise. **Start here.**
 
 ### A1 — Stop web registering paid entries for free
-`Web` · `P0` · `S` · **Gate: D1**
+`Web` · `P0` · `S` · **Gate: D1 — ANSWERED (no web payments)**
 
 Gate `completeRegistration` on the entry fee. Where a fee is owed, replace the
 priced button with a handoff to mobile; where the event is free, keep today's
@@ -173,21 +158,52 @@ import it.
 - **Risk:** low once B1 lands. Watch the UTF-16 encoding trap on Windows — see
   `project-gen-types-utf16`.
 
-### B3 — Extract foundation tokens
-`Both` · `P1` · `M` · **Gate: D2**
+### B3 — Extract foundation tokens, light and dark
+`Both` · `P1` · **`L` (was `M`)** · **Gate: D2 — ANSWERED**
 
 Colour, semantic colour, type scale, spacing, radius as plain data. Web's
-Tailwind theme reads it; mobile's `theme/` re-exports it. Adopt mobile's
-existing scales rather than authoring new ones.
+Tailwind theme reads it; mobile's `theme/` re-exports it. Adopt mobile's existing
+scales rather than authoring new ones.
 
-- **Verify:** rendered colours unchanged except the deliberate brand change
+**D2 expanded this task.** The token set must define light *and* dark from the
+outset, because web already ships three theme states (`next-themes`: light, dark,
+system) and mobile is expected to gain dark mode. Extracting a light-only token
+set now would mean extracting it twice.
+
+The hard part is not the extraction — it is that **mobile's palette cannot be
+naively inverted.** In the light theme, navy `#0A1228` is the *ink*. In a dark
+theme it becomes a *surface*. The roles swap, so a mechanical inversion produces
+navy text on a navy ground.
+
+There is a real head start: mobile already carries a dark surface family built
+for the player credential card, and it is internally consistent —
+
+| Token | Value | Dark-theme role |
+| --- | --- | --- |
+| `playerDarkBg` | `#050A18` | page ground |
+| `playerCardBg` | `#0A1228` | surface |
+| `playerCardElevated` | `#101A34` | raised surface |
+| `playerCardBorder` | `rgba(201,168,76,.24)` | hairline |
+| `playerText` | `#FFFFFF` | ink |
+| `playerTextSub` | `#B9C4DA` | muted ink |
+
+Gold `#C9A84C` reads acceptably on both grounds, which is why this palette
+survives the swap at all. Promote these from "player credential card" tokens to
+the app's dark theme rather than designing a second dark palette.
+
+- **Verify:** rendered colours unchanged except the deliberate brand change;
+  both themes legible on both platforms; contrast checked, not assumed
 - **Ship:** promote + next build
-- **Risk:** medium — visually broad, mechanically simple
+- **Risk:** medium — visually broad. Larger than originally scoped because of
+  the dark-theme requirement, but cheaper than doing it twice.
 
 ### B4 — Minimal feature flags on web
-`Web` · `S` · **Gate: D4**
+`Web` · `S` · **Gate: D4 — ANSWERED (shared map, no vendor)**
 
-Mirror mobile's visibility map so web can stage work.
+Mirror mobile's `FEATURE_VISIBILITY` in `packages/shared` so web can stage work
+and so aligning against a hidden mobile feature has a defined answer. Write the
+lookup behind a single accessor so a remote provider could back it later without
+touching call sites.
 
 - **Verify:** a flagged-off route is unreachable by direct URL, not merely
   unlinked
@@ -245,9 +261,16 @@ grids, bottom sheets become side panels, tab bars become persistent navigation.
 Web keeps higher density and gains hover and focus states; it does not become a
 stretched phone.
 
-**Gated on D2 and D3.** Sequence: dashboard → tournaments list → tournament
-detail → profile. Do the dashboard first — its information model differs most,
-so it forces the hard questions early rather than late.
+**Gates answered.** Sequence: dashboard → tournaments list → tournament detail →
+profile. Do the dashboard first — its information model differs most, so it
+forces the hard questions early rather than late.
+
+**D1 (task) — make `marketplace/[id]` a real web surface.** Per decision D3, this
+is the one stub that becomes a page: listing detail, photos, price, seller, and
+whatever the share flow needs. It is a read surface — creating and editing
+listings stay on mobile. Sensible to do early: it is self-contained, it is the
+smallest possible test of the shared token system on a real page, and it does not
+touch tournaments.
 
 ### E — Operations boundary · *Web is reference*
 
@@ -276,9 +299,8 @@ months.
 TODO 1.1 still has eight open items and is the programme gating a beta release.
 This work does not replace it, and running both at full speed will stall both.
 
-**Until the Sep 1 build:** workstream A only, plus answering the four gates. A is
-small and mostly web-only, needing no build. The gates need thinking time, not
-engineering time — which is exactly what a build blackout is good for.
+**Until the Sep 1 build:** workstream A, now fully unblocked. It is small, mostly
+web-only, and needs no build. C3 can go too — it is repo-only.
 
 **Immediately after the Sep 1 build verifies:** B1, while there is maximum
 distance to the next build you depend on. It is the highest-risk task here and
@@ -291,17 +313,19 @@ keeps beta on track; alignment stops the divergence widening while it does.
 | --- | --- | --- | --- | --- |
 | 1 | Fix the Supabase URL config | — | No | No |
 | 2 | A2, A4, A5, C3 | None | No | Yes |
-| 3 | Answer D1–D4 | — | No | No |
-| 4 | A1 | D1 | No | Yes |
-| 5 | Sep 1 build — verify the five queued items | — | **Yes** | No |
-| 6 | B1 → B2 → C1, C2 | B1 | Yes, to confirm | Yes |
-| 7 | B3, B4 | D2, D4 | Yes | Yes |
-| 8 | F — governance doc | D1–D4 | No | No |
-| 9 | D, E | All | Yes | Yes |
+| 3 | A1 | — | No | Yes |
+| 4 | Sep 1 build — verify the five queued items | — | **Yes** | No |
+| 5 | B1 → B2 → C1, C2 | B1 | Yes, to confirm | Yes |
+| 6 | B3, B4 | — | Yes | Yes |
+| 7 | F — governance doc | — | No | No |
+| 8 | D, E | E needs ownership calls | Yes | Yes |
 
 ### The one thing not to do
 
-**Do not start workstream D — the visible, satisfying part — before the gates are
-answered.** It is the largest body of work here, it touches the highest-traffic
-pages, and every line depends on D2 and D3. Building it first means building it
-twice.
+**Do not start workstream D before B3 lands.** It is the largest body of work
+here and it touches the highest-traffic pages. Its gates are answered, but every
+page in it consumes the shared tokens — building it against the current
+per-platform palettes means building it twice.
+
+The one exception is the `marketplace/[id]` task, which is self-contained and is
+a good first real-page test of the token system once B3 exists.
