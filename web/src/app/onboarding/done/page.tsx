@@ -55,11 +55,31 @@ function DoneContent() {
         {deferred ? "CHECK YOUR EMAIL" : "YOU'RE ALL SET"}
       </h1>
 
-      <p className="text-sm text-muted-foreground mt-4 mb-8">
+      <p className="text-sm text-muted-foreground mt-4 mb-6">
         {deferred
-          ? "Confirm your address and we'll finish setting up your profile automatically — your answers are saved."
+          ? "Confirm your address and we'll finish setting up your profile automatically."
           : "Your profile is ready. Let's find you some games."}
       </p>
+
+      {/* Say where the answers actually live.
+        *
+        * They are held in THIS browser until a session exists, so opening the
+        * link somewhere else — the mail app on a phone, a different machine —
+        * confirms the account but leaves the answers behind. Verified on
+        * 2026-08-26: a signup that onboarded in one browser and confirmed in
+        * another wrote nothing, then wrote all sixteen columns the moment it
+        * signed in back on the original browser.
+        *
+        * Nothing is lost in that case, so this warns without alarming. The
+        * previous copy — "your answers are saved" — was true only of a browser
+        * the reader might never return to. */}
+      {deferred && (
+        <p className="text-sm text-muted-foreground mb-8">
+          Open the link <strong className="text-foreground font-semibold">in this browser</strong> —
+          your answers are saved here. If you confirm somewhere else, sign back in here and
+          we&apos;ll finish the job.
+        </p>
+      )}
 
       {deferred && held !== null && (
         <p
