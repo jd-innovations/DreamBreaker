@@ -111,7 +111,15 @@ function profileToPartner(
     distance: null,
     availability: p.availability,
     play_style: p.play_style,
-    badges: [p.play_style].filter(Boolean) as string[],
+    // `profiles.play_style` holds a comma-separated list when it was written by
+    // the profile editor, and a single value when written by onboarding. Wrapping
+    // the raw column in an array rendered "competitive, Soft-game specialist" as
+    // ONE badge. Splitting is correct for both shapes: a single value has no
+    // comma and yields one badge unchanged.
+    badges: (p.play_style ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
     img: p.avatar_url ?? "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=600&h=800&fit=crop",
     bio: p.bio,
     matchPct: pct,
