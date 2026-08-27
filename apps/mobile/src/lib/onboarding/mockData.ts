@@ -72,7 +72,7 @@ export const ACTIVITY_MOCKS: Record<ActivityLevel, CourtActivityMock> = {
     gamesNow: 3,
     nextGameTime: '6:30 PM',
     matchFitPct: 92,
-    ctaLabel: 'See Whoâ€™s Playing',
+    ctaLabel: 'See Who’s Playing',
     ctaColor: 'green',
   },
   medium: {
@@ -80,7 +80,7 @@ export const ACTIVITY_MOCKS: Record<ActivityLevel, CourtActivityMock> = {
     gamesNow: 1,
     nextGameTime: '6:30 PM',
     matchFitPct: 78,
-    ctaLabel: 'Join Todayâ€™s Community Play',
+    ctaLabel: 'Join Today’s Community Play',
     ctaColor: 'orange',
   },
   low: {

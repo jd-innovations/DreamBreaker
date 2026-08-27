@@ -163,7 +163,7 @@ export default function AccountSettingsScreen() {
           </ProfileCompletionRing>
           {/* Info */}
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{profile?.full_name ?? 'Ã¢â‚¬â€'}</Text>
+            <Text style={styles.profileName}>{profile?.full_name ?? '—'}</Text>
             <View style={styles.ratingRow}>
               <Ionicons name="speedometer-outline" size={14} color={L.textMuted} />
               <Text style={styles.ratingText}>{ratingLabel}</Text>

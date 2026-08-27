@@ -262,7 +262,7 @@ export default function ProfileScreen() {
               </View>
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.playerName} numberOfLines={2}>{(profile?.full_name ?? 'â€”').toUpperCase()}</Text>
+              <Text style={styles.playerName} numberOfLines={2}>{(profile?.full_name ?? '—').toUpperCase()}</Text>
               {!!profile?.handle && (
                 <Text style={styles.playerHandle} numberOfLines={1}>@{profile.handle}</Text>
               )}

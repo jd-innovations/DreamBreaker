@@ -32,7 +32,7 @@ export default function EnableLocationScreen() {
       footer={
         <>
           <OnboardingCTA
-            label={loading ? 'Requestingâ€¦' : permissionStatus === 'granted' ? 'Continue' : 'Enable Location'}
+            label={loading ? 'Requesting…' : permissionStatus === 'granted' ? 'Continue' : 'Enable Location'}
             onPress={async () => {
               if (permissionStatus === 'granted') { continueNext(); return; }
               await refresh();
