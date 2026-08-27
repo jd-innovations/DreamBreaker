@@ -20,11 +20,29 @@ the visibility map and `resolveFeature()` live here; deciding whether this is an
 internal build is left to each app, because the two platforms answer it from
 completely different inputs (`EXPO_PUBLIC_APP_ENV` vs `NEXT_PUBLIC_APP_ENV`).
 
+## `database.types.ts` — regenerating it
+
+**B2, done.** This is now the only copy. Regenerate with:
+
+```
+node scripts/gen-db-types.mjs
+```
+
+Do not redirect the Supabase CLI into the file by hand. PowerShell's `>` writes
+UTF-16LE with a BOM, TypeScript then fails on a file that looks fine in an
+editor, and the symptom points at the generator rather than the redirect. The
+script captures stdout and writes UTF-8 explicitly, refuses to write output that
+does not contain `export type Database`, and leaves the previous file untouched
+on failure — a half-written 275 KB type file breaks every import in both apps.
+
+It is imported by its deep path (`@shared/database.types`) rather than through
+`index.ts`, deliberately: pulling 275 KB of types through the barrel would put
+them in front of every consumer of every other export.
+
 ## What belongs here eventually
 
 From the alignment plan, in order:
 
-- **B2** — one generated `database.types.ts` instead of the 267 KB copy in each app
 - **C1** — money formatting
 - **C2** — status vocabulary
 - The onboarding CHECK-constraint translation currently duplicated between
@@ -34,6 +52,11 @@ From the alignment plan, in order:
 ## Current consumers
 
 **Web only.** Mobile has not been wired in yet, and that is deliberate.
+
+Mobile still carries its own byte-identical copy of `database.types.ts` at
+`apps/mobile/src/lib/database.types.ts`. Deleting it is the second half of B2
+and lands with the mobile half of B1 — until then, regenerating means running
+the script and copying the result across, which is the status quo.
 
 Bringing mobile in means a root workspace and a single root lockfile, and this
 repo has a known trap there: local npm is 11.x while the EAS builders run

@@ -17,7 +17,7 @@ import { ensureFreshSession } from "@/lib/ensure-session";
 import { toast } from "sonner";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
-import type { Tables } from "@/lib/supabase/database.types";
+import type { Tables } from "@shared/database.types";
 
 type Profile = Pick<
   Tables<"profiles">,

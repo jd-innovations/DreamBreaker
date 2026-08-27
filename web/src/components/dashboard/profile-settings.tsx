@@ -6,7 +6,7 @@ import { Camera, Check, UserCircle } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { ensureFreshSession } from "@/lib/ensure-session";
-import type { Tables } from "@/lib/supabase/database.types";
+import type { Tables } from "@shared/database.types";
 
 type Profile = Pick<
   Tables<"profiles">,

@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import type { Database } from "./database.types";
+import type { Database } from "@shared/database.types";
 import { getSupabaseUrl, getSupabaseAnonKey } from "./env";
 
 // Request-scoped server client, acting as the signed-in user via the auth

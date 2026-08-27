@@ -1,6 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "./database.types";
+import type { Database } from "@shared/database.types";
 import { getSupabaseUrl, getSupabaseAnonKey } from "./env";
 
 // Browser client. The anon credentials it carries are public by design — access
