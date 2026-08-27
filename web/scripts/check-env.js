@@ -113,6 +113,52 @@ function validate(env) {
   return problems;
 }
 
+/**
+ * Observability warnings — reported, never fatal.
+ *
+ * Separate from `validate()` on purpose: a missing Supabase URL produces a
+ * broken app and must stop the build, while a missing Sentry auth token
+ * produces a *working* app whose crash reports are unreadable. Failing the
+ * build over the second would be wrong; staying silent about it is what
+ * actually happened.
+ *
+ * Verified in production 2026-08-27: the deployed build logged
+ *
+ *   Warning: No auth token provided. Will not upload source maps.
+ *
+ * two lines deep in a Vercel build log, and nobody saw it. Errors reached
+ * Sentry correctly — the DSN ships and the /monitoring tunnel returns real
+ * event ids — but every stack trace was minified chunk names and column
+ * offsets. next.config.ts describes that state exactly: "technically a crash
+ * report, but not an actionable one".
+ *
+ * The token is read from the environment by the Sentry build plugin itself;
+ * there is nothing to wire up in code. It only ever needs to exist on the
+ * builder, which is why its absence is invisible locally.
+ */
+function observabilityWarnings(env) {
+  const warnings = [];
+  const isCI = Boolean(env.CI || env.VERCEL);
+
+  if (isCI && isMissing(env.SENTRY_AUTH_TOKEN)) {
+    warnings.push(
+      "SENTRY_AUTH_TOKEN is not set. Source maps will NOT be uploaded and no " +
+        "release will be created, so production stack traces will be minified " +
+        "chunk names rather than your source. Set it in the Vercel project's " +
+        "Environment Variables.",
+    );
+  }
+
+  if (isCI && isMissing(env.NEXT_PUBLIC_SENTRY_DSN)) {
+    warnings.push(
+      "NEXT_PUBLIC_SENTRY_DSN is not set. The browser SDK will initialise with " +
+        "no DSN and silently discard every client-side error.",
+    );
+  }
+
+  return warnings;
+}
+
 function selfTest() {
   const ok = {
     NEXT_PUBLIC_SUPABASE_URL: "https://abc.supabase.co",
@@ -151,6 +197,13 @@ function main() {
   }
 
   loadNextEnv();
+
+  // Reported before the fatal check so they are visible even on a failing
+  // build, and so they are never mistaken for the reason it failed.
+  for (const w of observabilityWarnings(process.env)) {
+    console.warn(`[check-env] WARNING: ${w}`);
+  }
+
   const problems = validate(process.env);
   if (problems.length === 0) {
     console.log("[check-env] Supabase environment OK");
