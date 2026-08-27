@@ -1,10 +1,12 @@
 // Design tokens — the canonical values for both platforms.
 //
-// Workstream B3 of WEB_MOBILE_ALIGNMENT_PLAN.md, first half. This step is
-// deliberately INVISIBLE: every value here is exactly what shipped before it
-// existed, so the generated CSS is byte-identical to the file it replaces. The
-// brand change (decision D2, gold on navy) is a separate commit that edits only
-// this data — so it can be looked at, and reverted, on its own.
+// Workstream B3 of WEB_MOBILE_ALIGNMENT_PLAN.md.
+//
+// B3a introduced this file holding the previous values exactly, so the generated
+// CSS was byte-identical and the refactor was provably invisible. B3b is the
+// brand change from decision D2 — gold on navy, matching the app — and it edits
+// only the two scheme objects below. Everything downstream is generated, so the
+// visual change is one revertible commit and nothing else moved with it.
 //
 // ── Why colours are HSL triplets ─────────────────────────────────────────────
 //
@@ -97,47 +99,69 @@ export const COLOR_ROLE_ORDER: ColorRole[] = [
 export type ColorScheme = Record<ColorRole, Hsl>;
 
 export const light: ColorScheme = {
-  background: { h: 210, s: 17, l: 98 },
-  foreground: { h: 240, s: 6, l: 10 },
+  // Navy ink on a faintly navy-tinted page — mobile's `page` (#F3F6FC).
+  background: { h: 220, s: 60, l: 97 },
+  foreground: { h: 224, s: 60, l: 10 },
   card: { h: 0, s: 0, l: 100 },
-  cardForeground: { h: 240, s: 6, l: 10 },
+  cardForeground: { h: 224, s: 60, l: 10 },
   popover: { h: 0, s: 0, l: 100 },
-  popoverForeground: { h: 240, s: 6, l: 10 },
-  primary: { h: 84, s: 81, l: 56 },
-  primaryForeground: { h: 0, s: 0, l: 4 },
-  secondary: { h: 240, s: 5, l: 90 },
-  secondaryForeground: { h: 240, s: 6, l: 10 },
-  muted: { h: 240, s: 5, l: 96 },
-  mutedForeground: { h: 240, s: 4, l: 46 },
-  accent: { h: 84, s: 81, l: 56 },
-  accentForeground: { h: 0, s: 0, l: 4 },
+  popoverForeground: { h: 224, s: 60, l: 10 },
+  // A DEEPER gold than the app's #C9A84C, and deliberately so: `--primary` is
+  // used for text as well as fills, and #C9A84C on white measures 2.29:1 —
+  // well under the 4.5 floor. #8A6D1F reaches 4.90 as text and 4.90 under
+  // white as a fill, so one token serves both without failing either.
+  // The dark theme uses the brighter app gold, which passes there. Same role,
+  // different value per ground — the reason these are named by role.
+  primary: { h: 44, s: 63, l: 33 },
+  primaryForeground: { h: 0, s: 0, l: 100 },
+  secondary: { h: 220, s: 47, l: 92 },
+  secondaryForeground: { h: 224, s: 60, l: 10 },
+  muted: { h: 220, s: 50, l: 95 },
+  mutedForeground: { h: 220, s: 22, l: 45 },
+  // The app gold itself, for FILLS carrying navy text (8.13:1). Never for text
+  // on the page ground.
+  accent: { h: 44, s: 54, l: 54 },
+  accentForeground: { h: 224, s: 60, l: 10 },
   destructive: { h: 0, s: 84, l: 60 },
   destructiveForeground: { h: 0, s: 0, l: 98 },
-  border: { h: 240, s: 6, l: 90 },
-  input: { h: 240, s: 6, l: 90 },
-  ring: { h: 84, s: 81, l: 56 },
+  border: { h: 218, s: 53, l: 92 },
+  input: { h: 218, s: 53, l: 92 },
+  ring: { h: 44, s: 63, l: 33 },
 };
 
 export const dark: ColorScheme = {
-  background: { h: 240, s: 6, l: 4 },
+  // Mobile's player-credential surfaces, promoted to the app's dark theme:
+  // #050A18 ground, #0A1228 surface, #101A34 raised. They were designed as a
+  // set and are already internally consistent, which is why this adopts them
+  // rather than inventing a second dark palette.
+  //
+  // Note #0A1228 is `foreground` in the light scheme above and `card` here —
+  // the same hex in opposite roles. That is precisely why a mechanical
+  // inversion of the light theme would produce navy text on a navy ground.
+  background: { h: 224, s: 66, l: 6 },
   foreground: { h: 0, s: 0, l: 100 },
-  card: { h: 240, s: 4, l: 11 },
+  card: { h: 224, s: 60, l: 10 },
   cardForeground: { h: 0, s: 0, l: 100 },
-  popover: { h: 240, s: 4, l: 11 },
+  popover: { h: 223, s: 53, l: 13 },
   popoverForeground: { h: 0, s: 0, l: 100 },
-  primary: { h: 78, s: 100, l: 62 },
-  primaryForeground: { h: 0, s: 0, l: 4 },
-  secondary: { h: 240, s: 4, l: 16 },
+  // The app gold, unmodified. 8.13:1 as text on the card and 8.64:1 on the
+  // ground, so it works as both text and fill here.
+  primary: { h: 44, s: 54, l: 54 },
+  primaryForeground: { h: 224, s: 60, l: 10 },
+  secondary: { h: 223, s: 53, l: 13 },
   secondaryForeground: { h: 0, s: 0, l: 100 },
-  muted: { h: 240, s: 4, l: 16 },
-  mutedForeground: { h: 240, s: 5, l: 65 },
-  accent: { h: 78, s: 100, l: 62 },
-  accentForeground: { h: 0, s: 0, l: 4 },
+  muted: { h: 223, s: 53, l: 13 },
+  // mobile's playerTextSub (#B9C4DA) — 10.59:1 on the card.
+  mutedForeground: { h: 220, s: 31, l: 79 },
+  accent: { h: 44, s: 54, l: 54 },
+  accentForeground: { h: 224, s: 60, l: 10 },
   destructive: { h: 0, s: 72, l: 51 },
   destructiveForeground: { h: 0, s: 0, l: 98 },
-  border: { h: 240, s: 4, l: 16 },
-  input: { h: 240, s: 4, l: 16 },
-  ring: { h: 78, s: 100, l: 62 },
+  // A gold-tinted hairline, the opaque equivalent of mobile's
+  // rgba(201,168,76,0.24) over navy.
+  border: { h: 223, s: 34, l: 19 },
+  input: { h: 223, s: 34, l: 19 },
+  ring: { h: 44, s: 54, l: 54 },
 };
 
 export const colorSchemes = { light, dark } as const;
