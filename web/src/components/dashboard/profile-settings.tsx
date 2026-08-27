@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AvailabilityGrid } from "@/components/shared/availability-grid";
+import {
+  normalizeSchedule,
+  summarizeSchedule,
+  isScheduleEmpty,
+  type AvailabilitySchedule,
+} from "@shared/availability";
 import Link from "next/link";
 import { Camera, Check, UserCircle } from "@phosphor-icons/react";
 import { toast } from "sonner";
@@ -21,7 +28,6 @@ const SKILL_LEVELS = ["2.5-3.0", "3.0-3.5", "3.5-4.0", "4.0-4.5", "4.5+"];
 // exact set, so storing the display string would now be rejected outright.
 // Rendered through playStyleLabel().
 const PLAY_STYLES = PLAY_STYLE_KEYS;
-const AVAILABILITY_OPTIONS = ["Weekends", "Weeknights", "Weekends + Tue evenings", "Sat / Sun mornings", "Flexible", "Weekdays only"];
 const HAND_OPTIONS = ["right", "left", "ambidextrous"];
 const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop";
 
@@ -44,14 +50,14 @@ export function ProfileSettings({ userId }: { userId: string }) {
   const [selfRating, setSelfRating] = useState("");
   const [hand, setHand] = useState("");
   const [playStyle, setPlayStyle] = useState<string[]>([]);
-  const [availability, setAvailability] = useState<string[]>([]);
+  const [schedule, setSchedule] = useState<AvailabilitySchedule>({});
 
   useEffect(() => {
     const supabase = createClient();
     async function load() {
       const { data: prof } = await supabase
         .from("profiles")
-        .select("id,full_name,handle,dupr,skill_level,self_rating,location_city,location_state,avatar_url,bio,play_style,availability,hand")
+        .select("id,full_name,handle,dupr,skill_level,self_rating,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule,hand")
         .eq("id", userId)
         .single();
       if (prof) {
@@ -64,7 +70,7 @@ export function ProfileSettings({ userId }: { userId: string }) {
         setSelfRating(prof.self_rating ?? "");
         setHand(prof.hand ?? "");
         setPlayStyle(prof.play_style ?? []);
-        setAvailability(prof.availability ? prof.availability.split(",").map((s) => s.trim()).filter(Boolean) : []);
+        setSchedule(normalizeSchedule(prof.availability_schedule));
       }
       setLoading(false);
     }
@@ -135,7 +141,10 @@ export function ProfileSettings({ userId }: { userId: string }) {
         hand: (hand as "right" | "left" | "ambidextrous") || null,
         self_rating: selfRating.trim() || null,
         play_style: playStyle.length > 0 ? playStyle : null,
-        availability: availability.length > 0 ? availability.join(", ") : null,
+        // The schedule is the source of truth; the text is derived from it by
+        // the shared summarizer so web and mobile produce identical strings.
+        availability_schedule: schedule,
+        availability: isScheduleEmpty(schedule) ? null : summarizeSchedule(schedule),
       })
       .eq("id", profile.id)
       .select("id");
@@ -303,13 +312,7 @@ export function ProfileSettings({ userId }: { userId: string }) {
       {/* Availability */}
       <div>
         <label className={labelCls}>AVAILABILITY</label>
-        <div className="flex flex-wrap gap-2">
-          {AVAILABILITY_OPTIONS.map((a) => (
-            <button key={a} type="button" onClick={() => toggle(availability, setAvailability, a)} className={`px-4 h-9 rounded-full text-xs font-mono border transition-colors ${availability.includes(a) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/50"}`}>
-              {a}
-            </button>
-          ))}
-        </div>
+        <AvailabilityGrid value={schedule} onChange={setSchedule} />
       </div>
 
       {/* Save */}

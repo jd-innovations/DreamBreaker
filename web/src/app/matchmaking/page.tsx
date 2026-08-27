@@ -4,6 +4,9 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import {
+  AVAILABILITY_BLOCKS,
+  type AvailabilityDay,
+  type AvailabilityBlock,
   scheduleOverlap,
   overlapSlotCount,
   describeOverlap,
@@ -37,6 +40,7 @@ interface Partner {
   location: string;
   distance: string | null;
   availability: string | null;
+  availability_schedule: unknown;
   play_style: string[] | null;
   badges: string[];
   img: string;
@@ -66,7 +70,29 @@ interface Filters {
 const DEFAULT_FILTERS: Filters = { format: "All", minDupr: "", maxDupr: "", availability: "All", maxDistance: "Any" };
 
 const FORMATS = ["All", "Mixed Doubles", "Men's Doubles", "Women's Doubles", "Singles"];
-const AVAIL_OPTIONS = ["All", "Weekends", "Weeknights", "Flexible", "Sat / Sun mornings", "Weekends + Tue evenings"];
+// Filters are predicates over the schedule, not prose matched against a derived
+// string. The old list ("Weekends + Tue evenings") was compared with `===`
+// against `profiles.availability`, so it only ever matched someone who had
+// picked the identical phrase from the identical dropdown — and matches nothing
+// at all now that the text is derived from the grid.
+const AVAIL_OPTIONS = ["All", "Mornings", "Afternoons", "Evenings", "Weekdays", "Weekends"] as const;
+
+function matchesAvailabilityFilter(schedule: AvailabilitySchedule, filter: string): boolean {
+  if (filter === "All") return true;
+  const has = (days: AvailabilityDay[], blocks: AvailabilityBlock[]) =>
+    days.some((d) => (schedule[d] ?? []).some((b) => blocks.includes(b)));
+  const week: AvailabilityDay[] = ["mon", "tue", "wed", "thu", "fri"];
+  const weekend: AvailabilityDay[] = ["sat", "sun"];
+  const all: AvailabilityDay[] = [...week, ...weekend];
+  switch (filter) {
+    case "Mornings":   return has(all, ["morning"]);
+    case "Afternoons": return has(all, ["afternoon"]);
+    case "Evenings":   return has(all, ["evening"]);
+    case "Weekdays":   return has(week, [...AVAILABILITY_BLOCKS]);
+    case "Weekends":   return has(weekend, [...AVAILABILITY_BLOCKS]);
+    default:           return true;
+  }
+}
 const DISTANCES = ["Any", "5 mi", "10 mi", "25 mi", "50 mi"];
 
 // ─── Compute match score ──────────────────────────────────────────────────────
@@ -135,6 +161,7 @@ function profileToPartner(
     location: [p.location_city, p.location_state].filter(Boolean).join(", ") || "Unknown",
     distance: null,
     availability: p.availability,
+    availability_schedule: p.availability_schedule,
     play_style: p.play_style,
     // One badge per style, rendered as labels. The column is a text[] of keys
     // since the play_style migration; the comma-splitting this used to do is
@@ -495,7 +522,7 @@ function MatchmakingInner() {
   const visibleDeck = deck.filter((p) => {
     if (filters.minDupr && (p.dupr ?? 0) < parseFloat(filters.minDupr)) return false;
     if (filters.maxDupr && (p.dupr ?? 99) > parseFloat(filters.maxDupr)) return false;
-    if (filters.availability !== "All" && p.availability !== filters.availability) return false;
+    if (!matchesAvailabilityFilter(normalizeSchedule(p.availability_schedule), filters.availability)) return false;
     if (filters.maxDistance !== "Any") {
       const maxMi = parseInt(filters.maxDistance);
       const dist = p.distance ? parseInt(p.distance) : 999;
