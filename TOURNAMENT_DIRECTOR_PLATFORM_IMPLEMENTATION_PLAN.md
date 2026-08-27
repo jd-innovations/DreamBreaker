@@ -2,6 +2,10 @@
 
 Use `TOURNAMENT_DIRECTOR_PLATFORM_PRD_v1.3.md` and `TOURNAMENT_DIRECTOR_PLATFORM_AUDIT.md` as the source of truth.
 
+See `TOURNAMENT_PLATFORM_SCHEMA_BASELINE.md` for what the production schema
+actually contains as of 2026-08-27 — including two findings that change the
+shape of Phases 1A and 3 before any migration is written.
+
 Implementation must be incremental, preserve existing working functionality, and maintain **one continuous tournament state** from pre-event setup through live operations and final results.
 
 ## Phase 1A — Authoritative Lifecycle
