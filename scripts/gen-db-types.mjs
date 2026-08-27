@@ -38,10 +38,19 @@ console.log(`[gen-db-types] -> ${OUT}`);
 
 let generated;
 try {
+  // `shell: true` on Windows is required, not stylistic: Node 20+ refuses to
+  // spawn a .cmd (which is what `npx` is there) without it and throws EINVAL.
+  // Every argument here is a literal with no spaces or shell metacharacters,
+  // so passing them through a shell is safe.
   generated = execFileSync(
-    process.platform === "win32" ? "npx.cmd" : "npx",
+    "npx",
     ["--yes", "supabase", "gen", "types", "typescript", "--project-id", PROJECT_ID, "--schema", "public"],
-    { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "inherit"] },
+    {
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "inherit"],
+      shell: process.platform === "win32",
+    },
   );
 } catch (err) {
   console.error("[gen-db-types] generation failed — existing types left untouched.");

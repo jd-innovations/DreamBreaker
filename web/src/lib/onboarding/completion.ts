@@ -19,7 +19,7 @@ export type CompletenessFields = {
   skill_level?: string | null;
   gender?: string | null;
   hand?: string | null;
-  play_style?: string | null;
+  play_style?: string[] | null;
   availability?: string | null;
   onboarding_intent?: string[] | null;
   location_city?: string | null;

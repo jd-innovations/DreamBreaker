@@ -13,6 +13,11 @@
 // Folds into packages/shared when task B1 lands.
 
 import { z } from "zod";
+import {
+  PLAY_STYLE_KEYS,
+  PREFERRED_FORMAT_KEYS,
+  PLAY_INTENSITY_KEYS,
+} from "@shared/play-profile";
 import { AVAILABILITY_OPTIONS } from "./options";
 import type { OnboardingDraft, DraftField } from "./draft";
 
@@ -79,7 +84,9 @@ export type ProfileFields = {
   hand?: string;
   skill_level?: string;
   self_rating?: string;
-  play_style?: string;
+  play_style?: string[];
+  preferred_formats?: string[];
+  play_intensity?: string;
   availability?: string;
   date_of_birth?: string;
   location_city?: string;
@@ -122,10 +129,29 @@ export function draftToProfileFields(
     if (rating) out.self_rating = rating;
   }
 
-  // `profiles.play_style` is a single free-text tag; onboarding collects up to
-  // PLAYING_STYLE_MAX. Store the top choice, matching mobile and DATA_GAPS.md.
-  if (touched.has("playingStyle") && draft.playingStyle[0]) {
-    out.play_style = draft.playingStyle[0];
+  // The "playing style" step asks three questions at once — see
+  // PLAY_STYLE_VOCABULARY.md. Its keys are already the right keys; they were
+  // simply all being written to one column, and only the first of them.
+  //
+  //   how you play     -> play_style        (text[])
+  //   what you play    -> preferred_formats (text[])
+  //   how seriously    -> play_intensity    (text, single)
+  //
+  // Every selection is now kept. This step previously stored `playingStyle[0]`
+  // and discarded the other two of the three the user was invited to pick.
+  if (touched.has("playingStyle") && draft.playingStyle.length) {
+    const styles = draft.playingStyle.filter((k) =>
+      (PLAY_STYLE_KEYS as readonly string[]).includes(k),
+    );
+    const formats = draft.playingStyle.filter((k) =>
+      (PREFERRED_FORMAT_KEYS as readonly string[]).includes(k),
+    );
+    const intensity = draft.playingStyle.find((k) =>
+      (PLAY_INTENSITY_KEYS as readonly string[]).includes(k),
+    );
+    if (styles.length) out.play_style = styles;
+    if (formats.length) out.preferred_formats = formats;
+    if (intensity) out.play_intensity = intensity;
   }
 
   // `profiles.availability` is a human-readable summary string, matching how
@@ -169,7 +195,9 @@ export const profileFieldsSchema = z.object({
   skill_level: z.enum(SKILL_LEVEL_VALUES).optional(),
   // Numeric string; the column is numeric downstream.
   self_rating: z.string().regex(/^\d+(\.\d+)?$/).optional(),
-  play_style: z.string().min(1).optional(),
+  play_style: z.array(z.enum(PLAY_STYLE_KEYS)).min(1).optional(),
+  preferred_formats: z.array(z.enum(PREFERRED_FORMAT_KEYS)).min(1).optional(),
+  play_intensity: z.enum(PLAY_INTENSITY_KEYS).optional(),
   availability: z.string().min(1).optional(),
   date_of_birth: z
     .string()

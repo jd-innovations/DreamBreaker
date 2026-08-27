@@ -12,6 +12,7 @@ import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/client";
+import { PLAY_STYLE_KEYS, playStyleLabel } from "@shared/play-profile";
 import { getUserId } from "@/lib/dev-user";
 import { ensureFreshSession } from "@/lib/ensure-session";
 import { toast } from "sonner";
@@ -91,7 +92,10 @@ const COVER_PRESETS = [
 ];
 
 const SKILL_LEVELS = ["2.5-3.0", "3.0-3.5", "3.5-4.0", "4.0-4.5", "4.5+"];
-const PLAY_STYLES = ["Aggressive baseliner", "Soft-game specialist", "Counter-puncher", "All-court", "Bangers + transition", "Dink master"];
+// Keys, not labels. `profiles.play_style` is a text[] constrained to this
+// exact set, so storing the display string would now be rejected outright.
+// Rendered through playStyleLabel().
+const PLAY_STYLES = PLAY_STYLE_KEYS;
 const AVAILABILITY_OPTIONS = ["Weekends", "Weeknights", "Weekends + Tue evenings", "Sat / Sun mornings", "Flexible", "Weekdays only"];
 const HAND_OPTIONS = ["right", "left", "ambidextrous"];
 
@@ -286,7 +290,7 @@ export default function ProfilePage() {
         setProfile(prof);
         setFields({
           bio: prof.bio ?? "",
-          play_style: prof.play_style ? prof.play_style.split(",").map((s) => s.trim()).filter(Boolean) : [],
+          play_style: prof.play_style ?? [],
           availability: prof.availability ? prof.availability.split(",").map((s) => s.trim()).filter(Boolean) : [],
           hand: prof.hand ?? "",
           skill_level: prof.skill_level ?? "",
@@ -396,7 +400,7 @@ export default function ProfilePage() {
       if (mutual && mutual.length > 0) {
         const ids = mutual.map((m) => m.user_a === user.id ? m.user_b : m.user_a).filter(Boolean) as string[];
         const { data: pp } = await supabase.from("profiles").select("id,full_name,avatar_url,dupr,skill_level,location_city,location_state,play_style").in("id", ids);
-        setPartners((pp ?? []).map((p) => ({ id: p.id, name: p.full_name, avatar: p.avatar_url, dupr: p.dupr, skill_level: p.skill_level, location: [p.location_city, p.location_state].filter(Boolean).join(", ") || "—", badges: [p.play_style].filter(Boolean) as string[] })));
+        setPartners((pp ?? []).map((p) => ({ id: p.id, name: p.full_name, avatar: p.avatar_url, dupr: p.dupr, skill_level: p.skill_level, location: [p.location_city, p.location_state].filter(Boolean).join(", ") || "—", badges: (p.play_style ?? []).map(playStyleLabel) })));
       } else {
         // Ditto: the Partners tab has its own "NO PARTNERS YET" panel.
         setPartners([]);
@@ -545,7 +549,7 @@ export default function ProfilePage() {
     const supabase = createClient();
     const { data, error } = await supabase.from("profiles").update({
       bio: fields.bio || null,
-      play_style: fields.play_style.length > 0 ? fields.play_style.join(", ") : null,
+      play_style: fields.play_style.length > 0 ? fields.play_style : null,
       availability: fields.availability.length > 0 ? fields.availability.join(", ") : null,
       hand: (fields.hand as "right" | "left" | "ambidextrous") || null,
       skill_level: fields.skill_level || null,
@@ -559,7 +563,7 @@ export default function ProfilePage() {
       toast.error("Couldn't save — your session may have expired. Please sign out and back in.");
       return;
     }
-    setProfile((p) => p ? { ...p, bio: fields.bio || null, skill_level: fields.skill_level || null, self_rating: fields.self_rating || null, hand: (fields.hand as "right" | "left" | "ambidextrous") || null, play_style: fields.play_style.join(", ") || null, availability: fields.availability.join(", ") || null, location_city: fields.location_city || null, location_state: fields.location_state || null } : p);
+    setProfile((p) => p ? { ...p, bio: fields.bio || null, skill_level: fields.skill_level || null, self_rating: fields.self_rating || null, hand: (fields.hand as "right" | "left" | "ambidextrous") || null, play_style: fields.play_style.length > 0 ? fields.play_style : null, availability: fields.availability.join(", ") || null, location_city: fields.location_city || null, location_state: fields.location_state || null } : p);
     setEditing(false);
     toast.success("Profile saved.");
   };
@@ -567,7 +571,7 @@ export default function ProfilePage() {
   const cancelEdit = () => {
     if (profile) setFields({
       bio: profile.bio ?? "",
-      play_style: profile.play_style ? profile.play_style.split(",").map((s) => s.trim()).filter(Boolean) : [],
+      play_style: profile.play_style ?? [],
       availability: profile.availability ? profile.availability.split(",").map((s) => s.trim()).filter(Boolean) : [],
       hand: profile.hand ?? "",
       skill_level: profile.skill_level ?? "",

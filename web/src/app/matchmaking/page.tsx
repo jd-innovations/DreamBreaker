@@ -15,6 +15,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
+import { playStyleLabel } from "@shared/play-profile";
 import { getUserId } from "@/lib/dev-user";
 import { PlayerProfileSheet } from "@/components/shared/player-profile-sheet";
 
@@ -29,7 +30,7 @@ interface Partner {
   location: string;
   distance: string | null;
   availability: string | null;
-  play_style: string | null;
+  play_style: string[] | null;
   badges: string[];
   img: string;
   bio: string | null;
@@ -94,7 +95,7 @@ function profileToPartner(
     id: string; full_name: string; handle: string | null;
     dupr: number | null; skill_level: string | null;
     location_city: string | null; location_state: string | null;
-    avatar_url: string | null; bio: string | null; play_style: string | null;
+    avatar_url: string | null; bio: string | null; play_style: string[] | null;
     availability: string | null;
   },
   myDupr: number | null,
@@ -111,15 +112,10 @@ function profileToPartner(
     distance: null,
     availability: p.availability,
     play_style: p.play_style,
-    // `profiles.play_style` holds a comma-separated list when it was written by
-    // the profile editor, and a single value when written by onboarding. Wrapping
-    // the raw column in an array rendered "competitive, Soft-game specialist" as
-    // ONE badge. Splitting is correct for both shapes: a single value has no
-    // comma and yields one badge unchanged.
-    badges: (p.play_style ?? "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean),
+    // One badge per style, rendered as labels. The column is a text[] of keys
+    // since the play_style migration; the comma-splitting this used to do is
+    // now the database's job, not the view's.
+    badges: (p.play_style ?? []).map(playStyleLabel),
     img: p.avatar_url ?? "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=600&h=800&fit=crop",
     bio: p.bio,
     matchPct: pct,
@@ -244,7 +240,7 @@ function MatchmakingInner() {
   const [myDupr, setMyDupr] = useState<number | null>(null);
   const [myAvail, setMyAvail] = useState<string | null>(null);
   const [myLocation, setMyLocation] = useState<string | null>(null);
-  const [myStyle, setMyStyle] = useState<string | null>(null);
+  const [myStyle, setMyStyle] = useState<string[]>([]);
   const [myBio, setMyBio] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
@@ -280,7 +276,7 @@ function MatchmakingInner() {
       setMyDupr(meDupr);
       setMyAvail(meAvail);
       setMyLocation([me?.location_city, me?.location_state].filter(Boolean).join(", ") || null);
-      setMyStyle(me?.play_style ?? null);
+      setMyStyle(me?.play_style ?? []);
       setMyBio(me?.bio ?? null);
 
       const { data: alreadySwiped } = await supabase.from("matchmaking_swipes").select("target_id").eq("requester_id", user.id);
@@ -349,7 +345,7 @@ function MatchmakingInner() {
             .neq("player_id", user.id);
 
           const tournamentPartners = (partnerRegs ?? [])
-            .map((r) => r.profiles as { id: string; full_name: string; handle: string | null; dupr: number | null; skill_level: string | null; location_city: string | null; location_state: string | null; avatar_url: string | null; bio: string | null; play_style: string | null; availability: string | null } | null)
+            .map((r) => r.profiles as { id: string; full_name: string; handle: string | null; dupr: number | null; skill_level: string | null; location_city: string | null; location_state: string | null; avatar_url: string | null; bio: string | null; play_style: string[] | null; availability: string | null } | null)
             .filter(Boolean)
             .map((p) => ({
               ...profileToPartner(p!, meDupr, meAvail),
@@ -843,7 +839,7 @@ function MatchmakingInner() {
                         {/* Chips */}
                         <div className="flex gap-2 flex-wrap mb-4">
                           {topCard.availability && <InfoChip label="AVAILABILITY" value={topCard.availability} />}
-                          {topCard.play_style && <InfoChip label="PLAY STYLE" value={topCard.play_style} />}
+                          {topCard.play_style?.length ? <InfoChip label="PLAY STYLE" value={topCard.play_style.map(playStyleLabel).join(", ")} /> : null}
                         </div>
 
                         {/* Why matched */}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Camera, Check, UserCircle } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { PLAY_STYLE_KEYS, playStyleLabel } from "@shared/play-profile";
 import { ensureFreshSession } from "@/lib/ensure-session";
 import type { Tables } from "@shared/database.types";
 
@@ -16,7 +17,10 @@ type Profile = Pick<
 >;
 
 const SKILL_LEVELS = ["2.5-3.0", "3.0-3.5", "3.5-4.0", "4.0-4.5", "4.5+"];
-const PLAY_STYLES = ["Aggressive baseliner", "Soft-game specialist", "Counter-puncher", "All-court", "Bangers + transition", "Dink master"];
+// Keys, not labels. `profiles.play_style` is a text[] constrained to this
+// exact set, so storing the display string would now be rejected outright.
+// Rendered through playStyleLabel().
+const PLAY_STYLES = PLAY_STYLE_KEYS;
 const AVAILABILITY_OPTIONS = ["Weekends", "Weeknights", "Weekends + Tue evenings", "Sat / Sun mornings", "Flexible", "Weekdays only"];
 const HAND_OPTIONS = ["right", "left", "ambidextrous"];
 const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop";
@@ -59,7 +63,7 @@ export function ProfileSettings({ userId }: { userId: string }) {
         setSkill(prof.skill_level ?? "");
         setSelfRating(prof.self_rating ?? "");
         setHand(prof.hand ?? "");
-        setPlayStyle(prof.play_style ? prof.play_style.split(",").map((s) => s.trim()).filter(Boolean) : []);
+        setPlayStyle(prof.play_style ?? []);
         setAvailability(prof.availability ? prof.availability.split(",").map((s) => s.trim()).filter(Boolean) : []);
       }
       setLoading(false);
@@ -130,7 +134,7 @@ export function ProfileSettings({ userId }: { userId: string }) {
         skill_level: skill || null,
         hand: (hand as "right" | "left" | "ambidextrous") || null,
         self_rating: selfRating.trim() || null,
-        play_style: playStyle.length > 0 ? playStyle.join(", ") : null,
+        play_style: playStyle.length > 0 ? playStyle : null,
         availability: availability.length > 0 ? availability.join(", ") : null,
       })
       .eq("id", profile.id)
@@ -290,7 +294,7 @@ export function ProfileSettings({ userId }: { userId: string }) {
         <div className="flex flex-wrap gap-2">
           {PLAY_STYLES.map((s) => (
             <button key={s} type="button" onClick={() => toggle(playStyle, setPlayStyle, s)} className={`px-4 h-9 rounded-full text-xs font-mono border transition-colors ${playStyle.includes(s) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/50"}`}>
-              {s}
+              {playStyleLabel(s)}
             </button>
           ))}
         </div>
