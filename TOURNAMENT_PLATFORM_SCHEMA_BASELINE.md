@@ -44,16 +44,44 @@ live copies of matches, pools or brackets"* — and it is what Phase 3's split
 meant to establish. The table already violates the rule the plan is written to
 protect.
 
-So Phase 3 is not "extend `court_assignments`". It is:
+### Ownership — traced 2026-08-27, and the answer is clean
 
-1. Decide whether `bracket_matches` or `court_assignments` owns scores today
-   (check which one the mobile score-entry path actually writes).
-2. Migrate any authoritative data out of the duplicated columns.
-3. Reduce `court_assignments` to the operational relationship plus history.
+`bracket_matches` is authoritative. `court_assignments` is **dead**.
 
-Doing this before Phase 2 matters, because the RPCs in Phase 2 have to write to
-whichever table wins. Building them against the current ambiguity means writing
-them twice.
+Score entry lives in `apps/mobile/src/lib/supabase/matches.ts` and writes:
+
+```ts
+.from('bracket_matches').update({
+  score_team1: [score1], score_team2: [score2],
+  winner: winnerTeam, completed_at: now, updated_at: now,
+})
+```
+
+Across `apps/mobile/src` and `web/src`, `court_assignments` appears in exactly
+three places: both generated `database.types.ts` files, and **one comment** in
+`apps/mobile/src/lib/supabase/courts.ts` explaining why court inventory was
+deliberately not built on it. There is no query, no insert, no update, no delete
+against it anywhere in either application. It holds 1 row.
+
+Note the column names differ as well as the ownership: `bracket_matches` scores
+are `score_team1` / `score_team2` and are **arrays** (`[score1]`, presumably
+per-game), while `court_assignments` has scalar `score_a` / `score_b`. They were
+never two views of the same data — they are two different models, one of which
+was abandoned.
+
+This makes Phase 3 much cheaper than feared:
+
+1. ~~Decide which table owns scores~~ — settled: `bracket_matches`.
+2. ~~Migrate authoritative data out of the duplicated columns~~ — nothing to
+   migrate; no writer has ever populated them in application code.
+3. Drop the duplicated competition columns from `court_assignments`
+   (`player_a`, `player_b`, `round_label`, `score_a`, `score_b`, `winner`,
+   `completed_at`) and rebuild it as the operational assignment record the plan
+   describes.
+
+Because nothing reads or writes it, that reshape carries no application risk —
+only the generated types change. Doing it early keeps the Phase 2 RPCs from
+having to reason about two score models.
 
 ---
 
@@ -171,9 +199,10 @@ resolving the `court_assignments` ownership question (§2) as part of **1A**
 rather than waiting for Phase 3.
 
 The reason is Phase 2: every RPC that touches scores, court assignment, or match
-completion has to know which table is authoritative. Writing those RPCs while
-two tables both hold `score_a`/`score_b`/`winner` means either writing to both,
-or rewriting them at Phase 3.
+completion has to know which table is authoritative. That question is now
+answered (§2) — `bracket_matches` — so the remaining work is to strip the
+abandoned competition columns off `court_assignments` before the RPC layer is
+written against an ambiguous schema.
 
-The data volumes in §1 make this a cheap decision today and an expensive one
-later.
+With no application code touching that table and one row in it, this is close to
+free today. The data volumes in §1 say the same thing about the rest.
