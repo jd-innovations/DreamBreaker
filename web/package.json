@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --experimental-https",
-    "prebuild": "node scripts/check-env.js",
+    "prebuild": "node scripts/check-env.js && node ../scripts/gen-tokens.mjs --check",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check:env": "node scripts/check-env.js"
+    "check:env": "node scripts/check-env.js",
+    "tokens": "node ../scripts/gen-tokens.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
