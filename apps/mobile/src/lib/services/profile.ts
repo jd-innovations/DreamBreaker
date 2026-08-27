@@ -23,7 +23,8 @@ export type UserProfile = {
   dupr: number | null;
   dupr_verified: boolean | null;
   hand: string | null;
-  play_style: string | null;
+  /** Keys, not labels — see lib/playProfile.ts. Rendered via playStyleLabel(). */
+  play_style: string[] | null;
   skill_level: string | null;
   availability: string | null;
   self_rating: string | null;
@@ -123,7 +124,9 @@ export async function updateProfile(userId: string, updates: {
   location_lat?: number | null;
   location_lng?: number | null;
   hand?: string;
-  play_style?: string;
+  play_style?: string[];
+  preferred_formats?: string[];
+  play_intensity?: string;
   skill_level?: string;   // user-editable range band e.g. "3.5-4.0"
   availability?: string;
   self_rating?: string;   // user-editable numeric e.g. "4.01"

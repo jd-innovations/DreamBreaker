@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { playStyleSummary } from '@/lib/playProfile';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Image, ActivityIndicator, Alert, Share,
@@ -322,7 +323,7 @@ export default function PlayerProfileScreen() {
         avatarUrl: p.avatar_url,
         dupr: p.dupr,
         duprVerified: !!p.dupr_verified,
-        playStyle: p.play_style,
+        playStyle: playStyleSummary(p.play_style),
         hand: p.hand,
         skillLevel: p.skill_level,
         bio: p.bio,

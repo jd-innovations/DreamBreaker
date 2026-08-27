@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { playStyleSummary } from '@/lib/playProfile';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   TextInput, Image, Platform, Modal, ActivityIndicator, Alert,
@@ -201,7 +202,7 @@ export default function InviteDetailsScreen() {
           dupr: data.dupr,
           duprVerified: !!data.dupr_verified,
           skillLevel: data.skill_level,
-          playStyle: data.play_style,
+          playStyle: playStyleSummary(data.play_style),
           locationLabel: [data.location_city, data.location_state].filter(Boolean).join(', ') || null,
         });
       }

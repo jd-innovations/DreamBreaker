@@ -2,6 +2,31 @@ import { getSession, signUp } from '@/lib/auth';
 import { updateProfile } from '@/lib/services/profile';
 import { AVAILABILITY_OPTIONS } from './mockData';
 import type { OnboardingDraft } from './state';
+import {
+  PLAY_STYLE_KEYS,
+  PREFERRED_FORMAT_KEYS,
+  PLAY_INTENSITY_KEYS,
+} from '@/lib/playProfile';
+
+/**
+ * Routes the onboarding "playing style" selections onto the three columns they
+ * actually belong to. Mirrors web/src/lib/onboarding/transform.ts — keep both
+ * in step until packages/shared covers mobile too.
+ */
+function splitPlayingStyle(selected: string[]): {
+  play_style?: string[];
+  preferred_formats?: string[];
+  play_intensity?: string;
+} {
+  const styles = selected.filter((k) => (PLAY_STYLE_KEYS as readonly string[]).includes(k));
+  const formats = selected.filter((k) => (PREFERRED_FORMAT_KEYS as readonly string[]).includes(k));
+  const intensity = selected.find((k) => (PLAY_INTENSITY_KEYS as readonly string[]).includes(k));
+  return {
+    ...(styles.length ? { play_style: styles } : {}),
+    ...(formats.length ? { preferred_formats: formats } : {}),
+    ...(intensity ? { play_intensity: intensity } : {}),
+  };
+}
 
 // self_rating option keys collected during onboarding don't all match
 // profiles.skill_level's CHECK constraint values — translate the ones that
@@ -61,10 +86,17 @@ function draftToProfileFields(draft: OnboardingDraft) {
     hand: toHand(draft.handedness),
     skill_level: toSkillLevel(draft.selfRating),
     self_rating: toSelfRatingNumeric(draft.selfRating),
-    // Onboarding collects up to PLAYING_STYLE_MAX styles; profiles.play_style
-    // is a single free-text value used elsewhere as one tag — store the top
-    // choice, matching DATA_GAPS.md's documented tradeoff.
-    play_style: draft.playingStyle[0] ?? undefined,
+    // The "playing style" step asks three questions at once — see
+    // PLAY_STYLE_VOCABULARY.md. Its keys were already the right keys; they
+    // were simply all written to one column, and only the first of them.
+    //
+    //   how you play   -> play_style        (text[])
+    //   what you play  -> preferred_formats (text[])
+    //   how seriously  -> play_intensity    (text, single)
+    //
+    // Every selection is kept now. This used to store playingStyle[0] and
+    // discard the other two of the three the user was invited to pick.
+    ...splitPlayingStyle(draft.playingStyle),
     // profiles.availability is a human-readable summary string (see
     // edit-profile.tsx's summarizeSchedule); onboarding's tag list doesn't
     // map cleanly onto the day/block availability_schedule grid, so store a

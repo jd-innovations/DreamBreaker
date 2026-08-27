@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { playStyleSummary } from '@/lib/playProfile';
 import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -217,7 +218,7 @@ export default function ProfileScreen() {
   const detailRows: { label: string; value: string }[] = [
     profile?.skill_level  ? { label: 'Skill Level',   value: profile.skill_level }  : null,
     profile?.self_rating  ? { label: 'Self Rating',   value: profile.self_rating }  : null,
-    profile?.play_style   ? { label: 'Playing Style', value: profile.play_style }   : null,
+    playStyleSummary(profile?.play_style) ? { label: 'Playing Style', value: playStyleSummary(profile?.play_style)! } : null,
     profile?.hand         ? { label: 'Hand',           value: profile.hand.charAt(0).toUpperCase() + profile.hand.slice(1) } : null,
     profile?.availability ? { label: 'Availability',  value: profile.availability } : null,
   ].filter((r): r is { label: string; value: string } => r !== null);

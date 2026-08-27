@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { PLAY_STYLE_KEYS, playStyleLabel } from '@/lib/playProfile';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   TextInput, Switch, Image, ActivityIndicator, Alert,
@@ -193,27 +194,27 @@ function StepperRow({ label, value, onChange }: { label: string; value: number; 
 
 // ─── Play style field (chips + "Other" free text) ─────────────────────────────
 
-const PLAY_STYLES = [
-  'Banger',
-  'Soft Game / Dinker',
-  'All-Court / Balanced',
-  'Aggressive Net Player',
-  'Defensive / Counter-puncher',
-  'Third-Shot Specialist',
-];
 
-function PlayStyleField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [otherMode, setOtherMode] = useState(() => value !== '' && !PLAY_STYLES.includes(value));
-  const activeChip = otherMode ? 'Other' : value;
-
-  const selectChip = (opt: string) => {
-    if (opt === 'Other') {
-      if (otherMode) { setOtherMode(false); onChange(''); }
-      else { setOtherMode(true); onChange(''); }
-      return;
-    }
-    setOtherMode(false);
-    onChange(activeChip === opt ? '' : opt);
+function PlayStyleField({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+}) {
+  // Multi-select over the shared key set, with no "Other" escape hatch.
+  //
+  // This used to be single-select chips plus an "Other" free-text box, and that
+  // box is where "Banger", "Third-Shot Specialist" and "Soft Game / Dinker" came
+  // from — values no query could filter on and no two users spelled alike.
+  // `profiles.play_style` is now a text[] CHECK-constrained to these keys, so a
+  // free-text value would be rejected by the database outright.
+  //
+  // A player is genuinely more than one thing, which is why this is multi-select
+  // rather than a tidier single choice: "Soft Game / Dinker" was one user
+  // already trying to say two.
+  const toggle = (key: string) => {
+    onChange(value.includes(key) ? value.filter((k) => k !== key) : [...value, key]);
   };
 
   return (
@@ -222,32 +223,22 @@ function PlayStyleField({ value, onChange }: { value: string; onChange: (v: stri
       <View style={s.chipSection}>
         <Text style={s.fieldLabel}>Play Style</Text>
         <View style={s.chipWrap}>
-          {[...PLAY_STYLES, 'Other'].map((opt) => {
-            const active = activeChip === opt;
+          {PLAY_STYLE_KEYS.map((key) => {
+            const active = value.includes(key);
             return (
               <TouchableOpacity
-                key={opt}
+                key={key}
                 style={[s.chip, active && s.chipActive]}
-                onPress={() => selectChip(opt)}
+                onPress={() => toggle(key)}
                 activeOpacity={0.75}
               >
-                <Text style={[s.chipText, active && s.chipTextActive]}>{opt}</Text>
+                <Text style={[s.chipText, active && s.chipTextActive]}>
+                  {playStyleLabel(key)}
+                </Text>
               </TouchableOpacity>
             );
           })}
         </View>
-        {otherMode && (
-          <TextInput
-            style={s.otherInput}
-            value={value}
-            onChangeText={onChange}
-            placeholder="Describe your play style"
-            placeholderTextColor={L.textMuted}
-            selectionColor={L.navy}
-            underlineColorAndroid="transparent"
-            returnKeyType="done"
-          />
-        )}
       </View>
     </>
   );
@@ -398,7 +389,7 @@ export default function EditProfileScreen() {
   const [dupr,        setDupr]        = useState('');
   const [city,        setCity]        = useState('');
   const [state,       setState_]      = useState('');
-  const [playStyle,    setPlayStyle]    = useState('');
+  const [playStyle,    setPlayStyle]    = useState<string[]>([]);
   const [selfRating,   setSelfRating]   = useState('');
   const [skillLevel,   setSkillLevel]   = useState('');
   const [schedule,     setSchedule]     = useState<AvailabilitySchedule>({});
@@ -440,7 +431,7 @@ export default function EditProfileScreen() {
       setDupr(p.dupr != null ? String(p.dupr) : '');
       setCity(p.location_city ?? '');
       setState_(p.location_state ?? '');
-      setPlayStyle(p.play_style ?? '');
+      setPlayStyle(p.play_style ?? []);
       setSelfRating(p.self_rating ?? '');
       setSkillLevel(p.skill_level ?? '');
       setSchedule(p.availability_schedule ?? {});
@@ -489,7 +480,7 @@ export default function EditProfileScreen() {
       location_city:  city.trim(),
       location_state: state.trim(),
       hand,
-      play_style:     playStyle.trim() || undefined,
+      play_style:     playStyle.length ? playStyle : undefined,
       self_rating:    selfRating.trim() || undefined,
       skill_level:    skillLevel || undefined,
       availability:   summarizeSchedule(schedule) || undefined,

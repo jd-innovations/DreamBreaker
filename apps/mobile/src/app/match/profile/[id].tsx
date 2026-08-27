@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { playStyleSummary } from '@/lib/playProfile';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Image, Dimensions, Alert, ActivityIndicator,
@@ -137,7 +138,7 @@ export default function PartnerProfileScreen() {
         lookingFor: p.looking_status || 'Partner',
         skillRange: p.skill_level || '',
         hand: p.hand,
-        style: p.play_style,
+        style: playStyleSummary(p.play_style),
         age,
         bio: p.bio || '',
         verifiedDupr: p.dupr_verified,
