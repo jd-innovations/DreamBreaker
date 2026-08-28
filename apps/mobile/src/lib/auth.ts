@@ -40,17 +40,20 @@ export async function signUp(
 // pattern). Returns null if the user cancels/dismisses the browser sheet rather
 // than throwing — callers should treat null as "stay on the current screen."
 export async function signInWithGoogle() {
-  // Force the app's own scheme rather than letting makeRedirectUri() choose.
+  // The app's own scheme, always — NOT makeRedirectUri().
   //
-  // With no arguments it returns the DEV SERVER url inside a development
-  // client — exp://<tunnel-host>/--/ — which is not in Supabase's redirect
-  // allowlist. GoTrue then falls back to the project Site URL, and signing in
-  // with Google drops the user on the WEB app instead of back in the app.
-  // Observed 2026-08-28 while testing over a tunnel.
+  // makeRedirectUri({ native }) honours `native` only when
+  // Constants.executionEnvironment is Standalone or Bare (see its source). A
+  // development client is neither, so it falls through to the DEV SERVER url —
+  // exp://<tunnel-host> — which is not in Supabase's redirect allowlist. GoTrue
+  // then falls back to the project Site URL and Google sign-in lands the user
+  // on the WEB app, with no error raised anywhere. Confirmed by logging the
+  // computed value on device, 2026-08-28.
   //
-  // `pickleballapp://` is the scheme declared in app.json and is allowlisted,
-  // so this resolves identically in a dev client and a standalone build.
-  const redirectTo = makeRedirectUri({ native: 'pickleballapp://' });
+  // `pickleballapp://` is declared in app.json, registered by both the dev
+  // client and standalone builds, and allowlisted in Supabase, so it is correct
+  // in every environment this app actually runs in.
+  const redirectTo = 'pickleballapp://';
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
