@@ -28,7 +28,7 @@ import {
 import { ReactionPills, AttachmentOptionsSheet, FileAttachmentRow } from '@/components';
 import { useSupportContext } from '@/lib/support/supportContext';
 import { appLinks } from '@/lib/appLinks';
-import type { Tables } from '@/lib/database.types';
+import type { Tables } from '@shared/database.types';
 
 const FALLBACK_EVENT_IMAGE = 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=200&fit=crop&q=80';
 

@@ -3,7 +3,7 @@
 // manually" / "No custom condition text") — everything else derives from
 // these lists so the UI and the DB enum stay in lockstep.
 
-import type { Database } from '@/lib/database.types';
+import type { Database } from '@shared/database.types';
 
 export type MarketplaceCondition = Database['public']['Enums']['marketplace_condition'];
 export type MarketplaceListingStatus = Database['public']['Enums']['marketplace_listing_status'];

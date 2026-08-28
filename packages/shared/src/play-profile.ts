@@ -172,3 +172,14 @@ export function preferredFormatLabel(key: string): string {
 export function playIntensityLabel(key: string): string {
   return PLAY_INTENSITY_LABELS[key as PlayIntensityKey] ?? key;
 }
+
+/**
+ * A stored key list rendered for display.
+ *
+ * Returns null for both empty and missing, so callers can fall through to their
+ * own placeholder rather than printing an empty string.
+ */
+export function playStyleSummary(keys: string[] | null | undefined): string | null {
+  if (!keys || keys.length === 0) return null;
+  return keys.map(playStyleLabel).join(", ");
+}

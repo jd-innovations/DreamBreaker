@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { Tables, TablesUpdate } from '@/lib/database.types';
+import type { Tables, TablesUpdate } from '@shared/database.types';
 
 // Coach Marketplace V1 Phase 2 — Coach Offers service layer. Mirrors
 // apps/mobile/src/lib/marketplace/listingService.ts's conventions (thin

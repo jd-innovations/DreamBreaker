@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { playStyleSummary } from '@/lib/playProfile';
+import { playStyleSummary } from '@shared/play-profile';
 import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';

@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { Tables } from '@/lib/database.types';
+import type { Tables } from '@shared/database.types';
 import type { Facility } from '@/lib/supabase/facilities';
 
 // Maps named exceptions from join_play_event RPC to user-facing messages.

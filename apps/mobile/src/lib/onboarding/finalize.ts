@@ -6,7 +6,7 @@ import {
   PLAY_STYLE_KEYS,
   PREFERRED_FORMAT_KEYS,
   PLAY_INTENSITY_KEYS,
-} from '@/lib/playProfile';
+} from '@shared/play-profile';
 
 /**
  * Routes the onboarding "playing style" selections onto the three columns they

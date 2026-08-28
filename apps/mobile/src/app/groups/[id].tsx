@@ -36,7 +36,7 @@ import {
   type GroupInviteCandidate,
   type ReceivedGroupInvite,
 } from '@/lib/supabase/groupInvites';
-import type { Tables } from '@/lib/database.types';
+import type { Tables } from '@shared/database.types';
 
 const { width: SW } = Dimensions.get('window');
 // Generous enough that the bottom-anchored name/meta/description/buttons

@@ -6,7 +6,7 @@ import type {
   DirectorBracketParticipant,
   DirectorBracketRound,
 } from '@/lib/directorBracketStore';
-import type { Database } from '@/lib/database.types';
+import type { Database } from '@shared/database.types';
 
 // Re-export types consumed by screens
 export type { DirectorBracket, DirectorBracketMatch, DirectorBracketParticipant, DirectorBracketRound };

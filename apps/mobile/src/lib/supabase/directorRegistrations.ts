@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { Tables } from '@/lib/database.types';
+import type { Tables } from '@shared/database.types';
 
 // Director manual registration — the client half of
 // director_add_tournament_registration() (migration 20260821030000).

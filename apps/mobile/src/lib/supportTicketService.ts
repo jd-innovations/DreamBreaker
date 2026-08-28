@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { sendMessage } from './conversationService';
-import type { Database, Json } from './database.types';
+import type { Database, Json } from '@shared/database.types';
 import type { SupportContext } from './support/supportContext';
 import type { DiagnosticsSnapshot } from './support/supportDiagnostics';
 

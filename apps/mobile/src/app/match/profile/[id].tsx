@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { playStyleSummary } from '@/lib/playProfile';
+import { playStyleSummary } from '@shared/play-profile';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Image, Dimensions, Alert, ActivityIndicator,

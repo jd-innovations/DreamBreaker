@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { Tables } from '@/lib/database.types';
+import type { Tables } from '@shared/database.types';
 import type { RRRound, RRMatch, RRParticipant } from '@/lib/rrScheduleStore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

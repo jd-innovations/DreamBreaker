@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { Tables, Database } from '@/lib/database.types';
+import type { Tables, Database } from '@shared/database.types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
