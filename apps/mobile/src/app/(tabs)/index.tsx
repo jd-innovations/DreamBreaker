@@ -380,15 +380,15 @@ function FeaturedCard({ item }: { item: typeof FEATURED[0] }) {
         </View>
         <View style={fc.metaRow}>
           <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.8)" />
-          <Text style={fc.metaText}>{item.dates}</Text>
+          <Text style={fc.metaText} numberOfLines={1}>{item.dates}</Text>
         </View>
         <View style={fc.metaRow}>
           <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.8)" />
-          <Text style={fc.metaText}>{item.venue}</Text>
+          <Text style={fc.metaText} numberOfLines={1}>{item.venue}</Text>
         </View>
         <View style={[fc.metaRow, { marginBottom: 14 }]}>
           <Ionicons name="navigate-circle-outline" size={12} color="rgba(255,255,255,0.8)" />
-          <Text style={fc.metaText}>{item.city}</Text>
+          <Text style={fc.metaText} numberOfLines={1}>{item.city}</Text>
         </View>
         <View style={fc.statsRow}>
           <View style={fc.stat}>
@@ -428,14 +428,20 @@ const fc = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 4,
   },
   featuredText: { color: L.navy, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  // Bottom-anchored inside a FIXED-height card, so anything taller than the
+  // space available is clipped off the TOP — which is the title, not the button.
+  // That is what cut "SUNCOAST CLASSIC SRQ" in half: a venue name long enough to
+  // wrap added a line and pushed the heading out of view. The height is fixed on
+  // purpose (cards sit in a horizontal carousel and must match), so the fix is to
+  // stop the variable-length rows growing — every meta line is numberOfLines={1}.
   content:      {
     position: 'absolute', top: 58, bottom: 0, left: 0, right: 0, padding: 16,
     justifyContent: 'flex-end', overflow: 'hidden',
   },
   titleRow:     { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
-  name:         { color: '#FFFFFF', fontSize: 26, fontWeight: '800', letterSpacing: 0.5, flexShrink: 1 },
+  name:         { color: '#FFFFFF', fontSize: 26, lineHeight: 30, fontWeight: '800', letterSpacing: 0.5, flexShrink: 1 },
   metaRow:      { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3 },
-  metaText:     { color: 'rgba(255,255,255,0.88)', fontSize: 12, fontWeight: '500' },
+  metaText:     { color: 'rgba(255,255,255,0.88)', fontSize: 12, fontWeight: '500', flexShrink: 1 },
   statsRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 12,
