@@ -40,7 +40,17 @@ export async function signUp(
 // pattern). Returns null if the user cancels/dismisses the browser sheet rather
 // than throwing — callers should treat null as "stay on the current screen."
 export async function signInWithGoogle() {
-  const redirectTo = makeRedirectUri();
+  // Force the app's own scheme rather than letting makeRedirectUri() choose.
+  //
+  // With no arguments it returns the DEV SERVER url inside a development
+  // client — exp://<tunnel-host>/--/ — which is not in Supabase's redirect
+  // allowlist. GoTrue then falls back to the project Site URL, and signing in
+  // with Google drops the user on the WEB app instead of back in the app.
+  // Observed 2026-08-28 while testing over a tunnel.
+  //
+  // `pickleballapp://` is the scheme declared in app.json and is allowlisted,
+  // so this resolves identically in a dev client and a standalone build.
+  const redirectTo = makeRedirectUri({ native: 'pickleballapp://' });
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
