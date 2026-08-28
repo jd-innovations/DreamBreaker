@@ -148,11 +148,11 @@ export function ContextMenu({
           {dangerItems.map((item) => (
             <TouchableOpacity
               key={item.label}
-              style={cm.row}
+              style={[cm.row, cm.rowLast]}
               onPress={() => onItemPress?.(item.label)}
               activeOpacity={0.7}
             >
-              <View style={cm.iconWrap}>
+              <View style={[cm.iconWrap, cm.iconWrapDanger]}>
                 <Ionicons name={item.icon as never} size={17} color={L.danger} />
               </View>
               <Text style={[cm.label, cm.labelDanger]}>{item.label}</Text>
@@ -166,31 +166,43 @@ export function ContextMenu({
 
 const cm = StyleSheet.create({
   popover: {
-    position: "absolute",
-    minWidth: 216,
-    backgroundColor: L.bg,
-    borderRadius: 14,
-    paddingVertical: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
-    zIndex: 60,
+    position: 'absolute',
+    width: 252,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    paddingVertical: 5,
+    zIndex: 41,
+    shadowColor: '#000',
+    shadowOpacity: 0.13,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 16,
   },
   caret: {
-    position: "absolute",
-    top: -7,
-    width: 14,
-    height: 14,
-    backgroundColor: L.bg,
-    transform: [{ rotate: "45deg" }],
-    borderRadius: 3,
+    position: 'absolute', top: -7,
+    width: 0, height: 0,
+    borderLeftWidth: 6, borderRightWidth: 6, borderBottomWidth: 8,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderBottomColor: '#FFFFFF',
   },
-  row: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, height: 44 },
-  rowFirst: {},
-  iconWrap: { width: 26, alignItems: "flex-start" },
-  label: { fontSize: 15, color: L.navy, fontWeight: "500" },
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 8, marginHorizontal: 5,
+    borderRadius: 11, height: 50,
+  },
+  rowFirst: { marginTop: 4 },
+  rowLast: { marginBottom: 4 },
+  iconWrap: {
+    width: 32, height: 32, borderRadius: 9,
+    backgroundColor: '#F3F6FC',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  iconWrapDanger: { backgroundColor: L.dangerBg },
+  label: { color: L.navy, fontSize: 14, fontWeight: '500' },
   labelDanger: { color: L.danger },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: L.border, marginVertical: 6 },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: L.border,
+    marginHorizontal: 10, marginVertical: 3,
+  },
 });
