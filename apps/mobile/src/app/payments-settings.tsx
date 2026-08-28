@@ -226,17 +226,16 @@ export default function PaymentsSettingsScreen() {
   const { purchases, loading, refreshing, error, refresh } = usePurchaseHistory(PREVIEW_LIMIT);
 
   return (
-    <View style={[s.root, { paddingTop: insets.top }]}>
+    <View style={s.root}>
       <StatusBar style="dark" />
 
       {/* ── Header ── */}
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={s.backBtn} onPress={() => goBack()} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={20} color={L.blue} />
-          <Text style={s.backText}>Back</Text>
+          <Ionicons name="chevron-back" size={24} color={L.navy} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Payments</Text>
-        <View style={{ width: 80 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView
@@ -327,11 +326,10 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
-    paddingHorizontal: 8, paddingVertical: 12,
+    paddingHorizontal: 16, paddingVertical: 12,
   },
-  backBtn:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
-  backText:    { color: L.blue, fontSize: 17, fontWeight: '400' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '700' },
+  backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
 
   scroll: { padding: 20 },
 

@@ -30,10 +30,14 @@ export default function WalletScreen() {
   const isEmpty = !loading && !error && items.length === 0;
 
   return (
-    <View style={[s.root, { paddingTop: insets.top }]}>
+    <View style={s.root}>
       <StatusBar style="dark" />
 
-      <View style={s.header}>
+      {/* The safe-area inset lives on the HEADER, not the root, so the white
+          header colour runs to the top of the screen. With it on the root the
+          status-bar strip took the root's page grey and the header appeared to
+          float below a grey band. */}
+      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={s.backBtn} onPress={() => goBack('/(tabs)/profile')} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={24} color={L.navy} />
         </TouchableOpacity>
