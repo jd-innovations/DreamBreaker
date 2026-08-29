@@ -10,8 +10,11 @@
 # iOS build. web/.gitignore ignores it; eas-cli does not honour that nested
 # ignore file from the mobile project root. Measured 2026-08-29: 1,025 MB.
 #
-# Verify any change to this file for free, without spending a build:
+# Verify any change to this file for free, without spending a build — and do
+# not skip it, because an over-broad pattern here fails the build at Metro
+# resolution with no hint that the archive is the cause:
 #   npx eas-cli build:inspect -p ios -s archive -e preview -o <dir> --force
+#   git ls-files apps/mobile packages/shared   # every one must be in the copy
 #
 # Keep apps/mobile/** and packages/shared/** — the build needs both.
 #
@@ -28,25 +31,32 @@ web-build/
 *.tsbuildinfo
 .metro-health-check*
 
+# ⚠️ EVERY directory below is anchored with a leading slash, and must stay that
+# way. A bare `supabase/` is a gitignore pattern that matches a directory of
+# that name at ANY depth — it silently deleted apps/mobile/src/lib/supabase/
+# (34 files) from the archive and failed build #6 at Metro resolution, while
+# the same bundle built fine locally. `scripts/`, `docs/`, `tests/` and
+# `memory/` all have twins under apps/mobile too. Anchor, or repeat that.
+
 # --- the web app: 991 MB of .next, and nothing an iOS build needs ---
-web/
+/web/
 
 # --- deleted in the alignment work; the directory lingers ---
-frontend/
+/frontend/
 
 # --- repo material a mobile build never reads ---
-docs/
-tests/
-test_reports/
-supabase/
-memory/
-scripts/
-skills-lock.json
-design_guidelines.json
-design-lab-preview.png
+/docs/
+/tests/
+/test_reports/
+/supabase/
+/memory/
+/scripts/
+/skills-lock.json
+/design_guidelines.json
+/design-lab-preview.png
 /*.md
-.github/
-.claude/
+/.github/
+/.claude/
 
 # --- credentials and local env never belong in an upload ---
 .env
