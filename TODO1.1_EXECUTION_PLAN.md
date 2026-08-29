@@ -1,75 +1,76 @@
 # TODO 1.1 Execution Plan
 
-## ⏸️ START HERE — paused 2026-08-25
+## ⏸️ START HERE — resumed 2026-08-29
 
-Work stopped deliberately at a clean point. **Nothing is half-finished in the
-working tree**: everything is committed and pushed to
-`feature/expo-mobile-foundation` (head `5aef50f`).
+**All three things that blocked this plan on 2026-08-25 are cleared.** The
+pause block that stood here listed two items waiting on a human and one waiting
+on a build quota. Do not re-chase them:
 
-**Two things are waiting on a human, and one of them is breaking production.**
+| Was blocking | Status |
+| --- | --- |
+| 🔴 Supabase Site URL on `localhost:3000` | ✅ **Fixed.** `pickleballapp://` is allowlisted and Google sign-in is device-verified (`58b76bd`). `/auth/v1/settings` now reports `mailer_autoconfirm: false`, where it reported `true` at the pause — the dashboard was touched. |
+| Vercel preview not promoted | ✅ **Promoted.** Production web is on `9898639` (2026-08-27), not `79d707c`. It carries the 6.3 route error boundaries (`5bca3de`) and the alignment plan's A1 fix. |
+| 🚫 iOS build quota until 2026-09-01 | ✅ **Gone — EAS is on the Pro plan** (2026-08-29). Builds are still treated as expensive: batch work, cut one build. |
 
-### 🔴 1. Supabase URL configuration — breaks live auth
+**Nothing in this plan has moved since the pause.** Still 19 of 27 closed. The
+~45 commits since then went into the *second* programme,
+`WEB_MOBILE_ALIGNMENT_PLAN.md`, plus a run of auth fixes.
 
-Dashboard → Authentication → **URL Configuration**:
+### A dev client already exists — `MOBILE_BUILD_CHECKLIST.md` is stale on this
 
-```
-Site URL:       https://pickleballapp.app        (currently http://localhost:3000)
-Redirect URLs:  https://pickleballapp.app/**
-                http://localhost:3000/**         (keep, for local dev)
-                pickleballapp://**               (mobile — add so it keeps working)
-```
+That checklist opens by saying the installed app crashes, because
+`profiles.play_style` became `text[]` on 2026-08-27 while the installed build
+still called `.trim()` on it. **That was true when written and is not true now.**
+The fix (`7177bee`) shipped in iOS build **#5** (`4f52e2c5`, `development`
+profile, 2026-08-28, commit `02a0023`), and the commits after it — `58b76bd`
+("Verified working on device") and `e83527c` (written from device screenshots)
+— show device testing running normally since.
 
-Password reset and Google/Apple sign-in both shipped in 6.2 and **both fail on
-the round trip** until this is set — verified by following a real reset link,
-which landed on `localhost:3000`. It also affects **every** auth email, not just
-those flows: a beta signup confirming their address lands on localhost too.
-Server-side setting, no redeploy needed.
+**What that means for build spend:** a dev client is installed, and it loads JS
+from Metro. Every JS-only change since `02a0023` — including the `@shared`
+imports (`0ce5458`) — is already testable with `npx expo start --dev-client`
+and **no build at all**. Reach for a build only when something native changes.
 
-### 2. Promote a Vercel preview
+The verification list in `MOBILE_BUILD_CHECKLIST.md` is still the right list to
+work through; only its "why the app crashes" premise has expired.
 
-Production web is on `79d707c`. The route error boundaries (`5bca3de`) and the
-6.3 docs are not live. Low urgency — they only matter when something else
-breaks. Remember: **promote, never push** — see `project-vercel-deploy-model`.
+**One gap the dev client cannot close:** `EXPO_PUBLIC_SENTRY_DSN` is in the EAS
+`development` environment, but `SENTRY_AUTH_TOKEN` is **only** in `preview`.
+Source maps upload at build time, so crashes from a dev client report
+unsymbolicated. 4.1 mobile wants the `preview` build (#6, `2cacd3a3`, cut
+2026-08-29 from `a80fce0`) to close properly.
 
-### 🚫 Blocked until 2026-09-01 — the iOS build quota
+### Pre-flight checks that cost no build
 
-Free-plan iOS builds are exhausted. **A quota rejection creates no build
-record**, so a blocked build is invisible in `eas build:list` under every
-status — two attempts vanished that way before anyone worked it out. Suspect
-quota before the lockfile.
+Both were run green on 2026-08-29 and retire the biggest unverified risk here —
+the `@shared` imports from the alignment plan's B1/B2:
 
-These verify together in **one** build, so do not cut a build for any one of
-them:
+- `npx expo export --platform ios` — bundles clean, 11.8 MB.
+- `npx eas-cli build:inspect -p ios -s archive -e preview -o <dir> --force` —
+  produces the exact upload without spending a build. It confirmed the archive
+  is **the whole git repo, not `apps/mobile`**, so `packages/shared` does reach
+  the builders via `apps/mobile/metro.config.js` and **no root workspace is
+  needed**. It also caught `web/.next`, 991 MB of stale Next.js output, riding
+  along on every build; a root `.easignore` (`a80fce0`) took the archive from
+  1,025 MB to 22 MB.
 
-| Waiting on that build |
-| --- |
-| 4.1 mobile — the Sentry DSN is baked into the binary |
-| 5.3 case 20 — every non-DM conversation type was unreachable (`852bcd3`) |
-| 6.1 — "Add Test Players" gating, `community/[id]` demo events removed |
-| 6.2 — Coming Soon CTAs wired or hidden |
-| 6.3 — shared state components, five screens that reported failures as empty |
-
-**Regression to watch first:** direct DMs must behave exactly as before — that
-is the risk in the conversation-router change.
-
-⚠️ **Do not run `npm install` in `apps/mobile` before that build.** The
-committed lockfile was regenerated with npm 10; local npm is 11 and rewriting it
-breaks `npm ci` on the builders. See `project-eas-npm-lockfile`.
+⚠️ **Do not run `npm install` in `apps/mobile`.** Local npm is 11, the builders
+run 10.8.2, and rewriting the committed lockfile breaks `npm ci` on them. This
+constraint outlived the quota. See `project-eas-npm-lockfile`.
 
 ### Where to resume
 
-Phase 6 is complete. **Phases 4 and 5 were leapfrogged**, not finished — their
-items were blocked on a Sentry account, on hardware, or on a vendor decision, so
-this session took the only work that needed none of those. "Phase 6 complete"
-is a column in the table below, not sequential progress.
-
-Unblocked and unstarted, in the order recommended:
+**Phases 4 and 5 were leapfrogged, not finished** — their items were blocked on
+a Sentry account, on hardware, or on a vendor decision, so that session took the
+only work needing none of those. "Phase 6 complete" is a column in the table
+below, not sequential progress.
 
 1. **The tournament lifecycle bug** — nothing moves a tournament out of `open`
    when its event date passes. The only open defect with real user risk: a
-   player can register for an event that already happened. Needs its own item.
-2. **5.4 Offline and Poor-Network UX** — the natural follow-on from 6.3, and it
-   can reuse the `LoadingState`/`ErrorState` components that item created.
+   player can register for an event that already happened. Server-side, needs no
+   build, and it still has no item. Good work to run alongside a build.
+2. **5.1 Push Notifications** and **5.4 Offline UX** — both wanted a build
+   anyway; with a dev client installed they iterate against Metro for free.
 3. **4.2 Product Analytics** — highest priority on paper, but **needs a vendor
    decision first** (PostHog / Amplitude / Segment). Cannot be started cold.
 4. **4.3 Harden Support and Moderation.**
@@ -81,7 +82,7 @@ supply.
 
 Purpose: turn `TODO1.1.md` into an ordered, one-issue-at-a-time production readiness plan. Work through this file from top to bottom. Do not start broad feature work until the current item is complete or explicitly deferred.
 
-## Current State — 2026-08-25
+## Current State — 2026-08-25 (status re-verified 2026-08-29)
 
 **19 of 27 items closed.** Two more (4.1, 5.3) have Completion Notes but are
 explicitly *not* closed — read their notes, not this table, for detail.
@@ -98,55 +99,52 @@ one.
 
 Phases 0-3 are complete and deployed to production.
 
-### Blocked on one EAS build
+### Pending one EAS build — no longer blocked
 
-🚫 **iOS build quota exhausted — Free plan, resets Tue 2026-09-01** (confirmed
-2026-08-25). `eas build --platform ios` fails at "Computed project fingerprint"
-with a quota message and **creates no build record**, so a blocked attempt
-leaves no trace in `eas build:list` under any status, including `canceled`. Two
-attempts (2026-08-24 evening and 2026-08-25) vanished this way before anyone
-worked out why. If a build seems to have disappeared, suspect quota before
-suspecting the lockfile.
-
-The most recent successful iOS build is `333fdff2` (2026-08-24 06:14, `preview`,
-build number 3) from commit `48e6622` — which **predates the Sentry commit**, so
-it cannot verify 4.1 no matter how it is installed.
-
-Both of these need a new build and nothing else:
+The quota is gone (Pro plan, 2026-08-29) and a `preview` iOS build was cut that
+day. Until it is installed and worked through, these stay open:
 
 1. **4.1 mobile.** `EXPO_PUBLIC_SENTRY_DSN` is baked into the binary, so no
-   existing install can report a crash. Verified 2026-08-25 that the app
-   *bundles* cleanly for iOS (`npx expo export --platform ios` succeeds,
-   11.8 MB), so the SDK is not a build risk — only the quota is.
+   existing install can report a crash. The DSN and `SENTRY_AUTH_TOKEN` are both
+   present in the EAS `preview` environment, confirmed 2026-08-29, so the build
+   will carry them.
 2. ~~**5.3 cases 25 and 26.**~~ **Re-tested and passing 2026-08-25** after a
    delete-and-reinstall — both links now open in Safari. What 5.3 still needs
    from a build is **case 20's fix** (`852bcd3`, every non-DM conversation type
    was unreachable), and the regression to watch there is that direct DMs still
    behave exactly as before.
+3. **6.1, 6.2, 6.3's mobile changes**, plus the alignment work since: the
+   `@shared` imports, the native action sheet, the repaired mojibake strings,
+   and local-scope sign-out. Full list and order in `MOBILE_BUILD_CHECKLIST.md`.
+
+The most recent *previous* successful iOS build is `333fdff2` (2026-08-24 06:14,
+`preview`, build number 3) from commit `48e6622` — which **predates the Sentry
+commit**, so it cannot verify 4.1 no matter how it is installed.
 
 ⚠️ **Before committing any `npm install` or `npx expo install` in
 `apps/mobile`:** regenerate the lockfile with npm 10, or CI and the EAS builders
 (npm 10.8.2) both break. See `project-eas-npm-lockfile` in memory. This has
-already happened once.
+already happened once, and it outlived the quota.
+
+**A build profile note that matters:** only `development` sets
+`developmentClient: true`. A dev client loads JS from Metro, so once one is
+installed every later JS change is testable with no further build — which is how
+to keep build spend low. `preview` and `production` embed their bundle and
+ignore Metro entirely.
 
 ### Recommended next item: 4.2 (analytics), or the tournament lifecycle bug
 
 **Phase 6 is complete** — 6.1, 6.2 and 6.3 all closed 2026-08-25. What remains
 splits into work that is blocked and work that is a decision.
 
-**Blocked on the 2026-09-01 iOS build** (quota exhausted, see above): 4.1
+**Pending the 2026-08-29 preview build** (the quota is gone; see above): 4.1
 mobile, 5.3 case 20's fix, and device-verification of 6.1/6.2/6.3's mobile
 changes. These verify together in one pass — do not cut a build for one of them.
 
-**Blocked on a dashboard only the human can reach:**
-
-- 🔴 **Supabase Site URL is `http://localhost:3000`** and the redirect allowlist
-  is missing `https://pickleballapp.app/**`. Password reset and Google/Apple
-  sign-in are both wired (6.2) and both **fail on the round trip** until this is
-  set. It also affects *every* auth email, not just those flows — a real beta
-  signup confirming their address lands on localhost. Verified broken by
-  following a reset link 2026-08-25. Add `pickleballapp://**` at the same time
-  so mobile keeps working.
+~~**Blocked on a dashboard only the human can reach:**~~ **RESOLVED 2026-08-29.**
+The Supabase Site URL and redirect allowlist are fixed — `pickleballapp://` is
+allowlisted and Google sign-in is device-verified (`58b76bd`). Do not re-raise
+this as a blocker.
 
 **Open decisions, each recorded in the notes above:**
 

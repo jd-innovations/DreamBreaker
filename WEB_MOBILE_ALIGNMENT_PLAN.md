@@ -1,13 +1,13 @@
 # Web ↔ Mobile Alignment — Implementation Plan
 
 Companion to `WEB_MOBILE_ALIGNMENT_AUDIT.md`. Written 2026-08-26.
-**Nothing in this plan is implemented yet.**
+**Partly implemented — see the progress block below.**
 
 Rendered version: https://claude.ai/code/artifact/6ecb0225-2f4d-4db0-8285-bb56ad74b4eb
 
 **All four gating decisions were answered 2026-08-26** — recorded in §1. Nothing
-in this plan is blocked on a product decision any more; what remains blocked is
-blocked by the iOS build quota and by sequencing.
+in this plan is blocked on a product decision, and as of 2026-08-29 nothing is
+blocked on the build quota either. What remains is sequencing.
 
 ---
 
@@ -25,20 +25,26 @@ to `feature/expo-mobile-foundation`. Nothing half-finished in the working tree.
 | A5 · removed dead dependencies | ✅ done | `c657aef` |
 | C3 · one vocabulary for state components | ✅ done | `526a6ce` |
 
-**🔴 Two things are waiting on a human, and one is live in production.**
+~~**🔴 Two things are waiting on a human, and one is live in production.**~~
+**Both resolved — verified 2026-08-29. Do not re-chase them.**
 
-1. **Promote a Vercel preview.** A1's fix is committed but not deployed — the
-   priced button that charges nothing is still live until you promote.
-2. **Fix the Supabase URL configuration.** Site URL is still
-   `http://localhost:3000` and the redirect allowlist is missing
-   `https://pickleballapp.app/**`. Password reset and OAuth are shipped and
-   broken. Dashboard-only, no redeploy. Add `pickleballapp://**` at the same
-   time so mobile keeps working.
+1. **Vercel promote — done.** Production is on `9898639` (2026-08-27), which
+   carries A1's fix. The priced button that charged nothing is no longer live.
+2. **Supabase URL configuration — fixed.** `pickleballapp://` is allowlisted and
+   Google sign-in is device-verified (`58b76bd`); `/auth/v1/settings` now
+   reports `mailer_autoconfirm: false` where it reported `true` at the pause.
 
-**Everything else is parked on the 2026-09-01 iOS build.** B1 is the next real
-move and its *timing* matters more than its content — it is the highest-risk
-task here and the one most likely to break the EAS builders, so it lands
-immediately after that build verifies, never before one you depend on.
+**The iOS build quota is also gone** — EAS moved to the Pro plan 2026-08-29 and
+a `preview` build was cut that day.
+
+**B1/B2 already landed** (`0ce5458`), ahead of the build, contrary to the
+sequencing this plan recommended. That risk has since been retired without
+spending a build: `expo export --platform ios` bundles clean, and
+`eas build:inspect -s archive` confirms `packages/shared/src` reaches the
+builders. **The workspace was deliberately not created** — `apps/mobile` gets
+`packages/shared` through a Metro watch folder instead, which avoids
+regenerating the lockfile and the npm 10/11 trap entirely. See
+`apps/mobile/metro.config.js`, which explains the choice at length.
 
 **Left on disk deliberately:** `frontend/node_modules`, 599 MB. `git rm` removed
 the 86 tracked files; the untracked directory remains and is safe to delete by
@@ -53,11 +59,11 @@ when.
 
 | Constraint | Effect on this plan |
 | --- | --- |
-| iOS build quota exhausted until **2026-09-01** | No mobile change is device-verifiable before then. Five items already queue behind that build. Mobile work should be *written* now, verified in one pass. |
+| ~~iOS build quota exhausted~~ **Pro plan since 2026-08-29** | No longer a constraint, but builds are still treated as expensive: batch work and verify in one pass rather than building per fix. |
 | Web ships by manual promote, not push | Every web task needs an explicit promote step. "Merged" is not "live". See `project-vercel-deploy-model`. |
-| Supabase Site URL still `localhost:3000` | Password reset and OAuth are shipped but broken. Fix before any auth-adjacent work — it invalidates testing. |
+| ~~Supabase Site URL still `localhost:3000`~~ **Fixed 2026-08-29** | Was invalidating all auth testing. Resolved; password reset and OAuth round-trip correctly. |
 | TODO 1.1 has 8 open items | This is a **second** programme, not a replacement. Running both at full speed stalls both — see §6. |
-| No workspace exists | Nowhere to put shared code. **B1 is a hard prerequisite** for all of workstream C. |
+| ~~No workspace exists~~ **Solved without one** | `packages/shared` reaches mobile through a Metro watch folder, not npm workspaces — deliberately, to avoid regenerating the lockfile. Workstream C is unblocked. |
 | 3 free / 7 paid tournaments in production | Makes payment containment surgical rather than blunt — see A1. |
 
 ---

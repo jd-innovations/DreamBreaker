@@ -1,19 +1,41 @@
 # Mobile — what the next build needs to verify
 
-**Written 2026-08-27.** Read this before the first build after the Expo plan
-upgrade. Everything here is committed and pushed on
-`feature/expo-mobile-foundation`; none of it has ever run on a device.
+**Written 2026-08-27, updated 2026-08-29.** Read the update block first — the
+premise this file was written on has since expired.
 
-## Why the app on the device currently crashes
+## ⚠️ UPDATE 2026-08-29 — the crash section below is history
+
+The `play_style` crash described next **is fixed and shipped.** `7177bee` went
+out in iOS build **#5** (`4f52e2c5`, `development` profile, 2026-08-28, commit
+`02a0023`), and device testing has run normally since — `58b76bd` was verified
+on device and `e83527c` was written from device screenshots.
+
+**A dev client is installed, so JS changes need no build.** Run
+`npx expo start --dev-client`. Everything committed since `02a0023` — the
+`@shared` imports (`0ce5458`), the clipped tournament title (`7328daf`), the
+header fix (`e83527c`) — is testable that way for free. Build only for native
+changes, or for a shareable `preview`.
+
+Preview build **#6** (`2cacd3a3`, commit `a80fce0`) was cut 2026-08-29. The
+`SENTRY_AUTH_TOKEN` needed to symbolicate crash reports lives only in the EAS
+`preview` environment, so 4.1 wants that build rather than the dev client.
+
+The verification list further down is still the right list. Keep the crash
+section for the sequencing lesson it records: the migration shipped ahead of the
+client that understood it.
+
+---
+
+## Why the app on the device crashed (2026-08-27 to 2026-08-28 — resolved)
 
 `profiles.play_style` was migrated from `text` to `text[]` on 2026-08-27. The
 build installed on the test device predates that and still runs
 `playStyle.trim()` against what is now an array, which throws. Anything that
 reads or writes a profile is affected — Edit Profile most directly.
 
-**This is a sequencing mistake, not a code defect.** The migration ran before the
-client that understands it could ship. The fix is committed (`7177bee`); it has
-simply never been built. Migrate clients first next time, or accept the gap
+**This was a sequencing mistake, not a code defect.** The migration ran before
+the client that understands it could ship. The fix (`7177bee`) shipped in build
+#5 on 2026-08-28. Migrate clients first next time, or accept the gap
 knowingly.
 
 The crash is not recoverable on-device without a new build. Do not spend time
@@ -61,10 +83,16 @@ still be wrong in a way that matters.
 5. **Sign out** (`ac91859`). Works first tap, and leaves the web session alone —
    it is `scope: 'local'` now, where it used to sign you out everywhere.
 
-## Then: the deferred workspace work
+## ~~Then: the deferred workspace work~~ — DONE 2026-08-29, and differently
 
-With a green build in hand, do the mobile half of B1/B2 **immediately after it**,
-never before one that is needed:
+B1/B2's mobile half landed in `0ce5458`, and **no npm workspace was created.**
+`packages/shared` reaches mobile through a Metro watch folder
+(`apps/mobile/metro.config.js`), so the lockfile was never regenerated and the
+npm 10/11 trap below never applied. `eas build:inspect -s archive` confirmed
+`packages/shared/src` reaches the builders, because the archive is the whole git
+repo rather than `apps/mobile`.
+
+The original plan, kept for the reasoning:
 
 - Root `package.json` with workspaces; `apps/mobile` joins
 - Regenerate the lockfile with **npm 10**, not the local npm 11 — the EAS
