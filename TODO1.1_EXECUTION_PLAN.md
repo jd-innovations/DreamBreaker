@@ -84,8 +84,9 @@ Purpose: turn `TODO1.1.md` into an ordered, one-issue-at-a-time production readi
 
 ## Current State — 2026-08-25 (status re-verified 2026-08-29)
 
-**19 of 27 items closed.** Two more (4.1, 5.3) have Completion Notes but are
-explicitly *not* closed — read their notes, not this table, for detail.
+**20 of 27 items closed** (5.3 closed on device 2026-08-29). One more (4.1) has
+Completion Notes but is explicitly *not* closed — read its notes, not this
+table, for detail.
 
 An item is done iff it has a `### Completion Notes - X.Y` section that does not
 say INCOMPLETE. Grep for those rather than trusting any summary, including this
@@ -93,8 +94,8 @@ one.
 
 | | Items |
 | --- | --- |
-| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 5.2, **6.1**, **6.2**, **6.3** |
-| **Partial** | **4.1** (web verified, mobile unverified), **5.3** (17/17 run and resolved; fix awaits a build) |
+| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 5.2, **5.3**, 6.1, 6.2, 6.3 |
+| **Partial** | **4.1** (web verified; mobile capture still unproven — nothing in the app can force a crash) |
 | **Untouched** | 4.2, 4.3, 5.1, 5.4, 7.1, 7.2, 7.3 |
 
 Phases 0-3 are complete and deployed to production.
@@ -3381,6 +3382,26 @@ Goal: users only see real, working product.
   - Production mode shows no fake user/event/payment success data.
 - Done when:
   - Demo data cannot be confused for real data.
+
+
+#### Device verification — 2026-08-29 (build #7)
+
+Verified on iOS build **#7** (`2a64589e`, `preview`, commit `dcd0dfc`), the
+first successful preview build since 2026-08-24:
+
+- **Case 20 fixed.** Non-DM conversation types are reachable.
+- **The regression to watch did not happen** — direct DMs behave exactly as
+  before, confirmed on device. That was the risk in the conversation-router
+  change (`852bcd3`), and it is now cleared.
+
+**5.3 is closed.** Its Android calendar case remains part of D4 (no hardware),
+tracked there rather than here.
+
+#### 6.1 / 6.2 / 6.3 mobile — device-verified 2026-08-29
+
+All three were closed in the repo on 2026-08-25 with their mobile halves
+unverified, waiting on a build. Checked on build #7 and behaving as designed.
+Nothing further is pending from those items.
 
 ### Completion Notes - 6.1
 
