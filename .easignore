@@ -1,0 +1,59 @@
+# .easignore — what NOT to upload to EAS Build.
+#
+# ⚠️ This file REPLACES .gitignore for the build archive; eas-cli stops reading
+# .gitignore entirely once this exists. So every dependency and build-output
+# rule has to be re-listed here, or the archive gets BIGGER, not smaller.
+#
+# Why it exists: the archive is the whole git repo, not apps/mobile — that is
+# what lets packages/shared reach the builders (see apps/mobile/metro.config.js).
+# But it also meant web/.next, 991 MB of stale Next.js output, uploaded on every
+# iOS build. web/.gitignore ignores it; eas-cli does not honour that nested
+# ignore file from the mobile project root. Measured 2026-08-29: 1,025 MB.
+#
+# Verify any change to this file for free, without spending a build:
+#   npx eas-cli build:inspect -p ios -s archive -e preview -o <dir> --force
+#
+# Keep apps/mobile/** and packages/shared/** — the build needs both.
+#
+# There is a SECOND .easignore at apps/mobile/.easignore. It is not redundant:
+# it scopes the project directory, this one scopes the repo around it. Both
+# apply, gitignore-style. Measured after this file: 22 MB.
+
+# --- dependencies and build output (re-listed: .gitignore is not read) ---
+node_modules/
+.expo/
+dist/
+web-build/
+.next/
+*.tsbuildinfo
+.metro-health-check*
+
+# --- the web app: 991 MB of .next, and nothing an iOS build needs ---
+web/
+
+# --- deleted in the alignment work; the directory lingers ---
+frontend/
+
+# --- repo material a mobile build never reads ---
+docs/
+tests/
+test_reports/
+supabase/
+memory/
+scripts/
+skills-lock.json
+design_guidelines.json
+design-lab-preview.png
+/*.md
+.github/
+.claude/
+
+# --- credentials and local env never belong in an upload ---
+.env
+.env.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
