@@ -76,6 +76,52 @@ function scrubObject(input: unknown, depth = 0): unknown {
   return out;
 }
 
+/**
+ * Breadcrumb data keys that hold a URL or a path, and must go through
+ * scrubUrl rather than the generic key check.
+ *
+ * `url` is the browser SDK's fetch and xhr breadcrumbs, which carry the FULL
+ * url including its query string. `from` and `to` are navigation breadcrumbs,
+ * which carry paths — and `/claim/<token>` is a path where the segment is
+ * itself the credential.
+ *
+ * None of these keys match SENSITIVE_KEY, so before this existed every one of
+ * them reached Sentry intact on web, on every event.
+ */
+const URL_VALUE_KEYS = ["url", "from", "to"];
+
+/**
+ * Keys carrying a query or fragment in their own field instead of inside a
+ * url, so stripping the url accomplishes nothing.
+ *
+ * Found on mobile first (see apps/mobile/src/lib/observability/sentry.ts): the
+ * automatic http breadcrumbs split the request into `url` plus `http.query`,
+ * and around forty of them ride on every event. Mirrored here because the
+ * server and edge runtimes use the same integration shape.
+ */
+const URL_QUERY_KEYS = ["http.query", "http.fragment"];
+
+/**
+ * Scrubs one breadcrumb's data bag: URLs and paths through scrubUrl, query
+ * fields dropped wholesale, then the ordinary key/value pass over the rest.
+ *
+ * Copies rather than mutating — breadcrumb data is shared with the SDK's own
+ * buffers, and mutating it in place has been a source of confusing double
+ * scrubbing.
+ */
+function scrubCrumbData(data: unknown): unknown {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return scrubObject(data);
+
+  const copy: Record<string, unknown> = { ...(data as Record<string, unknown>) };
+  for (const key of URL_VALUE_KEYS) {
+    if (typeof copy[key] === "string") copy[key] = scrubUrl(copy[key] as string);
+  }
+  for (const key of URL_QUERY_KEYS) {
+    if (key in copy) copy[key] = REDACTED;
+  }
+  return scrubObject(copy);
+}
+
 // Sentry's event types differ slightly per runtime package; this module is
 // shared by all three, so it works structurally rather than importing a type
 // that only one of them exports.
@@ -115,7 +161,7 @@ export function scrubEvent<T extends ScrubbableEvent>(event: T): T {
 
   for (const crumb of event.breadcrumbs ?? []) {
     if (crumb.message) crumb.message = scrubText(crumb.message);
-    if (crumb.data) crumb.data = scrubObject(crumb.data) as typeof crumb.data;
+    if (crumb.data) crumb.data = scrubCrumbData(crumb.data) as typeof crumb.data;
   }
 
   if (event.extra) event.extra = scrubObject(event.extra) as typeof event.extra;
@@ -151,7 +197,7 @@ export const sharedSentryOptions = {
   enabled: Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN),
   beforeSend: scrubEvent,
   beforeBreadcrumb: (crumb: Breadcrumb): Breadcrumb => {
-    if (crumb.data) crumb.data = scrubObject(crumb.data) as Breadcrumb["data"];
+    if (crumb.data) crumb.data = scrubCrumbData(crumb.data) as Breadcrumb["data"];
     if (crumb.message) crumb.message = scrubText(crumb.message);
     return crumb;
   },
