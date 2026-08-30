@@ -119,3 +119,84 @@ export function setSentryUser(userId: string | null): void {
  * this one module rather than importing the SDK across the codebase.
  */
 export const withCrashReporting = Sentry.wrap;
+
+/**
+ * Whether crash reporting is actually running. False in Expo Go and in any
+ * build made before `EXPO_PUBLIC_SENTRY_DSN` existed, where `initSentry` is a
+ * no-op — a diagnostics screen that says "sent" when nothing was sent is worse
+ * than one that says nothing is wired.
+ */
+export const CRASH_REPORTING_ENABLED = Boolean(process.env.EXPO_PUBLIC_SENTRY_DSN);
+
+/**
+ * Sends a deliberately over-stuffed event so the scrubber above can be checked
+ * against something that actually has secrets in it (4.1's Completion Notes
+ * record that it had only ever been observed against an event carrying little
+ * to scrub, and 4.2's verification asks for proof that no sensitive payload is
+ * sent).
+ *
+ * Everything below is fake. It is written to hit every branch of `beforeSend`:
+ * a sensitive key at the top level and nested, an email inside otherwise
+ * innocuous prose, a Supabase URL carrying an access token in its query string,
+ * and user context that should arrive reduced to the uuid alone.
+ *
+ * In Sentry, the resulting event must show `[redacted]` for every field named
+ * below, a breadcrumb URL with no query string, and a user with an id and
+ * nothing else. Anything legible is a scrubber bug, not a test artefact.
+ */
+export function sendScrubProbe(): void {
+  if (!CRASH_REPORTING_ENABLED) return;
+
+  Sentry.addBreadcrumb({
+    category: 'xhr',
+    message: 'GET storage object',
+    data: {
+      url: 'https://fbzetvkbhneptvfruilw.supabase.co/storage/v1/object/avatars/a.png?token=fake-access-token&apikey=fake-anon-key',
+      apikey: 'fake-anon-key',
+    },
+  });
+
+  Sentry.withScope((scope) => {
+    scope.setUser({
+      id: '00000000-0000-4000-8000-000000000000',
+      email: 'scrub-probe@example.invalid',
+      username: 'Scrub Probe',
+    });
+    scope.setExtras({
+      email: 'scrub-probe@example.invalid',
+      full_name: 'Scrub Probe',
+      phone: '+15550100',
+      message: 'my card was declined, reach me at scrub-probe@example.invalid',
+      latitude: 27.3364,
+      longitude: -82.5307,
+      nested: { authorization: 'Bearer fake-token', notes: 'support ticket body' },
+      // Kept on purpose — these two are the deliberate exceptions.
+      payment_intent_id: 'pi_0000000000fake',
+      user_id: '00000000-0000-4000-8000-000000000000',
+    });
+    Sentry.captureException(
+      new Error('Scrub probe (deliberate): contact scrub-probe@example.invalid')
+    );
+  });
+}
+
+/**
+ * Throws on the next tick so the failure reaches the global error handler
+ * rather than a React render boundary. A `throw` inside a press handler is a
+ * different code path and would not prove the handler is installed.
+ */
+export function throwUncaughtError(): void {
+  setTimeout(() => {
+    throw new Error('Deliberate uncaught JS error from the diagnostics screen');
+  }, 0);
+}
+
+/**
+ * Kills the process through the native layer. Nothing after this runs, and the
+ * report is delivered on the NEXT launch — an empty Sentry immediately after is
+ * expected, not a failure. This is the only check that exercises the native
+ * handler; `beforeSend` never sees it, so it proves delivery, not scrubbing.
+ */
+export function crashNative(): void {
+  Sentry.nativeCrash();
+}

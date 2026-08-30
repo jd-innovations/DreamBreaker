@@ -7,6 +7,7 @@ import { isFeatureEnabled, type FeatureKey } from '@/lib/featureFlags';
 const GATED_ROUTE_PREFIXES: { prefix: string; feature: FeatureKey }[] = [
   { prefix: '/design-lab', feature: 'devTools' },
   { prefix: '/dev-qr-scan', feature: 'devTools' },
+  { prefix: '/dev-diagnostics', feature: 'devTools' },
   { prefix: '/onboarding-preview', feature: 'devTools' },
   { prefix: '/coach', feature: 'coachMarketplace' },
   { prefix: '/lessons', feature: 'lessonMarketplace' },
