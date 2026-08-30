@@ -8,10 +8,12 @@
 // the sticky CTA on mobile.
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/layout/logo";
 import { OnboardingProvider } from "@/lib/onboarding/state";
 import { STEPS, STEP_COUNT, stepIndex } from "@/lib/onboarding/steps";
+import { track } from "@/lib/analytics";
 
 function ProgressBar({ currentSlug }: { currentSlug: string | null }) {
   const i = currentSlug ? stepIndex(currentSlug) : -1;
@@ -40,10 +42,43 @@ function ProgressBar({ currentSlug }: { currentSlug: string | null }) {
   );
 }
 
+/**
+ * Onboarding funnel events (4.2), emitted from the layout because it already
+ * derives the step from the pathname — instrumenting six pages separately
+ * would be six chances to forget one.
+ *
+ * `completed` fires only when the index moves FORWARD. Going back to change an
+ * answer is not completing a step, and counting it would inflate every
+ * conversion rate. It means a step revisited and re-advanced counts twice,
+ * which is the honest reading: the user did complete it twice.
+ *
+ * The slug is a fixed value from STEPS, never user input.
+ */
+function useOnboardingFunnel(slug: string | null, index: number) {
+  const previous = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!slug || index < 0) return;
+
+    const from = previous.current;
+    if (from !== null && index > from) {
+      const completed = STEPS[from];
+      if (completed) {
+        track("onboarding_step_completed", { step: completed.slug, step_index: from, step_count: STEP_COUNT });
+      }
+    }
+
+    track("onboarding_step_viewed", { step: slug, step_index: index, step_count: STEP_COUNT });
+    previous.current = index;
+  }, [slug, index]);
+}
+
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const slug = STEPS.find((s) => s.path === pathname)?.slug ?? null;
   const i = slug ? stepIndex(slug) : -1;
+
+  useOnboardingFunnel(slug, i);
 
   return (
     <OnboardingProvider>

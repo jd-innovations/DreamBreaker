@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Lightning, ShieldCheck, Clock, CheckCircle, WarningCircle, Users } from "@phosphor-icons/react";
 import { toast } from "sonner";
+import { track } from "@/lib/analytics";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -47,6 +48,12 @@ export function HoldMySpotDialog({ open, onOpenChange, tournament, onSuccess }: 
 
   const confirm = async () => {
     setLoading(true);
+    track("tournament_registration_started", {
+      tournament_id: tournament.id,
+      entry_fee_cents: tournament.entry_fee_cents,
+      is_free: tournament.entry_fee_cents === 0,
+      source: "hold_my_spot",
+    });
     try {
       const userId = await getUserId();
       if (!userId) {
@@ -72,6 +79,13 @@ export function HoldMySpotDialog({ open, onOpenChange, tournament, onSuccess }: 
       const { data: existing } = await existingQuery.maybeSingle();
 
       if (existing) {
+        // A duplicate is a failure of this attempt, not a data error. Without
+        // it the funnel shows a start with no outcome, which reads as a crash.
+        track("tournament_registration_failed", {
+          tournament_id: tournament.id,
+          error_code: existing.status === "held" ? "already_held" : "already_registered",
+          source: "hold_my_spot",
+        });
         toast.error(
           existing.status === "held"
             ? "You already have a hold on this event."
@@ -99,10 +113,24 @@ export function HoldMySpotDialog({ open, onOpenChange, tournament, onSuccess }: 
       const { error } = await supabase.from("registrations").insert(insertPayload);
 
       if (error) {
+        // error.code is a PostgREST code such as 23505, not prose. The message
+        // is deliberately not sent — it can quote row values.
+        track("tournament_registration_failed", {
+          tournament_id: tournament.id,
+          error_code: error.code ?? "insert_failed",
+          source: "hold_my_spot",
+        });
         toast.error("Could not hold your spot. Please try again.");
         console.error(error);
         return;
       }
+
+      track("tournament_registration_succeeded", {
+        tournament_id: tournament.id,
+        entry_fee_cents: tournament.entry_fee_cents,
+        is_free: tournament.entry_fee_cents === 0,
+        source: "hold_my_spot",
+      });
 
       setExpiresAt(holdExpiry);
       setStep("success");

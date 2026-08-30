@@ -16,6 +16,7 @@
 // Every failure degrades to "profile still incomplete", which the nudge covers.
 
 import { createClient } from "@/lib/supabase/client";
+import { track } from "@/lib/analytics";
 import { ensureFreshSession } from "@/lib/ensure-session";
 import { draftToProfileFields, profileFieldsSchema } from "./transform";
 import type { OnboardingDraft, DraftField } from "./draft";
@@ -104,7 +105,15 @@ export async function finalizeOnboarding(
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { status: "deferred" };
-    return await writeProfileFields(user.id, draft, touched);
+    const result = await writeProfileFields(user.id, draft, touched);
+    // Only a real write counts. "deferred" means no session existed yet and
+    // the draft is still sitting in localStorage — reporting that as a
+    // completed profile would make the funnel claim conversions that have not
+    // happened, and the retry would then count the same person again.
+    if (result.status === "saved") {
+      track("profile_completed", { source: "onboarding" });
+    }
+    return result;
   } catch (err) {
     console.error("[onboarding] finalize failed to resolve a session", err);
     // Treat an unreadable session as deferred rather than an error: the draft
