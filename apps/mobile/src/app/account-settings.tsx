@@ -18,6 +18,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { getProfileCompletion } from '@/lib/profileCompletion';
 import { signOut } from '@/lib/auth';
 import { openPrivacy, openTerms } from '@/lib/legal';
+import { isFeatureEnabled } from '@/lib/featureFlags';
 import { ProfileCompletionRing } from '@/components';
 
 // Theme-backed alias Ã¢â‚¬â€ brand values resolve from @/theme.
@@ -66,6 +67,27 @@ const CELL_ROUTES: Record<string, string> = {
   Permissions:   '/permissions-settings',
   Payments:      '/payments-settings',
 };
+
+const DEV_TOOLS = [
+  {
+    route: '/dev-diagnostics',
+    icon: 'pulse-outline',
+    label: 'Diagnostics',
+    sub: 'Crash reporting checks and the scrubber probe.',
+  },
+  {
+    route: '/design-lab',
+    icon: 'color-palette-outline',
+    label: 'Design Lab',
+    sub: 'Component and token reference.',
+  },
+  {
+    route: '/dev-qr-scan',
+    icon: 'qr-code-outline',
+    label: 'QR Scanner Test',
+    sub: 'Decode and classify a code without mutating anything.',
+  },
+];
 
 function SettingCell({ icon, label }: { icon: string; label: string }) {
   const route = CELL_ROUTES[label];
@@ -241,6 +263,36 @@ export default function AccountSettingsScreen() {
           </View>
           <Ionicons name="chevron-forward" size={16} color={L.danger} />
         </TouchableOpacity>
+
+        {/* Developer tools — internal builds only.
+            These screens existed with no way to reach them: design-lab and
+            dev-qr-scan were reachable only by typing a URL, and a deep link is
+            unreliable when a dev client and a preview build both register the
+            pickleballapp:// scheme, because the OS picks one of them. The
+            `devTools` gate is the same one that guards the routes themselves,
+            so this block cannot appear in a production build. */}
+        {isFeatureEnabled('devTools') ? (
+          <View style={dev.section}>
+            <Text style={dev.heading}>Developer</Text>
+            {DEV_TOOLS.map((tool) => (
+              <TouchableOpacity
+                key={tool.route}
+                style={dev.row}
+                activeOpacity={0.75}
+                onPress={() => router.push(tool.route as never)}
+                accessibilityRole="button"
+                accessibilityLabel={tool.label}
+              >
+                <Ionicons name={tool.icon as never} size={20} color={L.navy} />
+                <View style={dev.rowText}>
+                  <Text style={dev.rowTitle}>{tool.label}</Text>
+                  <Text style={dev.rowSub}>{tool.sub}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={L.textMuted} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.footerRow}>
           <TouchableOpacity style={styles.footerBtn} onPress={openPrivacy} activeOpacity={0.7}>
@@ -459,4 +511,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
   },
+});
+
+const dev = StyleSheet.create({
+  section: {
+    marginTop: 8,
+    gap: 8,
+  },
+  heading: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    color: L.textMuted,
+    textTransform: 'uppercase',
+    paddingHorizontal: 4,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: L.bg,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: L.border,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  rowText: { flex: 1 },
+  rowTitle: { fontSize: 15, fontWeight: '700', color: L.navy },
+  rowSub: { fontSize: 12, color: L.textMuted, marginTop: 2 },
 });
