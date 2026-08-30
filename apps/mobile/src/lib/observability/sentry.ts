@@ -32,6 +32,24 @@ function scrubUrl(url: string): string {
   return typeof url === 'string' ? url.split('#')[0].split('?')[0] : url;
 }
 
+/**
+ * Breadcrumb data keys that carry a URL's query or fragment in their own field
+ * rather than inside `url`.
+ *
+ * This is not a theoretical case. Sentry's automatic http breadcrumbs — the
+ * ones attached to EVERY event, without anyone asking — split the request into
+ * `url` plus `http.query`, so `url` arrives already clean and stripping it
+ * again does nothing. Verified against a real event on 2026-08-30, where the
+ * seeded breadcrumb was clean and forty automatic ones carried their full
+ * query strings.
+ *
+ * Two things made that look safer than it was: the email regex happened to
+ * catch `email=` in one PostgREST filter, and Sentry's own server-side
+ * scrubbing filtered a `push_tokens` query. Neither is a control we own, and
+ * neither would catch `?token=<jwt>` on a signed storage or realtime URL.
+ */
+const URL_QUERY_KEYS = ['http.query', 'http.fragment'];
+
 function scrubText<T>(value: T): T {
   return (typeof value === 'string' ? value.replace(EMAIL, REDACTED) : value) as T;
 }
@@ -85,6 +103,12 @@ export function initSentry(): void {
         if (crumb.data) {
           const data = crumb.data as Record<string, unknown>;
           if (typeof data.url === 'string') data.url = scrubUrl(data.url);
+          // Dropped wholesale rather than filtered, matching scrubUrl: the
+          // reason not to allowlist query parameters does not change just
+          // because they arrived in a different field.
+          for (const key of URL_QUERY_KEYS) {
+            if (key in data) data[key] = REDACTED;
+          }
           crumb.data = scrubObject(data) as typeof crumb.data;
         }
       }
@@ -153,6 +177,20 @@ export function sendScrubProbe(): void {
     data: {
       url: 'https://fbzetvkbhneptvfruilw.supabase.co/storage/v1/object/avatars/a.png?token=fake-access-token&apikey=fake-anon-key',
       apikey: 'fake-anon-key',
+    },
+  });
+
+  // Shaped exactly like Sentry's automatic http breadcrumbs, which is where
+  // the real leak was: the query lives in its own field, so `url` arrives
+  // clean and scrubbing it proves nothing. The token below must not survive.
+  Sentry.addBreadcrumb({
+    category: 'http',
+    type: 'http',
+    data: {
+      method: 'GET',
+      status_code: 200,
+      url: 'https://fbzetvkbhneptvfruilw.supabase.co/storage/v1/object/sign/avatars/a.png',
+      'http.query': 'token=eyJhbGciOiJIUzI1NiJ9.fake-signed-url-token.signature&download=true',
     },
   });
 
