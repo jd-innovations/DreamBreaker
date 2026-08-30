@@ -84,9 +84,8 @@ Purpose: turn `TODO1.1.md` into an ordered, one-issue-at-a-time production readi
 
 ## Current State — 2026-08-25 (status re-verified 2026-08-29)
 
-**20 of 27 items closed** (5.3 closed on device 2026-08-29). One more (4.1) has
-Completion Notes but is explicitly *not* closed — read its notes, not this
-table, for detail.
+**21 of 27 items closed.** 5.3 and 4.1 both closed on device 2026-08-29/30.
+Nothing is partial any more; the six that remain are untouched.
 
 An item is done iff it has a `### Completion Notes - X.Y` section that does not
 say INCOMPLETE. Grep for those rather than trusting any summary, including this
@@ -94,9 +93,9 @@ one.
 
 | | Items |
 | --- | --- |
-| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 5.2, **5.3**, 6.1, 6.2, 6.3 |
-| **Partial** | **4.1** (web verified; mobile capture still unproven — nothing in the app can force a crash) |
-| **Untouched** | 4.2, 4.3, 5.1, 5.4, 7.1, 7.2, 7.3 |
+| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, **4.1**, 5.2, 5.3, 6.1, 6.2, 6.3 |
+| **Partial** | — |
+| **Untouched** | **4.2** (started — shared taxonomy landed, neither platform wired), 4.3, 5.1, 5.4, 7.1, 7.2, 7.3 |
 
 Phases 0-3 are complete and deployed to production.
 
@@ -3110,6 +3109,62 @@ Goal: every native integration works on real devices.
   - Matrix results documented.
 - Done when:
   - Auth is verified across providers and app lifecycle.
+
+
+#### Mobile capture verified on device — 2026-08-29/30
+
+Ran on the dev client (build #5) through the new `dev-diagnostics` screen,
+which exists because nothing in the app could force a crash — the one reason
+this item stayed open after both platforms were wired.
+
+All three of this item's Verification bullets now pass:
+
+- **Mobile test error appears in the dashboard.** Issue
+  `0c400737f3ee43cbb521ee7c4c2edfe5`, then two more.
+- **Web was already verified in production.**
+- **Release and environment tags are correct**: `environment = development`,
+  `release = app.pickleballapp@1.0.0+5`, `dist = 5`, `hermes = True`.
+
+**Scrubbing is now proven against an event that actually had secrets in it**,
+which the earlier notes flagged as untested. Confirmed redacted: the exception
+message, the user object (reduced to a bare uuid from a scope that set email
+and username), and every seeded extra — `email`, `full_name`, `phone`,
+`message`, `latitude`, `longitude`, and a nested `authorization` / `notes`.
+`payment_intent_id` and `user_id` survive, which is the deliberate exception.
+
+**The probe found a real leak on its first run (`f1ed3cf`).** `scrubUrl`
+strips the query off `crumb.data.url`, but Sentry's *automatic* http
+breadcrumbs — attached to every event, unasked — split the request into `url`
+plus **`http.query`**, so `url` arrives already clean and the whole query
+string rode along untouched. The first event carried one clean seeded
+breadcrumb and around forty automatic ones with their PostgREST filters and
+column lists intact.
+
+Two coincidences hid it, and neither is a control this project owns: the email
+regex happened to catch `email=` inside one filter, and `push_tokens` came back
+`[Filtered]` — **Sentry's server-side scrubbing, not ours; ours writes
+`[redacted]`**. Neither would have caught `?token=<jwt>` on a signed storage or
+realtime URL, the exact case `scrubUrl`'s comment claims to defend.
+
+`http.query` and `http.fragment` are now dropped wholesale, and the probe seeds
+a breadcrumb in the automatic shape carrying a fake signed-URL token, so the
+test exercises what was broken rather than what already worked. Re-verified
+2026-08-30: every `http.query` reads `[redacted]`, seeded one included.
+
+**A trap worth remembering:** `Sentry.init()` captures `beforeSend` at startup,
+so Fast Refresh updates the probe without updating the scrubber. A scrubber
+change must be tested after a **full reload**, or the result is a false
+negative.
+
+**4.1 is closed on its Verification criteria.** Two smaller things stay open and
+are tracked as leftovers, not as blockers:
+
+- **Alerting rules are untuned** (crash spikes, payment/auth failures).
+- **Symbolication is unproven on a non-Metro build.** A dev client resolves
+  frames from Metro's source maps; `SENTRY_AUTH_TOKEN` lives only in the EAS
+  `preview` environment, so the uploaded-source-map path is only exercised by a
+  preview build. The uncaught-JS and native-crash buttons are also still
+  unpressed. All three fold into build #8.
 
 ### Completion Notes - 5.2
 
