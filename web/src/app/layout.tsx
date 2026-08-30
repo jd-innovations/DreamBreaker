@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { OnboardingNudgeHost } from "@/components/onboarding/onboarding-nudge-host";
+import { AnalyticsProvider } from "@/components/layout/analytics-provider";
 import { Toaster } from "sonner";
 
 const manrope = Manrope({
@@ -53,6 +54,10 @@ export default function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">{`(function(){try{var t=localStorage.getItem('dbpb-theme');document.documentElement.classList.add(t||'dark');}catch(e){}})();`}</Script>
         {/* Runtime config — read server env vars into the DOM so client bundles don't need build-time baking */}
         <script id="app-config" type="application/json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "", supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "" }) }} />
+        {/* Analytics starts here, not in PageShell: /dashboard and /admin roll
+            their own shells, and partial coverage makes funnel holes that read
+            as user drop-off. No-op when no PostHog key is configured. */}
+        <AnalyticsProvider />
         <ThemeProvider>
           {children}
           {/* Flushes an onboarding draft once a session exists (email signup has

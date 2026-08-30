@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { GoogleLogo, AppleLogo, Eye, EyeSlash, Lightning, Trophy, Heart, X } from "@phosphor-icons/react";
 import { toast } from "sonner";
+import { track, identifyUser } from "@/lib/analytics";
 import { Logo } from "@/components/layout/logo";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -76,6 +77,9 @@ export default function AuthPage() {
   // round trip — that field is dashboard-only and cannot be read from here.
   const handleOAuth = async (provider: "google" | "apple") => {
     setLoading(true);
+    // `method` is the provider name, which is a fixed vocabulary, not user
+    // input — see ALLOWED_PROPERTY_KEYS in packages/shared/src/analytics.ts.
+    track("auth_started", { method: provider, source: "auth_page" });
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithOAuth({
@@ -85,10 +89,16 @@ export default function AuthPage() {
       // A successful call navigates away, so reaching here at all means it
       // failed. Surface it rather than leaving the button looking inert.
       if (error) {
+        // No error_code here: Supabase OAuth errors are prose, and prose is
+        // what the allowlist exists to keep out. The count is the signal.
+        track("auth_failed", { method: provider, source: "auth_page" });
         toast.error(error.message);
         setLoading(false);
       }
+      // Success is not reported here. A successful call redirects to the
+      // provider, so this frame never sees it — /auth/callback owns that event.
     } catch (err: unknown) {
+      track("auth_failed", { method: provider, source: "auth_page" });
       toast.error(err instanceof Error ? err.message : "Sign-in failed");
       setLoading(false);
     }
@@ -137,6 +147,7 @@ export default function AuthPage() {
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+    track("auth_started", { method: "email", source: "auth_page" });
     try {
       const fd = new FormData(e.currentTarget);
       const supabase = createClient();
@@ -145,12 +156,18 @@ export default function AuthPage() {
         password: fd.get("password") as string,
       });
       if (error) {
+        track("auth_failed", { method: "email", source: "auth_page" });
         toast.error(error.message);
         return;
       }
+      // Identify before the success event so it lands on the right person, and
+      // before the navigation below, which tears this frame down.
+      if (data.user?.id) identifyUser(data.user.id);
+      track("auth_succeeded", { method: "email", source: "auth_page" });
       toast.success("Welcome back!");
       window.location.href = "/dashboard";
     } catch (err: unknown) {
+      track("auth_failed", { method: "email", source: "auth_page" });
       toast.error(err instanceof Error ? err.message : "Sign-in failed");
     } finally {
       setLoading(false);

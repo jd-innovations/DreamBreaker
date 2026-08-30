@@ -8,6 +8,7 @@ import { Sun, Moon, List, X, ShieldStar } from "@phosphor-icons/react";
 import { Logo } from "./logo";
 import { useTheme } from "./theme-provider";
 import { createClient } from "@/lib/supabase/client";
+import { resetAnalytics } from "@/lib/analytics";
 import { NotificationBell } from "@/components/notifications/bell";
 
 const navLinks = [
@@ -115,6 +116,10 @@ export function Header() {
     } catch {
       /* fall through and navigate anyway */
     } finally {
+      // Clears the analytics identity too. Without this a shared browser
+      // attributes the next person's whole session to whoever logged out —
+      // and unlike the auth session, PostHog's identity survives navigation.
+      resetAnalytics();
       setLoggingOut(false);
       router.push("/");
       router.refresh();
