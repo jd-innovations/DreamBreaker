@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Switch,
+  ScrollView, Switch, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -318,9 +318,34 @@ export default function NotificationsSettingsScreen() {
           />
         </Group>
         {pushResult && (
-          <Text style={s.groupNote}>
-            {pushResult.ok ? 'Push notifications are enabled on this device.' : pushResult.reason}
-          </Text>
+          <View>
+            <Text style={s.groupNote}>
+              {pushResult.ok
+                ? 'Push notifications are enabled on this device.'
+                : pushResult.status === 'permission_denied'
+                  ? 'Notifications are turned off for Pickleball App in iOS Settings. iOS only asks once, so the switch above cannot turn them back on — it has to be done in Settings.'
+                  : pushResult.reason}
+            </Text>
+
+            {/* iOS shows its permission prompt ONCE per install. If it was
+                declined — during onboarding, most likely — requesting again
+                returns denied without showing anything, so the toggle can never
+                succeed and would just flip back with no explanation. The only
+                real remedy is the system settings page, so offer it directly
+                rather than describing where to find it. */}
+            {!pushResult.ok && pushResult.status === 'permission_denied' && (
+              <TouchableOpacity
+                style={s.openSettingsBtn}
+                onPress={() => { void Linking.openSettings(); }}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Open iOS Settings to enable notifications"
+              >
+                <Ionicons name="open-outline" size={16} color={L.blue} />
+                <Text style={s.openSettingsText}>Open Settings</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
 
         {/* Quiet Hours and Badge Counts were here. Both removed 2026-08-31.
@@ -384,6 +409,15 @@ const s = StyleSheet.create({
     color: L.textMuted, fontSize: 12, fontWeight: '400',
     paddingHorizontal: 4, marginTop: 8,
   },
+  openSettingsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    marginTop: 2,
+  },
+  openSettingsText: { color: L.blue, fontSize: 14, fontWeight: '700' },
 
   row: {
     flexDirection: 'row', alignItems: 'center',
