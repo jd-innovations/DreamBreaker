@@ -13,6 +13,7 @@ import { fetchTournamentById, updateTournamentDetails } from '@/lib/supabase/tou
 import { useProfile } from '@/hooks/useProfile';
 import type { Tournament } from '@/lib/tournamentTypes';
 import { DirectorOnly } from '@/components/DirectorOnly';
+import AmenityPicker from '@/components/AmenityPicker';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -227,6 +228,7 @@ function EditTournamentScreen() {
     'date' | 'registrationOpenDate' | 'registrationCloseDate' | null
   >(null);
   const [dateDraft, setDateDraft] = useState(new Date());
+  const [amenities, setAmenities] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -240,6 +242,7 @@ function EditTournamentScreen() {
       }
       setTournament(t);
       setForm(tournamentToForm(t));
+      setAmenities(t.amenities ?? []);
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -319,6 +322,7 @@ function EditTournamentScreen() {
 
     setSaving(true);
     const result = await updateTournamentDetails(id, {
+      amenities,
       name:                 form.name.trim(),
       venue:                form.venue.trim(),
       city:                 form.city.trim(),
@@ -379,6 +383,10 @@ function EditTournamentScreen() {
           <Field label="Venue / Location *" value={form.venue} onChange={v => set('venue', v)} error={errors.venue} />
           <Field label="City *" value={form.city} onChange={v => set('city', v)} error={errors.city} />
           <Field label="State *" value={form.state} onChange={v => set('state', v)} error={errors.state} />
+
+          <View style={{ marginTop: 10 }}>
+            <AmenityPicker value={amenities} onChange={setAmenities} />
+          </View>
 
           <Text style={s.sectionTitle}>Dates</Text>
           <DateField

@@ -12,6 +12,7 @@ import { colors, radius } from '@/theme';
 import { useSession } from '@/hooks/useSession';
 import { useProfile } from '@/hooks/useProfile';
 import { createDraftTournament } from '@/lib/supabase/tournaments';
+import AmenityPicker from '@/components/AmenityPicker';
 import { FacilityPicker, type FacilityPickerValue } from '@/components/FacilityPicker';
 import { useSupportContext } from '@/lib/support/supportContext';
 
@@ -346,6 +347,7 @@ export default function CreateTournamentScreen() {
 
   const [stepIdx, setStepIdx]   = useState(0);
   const [form, setForm]         = useState<FormState>(EMPTY);
+  const [amenities, setAmenities] = useState<string[]>([]);
   const [errors, setErrors]     = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
   const [facilityId,   setFacilityId]   = useState<string | null>(null);
@@ -466,6 +468,7 @@ export default function CreateTournamentScreen() {
     setSubmitting(true);
     const t = await createDraftTournament({
       directorId:           user.id,
+      amenities,
       name:                 form.name.trim(),
       venue:                form.venue.trim(),
       city:                 form.city.trim(),
@@ -559,6 +562,10 @@ export default function CreateTournamentScreen() {
                 placeholder="e.g. FL"
                 error={errors.state}
               />
+
+              <View style={{ marginTop: 6 }}>
+                <AmenityPicker value={amenities} onChange={setAmenities} />
+              </View>
             </View>
           )}
 

@@ -109,6 +109,10 @@ function dbRowToTournament(row: Record<string, unknown>): Tournament {
     featured:             Boolean(row.featured),
     facilityId:           row.facility_id != null ? String(row.facility_id) : null,
     coverImgUrl:          row.cover_img_url != null ? String(row.cover_img_url) : null,
+    // Director-chosen chips for the detail strip. Empty for every tournament
+    // until a director picks some; the strip hides itself rather than falling
+    // back to the invented copy it used to show.
+    amenities:            Array.isArray(row.amenities) ? (row.amenities as string[]) : [],
     directorId:           row.director_id != null ? String(row.director_id) : null,
   };
 }
@@ -127,7 +131,7 @@ export async function fetchTournaments(): Promise<Tournament[]> {
 export async function fetchTournamentById(id: string): Promise<Tournament | null> {
   const { data, error } = await supabase
     .from('tournaments')
-    .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id')
+    .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,amenities')
     .eq('id', id)
     .single();
 
@@ -163,6 +167,7 @@ export type CreateTournamentInput = {
   holdFeeCents: number;
   drawSize: number;
   facilityId: string | null;
+  amenities: string[];
 };
 
 // Always creates in 'draft' — matches the web director flow (draft -> submit
@@ -187,6 +192,7 @@ export async function createDraftTournament(input: CreateTournamentInput): Promi
       hold_fee_cents:         input.holdFeeCents,
       draw_size:              input.drawSize,
       facility_id:            input.facilityId,
+      amenities:              input.amenities,
       status:                 'draft',
       spots_filled:           0,
     })
@@ -212,6 +218,7 @@ export type UpdateTournamentInput = {
   entryFeeCents: number;
   holdFeeCents: number;
   drawSize: number;
+  amenities: string[];
 };
 
 // Directors can only edit while the tournament is still a draft (RLS also
@@ -233,6 +240,7 @@ export async function updateTournamentDetails(id: string, input: UpdateTournamen
       entry_fee_cents:         input.entryFeeCents,
       hold_fee_cents:          input.holdFeeCents,
       draw_size:               input.drawSize,
+      amenities:               input.amenities,
     })
     .eq('id', id);
 

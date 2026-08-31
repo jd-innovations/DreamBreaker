@@ -47,5 +47,7 @@ export interface Tournament {
   featured:             boolean;
   facilityId?: string | null;
   coverImgUrl?: string | null;
+  /** Up to 3 amenity keys chosen by the director; resolved via AMENITY_CATALOG. */
+  amenities?: string[];
   directorId?: string | null;
 }

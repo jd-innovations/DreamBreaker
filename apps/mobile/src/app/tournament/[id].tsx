@@ -33,6 +33,7 @@ import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
 import { fetchPlayerHolds, fetchPlayerRegistrations } from '@/lib/supabase/registrations';
 import { fetchFacilityById, facilityAccessType, type FacilityDetail } from '@/lib/supabase/facilities';
 import LocationCard from '@/components/LocationCard';
+import { resolveAmenities } from '@/lib/tournamentAmenities';
 import { fetchProfile, type UserProfile } from '@/lib/services/profile';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateConversation } from '@/lib/conversationService';
@@ -76,13 +77,6 @@ const DIRECTOR_PHOTO = 'https://images.unsplash.com/photo-1472099645785-5658abf4
 // Labels are deliberately short enough to stay on one line each at this width —
 // the compact single-row strip below depends on it. Longer copy ("USAP
 // Approved", "For All Players") wraps to two lines and makes the row ragged.
-const AMENITIES = [
-  { icon: 'trophy-outline',    title: 'Sanctioned',    sub: 'USAP'     },
-  { icon: 'car-outline',       title: 'Parking',       sub: 'Free'     },
-  { icon: 'gift-outline',      title: 'Player Gifts',  sub: 'Included' },
-  { icon: 'restaurant-outline', title: 'Food & Drinks', sub: 'On Site'  },
-];
-
 function splitHeroName(name: string): [string, string] {
   const idx = name.lastIndexOf(' ');
   if (idx === -1) return ['', name.toUpperCase()];
@@ -273,6 +267,9 @@ export default function TournamentDetail() {
     entityLabel: tournament?.name,
   });
 
+  // Unknown keys are dropped and the list is capped at three, so a row written
+  // by a newer build renders fewer chips here rather than breaking the strip.
+  const amenities = resolveAmenities(tournament?.amenities);
   const heroLine1 = tournament ? splitHeroName(tournament.name)[0] : '';
   const heroLine2 = tournament ? splitHeroName(tournament.name)[1] : '';
 
@@ -631,19 +628,23 @@ export default function TournamentDetail() {
             </TouchableOpacity>
           )}
 
-          {/* AMENITIES */}
-          <View style={s.amenitiesRow}>
-            {AMENITIES.map((a, i) => (
-              <React.Fragment key={a.title}>
-                {i > 0 && <View style={s.amenityDivider} />}
-                <View style={s.amenityItem}>
-                  <Ionicons name={a.icon as never} size={22} color={L.gold} />
-                  <Text style={s.amenityTitle} numberOfLines={1}>{a.title}</Text>
-                  <Text style={s.amenitySub} numberOfLines={1}>{a.sub}</Text>
-                </View>
-              </React.Fragment>
-            ))}
-          </View>
+          {/* AMENITIES — up to three chips the director actually chose.
+              Hidden entirely when none are set: an empty strip says nothing,
+              and the invented copy this replaced said something untrue. */}
+          {amenities.length > 0 && (
+            <View style={s.amenitiesRow}>
+              {amenities.map((a, i) => (
+                <React.Fragment key={a.key}>
+                  {i > 0 && <View style={s.amenityDivider} />}
+                  <View style={s.amenityItem}>
+                    <Ionicons name={a.icon} size={22} color={L.gold} />
+                    <Text style={s.amenityTitle} numberOfLines={1}>{a.title}</Text>
+                    <Text style={s.amenitySub} numberOfLines={1}>{a.sub}</Text>
+                  </View>
+                </React.Fragment>
+              ))}
+            </View>
+          )}
 
           {/* DIVISIONS */}
           <View style={s.section}>
