@@ -4248,6 +4248,56 @@ needs either a device or a rendered page, not a static scan.
 - Done when:
   - App feels stable on target devices.
 
+### Completion Notes - 7.3 (partial — images done, profiling outstanding)
+
+**Not closed.** 7.3 also asks for startup/route profiling and low-end device
+behaviour, which need hardware. The image half is done.
+
+#### Mobile assets: 7.0 MB -> 1.13 MB, an 84% cut
+
+That is download size for every user, since these ship inside the binary.
+
+**Deleting beat compressing.** Three of the four largest files were referenced
+nowhere — `pba-logo.png` (2.0 MB), `onboarding-hero.jpg` (432 KB),
+`logo-glow.png` (324 KB). 2.8 MB, over a third of the total, was dead weight.
+Checked by exact filename against `src/`, `app.config.js` and `app.json`; an
+earlier substring search produced a false positive by matching
+`pba-logo-cropped`, which IS used.
+
+**Resizing beat compressing too.** `pba-logo-cropped.png` was 1472x293 and
+renders at 200x40 points — so 600px wide covers 3x retina, the densest screen
+this app runs on. Resized: **695 KB -> 17 KB**. Recompression alone had managed
+695 -> 675 KB.
+
+| | before | after |
+| --- | --- | --- |
+| icon.png | 1402 KB | 372 KB |
+| pba-logo-cropped.png | 695 KB | 17 KB |
+| default-court-cover.jpg | 308 KB | 167 KB |
+| android-icon-foreground.png | 287 KB | 74 KB |
+
+#### The check that caught a bad result
+
+Every re-encode was verified by decoding both versions and comparing raw
+pixels, not by trusting the file size. That caught a real regression:
+palette-quantising `pba-logo-cropped.png` gave a spectacular 695 -> 47 KB and a
+**mean pixel difference of 32/255 with a maximum of 231** — a logo with
+gradients wrecked by a 256-colour palette. A size-only check would have shipped
+it. The final versions measure: icon 0.64/255, android foreground 0.49/255, the
+resized logo pixel-exact against its own downscale, and the JPEGs 0.70 and 2.18.
+
+`icon.png` remains exactly **1024x1024** — stores mandate it — and dimensions
+were left alone everywhere except the one asset that was demonstrably
+oversampled.
+
+Verified after: `expo export` for iOS succeeds, all five `app.config.js` asset
+references resolve, and `expo-doctor` is still 18/18.
+
+#### Not done
+
+Startup and route profiling, heavy renders, low-end device behaviour. All need
+a device and build #9.
+
 ## Suggested Work Order
 
 1. `0.1` Freeze beta scope.
