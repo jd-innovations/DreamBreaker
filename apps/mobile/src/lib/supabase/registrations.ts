@@ -386,20 +386,20 @@ export async function checkInRegistration(
     p_tournament_id: tournamentId,
   });
   if (error) {
-    track('qr_checkin_failed', { tournament_id: tournamentId, checkin_method: method, error_code: 'rpc_error' });
+    track('checkin_failed', { tournament_id: tournamentId, checkin_method: method, error_code: 'rpc_error' });
     throw new Error(error.message);
   }
 
   const row = data?.[0];
   if (!row) {
-    track('qr_checkin_failed', { tournament_id: tournamentId, checkin_method: method, error_code: 'empty_response' });
+    track('checkin_failed', { tournament_id: tournamentId, checkin_method: method, error_code: 'empty_response' });
     throw new Error('No response from check-in');
   }
 
   // `result` is the RPC's own enum, not free text — already_checked_in and
   // wrong_tournament are the two worth telling apart at a busy desk. reason and
   // playerName are deliberately never sent.
-  track(row.result === 'success' ? 'qr_checkin_succeeded' : 'qr_checkin_failed', {
+  track(row.result === 'success' ? 'checkin_succeeded' : 'checkin_failed', {
     tournament_id: tournamentId,
     checkin_method: method,
     ...(row.result === 'success' ? {} : { error_code: row.result as string }),

@@ -60,9 +60,15 @@ export type AnalyticsEvent =
   | "payment_succeeded"
   | "payment_failed"
   | "payment_canceled"
-  // Check-in
-  | "qr_checkin_succeeded"
-  | "qr_checkin_failed"
+  // Check-in. NOT `qr_checkin_*`: manual check-in and QR scanning share one
+  // code path, so an event named for the scanner would count both and hide how
+  // much the scanner is actually used — which is the number that decides
+  // whether it earns its place at a busy check-in desk. The `checkin_method`
+  // property carries scan vs manual. Renamed 2026-08-31, one event into the
+  // project's history, because renaming later means losing history or keeping
+  // an alias forever.
+  | "checkin_succeeded"
+  | "checkin_failed"
   // Support
   | "support_ticket_submitted";
 
@@ -87,8 +93,8 @@ export const ANALYTICS_EVENTS: readonly AnalyticsEvent[] = [
   "payment_succeeded",
   "payment_failed",
   "payment_canceled",
-  "qr_checkin_succeeded",
-  "qr_checkin_failed",
+  "checkin_succeeded",
+  "checkin_failed",
   "support_ticket_submitted",
 ] as const;
 
