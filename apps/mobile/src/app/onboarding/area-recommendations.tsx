@@ -86,7 +86,7 @@ export default function AreaRecommendationsScreen() {
   return (
     <View style={[s.root, { paddingTop: insets.top + 8 }]}> 
       <View style={s.header}>
-        <TouchableOpacity style={s.headerBtn} activeOpacity={0.7} onPress={() => router.back()}>
+        <TouchableOpacity style={s.headerBtn} activeOpacity={0.7} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={24} color={L.navy} />
         </TouchableOpacity>
         <TouchableOpacity style={s.skipBtn} activeOpacity={0.7} onPress={next}>

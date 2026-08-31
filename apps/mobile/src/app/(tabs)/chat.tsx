@@ -473,7 +473,7 @@ export default function ChatScreen() {
       <View style={s.header}>
         <Text style={s.title}>Chats</Text>
         <View style={s.headerRight}>
-          <TouchableOpacity style={s.iconBtn} onPress={() => searchInputRef.current?.focus()}>
+          <TouchableOpacity style={s.iconBtn} onPress={() => searchInputRef.current?.focus()} accessibilityRole="button" accessibilityLabel="Search">
             <Ionicons name="search" size={24} color={L.navy} />
           </TouchableOpacity>
           <TouchableOpacity style={s.iconBtn} onPress={() => router.push('/new-message' as never)}>

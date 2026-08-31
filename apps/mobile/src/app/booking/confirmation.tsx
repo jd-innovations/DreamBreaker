@@ -164,7 +164,7 @@ export default function ConfirmationScreen() {
       <StatusBar style="dark" />
 
       <View style={s.header}>
-        <TouchableOpacity style={s.iconBtn} onPress={() => router.replace('/(tabs)' as never)} activeOpacity={0.7}>
+        <TouchableOpacity style={s.iconBtn} onPress={() => router.replace('/(tabs)' as never)} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={20} color={L.navy} />
         </TouchableOpacity>
         <Text style={s.title}>Confirmation</Text>

@@ -87,8 +87,7 @@ export default function CreateAccountScreen() {
           style={s.backBtn}
           activeOpacity={0.7}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          onPress={() => router.back()}
-        >
+          onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={26} color={L.navy} />
         </TouchableOpacity>
       </View>

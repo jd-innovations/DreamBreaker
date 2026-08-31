@@ -191,7 +191,7 @@ function InviteCard({
           <Ionicons name="person-add-outline" size={16} color={L.gold} />
           <Text style={inv.label}>INVITED TO PLAY</Text>
         </View>
-        <TouchableOpacity onPress={onDecline} disabled={responding} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+        <TouchableOpacity onPress={onDecline} disabled={responding} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={18} color={L.textMuted} />
         </TouchableOpacity>
       </View>

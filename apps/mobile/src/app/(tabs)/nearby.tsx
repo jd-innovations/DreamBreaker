@@ -256,7 +256,7 @@ function FacilityBottomSheet({
                   <Text style={fbs.verifiedText}>VERIFIED</Text>
                 </View>
               )}
-              <TouchableOpacity style={bs.closeBtn} onPress={onDismiss} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity style={bs.closeBtn} onPress={onDismiss} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Close">
                 <Ionicons name="close" size={15} color={L.textSub} />
               </TouchableOpacity>
             </View>
@@ -383,7 +383,7 @@ function BottomSheet({
               <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Ionicons name="bookmark-outline" size={20} color={L.textSub} />
               </TouchableOpacity>
-              <TouchableOpacity style={bs.closeBtn} onPress={onDismiss} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity style={bs.closeBtn} onPress={onDismiss} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Close">
                 <Ionicons name="close" size={15} color={L.textSub} />
               </TouchableOpacity>
             </View>
@@ -774,8 +774,7 @@ export default function ExploreScreen() {
           <TouchableOpacity
             style={s.headerBtn}
             activeOpacity={0.75}
-            onPress={() => setFilterModalVisible(true)}
-          >
+            onPress={() => setFilterModalVisible(true)} accessibilityRole="button" accessibilityLabel="Filters">
             <Ionicons name="options-outline" size={20} color={L.gold} />
             {hasActiveFilters && <View style={s.headerBtnDot} />}
           </TouchableOpacity>
@@ -807,7 +806,7 @@ export default function ExploreScreen() {
             onChangeText={setSearch}
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')}>
+            <TouchableOpacity onPress={() => setSearch('')} accessibilityRole="button" accessibilityLabel="Clear">
               <Ionicons name="close-circle" size={16} color={L.textMuted} />
             </TouchableOpacity>
           )}
@@ -988,7 +987,7 @@ function ExploreFilterModal({
 
           <View style={fm.headerRow}>
             <Text style={fm.title}>{title}</Text>
-            <TouchableOpacity onPress={onClose} hitSlop={8}>
+            <TouchableOpacity onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close">
               <Ionicons name="close" size={22} color={L.navy} />
             </TouchableOpacity>
           </View>

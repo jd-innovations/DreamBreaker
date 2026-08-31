@@ -526,7 +526,7 @@ export default function PartnerFinderScreen() {
 
       {/* ── PERSISTENT TOP BAR — stays fixed while cards swipe underneath ── */}
       <View style={[s.topControls, { top: insets.top + 36 }]} pointerEvents="box-none">
-        <TouchableOpacity style={s.topBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={s.topBtn} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={s.topRight} pointerEvents="box-none">
@@ -558,12 +558,12 @@ export default function PartnerFinderScreen() {
       <Animated.View
         style={[s.sheet, { paddingBottom: insets.bottom + 8, transform: [{ translateY: sheetY }] }]}
       >
-        <TouchableOpacity onPress={closeSheet} style={s.handleWrap} activeOpacity={0.7}>
+        <TouchableOpacity onPress={closeSheet} style={s.handleWrap} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Close">
           <View style={s.handle} />
         </TouchableOpacity>
         <View style={s.sheetHeaderRow}>
           <Text style={s.sheetTitle}>Interested in {player.name.split(' ')[0]}?</Text>
-          <TouchableOpacity onPress={closeSheet} style={s.sheetCloseBtn} activeOpacity={0.7}>
+          <TouchableOpacity onPress={closeSheet} style={s.sheetCloseBtn} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="close" size={20} color={L.textMuted} />
           </TouchableOpacity>
         </View>
@@ -677,7 +677,7 @@ export default function PartnerFinderScreen() {
                 <Text style={s.reportTitle}>Report Profile</Text>
                 <Text style={s.reportSub}>Help keep Pickleball App safe</Text>
               </View>
-              <TouchableOpacity onPress={closeReport} style={s.reportCloseBtn} activeOpacity={0.7}>
+              <TouchableOpacity onPress={closeReport} style={s.reportCloseBtn} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Close">
                 <Ionicons name="close" size={22} color={L.textMuted} />
               </TouchableOpacity>
             </View>

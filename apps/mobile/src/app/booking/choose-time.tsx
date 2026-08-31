@@ -356,7 +356,7 @@ export default function ChooseTimeScreen() {
       <StatusBar style="dark" />
 
       <View style={s.header}>
-        <TouchableOpacity style={s.iconBtn} onPress={() => goBack()} activeOpacity={0.7}>
+        <TouchableOpacity style={s.iconBtn} onPress={() => goBack()} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={20} color={L.navy} />
         </TouchableOpacity>
         <Text style={s.title}>Choose Time</Text>

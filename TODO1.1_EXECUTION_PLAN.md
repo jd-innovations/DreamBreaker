@@ -4171,6 +4171,70 @@ enforced in code. Same for crash reports through the two scrubbers.
 - Done when:
   - Core flows are usable with assistive tech.
 
+### Completion Notes - 7.2 (partial — static half done, device pass outstanding)
+
+**Not closed.** 7.2's verification is "accessibility issues are fixed or
+triaged" and its Done-when is "core flows are usable with assistive tech" —
+the second needs VoiceOver and TalkBack on real hardware, which is build #9
+and D4 (no Android device).
+
+#### What was done, 2026-08-31
+
+Coverage across the whole app was **25 of 168 files** containing any
+`accessibilityLabel`. The number is less alarming than it looks: in React
+Native a touchable containing a `<Text>` is announced with that text, so the
+real defect is **icon-only controls**, which announce nothing.
+
+Measured across the flows 7.2 names (onboarding, auth, tabs, registration,
+booking, payment, support, deletion): **241 touchables, 62 icon-only with no
+label**. 35 labels were added, all in the class where the correct wording is
+unambiguous and mechanical — back, close, clear, search, filters,
+notifications, settings — since those are navigation controls where a wrong
+label is worse than none.
+
+#### Two things worth knowing
+
+**One label was added and then removed.** The "Filters" control in
+`(tabs)/chat.tsx` has no `onPress`. Labelling it announces "Filters, button"
+and then nothing happens on activation, which is worse for a screen-reader
+user than silence. **A dead control is not an accessibility bug and must not
+be papered over as one** — it is the fifth dead control this programme has
+found.
+
+**A mass label sweep was deliberately avoided.** Labelling all 62 mechanically
+would have produced accurate-sounding text like "button" on controls whose
+purpose only a human can name, and would have buried the six genuinely dead
+ones.
+
+#### Triage: 29 remaining, each needing a human-chosen label
+
+Real controls (they have an `onPress`), listed so the next pass is a
+worklist rather than another audit:
+
+```
+(tabs)/chat.tsx           129, 327, 479
+(tabs)/finder.tsx         430, 432, 512, 543, 547, 551, 593, 651
+(tabs)/games.tsx          702
+(tabs)/index.tsx          489, 717, 1058, 1103
+(tabs)/landing.tsx        205
+(tabs)/marketplace.tsx    71, 210
+(tabs)/nearby.tsx         781
+(tabs)/stats.tsx          371, 459
+onboarding/email-account.tsx   91
+onboarding/search-radius.tsx   80, 90, 97
+reset-password.tsx        106
+sign-in.tsx               171
+sign-up.tsx               195
+```
+
+Plus **6 dead controls** with no handler — those want removing or wiring, not
+labelling.
+
+#### Not yet examined
+
+Dynamic type, contrast ratios, reduced motion, and web keyboard focus. Each
+needs either a device or a rendered page, not a static scan.
+
 ### 7.3 Final Performance Pass
 
 - Issue: Map/image/web surfaces need profiling.

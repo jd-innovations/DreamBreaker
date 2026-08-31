@@ -140,7 +140,7 @@ function FilterSheet({
       <View style={fs.handleRow}><View style={fs.handle} /></View>
       <View style={fs.header}>
         <Text style={fs.title}>Filters</Text>
-        <TouchableOpacity onPress={onClose} style={fs.closeBtn}>
+        <TouchableOpacity onPress={onClose} style={fs.closeBtn} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={22} color={L.navy} />
         </TouchableOpacity>
       </View>

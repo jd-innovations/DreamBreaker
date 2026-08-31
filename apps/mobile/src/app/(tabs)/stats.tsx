@@ -459,7 +459,7 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
             <TouchableOpacity onPress={handleShare} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={dm.headerActionBtn}>
               <Ionicons name="share-outline" size={22} color={colors.navy} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Close">
               <Ionicons name="close" size={24} color={colors.navy} />
             </TouchableOpacity>
           </View>
