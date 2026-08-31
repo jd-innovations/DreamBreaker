@@ -783,6 +783,7 @@ export default function TournamentDetail() {
             </View>
           </View>
           {/* HOST CARD */}
+          <Text style={s.sectionTitleStandalone}>ORGANIZER</Text>
           <View style={s.hostCard}>
             <TouchableOpacity
               style={s.hostLeft}
@@ -805,41 +806,41 @@ export default function TournamentDetail() {
             </TouchableOpacity>
 
             <TouchableOpacity
-            style={s.msgDirectorBtn}
-            activeOpacity={0.8}
-            disabled={msgingDirector}
-            onPress={openDirectorDM}
-          >
-            {msgingDirector
-              ? <ActivityIndicator size="small" color={L.navy} />
-              : <Ionicons name="chatbubble-outline" size={15} color={L.navy} />}
-            <Text style={s.msgDirectorText}>Message Director</Text>
-          </TouchableOpacity>
-
-          {/* Real contextual tournament group chat — directors and registered/held players only */}
-          {(playerRegStatus != null || (!!user && user.id === directorUserId)) && (
-            <TouchableOpacity
               style={s.msgDirectorBtn}
               activeOpacity={0.8}
-              onPress={() => router.push(`/conversation/tournament-${id}` as never)}
+              disabled={msgingDirector}
+              onPress={openDirectorDM}
             >
-              <Ionicons name="chatbubbles-outline" size={15} color={L.navy} />
-              <Text style={s.msgDirectorText}>Tournament Chat</Text>
+              {msgingDirector
+                ? <ActivityIndicator size="small" color={L.navy} />
+                : <Ionicons name="chatbubble-outline" size={15} color={L.navy} />}
+              <Text style={s.msgDirectorText}>Message Director</Text>
             </TouchableOpacity>
-          )}
 
-          {/* DIRECTOR BANNER — only this tournament's own director */}
-          {isThisDirector && (
-            <TouchableOpacity
-              style={s.directorBanner}
-              activeOpacity={0.8}
-              onPress={() => router.push(`/tournament/${tournament.id}/workspace` as never)}
-            >
-              <Ionicons name="construct-outline" size={15} color={L.gold} />
-              <Text style={s.directorBannerText}>Director: Manage Tournament</Text>
-              <Ionicons name="chevron-forward" size={14} color={L.textSub} />
-            </TouchableOpacity>
-          )}
+            {/* Real contextual tournament group chat — directors and registered/held players only */}
+            {(playerRegStatus != null || (!!user && user.id === directorUserId)) && (
+              <TouchableOpacity
+                style={s.msgDirectorBtn}
+                activeOpacity={0.8}
+                onPress={() => router.push(`/conversation/tournament-${id}` as never)}
+              >
+                <Ionicons name="chatbubbles-outline" size={15} color={L.navy} />
+                <Text style={s.msgDirectorText}>Tournament Chat</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* DIRECTOR BANNER — only this tournament's own director */}
+            {isThisDirector && (
+              <TouchableOpacity
+                style={s.directorBanner}
+                activeOpacity={0.8}
+                onPress={() => router.push(`/tournament/${tournament.id}/workspace` as never)}
+              >
+                <Ionicons name="construct-outline" size={15} color={L.gold} />
+                <Text style={s.directorBannerText}>Director: Manage Tournament</Text>
+                <Ionicons name="chevron-forward" size={14} color={L.textSub} />
+              </TouchableOpacity>
+            )}
 
             <View style={s.hostDivider} />
 
@@ -869,6 +870,7 @@ export default function TournamentDetail() {
           </View>
 
           {/* FACILITY CARD */}
+          {!!facility && <Text style={s.sectionTitleStandalone}>LOCATION</Text>}
           {facility && (() => {
             const access = facilityAccessType(facility);
             const BADGE = {
@@ -1236,7 +1238,7 @@ export default function TournamentDetail() {
 // ─── Facility card styles ──────────────────────────────────────────────────────
 
 const fc = StyleSheet.create({
-  card:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: 14, padding: 14, marginBottom: 14, gap: 12 },
+  card:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: 14, padding: 14, marginHorizontal: 16, marginBottom: 14, gap: 12 },
   left:        { flex: 1, gap: 6 },
   nameRow:     { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   name:        { color: L.navy, fontSize: 14, fontWeight: '800', flexShrink: 1 },
@@ -1313,7 +1315,7 @@ const s = StyleSheet.create({
 
   // Host card
   hostCard: {
-    marginHorizontal: 16, marginTop: 8, marginBottom: 18,
+    marginHorizontal: 16, marginTop: 0, marginBottom: 18,
     borderRadius: 16, borderWidth: 1, borderColor: L.border,
     backgroundColor: L.bg,
     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 2 },
@@ -1430,6 +1432,12 @@ const s = StyleSheet.create({
   section:      { marginBottom: 24, paddingHorizontal: 16 },
   sectionHeader:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.8 },
+  // For headings whose content is a card that carries its own horizontal
+  // margin, so it cannot sit inside s.section without doubling the inset to 32.
+  sectionTitleStandalone: {
+    color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.8,
+    paddingHorizontal: 16, marginBottom: 12,
+  },
   edtRow:       { flexDirection: 'row', alignItems: 'center', gap: 4 },
   edtText:      { color: L.textMuted, fontSize: 12 },
 
