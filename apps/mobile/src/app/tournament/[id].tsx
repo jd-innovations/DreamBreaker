@@ -33,6 +33,7 @@ import { fetchTournamentById } from '@/lib/supabase/tournaments';
 import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
 import { fetchPlayerHolds, fetchPlayerRegistrations } from '@/lib/supabase/registrations';
 import { fetchFacilityById, facilityAccessType, type FacilityDetail } from '@/lib/supabase/facilities';
+import EventLocationCard from '@/components/EventLocationCard';
 import { fetchProfile, type UserProfile } from '@/lib/services/profile';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateConversation } from '@/lib/conversationService';
@@ -879,35 +880,35 @@ export default function TournamentDetail() {
               private:    { label: 'Private',    bg: '#FEE2E2', color: '#DC2626' },
             }[access];
             return (
-              <TouchableOpacity
-                style={fc.card}
-                activeOpacity={0.85}
-                onPress={() => router.push(`/facility/${facility.id}` as never)}
-              >
-                <View style={fc.left}>
-                  <View style={fc.nameRow}>
-                    <Text style={fc.name} numberOfLines={1}>{facility.name}</Text>
-                    {facility.verified && (
-                      <View style={fc.verBadge}>
-                        <Ionicons name="shield-checkmark" size={10} color="#2563EB" />
-                        <Text style={fc.verText}>Verified</Text>
+              <View style={s.locationWrap}>
+                <EventLocationCard
+                  name={facility.name}
+                  addressLines={[facility.address, [facility.city, facility.state].filter(Boolean).join(', ')]}
+                  latitude={facility.latitude}
+                  longitude={facility.longitude}
+                  verified={facility.verified}
+                  // Coordinates when we have them: an address string sends the
+                  // maps app to whatever it geocodes, which for a court inside
+                  // a park is the park entrance, not the court.
+                  directionsQuery={
+                    facility.latitude != null && facility.longitude != null
+                      ? `${facility.latitude},${facility.longitude}`
+                      : `${facility.address}, ${facility.city}, ${facility.state}`
+                  }
+                  // Access and court count have no community-event equivalent,
+                  // so they ride in the card's meta slot rather than being lost
+                  // in the swap from the old compact row.
+                  meta={
+                    <View style={fc.meta}>
+                      <View style={[fc.accessBadge, { backgroundColor: BADGE.bg }]}>
+                        <Text style={[fc.accessText, { color: BADGE.color }]}>{BADGE.label}</Text>
                       </View>
-                    )}
-                  </View>
-                  <View style={fc.meta}>
-                    <View style={[fc.accessBadge, { backgroundColor: BADGE.bg }]}>
-                      <Text style={[fc.accessText, { color: BADGE.color }]}>{BADGE.label}</Text>
+                      <Text style={fc.courts}>{facility.court_count} {facility.court_count === 1 ? 'Court' : 'Courts'}</Text>
                     </View>
-                    <Text style={fc.courts}>{facility.court_count} {facility.court_count === 1 ? 'Court' : 'Courts'}</Text>
-                    <Text style={fc.dot}>·</Text>
-                    <Text style={fc.loc}>{facility.city}, {facility.state}</Text>
-                  </View>
-                </View>
-                <View style={fc.right}>
-                  <Text style={fc.viewText}>View Facility</Text>
-                  <Ionicons name="chevron-forward" size={14} color={L.gold} />
-                </View>
-              </TouchableOpacity>
+                  }
+                  onViewFacility={() => router.push(`/facility/${facility.id}` as never)}
+                />
+              </View>
             );
           })()}
 
@@ -1237,21 +1238,13 @@ export default function TournamentDetail() {
 
 // ─── Facility card styles ──────────────────────────────────────────────────────
 
+// What survives of the old compact facility row: the access badge and court
+// count, which EventLocationCard has no opinion about and renders via `meta`.
 const fc = StyleSheet.create({
-  card:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: 14, padding: 14, marginHorizontal: 16, marginBottom: 14, gap: 12 },
-  left:        { flex: 1, gap: 6 },
-  nameRow:     { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  name:        { color: L.navy, fontSize: 14, fontWeight: '800', flexShrink: 1 },
-  verBadge:    { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#DBEAFE', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
-  verText:     { fontSize: 9, fontWeight: '800', color: '#2563EB', letterSpacing: 0.2 },
-  meta:        { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  meta:        { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 },
   accessBadge: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
   accessText:  { fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
   courts:      { color: L.textSub, fontSize: 11, fontWeight: '600' },
-  dot:         { color: L.border, fontSize: 11 },
-  loc:         { color: L.textSub, fontSize: 11, fontWeight: '500' },
-  right:       { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
-  viewText:    { color: L.gold, fontSize: 12, fontWeight: '700' },
 });
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -1434,6 +1427,7 @@ const s = StyleSheet.create({
   sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.8 },
   // For headings whose content is a card that carries its own horizontal
   // margin, so it cannot sit inside s.section without doubling the inset to 32.
+  locationWrap: { marginHorizontal: 16, marginBottom: 18 },
   sectionTitleStandalone: {
     color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.8,
     paddingHorizontal: 16, marginBottom: 12,
