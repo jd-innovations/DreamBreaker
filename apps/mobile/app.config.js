@@ -41,8 +41,26 @@ module.exports = {
   updates: {
     url: 'https://u.expo.dev/04fcdd30-fb9e-47e2-9371-8e4e8b521c17',
   },
+  // fingerprint, NOT appVersion.
+  //
+  // The runtime version decides which installed builds an `eas update` is
+  // offered to. `appVersion` derives it from the version string above, so it
+  // only changes when someone edits that string by hand — adding a NATIVE
+  // module does not move it.
+  //
+  // That is not academic. Between build #8 and #9 this app gained
+  // expo-network, imported on the startup path via OfflineBanner. Under
+  // `appVersion` both builds claim runtime "1.0.0", so an update built after
+  // that change would have been delivered to build #8, whose binary has no
+  // such native module, and crashed it at launch on every device that had it —
+  // strictly worse than the bug such an update would be shipping to fix.
+  //
+  // `fingerprint` hashes the native project instead, so any native change
+  // produces a new runtime and an incompatible update is simply never offered.
+  // That is the whole point of the field, and it is the only policy that makes
+  // OTA updates safe in a project that adds native dependencies.
   runtimeVersion: {
-    policy: 'appVersion',
+    policy: 'fingerprint',
   },
 
   ios: {
