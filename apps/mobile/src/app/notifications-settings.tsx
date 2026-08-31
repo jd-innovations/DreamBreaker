@@ -64,10 +64,12 @@ function IconCircle({ name }: { name: string }) {
 // â”€â”€â”€ Toggle row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ToggleRow({
-  icon, label, sub, value, onChange, last,
+  icon, label, sub, value, onChange, last, disabled,
 }: {
   icon: string; label: string; sub: string;
   value: boolean; onChange: (v: boolean) => void; last?: boolean;
+  /** Greyed and inert while the true value is still being determined. */
+  disabled?: boolean;
 }) {
   return (
     <>
@@ -80,6 +82,7 @@ function ToggleRow({
         <Switch
           value={value}
           onValueChange={onChange}
+          disabled={disabled}
           trackColor={{ false: '#D1D1D6', true: L.green }}
           thumbColor="#FFFFFF"
           ios_backgroundColor="#D1D1D6"
@@ -299,7 +302,12 @@ export default function NotificationsSettingsScreen() {
           <ToggleRow
             icon="phone-portrait-outline"
             label={registeringPush ? 'Enabling Push...' : 'Push Notifications'}
-            sub="Receive notifications on this device"
+            // Says what it is doing while it finds out. Without this the switch
+            // renders off, then animates on a moment later once the device
+            // answers — which reads as the app flipping it by itself rather
+            // than as a value arriving.
+            sub={pushNotifs === null ? 'Checking this device...' : 'Receive notifications on this device'}
+            disabled={pushNotifs === null || registeringPush}
             value={pushNotifs === true}
             onChange={(next) => { void handlePushToggle(next); }}
           />
