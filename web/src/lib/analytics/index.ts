@@ -37,14 +37,18 @@ let started = false;
  * Initialises the SDK once. Safe to call repeatedly — React strict mode in
  * development mounts effects twice, and a second init would double every event.
  */
-export function initAnalytics(): void {
+export function initAnalytics(config: { key?: string; host?: string }): void {
   if (started || typeof window === "undefined") return;
 
-  const key = getPostHogKey();
+  // The values are ARGUMENTS, not reads. See ./env.ts — reading process.env in
+  // this module silently produced null in production, because posthog-js drags
+  // a `process` polyfill into the chunk and Next's static substitution stops
+  // applying once `process` is a real binding.
+  const key = getPostHogKey(config.key);
   if (!key) return;
 
   posthog.init(key, {
-    api_host: getPostHogHost(),
+    api_host: getPostHogHost(config.host),
     person_profiles: "identified_only",
     autocapture: false,
     capture_pageview: false,

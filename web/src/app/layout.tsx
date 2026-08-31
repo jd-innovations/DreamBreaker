@@ -57,7 +57,14 @@ export default function RootLayout({
         {/* Analytics starts here, not in PageShell: /dashboard and /admin roll
             their own shells, and partial coverage makes funnel holes that read
             as user drop-off. No-op when no PostHog key is configured. */}
-        <AnalyticsProvider />
+        {/* The env vars are read HERE, in a server component, and passed down.
+            Read inside the analytics module they compiled to a runtime lookup
+            against a process polyfill and silently resolved to undefined —
+            see web/src/lib/analytics/env.ts. */}
+        <AnalyticsProvider
+          posthogKey={process.env.NEXT_PUBLIC_POSTHOG_KEY}
+          posthogHost={process.env.NEXT_PUBLIC_POSTHOG_HOST}
+        />
         <ThemeProvider>
           {children}
           {/* Flushes an onboarding draft once a session exists (email signup has

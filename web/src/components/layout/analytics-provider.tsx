@@ -16,10 +16,19 @@ import { createClient } from "@/lib/supabase/client";
  * roll their own shells, and partial coverage produces funnels with holes that
  * read as user drop-off.
  */
-export function AnalyticsProvider() {
+export function AnalyticsProvider({
+  posthogKey,
+  posthogHost,
+}: {
+  posthogKey?: string;
+  posthogHost?: string;
+}) {
+  // Passed down from the root layout rather than read here. A client component
+  // that imports posthog-js cannot reliably read process.env — see
+  // lib/analytics/env.ts for what that cost.
   useEffect(() => {
-    initAnalytics();
-  }, []);
+    initAnalytics({ key: posthogKey, host: posthogHost });
+  }, [posthogKey, posthogHost]);
 
   // ── Identity ──────────────────────────────────────────────────────────────
   //
