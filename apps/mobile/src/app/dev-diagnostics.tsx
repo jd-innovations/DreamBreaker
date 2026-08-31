@@ -6,6 +6,7 @@ import { colors } from '@/theme';
 import { goBack } from '@/lib/navigation';
 import { haptics } from '@/lib/haptics';
 import { APP_ENV } from '@/lib/featureFlags';
+import * as Updates from 'expo-updates';
 import {
   CRASH_REPORTING_ENABLED,
   sendScrubProbe,
@@ -103,6 +104,24 @@ export default function DevDiagnosticsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={[s.body, { paddingBottom: insets.bottom + 32 }]}>
+        {/* Which JS is actually running.
+            Added because "did the OTA update land?" was unanswerable from the
+            device, and the two-launch download/apply cycle makes guessing
+            unreliable: an update downloads on one launch and runs on the next,
+            so a screen that looks unchanged may simply be one launch early.
+            EMBEDDED means the bundle shipped inside the binary — no update has
+            been applied. */}
+        <View style={s.card}>
+          <Text style={s.cardTitle}>Running bundle</Text>
+          <Text style={s.caption}>
+            {Updates.isEmbeddedLaunch ? 'EMBEDDED (no update applied)' : 'UPDATE applied'}
+          </Text>
+          <Text style={s.caption}>Update ID: {Updates.updateId ?? 'none'}</Text>
+          <Text style={s.caption}>Channel: {Updates.channel ?? 'none'}</Text>
+          <Text style={s.caption}>Runtime: {Updates.runtimeVersion ?? 'unknown'}</Text>
+          <Text style={s.caption}>Created: {Updates.createdAt ? Updates.createdAt.toISOString() : 'n/a'}</Text>
+        </View>
+
         <View style={[s.status, CRASH_REPORTING_ENABLED ? s.statusOn : s.statusOff]}>
           <Ionicons
             name={CRASH_REPORTING_ENABLED ? 'checkmark-circle' : 'alert-circle'}
