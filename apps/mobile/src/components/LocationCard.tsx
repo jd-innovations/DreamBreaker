@@ -11,10 +11,13 @@ import { VenueMapCard } from './VenueMapCard';
 // tile) was already shared, but the card around it never was. Extracted so the
 // third screen that wants it imports rather than copies.
 //
-// Deliberately dumb: it takes strings and callbacks, not an event or a
-// facility. The two callers reach the same fields by different names, and
-// teaching this component both shapes would put screen-specific branching in
-// the one place that is supposed to be screen-agnostic.
+// Deliberately dumb: it takes strings and callbacks, not an event, tournament
+// or facility. Not named EventLocationCard for that reason — a tournament is
+// not a community event, and a name implying otherwise would tell the next
+// caller this is off limits to them. It renders a venue; it does not know or
+// care what is being held there. Screens reach the same fields under different
+// names, and teaching it every shape would put screen-specific branching in
+// the one file that is supposed to be screen-agnostic.
 
 type Props = {
   name: string;
@@ -32,7 +35,7 @@ type Props = {
   onViewFacility?: () => void;
 };
 
-export default function EventLocationCard({
+export default function LocationCard({
   name, addressLines, latitude, longitude, verified, directionsQuery, meta, onViewFacility,
 }: Props) {
   const hasCoords = latitude != null && longitude != null;

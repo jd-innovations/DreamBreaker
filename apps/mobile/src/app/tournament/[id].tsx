@@ -33,7 +33,7 @@ import { fetchTournamentById } from '@/lib/supabase/tournaments';
 import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
 import { fetchPlayerHolds, fetchPlayerRegistrations } from '@/lib/supabase/registrations';
 import { fetchFacilityById, facilityAccessType, type FacilityDetail } from '@/lib/supabase/facilities';
-import EventLocationCard from '@/components/EventLocationCard';
+import LocationCard from '@/components/LocationCard';
 import { fetchProfile, type UserProfile } from '@/lib/services/profile';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateConversation } from '@/lib/conversationService';
@@ -881,7 +881,7 @@ export default function TournamentDetail() {
             }[access];
             return (
               <View style={s.locationWrap}>
-                <EventLocationCard
+                <LocationCard
                   name={facility.name}
                   addressLines={[facility.address, [facility.city, facility.state].filter(Boolean).join(', ')]}
                   latitude={facility.latitude}
@@ -1239,7 +1239,7 @@ export default function TournamentDetail() {
 // ─── Facility card styles ──────────────────────────────────────────────────────
 
 // What survives of the old compact facility row: the access badge and court
-// count, which EventLocationCard has no opinion about and renders via `meta`.
+// count, which LocationCard has no opinion about and renders via `meta`.
 const fc = StyleSheet.create({
   meta:        { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 },
   accessBadge: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
