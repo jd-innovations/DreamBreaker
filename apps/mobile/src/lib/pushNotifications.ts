@@ -81,6 +81,42 @@ export async function getCurrentDeviceExpoPushToken(): Promise<string | null> {
   }
 }
 
+/**
+ * Whether push is actually on for THIS device and this user.
+ *
+ * The notifications screen used to initialise its Push toggle to `false` on
+ * every mount and never ask. So the switch read OFF even when the device was
+ * registered and notifications were arriving — it reported the state of a
+ * `useState` call, not of the world. Reported from build #9 as "the toggle
+ * switches back to inactive", alongside pushes that plainly worked.
+ *
+ * Both halves are required and they fail independently: permission can be
+ * revoked in iOS Settings while the token row survives, and the row can be
+ * deleted (sign-out cleanup, the receipt sweeper removing a dead token) while
+ * permission is still granted. Either one means push does not reach this
+ * device, so the toggle must show off.
+ *
+ * Never prompts — getCurrentDeviceExpoPushToken passes requestPermission:false.
+ * Opening a settings screen is not consent to be asked for permission.
+ */
+export async function isPushRegisteredForThisDevice(userId: string): Promise<boolean> {
+  const token = await getCurrentDeviceExpoPushToken();
+  if (!token) return false;
+
+  const { data, error } = await supabase
+    .from('push_tokens')
+    .select('expo_push_token')
+    .eq('user_id', userId)
+    .eq('expo_push_token', token)
+    .limit(1);
+
+  if (error) {
+    if (__DEV__) console.warn('[push] registration lookup failed', error.message);
+    return false;
+  }
+  return (data?.length ?? 0) > 0;
+}
+
 export async function registerPushTokenForUser(
   userId: string,
   options: RegisterOptions = {},

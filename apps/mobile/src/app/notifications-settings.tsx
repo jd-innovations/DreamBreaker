@@ -9,7 +9,7 @@ import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/theme';
 import { useSession } from '@/hooks/useSession';
-import { registerPushTokenForUser, type PushRegistrationResult } from '@/lib/pushNotifications';
+import { registerPushTokenForUser, isPushRegisteredForThisDevice, deleteCurrentDevicePushToken, type PushRegistrationResult } from '@/lib/pushNotifications';
 import {
   loadNotificationPreferences,
   saveNotificationPreference,
@@ -103,7 +103,11 @@ export default function NotificationsSettingsScreen() {
   // it is about whether THIS device has a token, not about what the user wants
   // to be told. Both matter — a device with no token receives nothing however
   // the preferences are set.
-  const [pushNotifs,  setPushNotifs]  = useState(false);
+  // Starts null, not false. "Off" and "not asked yet" are different states, and
+  // rendering the switch off before the answer arrives is what made this look
+  // unpersisted: it always read off on mount, however the device was actually
+  // configured.
+  const [pushNotifs, setPushNotifs] = useState<boolean | null>(null);
   const [registeringPush, setRegisteringPush] = useState(false);
   const [pushResult, setPushResult] = useState<PushRegistrationResult | null>(null);
 
@@ -111,6 +115,18 @@ export default function NotificationsSettingsScreen() {
   const [prefs, setPrefs] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
   const [prefsStatus, setPrefsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [prefsError, setPrefsError] = useState<string | null>(null);
+
+  // Ask the device and the database what is actually true, rather than
+  // assuming off. Never prompts for permission — see
+  // isPushRegisteredForThisDevice.
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) { setPushNotifs(false); return; }
+    void isPushRegisteredForThisDevice(user.id).then((on) => {
+      if (!cancelled) setPushNotifs(on);
+    });
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,8 +169,33 @@ export default function NotificationsSettingsScreen() {
 
   async function handlePushToggle(next: boolean) {
     if (!next) {
-      setPushNotifs(false);
-      setPushResult(null);
+      // Turning it off used to set local state and nothing else, so the device
+      // token stayed registered and notifications kept arriving. A switch
+      // labelled "Receive notifications on this device" has to actually stop
+      // them, or it is the third control on this screen that only looked like
+      // it worked.
+      //
+      // Deleting THIS device's token, not the user's: signing out of one phone
+      // must not silence another.
+      if (!user?.id) { setPushNotifs(false); setPushResult(null); return; }
+
+      setRegisteringPush(true);
+      try {
+        await deleteCurrentDevicePushToken(user.id);
+        setPushNotifs(false);
+        setPushResult(null);
+      } catch {
+        // Left ON deliberately: the token is still registered, so notifications
+        // will still arrive, and showing off would be the same lie in reverse.
+        setPushNotifs(true);
+        setPushResult({
+          ok: false,
+          status: 'failed',
+          reason: "Couldn't turn notifications off. Check your connection and try again.",
+        });
+      } finally {
+        setRegisteringPush(false);
+      }
       return;
     }
 
@@ -259,7 +300,7 @@ export default function NotificationsSettingsScreen() {
             icon="phone-portrait-outline"
             label={registeringPush ? 'Enabling Push...' : 'Push Notifications'}
             sub="Receive notifications on this device"
-            value={pushNotifs}
+            value={pushNotifs === true}
             onChange={(next) => { void handlePushToggle(next); }}
           />
           {/* SMS was here. Removed 2026-08-31 rather than left as a toggle
