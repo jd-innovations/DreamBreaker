@@ -178,10 +178,13 @@ Phase 7 (store readiness), which is gated on 1.4's legal placeholders.
 
 ### Smaller leftovers
 
-- 4.1: alerting rules are untuned, and the scrubber has only been observed
-  against an event carrying little to scrub.
-- 5.3: case 20 (`/conversation/<id>`) needs a re-test signed in as the admin
-  account — the earlier result is ambiguous.
+- 4.1: **alerting rules are untuned** (crash spikes, payment/auth failures).
+  Dashboard configuration, no code. This is the item's only remaining piece.
+  ~~the scrubber has only been observed against an event carrying little to
+  scrub~~ — closed 2026-08-30, and it found a real leak doing it; see 4.1's
+  notes. Symbolication closed 2026-08-31 on build #8.
+- ~~5.3: case 20 needs a re-test signed in as the admin account~~ — done on
+  build #7, 2026-08-29. 5.3 is closed.
 - Six duplicate test-mode charges sit in the reconciliation queue. Refunding
   them in Stripe would clear both `duplicate_payment` and
   `succeeded_not_fulfilled`.
@@ -3156,15 +3159,35 @@ so Fast Refresh updates the probe without updating the scrubber. A scrubber
 change must be tested after a **full reload**, or the result is a false
 negative.
 
-**4.1 is closed on its Verification criteria.** Two smaller things stay open and
-are tracked as leftovers, not as blockers:
+**4.1 is closed on its Verification criteria**, and the symbolication leftover
+closed with it on 2026-08-31.
 
-- **Alerting rules are untuned** (crash spikes, payment/auth failures).
-- **Symbolication is unproven on a non-Metro build.** A dev client resolves
-  frames from Metro's source maps; `SENTRY_AUTH_TOKEN` lives only in the EAS
-  `preview` environment, so the uploaded-source-map path is only exercised by a
-  preview build. The uncaught-JS and native-crash buttons are also still
-  unpressed. All three fold into build #8.
+#### Symbolication proven on a real binary — 2026-08-31 (build #8)
+
+iOS build **#8** (`65756903`, `preview`, commit `841d5ec`). The uncaught-JS
+button produced:
+
+```
+Error: Deliberate uncaught JS error from the diagnostics screen
+    at setTimeout$argument_0 (/src/lib/observability/sentry.ts:228:20)
+```
+
+Line 228 is exactly the `throw`, so the uploaded source maps resolve to the
+right place rather than merely looking readable. This could only ever be proven
+here: a dev client resolves frames from Metro, and `SENTRY_AUTH_TOKEN` — which
+gates the upload — exists only in the EAS `preview` environment. The native
+crash path was exercised in the same session and reported on the next launch,
+as designed.
+
+**One leftover remains on 4.1: alerting rules are untuned** (crash spikes,
+payment/auth failures). Dashboard configuration, no code.
+
+**A number worth carrying:** build #8 took **71 minutes** against ~7 for the
+JS-only builds before it. Adding four native modules invalidates the native
+cache, and that is the true cost — not a stuck worker. It was nearly cancelled
+at the 64-minute mark on the assumption that it had wedged, which would have
+thrown the work away and paid the same cost again. For this project: ~70 minutes
+when native dependencies change, ~7 when they do not.
 
 ### Completion Notes - 5.2
 
