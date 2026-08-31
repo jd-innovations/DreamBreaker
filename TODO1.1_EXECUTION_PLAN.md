@@ -84,9 +84,10 @@ Purpose: turn `TODO1.1.md` into an ordered, one-issue-at-a-time production readi
 
 ## Current State — 2026-08-25 (status re-verified 2026-08-29)
 
-**22 of 27 items closed.** 5.3 and 4.1 closed on device 2026-08-29/30; **4.2
-closed 2026-08-31** on build #8. Nothing is partial; the five that remain are
-untouched. Phase 4 is complete except 4.3.
+**23 of 27 items closed.** 4.2 and **4.3** closed 2026-08-31. **Phase 4 is
+complete.** 5.1 and 5.4 have all their code written and verified locally but
+are NOT closed — both need the queued migrations applied and build #9 on a
+device. Only Phase 7 is untouched, and it is gated on 1.4's legal placeholders.
 
 An item is done iff it has a `### Completion Notes - X.Y` section that does not
 say INCOMPLETE. Grep for those rather than trusting any summary, including this
@@ -94,9 +95,10 @@ one.
 
 | | Items |
 | --- | --- |
-| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 4.1, **4.2**, 5.2, 5.3, 6.1, 6.2, 6.3 |
+| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 4.1, 4.2, **4.3**, 5.2, 5.3, 6.1, 6.2, 6.3 |
 | **Partial** | — |
-| **Untouched** | 4.3, 5.1, 5.4, 7.1, 7.2, 7.3 |
+| **Untouched** | 7.1, 7.2, 7.3 |
+| **Code done, awaiting deploy + build #9** | **5.1**, **5.4** |
 
 Phases 0-3 are complete and deployed to production.
 
@@ -3153,6 +3155,80 @@ landing point. Mobile captures all three correctly.
   - Support ticket can be created, replied to, closed.
 - Done when:
   - External users have usable safety/support paths.
+
+### Completion Notes - 4.3
+
+**Closed on its Verification criteria 2026-08-31**, with two enforcement
+surfaces explicitly deferred — see the end.
+
+#### What the Block button did before this
+
+Almost nothing. `apps/mobile/src/lib/services/blocking.ts` said so in its own
+header: *"No screen in the app reads this table yet."* `blocked_users` was
+write-only, the single exception being `v_mutual_matches`, which honours it in
+matchmaking. Everywhere else — direct messages above all — a blocked person
+carried on exactly as before.
+
+That is worse than having no button at all: someone who blocks a harasser stops
+looking for other remedies. Production had **zero rows** in `blocked_users` and
+zero reports, so nobody was exposed and there was nothing to migrate.
+
+#### Verification
+
+- **Blocked user cannot message or invite.** Enforced in the database, not the
+  client — client filtering is a display preference, bypassable with a direct
+  PostgREST call, and every new screen would re-open it. Messages
+  (`20260831040000`): a send trigger plus RESTRICTIVE policies that hide the
+  conversation and its history. Invites (`20260831050000`): one trigger over
+  `group_invites`, `play_event_invites` and `partner_likes`.
+- **Report creates an admin-visible record.** Already true for group posts and
+  marketplace; now true for a person, from a DM thread or a profile. No
+  migration was needed — `user_reports` and its RLS already supported it.
+- **Support ticket can be created, replied to and closed.** Already worked:
+  `handleSend` and `handleStatusChange` in the admin ticket panel.
+
+#### Decisions worth re-reading before changing anything here
+
+- **The rejection message is deliberately vague** — "This conversation is
+  unavailable." Naming the block tells a harasser they were blocked, which turns
+  the block into a signal and invites a fresh account.
+- **`is_blocked_between` is SECURITY DEFINER** because RLS exposes only a
+  caller's own blocks. A plain query can tell you whether you blocked them,
+  never whether they blocked you — and that is the direction that matters.
+- **The new policies are RESTRICTIVE**, so they can only ever deny. Editing the
+  existing permissive policies risked widening them.
+- **`matchmaking_swipes` is not guarded.** A swipe is browsing and includes
+  passes; rejecting one would throw in the discovery UI. Nothing escapes —
+  `v_mutual_matches` filters blocked pairs on read.
+- **Unblock had to ship in the same change.** There was no unblock anywhere in
+  either app. With enforcement, blocking would have become irreversible and
+  taken the conversation history with it. People block in anger and by mis-tap.
+  Blocked Accounts now lives in Account Settings — reachable there rather than
+  from the blocked person's profile, which is the surface a block removes.
+
+#### A defect this work exposed
+
+Three `partner_likes` writes treated a failed insert as success. **supabase-js
+resolves on a database error rather than throwing**, so the `try/catch` around
+them never fired: `handleConnect` told the user "Connection Request Sent" for a
+write that never happened. Fixed in `735d033`. Adding enforcement without it
+would have produced a confident lie at exactly the moment someone was trying to
+avoid a person — the same "reports success when nothing happened" pattern 6.3
+and 5.3 both found.
+
+#### Deferred, and why it is a decision rather than an omission
+
+**Group visibility, search ranking, profile access.** Each needs a product call
+on what a block should MEAN there. Should blocking someone eject you both from a
+40-person group chat? Hiding yourself from search is also a way of disappearing
+from people you did not block. Guessing at those in a migration would bake in
+answers nobody agreed to.
+
+**Admin support queue SLA states** — operational polish. It makes the queue
+nicer to work; it does not protect a user or unblock a store submission.
+
+**Tournament and coach report surfaces** — low volume, and support tickets
+already reach the team.
 
 ## Phase 5 - Native Capabilities and Device QA
 
