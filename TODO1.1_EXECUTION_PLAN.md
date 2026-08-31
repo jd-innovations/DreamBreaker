@@ -3250,6 +3250,47 @@ Goal: every native integration works on real devices.
 - Done when:
   - Push can be trusted or disabled for beta.
 
+### Completion Notes - 5.1 (device-verified in part, 2026-08-31)
+
+Verified on iOS build #9 plus an OTA update:
+
+- **Permission prompt and token row.** Registering writes a `push_tokens` row;
+  confirmed against production.
+- **DB-triggered message push arrives.** A DM from another account produced a
+  notification with haptics.
+- **The toggle now reflects reality and persists.**
+
+#### Two bugs the device testing found, both in one control
+
+The Push toggle initialised to `useState(false)` and **never asked whether the
+device was registered** — it reported a variable, not the world, so it read OFF
+on every mount while notifications plainly arrived. And turning it OFF only set
+local state: the token stayed registered and pushes kept coming.
+
+Both fixed (`a71beff`). `isPushRegisteredForThisDevice()` now requires
+permission AND this device's exact token in `push_tokens` — they fail
+independently, and either means push does not arrive. Turning off deletes THIS
+device's token, not the user's, so signing out of one phone cannot silence
+another.
+
+Also added an **Open Settings** path (`89a38e7`): iOS shows its permission
+prompt once per install and onboarding asks first, so anyone who declined there
+was permanently stuck with a switch that flipped back and explained nothing.
+
+That is three controls on this screen that only looked like they worked, after
+SMS, quiet hours and the badge rows.
+
+#### Still open on 5.1
+
+- **Logout cleanup and re-login registration** — untested.
+- **Invalid-token cleanup** — needs a real uninstall, then a send to that user,
+  then a sweeper run. The machinery is deployed (`push_tickets`,
+  `push-receipt-sweeper`, every 15 minutes) but has never removed a real dead
+  token.
+- **Direct Expo push, foreground display, background delivery, cold-tap
+  routing** — untested.
+- **Android** — blocked on D4, no hardware.
+
 ### 5.2 Complete Device Auth Matrix
 
 - Issue: Apple Sign-In core passed, but granular auth cases remain incomplete.
