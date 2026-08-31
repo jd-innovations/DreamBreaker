@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Switch, Linking,
+  ScrollView, Switch, Linking, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -64,12 +64,19 @@ function IconCircle({ name }: { name: string }) {
 // â”€â”€â”€ Toggle row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ToggleRow({
-  icon, label, sub, value, onChange, last, disabled,
+  icon, label, sub, value, onChange, last, disabled, pending,
 }: {
   icon: string; label: string; sub: string;
   value: boolean; onChange: (v: boolean) => void; last?: boolean;
-  /** Greyed and inert while the true value is still being determined. */
   disabled?: boolean;
+  /**
+   * True while the real value is still unknown. Renders a spinner INSTEAD of
+   * the switch rather than a disabled switch, because `disabled` does not stop
+   * a Switch animating — it only stops it responding. Mounting the switch late,
+   * once the value is known, means it appears already in the right position
+   * instead of sliding into it.
+   */
+  pending?: boolean;
 }) {
   return (
     <>
@@ -79,14 +86,18 @@ function ToggleRow({
           <Text style={s.rowLabel}>{label}</Text>
           <Text style={s.rowSub}>{sub}</Text>
         </View>
-        <Switch
-          value={value}
-          onValueChange={onChange}
-          disabled={disabled}
-          trackColor={{ false: '#D1D1D6', true: L.green }}
-          thumbColor="#FFFFFF"
-          ios_backgroundColor="#D1D1D6"
-        />
+        {pending ? (
+          <ActivityIndicator size="small" color={L.textMuted} style={s.switchSlot} />
+        ) : (
+          <Switch
+            value={value}
+            onValueChange={onChange}
+            disabled={disabled}
+            trackColor={{ false: '#D1D1D6', true: L.green }}
+            thumbColor="#FFFFFF"
+            ios_backgroundColor="#D1D1D6"
+          />
+        )}
       </View>
       {!last && <Div />}
     </>
@@ -307,7 +318,8 @@ export default function NotificationsSettingsScreen() {
             // answers — which reads as the app flipping it by itself rather
             // than as a value arriving.
             sub={pushNotifs === null ? 'Checking this device...' : 'Receive notifications on this device'}
-            disabled={pushNotifs === null || registeringPush}
+            pending={pushNotifs === null}
+            disabled={registeringPush}
             value={pushNotifs === true}
             onChange={(next) => { void handlePushToggle(next); }}
           />
@@ -434,6 +446,9 @@ const s = StyleSheet.create({
   rowCenter: { flex: 1 },
   rowLabel:  { color: L.navy, fontSize: 15, fontWeight: '500', marginBottom: 2 },
   rowSub:    { color: L.textMuted, fontSize: 12, fontWeight: '400' },
+  // iOS Switch is 51x31. Matching it keeps the row from reflowing when the
+  // spinner is replaced by the real control.
+  switchSlot: { width: 51, height: 31 },
 
   iconCircle: {
     width: 40, height: 40, borderRadius: 20,
