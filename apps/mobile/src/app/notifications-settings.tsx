@@ -129,7 +129,6 @@ export default function NotificationsSettingsScreen() {
   // Delivery methods
   const [pushNotifs,  setPushNotifs]  = useState(false);
   const [emailNotifs, setEmailNotifs] = useState(true);
-  const [smsNotifs,   setSmsNotifs]   = useState(false);
   const [registeringPush, setRegisteringPush] = useState(false);
   const [pushResult, setPushResult] = useState<PushRegistrationResult | null>(null);
 
@@ -229,19 +228,17 @@ export default function NotificationsSettingsScreen() {
             value={pushNotifs}
             onChange={(next) => { void handlePushToggle(next); }}
           />
+          {/* SMS was here. Removed 2026-08-31 rather than left as a toggle
+              that does nothing: there is no SMS provider configured anywhere in
+              this project, so the switch could never have had an effect. Put it
+              back when a provider and a real send path exist — not before, or
+              it is a promise the app cannot keep. */}
           <ToggleRow
             icon="mail-outline"
             label="Email Notifications"
             sub="Receive notifications via email"
             value={emailNotifs}
             onChange={setEmailNotifs}
-          />
-          <ToggleRow
-            icon="chatbubble-outline"
-            label="SMS Notifications"
-            sub="Receive important alerts via text message"
-            value={smsNotifs}
-            onChange={setSmsNotifs}
             last
           />
         </Group>
