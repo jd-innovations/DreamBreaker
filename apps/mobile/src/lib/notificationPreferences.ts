@@ -20,23 +20,6 @@
 
 import { supabase } from '@/lib/supabase';
 
-// ── A deliberate, contained type escape ─────────────────────────────────────
-//
-// notif_messages and notif_email_enabled are added by migration
-// 20260831020000, but packages/shared/src/database.types.ts is GENERATED from
-// production and has not been regenerated yet — that needs database access this
-// machine does not currently have (IPv6 unsupported on this network).
-//
-// So the two Supabase calls below are cast. The casts are confined to this
-// module on purpose: hand-editing the generated types would drift silently the
-// next time anyone regenerates them, and casting at every call site across the
-// app would spread the problem.
-//
-// AFTER the migration is applied, run:
-//   npx supabase gen types typescript --linked > packages/shared/src/database.types.ts
-// (mind the UTF-16 trap: PowerShell `>` writes UTF-16, so re-encode to UTF-8)
-// then delete the two casts below and let the compiler check this file properly.
-
 export type NotificationPreferences = {
   /** Honoured today by notify_new_message. */
   messages: boolean;
@@ -77,7 +60,7 @@ export type LoadResult =
 export async function loadNotificationPreferences(userId: string): Promise<LoadResult> {
   const { data, error } = await supabase
     .from('profiles')
-    .select(COLUMNS as never)
+    .select(COLUMNS)
     .eq('id', userId)
     .maybeSingle();
 
@@ -91,7 +74,7 @@ export async function loadNotificationPreferences(userId: string): Promise<LoadR
     return { ok: false, reason: "We couldn't find your profile." };
   }
 
-  const row = data as unknown as Record<string, boolean | null>;
+  const row = data as Record<string, boolean | null>;
   return {
     ok: true,
     preferences: {
@@ -119,18 +102,24 @@ export async function saveNotificationPreference(
   key: keyof NotificationPreferences,
   value: boolean,
 ): Promise<SaveResult> {
-  const column: Record<keyof NotificationPreferences, string> = {
-    messages: 'notif_messages',
-    tournaments: 'notif_tournaments',
-    newMatch: 'notif_new_match',
-    likedYou: 'notif_liked_you',
-    holdExpiry: 'notif_hold_expiry',
-    email: 'notif_email_enabled',
-  };
+  // An explicit switch rather than a computed key like `{ [column]: value }`.
+  //
+  // A computed key widens to Record<string, boolean>, which the generated
+  // Update type rejects — and casting past it would throw away exactly the
+  // checking that regenerating the types bought. Written out, the compiler
+  // verifies every column name against the real schema, so a typo or a dropped
+  // column is a build error instead of a silent no-op at runtime.
+  const patch =
+    key === 'messages' ? { notif_messages: value }
+    : key === 'tournaments' ? { notif_tournaments: value }
+    : key === 'newMatch' ? { notif_new_match: value }
+    : key === 'likedYou' ? { notif_liked_you: value }
+    : key === 'holdExpiry' ? { notif_hold_expiry: value }
+    : { notif_email_enabled: value };
 
   const { error } = await supabase
     .from('profiles')
-    .update({ [column[key]]: value } as never)
+    .update(patch)
     .eq('id', userId);
 
   if (error) {
