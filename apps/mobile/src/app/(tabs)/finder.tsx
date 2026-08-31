@@ -193,7 +193,11 @@ export default function PartnerFinderScreen() {
     supabase
       .from('partner_likes')
       .upsert({ from_user_id: fromId, to_user_id: toId, kind })
-      .then(() => {
+      .then(({ error }) => {
+        // supabase-js resolves on a database error rather than rejecting, so
+        // without this the match lookup below runs as though the like landed.
+        // Reachable since the blocking triggers (20260831050000).
+        if (error) return;
         if (kind !== 'like') return;
         const a = fromId < toId ? fromId : toId;
         const b = fromId < toId ? toId   : fromId;

@@ -167,7 +167,17 @@ export default function PartnerProfileScreen() {
     if (connectLoading) return;
     setConnectLoading(true);
     try {
-      await supabase.from('partner_likes').upsert({ from_user_id: myId, to_user_id: id, kind: 'like' });
+      // supabase-js RESOLVES on a database error — it does not throw — so the
+      // surrounding try/catch never sees one. Before this check, a rejected
+      // insert still set pending and told the user "Connection Request Sent".
+      // The blocking triggers (20260831050000) make that path reachable.
+      const { error: likeError } = await supabase
+        .from('partner_likes')
+        .upsert({ from_user_id: myId, to_user_id: id, kind: 'like' });
+      if (likeError) {
+        Alert.alert('Could not send request', 'This action is unavailable.');
+        return;
+      }
       setPending(true);
       const a = myId < id ? myId : id;
       const b = myId < id ? id : myId;
@@ -195,12 +205,12 @@ export default function PartnerProfileScreen() {
     const wasBookmarked = bookmarked;
     setBookmarked(!wasBookmarked); // optimistic
     try {
-      if (wasBookmarked) {
-        await supabase.from('partner_likes').delete()
-          .eq('from_user_id', myId).eq('to_user_id', id).eq('kind', 'save');
-      } else {
-        await supabase.from('partner_likes').upsert({ from_user_id: myId, to_user_id: id, kind: 'save' });
-      }
+      // Same trap as handleConnect: check `error`, do not rely on a throw.
+      const { error: bookmarkError } = wasBookmarked
+        ? await supabase.from('partner_likes').delete()
+            .eq('from_user_id', myId).eq('to_user_id', id).eq('kind', 'save')
+        : await supabase.from('partner_likes').upsert({ from_user_id: myId, to_user_id: id, kind: 'save' });
+      if (bookmarkError) setBookmarked(wasBookmarked); // revert; the write did not happen
     } catch {
       setBookmarked(wasBookmarked); // revert on failure
     }
