@@ -7,6 +7,43 @@ import { isProfileCompleteForEntry } from "@/lib/onboarding/completion";
 type CallbackClient = ReturnType<typeof createServerClient>;
 
 /**
+ * Marks a redirect so the browser can report the sign-in to analytics.
+ *
+ * This route cannot do it itself. posthog-js is a browser SDK, and capturing
+ * server-side with posthog-node would attach the event to a NEW distinct id
+ * rather than the anonymous one already in the visitor's browser — breaking the
+ * very identity stitching that makes a funnel work. `auth_started` fires
+ * anonymously on the auth page; only the browser can join the two.
+ *
+ * So the fact travels in the URL and `AnalyticsProvider` acts on it, then
+ * strips it. The parameter carries no identity — just which provider — because
+ * anything in a URL ends up in history, referrers and server logs.
+ */
+function withAuthEvent(url: string, provider: string): string {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}auth_ok=${encodeURIComponent(provider)}`;
+}
+
+/**
+ * Which provider signed this user in, or null when it was not a federated
+ * sign-in.
+ *
+ * Deliberately narrow. This route also handles password recovery and email
+ * confirmation, and neither is a sign-in worth reporting as auth_succeeded:
+ * counting a password reset as an authentication would inflate the funnel with
+ * events that had no auth_started.
+ */
+async function federatedProvider(supabase: CallbackClient): Promise<string | null> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const provider = user?.app_metadata?.provider;
+    return provider === "google" || provider === "apple" ? provider : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Decides where a freshly-authenticated user lands when the caller did not name
  * a destination.
  *
@@ -87,11 +124,16 @@ export async function GET(request: Request) {
       // This closes a real gap: before it, /onboarding was reachable from
       // exactly one place — the email signup handler — so every Google and
       // Apple signup went straight to the dashboard and never onboarded at all.
+      const provider = await federatedProvider(supabase);
+
       if (explicitNext) {
-        return NextResponse.redirect(`${origin}${explicitNext}`);
+        const target = provider ? withAuthEvent(explicitNext, provider) : explicitNext;
+        return NextResponse.redirect(`${origin}${target}`);
       }
 
-      return NextResponse.redirect(`${origin}${await resolveLanding(supabase)}`);
+      const landing = await resolveLanding(supabase);
+      const target = provider ? withAuthEvent(landing, provider) : landing;
+      return NextResponse.redirect(`${origin}${target}`);
     }
   }
 
