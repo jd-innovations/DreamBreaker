@@ -27,6 +27,7 @@ import {
 } from '@/components';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/useSession';
+import { ReportUserSheet } from '@/components/safety/ReportUserSheet';
 import {
   fetchMessages,
   sendMessage as sendMessageToDb,
@@ -1010,6 +1011,7 @@ function RealDMScreen({ conversationId }: { conversationId: string }) {
   }, [sendAttachment]);
 
   const name = partner?.name ?? '…';
+  const [reportOpen, setReportOpen] = useState(false);
 
   if (notFound) {
     return <ConversationUnavailable insetsTop={insets.top} />;
@@ -1056,8 +1058,40 @@ function RealDMScreen({ conversationId }: { conversationId: string }) {
             </View>
             <Text style={s.hdrActionLabel}>Profile</Text>
           </TouchableOpacity>
+
+          {/* 4.3. Reporting has to be reachable from the thread itself: being
+              harassed in a DM and having to navigate elsewhere to report it is
+              the moment a safety flow fails. Blocking already worked from
+              Marketplace only, and reports did not exist for people at all. */}
+          <TouchableOpacity
+            style={s.hdrAction}
+            activeOpacity={0.7}
+            onPress={() => setReportOpen(true)}
+            disabled={!partner}
+            accessibilityRole="button"
+            accessibilityLabel="Report this person"
+          >
+            <View style={s.hdrActionCircle}>
+              <Ionicons name="flag-outline" size={18} color={L.textSub} />
+            </View>
+            <Text style={s.hdrActionLabel}>Report</Text>
+          </TouchableOpacity>
         </View>
       </View>
+
+      {partner && user?.id ? (
+        <ReportUserSheet
+          visible={reportOpen}
+          onClose={() => setReportOpen(false)}
+          reporterId={user.id}
+          reportedId={partner.id}
+          reportedName={partner.name}
+          conversationId={conversationId}
+          // Blocking hides this conversation (20260831040000), so staying here
+          // would leave the user looking at a thread that no longer loads.
+          onBlocked={() => goBack()}
+        />
+      ) : null}
 
       <View style={s.headerBorder} />
 

@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { getOrCreateConversation } from '@/lib/conversationService';
 import { computeMatch } from '@/lib/computeMatch';
 import { useSupportContext } from '@/lib/support/supportContext';
+import { ReportUserSheet } from '@/components/safety/ReportUserSheet';
 
 const { width: SW } = Dimensions.get('window');
 const HERO_H = SW * 1.1;
@@ -69,6 +70,7 @@ export default function PartnerProfileScreen() {
   useSupportContext({ feature: 'partner_finder', entityType: 'player_profile', entityId: id, entityLabel: profile?.name });
   const [msgLoading, setMsgLoading] = useState(false);
   const [connectLoading, setConnectLoading] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     if (!id) { setLoading(false); return; }
@@ -263,6 +265,19 @@ export default function PartnerProfileScreen() {
             <TouchableOpacity style={s.iconBtn} onPress={handleBookmark}>
               <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={bookmarked ? L.gold : '#FFFFFF'} />
             </TouchableOpacity>
+            {/* 4.3. Hidden on your own profile — reporting yourself is not a
+                thing, and blocked_users has a no_self_block constraint that
+                would reject it anyway. */}
+            {myId && myId !== id ? (
+              <TouchableOpacity
+                style={s.iconBtn}
+                onPress={() => setReportOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Report this person"
+              >
+                <Ionicons name="flag-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            ) : null}
           </View>
 
           {/* Name overlay */}
@@ -419,6 +434,18 @@ export default function PartnerProfileScreen() {
             : <Ionicons name="chatbubble-outline" size={22} color={L.navy} />}
         </TouchableOpacity>
       </View>
+
+      {myId && profile && myId !== id ? (
+        <ReportUserSheet
+          visible={reportOpen}
+          onClose={() => setReportOpen(false)}
+          reporterId={myId}
+          reportedId={id}
+          reportedName={profile.name}
+          // Blocking from here removes the reason to stay on the profile.
+          onBlocked={() => router.back()}
+        />
+      ) : null}
     </View>
   );
 }
