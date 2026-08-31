@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Dimensions, Image, Modal, Pressable, Alert, ActivityIndicator, Linking,
-  LayoutAnimation, Platform, UIManager, Share,
+  LayoutAnimation, Platform, UIManager, Share, Animated,
 } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -317,6 +317,22 @@ export default function TournamentDetail() {
     ));
     setCtasExpanded(next);
   }, []);
+  // Hero pull-zoom, ported from community/[id].tsx. Native-driven so the
+  // transform runs on the UI thread and keeps up even while JS is busy.
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  // Scale only — deliberately no translateY. Pulling down past the top (a
+  // negative offset, iOS rubber-band) zooms in hard; scrolling up zooms gently
+  // as the hero recedes, which is the only half Android sees since it has no
+  // bounce by default. Staying at scale >= 1 means the image can never expose a
+  // gap at the edges, which a parallax translate would. s.hero already has
+  // overflow: 'hidden', so the scaled image is clipped to the hero.
+  const heroScale = scrollY.interpolate({
+    inputRange:  [-HERO_H, 0, HERO_H],
+    outputRange: [2, 1, 1.2],
+    extrapolate: 'clamp',
+  });
+
   const onCtaScroll = useCallback((e: { nativeEvent: { contentOffset: { y: number } } }) => {
     const y = e.nativeEvent.contentOffset.y;
     const dy = y - lastScrollY.current;
@@ -324,6 +340,10 @@ export default function TournamentDetail() {
     else if (dy < -6) setCtasExpandedAnimated(false);
     lastScrollY.current = y;
   }, [setCtasExpandedAnimated]);
+
+  // Named because two sections depend on it: the workspace banner and the
+  // empty About prompt.
+  const isThisDirector = !!user && user.id === directorUserId;
 
   const openDirectorDM = useCallback(async () => {
     if (!directorUserId) {
@@ -469,15 +489,25 @@ export default function TournamentDetail() {
       </View>
 
       {/* ── SCROLLABLE CONTENT ── */}
-      <ScrollView
+      <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 250 }}
-        onScroll={onCtaScroll}
         scrollEventThrottle={16}
+        // One handler drives both: the native driver moves the hero, and the
+        // listener keeps the existing collapsing-CTA behaviour. Replacing
+        // onCtaScroll outright would have silently disabled that.
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true, listener: onCtaScroll },
+        )}
       >
         {/* HERO */}
         <View style={[s.hero, { height: HERO_H }]}>
-          <Image source={{ uri: HERO_PHOTO }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <Animated.Image
+            source={{ uri: HERO_PHOTO }}
+            style={[StyleSheet.absoluteFill, { transform: [{ scale: heroScale }] }]}
+            resizeMode="cover"
+          />
           <LinearGradient
             colors={['rgba(0,0,0,0.25)', 'rgba(0,0,0,0.10)', 'rgba(0,0,0,0.72)']}
             locations={[0, 0.4, 1]}
@@ -651,7 +681,7 @@ export default function TournamentDetail() {
           </View>
 
           {/* DIRECTOR BANNER — only this tournament's own director */}
-          {!!user && user.id === directorUserId && (
+          {isThisDirector && (
             <TouchableOpacity
               style={s.directorBanner}
               activeOpacity={0.8}
@@ -689,10 +719,37 @@ export default function TournamentDetail() {
             </TouchableOpacity>
           )}
 
-          {/* DESCRIPTION */}
-          <Text style={s.description}>
-            Join us for our signature summer event! 3 days of competitive play, great vibes, and unforgettable moments in beautiful Sarasota, FL.
-          </Text>
+          {/* ABOUT THIS EVENT
+              Was a hardcoded paragraph about "3 days of competitive play in
+              Sarasota" shown identically on every tournament, including ones in
+              other states. tournaments.description is real and is null on most
+              rows, so the section now renders only when there is something to
+              say — or, for this tournament's own director, offers a prompt to
+              write one. Showing invented copy under a confident heading is the
+              pattern this app has been removing all week. */}
+          {tournament.description ? (
+            <View style={s.section}>
+              <Text style={[s.sectionTitle, { marginBottom: 12 }]}>ABOUT THIS EVENT</Text>
+              <Text style={s.description}>{tournament.description}</Text>
+            </View>
+          ) : isThisDirector ? (
+            <View style={s.section}>
+              <Text style={[s.sectionTitle, { marginBottom: 12 }]}>ABOUT THIS EVENT</Text>
+              <TouchableOpacity
+                style={s.aboutPrompt}
+                activeOpacity={0.8}
+                onPress={() => router.push(`/tournament/${tournament.id}/workspace` as never)}
+                accessibilityRole="button"
+                accessibilityLabel="Add a description for this tournament"
+              >
+                <Ionicons name="create-outline" size={16} color={L.gold} />
+                <Text style={s.aboutPromptText}>
+                  Add a description so players know what to expect — format, schedule, what to bring.
+                </Text>
+                <Ionicons name="chevron-forward" size={15} color={L.textMuted} />
+              </TouchableOpacity>
+            </View>
+          ) : null}
 
           {/* AMENITIES */}
           <View style={s.amenitiesRow}>
@@ -851,7 +908,7 @@ export default function TournamentDetail() {
           </View>
 
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* ── HOLD MY SPOT TOOLTIP ── */}
       <Modal
@@ -1327,6 +1384,18 @@ const s = StyleSheet.create({
     color: L.text, fontSize: 14, lineHeight: 22, fontWeight: '400',
     paddingHorizontal: 16, marginBottom: 18,
   },
+  aboutPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: L.border,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+  },
+  aboutPromptText: { flex: 1, color: L.textMuted, fontSize: 13, lineHeight: 18 },
 
   // Amenities — one tinted strip with hairline dividers, rather than four
   // separate bordered cards. `alignItems: 'stretch'` is what lets the dividers

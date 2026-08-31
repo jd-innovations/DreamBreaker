@@ -13,6 +13,8 @@ export function isTournamentExpired(tournament: Pick<Tournament, 'eventDate'>): 
 export interface Tournament {
   id: string;
   name: string;
+  /** Director-written blurb. Null on most tournaments — see the About section. */
+  description?: string | null;
   venue: string;
   city: string;
   state: string;
