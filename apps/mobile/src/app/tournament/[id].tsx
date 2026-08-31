@@ -601,7 +601,12 @@ export default function TournamentDetail() {
           {/* Real contextual tournament group chat — directors and registered/held players only */}
           {(playerRegStatus != null || (!!user && user.id === directorUserId)) && (
             <TouchableOpacity
-              style={s.msgDirectorBtn}
+              // msgDirectorBtn's marginBottom of 4 assumes the host card's
+              // divider sits right below it. This copy stands alone above the
+              // director banner, which has no marginTop, so 4 left them almost
+              // touching. Overridden here rather than in the shared style,
+              // where 4 is still correct.
+              style={[s.msgDirectorBtn, s.chatBtnStandalone]}
               activeOpacity={0.8}
               onPress={() => router.push(`/conversation/tournament-${id}` as never)}
             >
@@ -610,32 +615,6 @@ export default function TournamentDetail() {
             </TouchableOpacity>
           )}
 
-          <View style={s.hostDivider} />
-
-            <View style={s.hostStats}>
-              <View style={s.hostStat}>
-                <Ionicons name="people-outline" size={22} color={L.textSub} />
-                <Text style={s.hostStatNum}>3,842</Text>
-                <Text style={s.hostStatLabel}>Players Served</Text>
-              </View>
-              <View style={s.hostStat}>
-                <Ionicons name="star-outline" size={22} color={L.textSub} />
-                <Text style={s.hostStatNum}>4.8</Text>
-                <Text style={s.hostStatLabel}>Avg. Rating{'\n'}(126 reviews)</Text>
-              </View>
-              <View style={s.hostStat}>
-                <Ionicons name="calendar-outline" size={22} color={L.textSub} />
-                <Text style={s.hostStatNum}>28</Text>
-                <Text style={s.hostStatLabel}>Tournaments{'\n'}Hosted</Text>
-              </View>
-              <TouchableOpacity
-                style={s.hostMore}
-                onPress={() => setDirectorModalVisible(true)}
-              >
-                <Ionicons name="chevron-forward" size={20} color={L.textMuted} />
-              </TouchableOpacity>
-            </View>
-          </View>
 
           {/* DIRECTOR BANNER — only this tournament's own director */}
           {isThisDirector && (
@@ -866,6 +845,33 @@ export default function TournamentDetail() {
               : <Ionicons name="chatbubble-outline" size={15} color={L.navy} />}
             <Text style={s.msgDirectorText}>Message Director</Text>
           </TouchableOpacity>
+
+            <View style={s.hostDivider} />
+
+            <View style={s.hostStats}>
+              <View style={s.hostStat}>
+                <Ionicons name="people-outline" size={22} color={L.textSub} />
+                <Text style={s.hostStatNum}>3,842</Text>
+                <Text style={s.hostStatLabel}>Players Served</Text>
+              </View>
+              <View style={s.hostStat}>
+                <Ionicons name="star-outline" size={22} color={L.textSub} />
+                <Text style={s.hostStatNum}>4.8</Text>
+                <Text style={s.hostStatLabel}>Avg. Rating{'\n'}(126 reviews)</Text>
+              </View>
+              <View style={s.hostStat}>
+                <Ionicons name="calendar-outline" size={22} color={L.textSub} />
+                <Text style={s.hostStatNum}>28</Text>
+                <Text style={s.hostStatLabel}>Tournaments{'\n'}Hosted</Text>
+              </View>
+              <TouchableOpacity
+                style={s.hostMore}
+                onPress={() => setDirectorModalVisible(true)}
+              >
+                <Ionicons name="chevron-forward" size={20} color={L.textMuted} />
+              </TouchableOpacity>
+            </View>
+            </View>
 
           {/* FACILITY CARD */}
           {facility && (() => {
@@ -1353,6 +1359,7 @@ const s = StyleSheet.create({
     paddingVertical: 10, backgroundColor: L.page,
   },
   msgDirectorText: { color: L.navy, fontSize: 14, fontWeight: '700' },
+  chatBtnStandalone: { marginBottom: 14 },
 
   directorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
