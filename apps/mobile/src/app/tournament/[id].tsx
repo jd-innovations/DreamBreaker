@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Dimensions, Image, Modal, Pressable, Alert, ActivityIndicator, Linking,
+  StyleSheet, Dimensions, Image, Modal, Pressable, Alert, ActivityIndicator,
   LayoutAnimation, Platform, UIManager, Share, Animated,
 } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -14,7 +14,6 @@ import { goBack } from '@/lib/navigation';
 import { isTournamentCompleted, getAllBrackets } from '@/lib/directorBracketStore';
 import { isTournamentCompleted as fetchHasPublishedResults } from '@/lib/supabase/brackets';
 import { StatusChip, AddToCalendarButton } from '@/components';
-import { VenueMapCard } from '@/components/VenueMapCard';
 import type { CalendarEventInput } from '@/lib/calendarEvents';
 import { withLink } from '@/lib/calendarEvents';
 import {
@@ -298,7 +297,6 @@ export default function TournamentDetail() {
   const [directorUserId, setDirectorUserId] = useState<string | null>(null);
   const [directorProfile, setDirectorProfile] = useState<UserProfile | null>(null);
   const [msgingDirector, setMsgingDirector] = useState(false);
-  const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [directorModalVisible, setDirectorModalVisible] = useState(false);
 
   // CTA stack starts collapsed (Register Now only); scrolling up expands it
@@ -321,6 +319,12 @@ export default function TournamentDetail() {
   // Hero pull-zoom, ported from community/[id].tsx. Native-driven so the
   // transform runs on the UI thread and keeps up even while JS is busy.
   const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollRef = useRef<ScrollView>(null);
+  const sheetY = useRef(0);
+  const locationY = useRef(0);
+  const scrollToLocation = () => {
+    scrollRef.current?.scrollTo({ y: Math.max(0, sheetY.current + locationY.current - 12), animated: true });
+  };
 
   // Scale only — deliberately no translateY. Pulling down past the top (a
   // negative offset, iOS rubber-band) zooms in hard; scrolling up zooms gently
@@ -491,6 +495,7 @@ export default function TournamentDetail() {
 
       {/* ── SCROLLABLE CONTENT ── */}
       <Animated.ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 250 }}
         scrollEventThrottle={16}
@@ -530,7 +535,7 @@ export default function TournamentDetail() {
             <TouchableOpacity
               style={s.locationRow}
               activeOpacity={0.75}
-              onPress={() => setLocationModalVisible(true)}
+              onPress={scrollToLocation}
             >
               <Ionicons name="location" size={14} color="rgba(255,255,255,0.9)" />
               <View>
@@ -544,7 +549,7 @@ export default function TournamentDetail() {
         </View>
 
         {/* WHITE CONTENT (overlaps hero) */}
-        <View style={s.whiteSheet}>
+        <View style={s.whiteSheet} onLayout={e => { sheetY.current = e.nativeEvent.layout.y; }}>
 
           {/* STATUS CHIPS */}
           <View style={s.statusRow}>
@@ -870,43 +875,46 @@ export default function TournamentDetail() {
             </View>
           </View>
 
-          {/* FACILITY CARD */}
-          {!!facility && <Text style={s.sectionTitleStandalone}>LOCATION</Text>}
-          {facility && (() => {
-            const access = facilityAccessType(facility);
+          {/* LOCATION */}
+          <Text style={s.sectionTitleStandalone}>LOCATION</Text>
+          {(() => {
+            const access = facility ? facilityAccessType(facility) : null;
             const BADGE = {
               public:     { label: 'Public',     bg: '#DCFCE7', color: '#16A34A' },
               membership: { label: 'Membership', bg: '#FEF9C3', color: '#CA8A04' },
               private:    { label: 'Private',    bg: '#FEE2E2', color: '#DC2626' },
-            }[access];
+            }[access ?? 'public'];
+            const cityState = [tournament.city, tournament.state].filter(Boolean).join(', ');
             return (
-              <View style={s.locationWrap}>
+              <View style={s.locationWrap} onLayout={e => { locationY.current = e.nativeEvent.layout.y; }}>
                 <LocationCard
-                  name={facility.name}
-                  addressLines={[facility.address, [facility.city, facility.state].filter(Boolean).join(', ')]}
-                  latitude={facility.latitude}
-                  longitude={facility.longitude}
-                  verified={facility.verified}
+                  name={facility?.name ?? tournament.venue}
+                  addressLines={[facility?.address ?? tournament.venueAddress, cityState]}
+                  latitude={facility?.latitude}
+                  longitude={facility?.longitude}
+                  verified={facility?.verified}
                   // Coordinates when we have them: an address string sends the
                   // maps app to whatever it geocodes, which for a court inside
                   // a park is the park entrance, not the court.
                   directionsQuery={
-                    facility.latitude != null && facility.longitude != null
+                    facility?.latitude != null && facility?.longitude != null
                       ? `${facility.latitude},${facility.longitude}`
-                      : `${facility.address}, ${facility.city}, ${facility.state}`
+                      : [facility?.address ?? tournament.venueAddress ?? tournament.venue, cityState]
+                          .filter(Boolean).join(', ')
                   }
                   // Access and court count have no community-event equivalent,
                   // so they ride in the card's meta slot rather than being lost
-                  // in the swap from the old compact row.
-                  meta={
+                  // in the swap from the old compact row. Absent entirely when
+                  // the tournament has no facility record to describe.
+                  meta={facility ? (
                     <View style={fc.meta}>
                       <View style={[fc.accessBadge, { backgroundColor: BADGE.bg }]}>
                         <Text style={[fc.accessText, { color: BADGE.color }]}>{BADGE.label}</Text>
                       </View>
                       <Text style={fc.courts}>{facility.court_count} {facility.court_count === 1 ? 'Court' : 'Courts'}</Text>
                     </View>
-                  }
-                  onViewFacility={() => router.push(`/facility/${facility.id}` as never)}
+                  ) : undefined}
+                  onViewFacility={facility ? () => router.push(`/facility/${facility.id}` as never) : undefined}
                 />
               </View>
             );
@@ -946,54 +954,6 @@ export default function TournamentDetail() {
 
             <TouchableOpacity style={tt.doneBtn} onPress={() => setHoldTooltip(false)} activeOpacity={0.85}>
               <Text style={tt.doneBtnText}>Done</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* ── VENUE LOCATION SHEET ── */}
-      <Modal
-        visible={locationModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setLocationModalVisible(false)}
-      >
-        <Pressable style={sheet.backdrop} onPress={() => setLocationModalVisible(false)}>
-          <Pressable style={[sheet.card, { paddingBottom: insets.bottom + 16 }]} onPress={() => {}}>
-            <View style={sheet.handle} />
-            <View style={sheet.header}>
-              <Text style={sheet.title}>Venue</Text>
-              <TouchableOpacity onPress={() => setLocationModalVisible(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Ionicons name="close" size={22} color={L.textSub} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={sheet.venueName}>{tournament.venue}</Text>
-            <Text style={sheet.venueAddress}>{tournament.city}, {tournament.state}</Text>
-
-            <View style={sheet.mapWrap}>
-              {facility?.latitude != null && facility?.longitude != null ? (
-                <VenueMapCard latitude={facility.latitude} longitude={facility.longitude} name={tournament.venue} />
-              ) : (
-                <View style={sheet.mapEmpty}>
-                  <Ionicons name="location-outline" size={28} color={L.textSub} />
-                  <Text style={sheet.mapEmptyText}>Exact coordinates are not available for this venue yet.</Text>
-                </View>
-              )}
-            </View>
-
-            <TouchableOpacity
-              style={sheet.primaryBtn}
-              activeOpacity={0.85}
-              onPress={() => {
-                const query = facility?.latitude != null && facility?.longitude != null
-                  ? `${facility.latitude},${facility.longitude}`
-                  : encodeURIComponent(`${tournament.venue}, ${tournament.city}, ${tournament.state}`);
-                Linking.openURL(`https://maps.google.com/?q=${query}`);
-              }}
-            >
-              <Ionicons name="navigate-outline" size={16} color="#FFFFFF" />
-              <Text style={sheet.primaryBtnText}>Open in Maps</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -1610,17 +1570,6 @@ const sheet = StyleSheet.create({
   },
   title: { color: L.navy, fontSize: 17, fontWeight: '900' },
 
-  venueName:    { color: L.navy, fontSize: 16, fontWeight: '800', marginBottom: 2 },
-  venueAddress: { color: L.textSub, fontSize: 13, fontWeight: '500', marginBottom: 16 },
-  mapWrap: {
-    height: 220, borderRadius: 16, overflow: 'hidden',
-    borderWidth: 1, borderColor: L.border, marginBottom: 16,
-  },
-  mapEmpty: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    gap: 8, padding: 24, backgroundColor: L.page,
-  },
-  mapEmptyText: { color: L.textSub, fontSize: 13, textAlign: 'center', lineHeight: 19 },
 
   directorHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
   directorAvatar: { width: 64, height: 64, borderRadius: 32 },
