@@ -84,10 +84,21 @@ Purpose: turn `TODO1.1.md` into an ordered, one-issue-at-a-time production readi
 
 ## Current State — 2026-08-25 (status re-verified 2026-08-29)
 
-**23 of 27 items closed.** 4.2 and **4.3** closed 2026-08-31. **Phase 4 is
-complete.** 5.1 and 5.4 have all their code written and verified locally but
-are NOT closed — both need the queued migrations applied and build #9 on a
-device. Only Phase 7 is untouched, and it is gated on 1.4's legal placeholders.
+**24 of 27 items closed.** Phase 4 is complete (4.1, 4.2, 4.3), and **5.4
+closed 2026-08-31** on build #9.
+
+Three remain open, all needing device or human work rather than code:
+
+- **5.1** — push. Permission, token row, DB-triggered push, sign-out cleanup
+  and re-registration are all verified. Foreground/background/cold-tap,
+  invalid-token cleanup and Android are not.
+- **7.2** — 35 accessibility labels shipped, 29 triaged; VoiceOver and
+  TalkBack untested.
+- **7.3** — assets cut 7.0 MB to 1.13 MB; profiling needs hardware.
+
+**7.1's engineering half is done** (`STORE_SUBMISSION.md`); it needs a demo
+account and screenshots. 1.4's placeholders were already filled — that gate
+never actually existed.
 
 An item is done iff it has a `### Completion Notes - X.Y` section that does not
 say INCOMPLETE. Grep for those rather than trusting any summary, including this
@@ -95,10 +106,10 @@ one.
 
 | | Items |
 | --- | --- |
-| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 4.1, 4.2, **4.3**, 5.2, 5.3, 6.1, 6.2, 6.3 |
+| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 4.1-4.3, 5.2, 5.3, **5.4**, 6.1-6.3 |
 | **Partial** | — |
-| **Untouched** | 7.1, 7.2, 7.3 |
-| **Code done, awaiting deploy + build #9** | **5.1**, **5.4** |
+| **Needs a demo account + screenshots** | 7.1 |
+| **Partial — device work only** | 5.1, 7.2, 7.3 |
 
 Phases 0-3 are complete and deployed to production.
 
@@ -3631,6 +3642,40 @@ the web page is a better outcome than an app that opens to nothing.
   - User sees clear recovery path.
 - Done when:
   - Offline failures are safe and understandable.
+
+### Completion Notes - 5.4
+
+**Closed 2026-08-31**, device-verified on iOS build #9.
+
+Both Verification bullets pass:
+
+- **No false success while offline.** Booking, support and QR check-in all
+  refuse in airplane mode and say so. Payments refuse before the Stripe sheet
+  opens and state that nothing was charged.
+- **Clear recovery path.** The offline banner names the condition, and each
+  guarded action explains itself rather than failing generically.
+
+**The app stays usable.** The main screen still renders from cache with the
+banner showing — deliberate, and the reason the banner does not block
+interaction: most of this app reads data that is perfectly good offline, and
+covering the screen would take that away for nothing.
+
+#### Design decisions worth not undoing
+
+- **isOnline requires connected AND internet-reachable.** They come apart
+  constantly — a captive portal at a venue, hotel wifi before you accept the
+  terms — and in every one of those `isConnected` is true while nothing works.
+- **Unknown counts as online.** `isInternetReachable` is null until the first
+  probe resolves; treating that as offline would flash the banner on every cold
+  start and block payments that would have succeeded.
+- **Guards check at the tap, not at render.** The connection can drop between
+  the screen painting and the button press, and that is the press that moves
+  money.
+- **Every caller was updated, not just the guard.** All five payment call sites
+  previously fell through to "Payment Failed - We could not complete your
+  payment", which for an offline refusal is both wrong and alarming. They now
+  say you are offline and that nothing was charged; the fear after a failed
+  payment is always double billing.
 
 ## Phase 6 - Remove Production Fakery and Incomplete UX
 
