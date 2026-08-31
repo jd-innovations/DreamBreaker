@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { track } from '@/lib/analytics';
 import { balanceDueCents, effectiveEntryFeeCents } from '@/lib/tournamentFees';
 import type { TournamentRegistration, RegistrationStatus } from '@/lib/registrationStore';
 export type { TournamentRegistration };
@@ -373,15 +374,36 @@ export type CheckInResult = {
   checkedInAt: string | null;
 };
 
-export async function checkInRegistration(registrationId: string, tournamentId: string): Promise<CheckInResult> {
+export async function checkInRegistration(
+  registrationId: string,
+  tournamentId: string,
+  /** Which surface initiated it. Both paths land here, and the split matters:
+   *  a scanner that keeps failing over to manual entry is a broken scanner. */
+  method: 'scan' | 'manual' = 'manual',
+): Promise<CheckInResult> {
   const { data, error } = await supabase.rpc('check_in_registration', {
     p_registration_id: registrationId,
     p_tournament_id: tournamentId,
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    track('qr_checkin_failed', { tournament_id: tournamentId, checkin_method: method, error_code: 'rpc_error' });
+    throw new Error(error.message);
+  }
 
   const row = data?.[0];
-  if (!row) throw new Error('No response from check-in');
+  if (!row) {
+    track('qr_checkin_failed', { tournament_id: tournamentId, checkin_method: method, error_code: 'empty_response' });
+    throw new Error('No response from check-in');
+  }
+
+  // `result` is the RPC's own enum, not free text — already_checked_in and
+  // wrong_tournament are the two worth telling apart at a busy desk. reason and
+  // playerName are deliberately never sent.
+  track(row.result === 'success' ? 'qr_checkin_succeeded' : 'qr_checkin_failed', {
+    tournament_id: tournamentId,
+    checkin_method: method,
+    ...(row.result === 'success' ? {} : { error_code: row.result as string }),
+  });
 
   return {
     result: row.result as CheckInResult['result'],

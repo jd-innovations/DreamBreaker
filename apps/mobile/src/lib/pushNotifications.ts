@@ -3,6 +3,7 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
+import { track } from './analytics';
 import {
   navigateToExternalDestination,
   resolveNotificationDestination,
@@ -49,8 +50,16 @@ async function getGrantedPermission(requestPermission: boolean): Promise<boolean
   if (hasUsablePermission(current)) return true;
   if (!requestPermission) return false;
 
+  // The OS prompt is about to appear. shown/accepted/denied are separate events
+  // because the gap between them is the number worth knowing: a low accept rate
+  // is a copy problem, while never reaching `shown` is a code path problem.
+  track('push_prompt_shown');
   const requested = await Notifications.requestPermissionsAsync();
-  return hasUsablePermission(requested);
+  const granted = hasUsablePermission(requested);
+  track(granted ? 'push_prompt_accepted' : 'push_prompt_denied', {
+    permission_status: requested.status,
+  });
+  return granted;
 }
 
 async function getCurrentExpoPushToken(): Promise<string> {

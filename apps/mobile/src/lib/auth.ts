@@ -6,13 +6,24 @@ import * as Crypto from 'expo-crypto';
 import { supabase } from './supabase';
 import { deleteCurrentDevicePushToken } from './pushNotifications';
 import { updateProfile } from './services/profile';
+import { track } from './analytics';
 
 // No-op on native; required once for the OAuth browser session to resolve on web.
 WebBrowser.maybeCompleteAuthSession();
 
 export async function signIn(email: string, password: string) {
+  // Instrumented here rather than in the screen so every caller is covered —
+  // the sign-in screen is not the only entry point, and a funnel that misses
+  // one path reads as user drop-off rather than as missing instrumentation.
+  track('auth_started', { method: 'email' });
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
+  if (error) {
+    // No message: Supabase auth errors are prose and can echo the address that
+    // was typed. The count and the method are the signal.
+    track('auth_failed', { method: 'email' });
+    throw error;
+  }
+  track('auth_succeeded', { method: 'email' });
   return data;
 }
 
@@ -27,12 +38,19 @@ export async function signUp(
   fullName: string,
   extraMetadata?: Record<string, unknown>,
 ) {
+  track('auth_started', { method: 'email', source: 'sign_up' });
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { full_name: fullName, ...extraMetadata } },
   });
-  if (error) throw error;
+  if (error) {
+    track('auth_failed', { method: 'email', source: 'sign_up' });
+    throw error;
+  }
+  // Deliberately not auth_succeeded. With confirmations on, signUp returns no
+  // session — the account exists but the person is not signed in, and counting
+  // this as a success would hide every abandoned confirmation.
   return data;
 }
 
@@ -55,26 +73,48 @@ export async function signInWithGoogle() {
   // in every environment this app actually runs in.
   const redirectTo = 'pickleballapp://';
 
+  track('auth_started', { method: 'google' });
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo, skipBrowserRedirect: true },
   });
-  if (error) throw error;
+  if (error) {
+    track('auth_failed', { method: 'google', error_code: 'oauth_url_failed' });
+    throw error;
+  }
 
   const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-  if (res.type !== 'success') return null;
+  // A dismissed browser sheet is a cancel, not a failure. Counting it as
+  // failed would make Google sign-in look broken every time someone changes
+  // their mind — the distinction the return contract already draws.
+  if (res.type !== 'success') {
+    track('auth_failed', { method: 'google', result: 'canceled' });
+    return null;
+  }
 
   const { params, errorCode } = QueryParams.getQueryParams(res.url);
-  if (errorCode) throw new Error(errorCode);
+  if (errorCode) {
+    // errorCode is GoTrue's short code, not prose.
+    track('auth_failed', { method: 'google', error_code: errorCode });
+    throw new Error(errorCode);
+  }
 
   const { access_token, refresh_token } = params;
-  if (!access_token || !refresh_token) return null;
+  if (!access_token || !refresh_token) {
+    track('auth_failed', { method: 'google', error_code: 'missing_tokens' });
+    return null;
+  }
 
   const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
     access_token,
     refresh_token,
   });
-  if (sessionError) throw sessionError;
+  if (sessionError) {
+    track('auth_failed', { method: 'google', error_code: 'set_session_failed' });
+    throw sessionError;
+  }
+  track('auth_succeeded', { method: 'google' });
   return sessionData.session;
 }
 
@@ -87,7 +127,11 @@ export async function signInWithGoogle() {
 // device (neither is an error), and throws for genuine failures.
 export async function signInWithApple() {
   const available = await AppleAuthentication.isAvailableAsync();
+  // Not an attempt: the device cannot offer Apple sign-in at all. Recording a
+  // start here would put unreachable users in the top of the funnel.
   if (!available) return null;
+
+  track('auth_started', { method: 'apple' });
 
   // Apple's documented nonce pattern: the SHA256 hash goes to Apple (embedded
   // verbatim in the identity token's `nonce` claim); the original raw value
@@ -111,12 +155,15 @@ export async function signInWithApple() {
     // The user tapped Cancel -- not an authentication failure.
     if (e && typeof e === 'object' && 'code' in e && e.code === 'ERR_REQUEST_CANCELED') {
       if (__DEV__) console.log('[auth] apple auth cancelled');
+      track('auth_failed', { method: 'apple', result: 'canceled' });
       return null;
     }
+    track('auth_failed', { method: 'apple', error_code: 'apple_sign_in_failed' });
     throw e;
   }
 
   if (!credential.identityToken) {
+    track('auth_failed', { method: 'apple', error_code: 'no_identity_token' });
     throw new Error('Apple did not return an identity token.');
   }
 
@@ -127,9 +174,11 @@ export async function signInWithApple() {
   });
   if (error) {
     if (__DEV__) console.log('[auth] supabase auth failed');
+    track('auth_failed', { method: 'apple', error_code: 'id_token_rejected' });
     throw error;
   }
   if (__DEV__) console.log('[auth] supabase auth success');
+  track('auth_succeeded', { method: 'apple' });
 
   // Apple returns the user's name only on the FIRST authorization ever for
   // this Apple ID + app pair -- every later sign-in gets `fullName: null`.

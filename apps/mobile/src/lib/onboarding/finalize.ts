@@ -1,4 +1,5 @@
 import { getSession, signUp } from '@/lib/auth';
+import { track } from '@/lib/analytics';
 import { updateProfile } from '@/lib/services/profile';
 import { AVAILABILITY_OPTIONS } from './mockData';
 import type { OnboardingDraft } from './state';
@@ -134,6 +135,8 @@ export async function finalizeOnboarding(draft: OnboardingDraft): Promise<Finali
 
     if (session?.user) {
       await updateProfile(session.user.id, { ...fields, full_name: fullName || undefined });
+      // A session existed, so the profile was actually written.
+      track('profile_completed', { source: 'onboarding', method: draft.authMethod ?? 'email' });
       return { ok: true, needsEmailConfirmation: false };
     }
 
@@ -152,6 +155,10 @@ export async function finalizeOnboarding(draft: OnboardingDraft): Promise<Finali
     }
 
     await signUp(draft.profileEmail, draft.emailPassword, fullName, fields);
+    // Deliberately no profile_completed here. The fields ride into
+    // raw_user_meta_data and the profile row is written by the trigger only
+    // once the email is confirmed — counting it now would claim a completed
+    // profile for everyone who never opens the confirmation mail.
     return { ok: true, needsEmailConfirmation: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Something went wrong. Please try again.' };

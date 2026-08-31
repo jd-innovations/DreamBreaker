@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStripe } from '@stripe/stripe-react-native';
 import { createBookingPaymentIntent, pollForReservationConfirmation } from './reservationPaymentIntent';
+import { track } from '@/lib/analytics';
 
 // Booking Engine Phase 3A — the real PaymentSheet hook, wired into
 // booking/review.tsx as of Phase 3.1. Importing this (and therefore
@@ -29,19 +30,39 @@ export function useReservationPayment() {
 
   async function payForReservation(reservationId: string, attemptId: string): Promise<PaymentOutcome> {
     setProcessing(true);
+    // Every branch below reports exactly once, because a payment funnel with a
+    // silent branch is worse than none: a start with no outcome is
+    // indistinguishable from a crash mid-checkout, which is the one thing you
+    // would drop everything to investigate.
+    track('payment_started', { reservation_id: reservationId, source: 'booking' });
     try {
       const intentResult = await createBookingPaymentIntent(reservationId, attemptId);
-      if (!intentResult.ok) return { status: 'error', code: intentResult.code };
+      if (!intentResult.ok) {
+        track('payment_failed', { reservation_id: reservationId, error_code: intentResult.code });
+        return { status: 'error', code: intentResult.code };
+      }
 
       const { error: initError } = await initPaymentSheet({
         paymentIntentClientSecret: intentResult.clientSecret,
         merchantDisplayName: 'Pickleball App',
       });
-      if (initError) return { status: 'error', code: initError.code ?? 'init_failed' };
+      if (initError) {
+        track('payment_failed', { reservation_id: reservationId, error_code: initError.code ?? 'init_failed' });
+        return { status: 'error', code: initError.code ?? 'init_failed' };
+      }
 
       const { error: presentError } = await presentPaymentSheet();
       if (presentError) {
-        if (presentError.code === 'Canceled') return { status: 'canceled' };
+        // Canceled is its own event, not a failure. Someone closing the sheet
+        // is a normal outcome; filing it as a failure would make the payment
+        // system look broken in proportion to how many people browse.
+        if (presentError.code === 'Canceled') {
+          track('payment_canceled', { reservation_id: reservationId });
+          return { status: 'canceled' };
+        }
+        // The Stripe code, never presentError.message — that string is shown to
+        // the user and can name the card or the decline reason.
+        track('payment_failed', { reservation_id: reservationId, error_code: presentError.code ?? 'present_failed' });
         return { status: 'failed', message: presentError.message ?? 'Payment failed.' };
       }
 
@@ -50,6 +71,14 @@ export function useReservationPayment() {
       // server-confirmed state before reporting anything stronger than
       // "succeeded, pending confirmation."
       const confirmed = await pollForReservationConfirmation(reservationId);
+      // `result` separates the two success shapes. They are not the same thing:
+      // "the card was charged" and "the reservation is confirmed" diverging is
+      // precisely the condition 3.3's reconciliation queue exists to catch, and
+      // the rate is worth watching without opening the admin screen.
+      track('payment_succeeded', {
+        reservation_id: reservationId,
+        result: confirmed ? 'confirmed' : 'pending_confirmation',
+      });
       return confirmed ? { status: 'confirmed' } : { status: 'succeeded_pending_confirmation' };
     } finally {
       setProcessing(false);

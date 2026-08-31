@@ -13,6 +13,7 @@ import { useExternalLinks } from '@/hooks/useExternalLinks';
 import { useFeatureRouteGuard } from '@/hooks/useFeatureRouteGuard';
 import { STRIPE_PUBLISHABLE_KEY } from '@/lib/payments/stripeConfig';
 import { initSentry, setSentryUser, withCrashReporting } from '@/lib/observability/sentry';
+import { initAnalytics, identifyUser, resetAnalytics } from '@/lib/analytics';
 import '../global.css';
 
 // StripeProvider requires a custom Expo dev client build — @stripe/stripe-react-native
@@ -28,6 +29,13 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 // component would miss it.
 initSentry();
 
+// Analytics starts here too, but note the difference: this one is async. It is
+// deliberately not awaited — the SDK restores a queued-event buffer from
+// storage, and blocking the first render on disk IO to record that the app
+// opened would be the wrong trade. Events fired before it settles are dropped
+// rather than queued, which is why nothing here reports app launch.
+void initAnalytics();
+
 function RootLayout() {
   const [fontsLoaded] = useFonts({ BebasNeue_400Regular });
   const { user, loading, isAuthenticated } = useSession();
@@ -39,6 +47,15 @@ function RootLayout() {
   // sign-out matters on a shared device, where the next person's crashes would
   // otherwise be filed under the previous account.
   useEffect(() => { setSentryUser(user?.id ?? null); }, [user?.id]);
+
+  // Same rule for analytics: a uuid and nothing else, cleared on sign-out.
+  // PostHog's identity is persisted, so unlike the session it survives a
+  // restart — on a shared device it would follow the next person around until
+  // something resets it.
+  useEffect(() => {
+    if (user?.id) identifyUser(user.id);
+    else resetAnalytics();
+  }, [user?.id]);
 
   useEffect(() => {
     // Fast Refresh can re-run this effect after the native splash screen has

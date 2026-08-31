@@ -84,7 +84,7 @@ function CheckInScanScreen() {
 
     setState({ kind: 'checking' });
     try {
-      const outcome = await checkInRegistration(classification.token, tournamentId);
+      const outcome = await checkInRegistration(classification.token, tournamentId, 'scan');
       if (outcome.result === 'success') haptics.success();
       else if (outcome.result === 'already_checked_in') haptics.warning();
       else haptics.error();

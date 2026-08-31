@@ -3,6 +3,7 @@ import { useStripe } from '@stripe/stripe-react-native';
 import { supabase } from '@/lib/supabase';
 import { isPlayerHeld, isPlayerRegistered } from '@/lib/supabase/registrations';
 import { fetchRegistrationGroup, memberFor } from '@/lib/supabase/registrationGroups';
+import { track } from '@/lib/analytics';
 
 // First domain-specific consumer of the shared payment foundation
 // (supabase/functions/_shared/payments.ts). Replaces the direct client
@@ -136,22 +137,35 @@ export function useTournamentEntryPayment() {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   async function presentTournamentPayment(clientSecret: string): Promise<PayTournamentEntryResult> {
+    // Instrumented here rather than in each of the four entry paths (solo,
+    // partner, group, waitlist): they all funnel through this one sheet, and
+    // four copies would be four chances for the branches to disagree.
+    track('payment_started', { source: 'tournament_entry' });
+
     const { error: initError } = await initPaymentSheet({
       paymentIntentClientSecret: clientSecret,
       merchantDisplayName: 'Pickleball App',
     });
     if (initError) {
       console.error('[presentTournamentPayment] initPaymentSheet error:', initError.code, initError.message);
+      track('payment_failed', { source: 'tournament_entry', error_code: initError.code ?? 'init_failed' });
       return { ok: false, reason: 'failed' };
     }
 
     const { error: presentError } = await presentPaymentSheet();
     if (presentError) {
       console.error('[presentTournamentPayment] presentPaymentSheet error:', presentError.code, presentError.message);
-      if (presentError.code === 'Canceled') return { ok: false, reason: 'canceled' };
+      if (presentError.code === 'Canceled') {
+        track('payment_canceled', { source: 'tournament_entry' });
+        return { ok: false, reason: 'canceled' };
+      }
+      // The code, never the message: it is user-facing text and can name the
+      // card or the decline reason.
+      track('payment_failed', { source: 'tournament_entry', error_code: presentError.code ?? 'present_failed' });
       return { ok: false, reason: 'failed' };
     }
 
+    track('payment_succeeded', { source: 'tournament_entry' });
     return { ok: true };
   }
 

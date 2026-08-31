@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { track } from './analytics';
 import { sendMessage } from './conversationService';
 import type { Database, Json } from '@shared/database.types';
 import type { SupportContext } from './support/supportContext';
@@ -88,6 +89,15 @@ export async function createSupportTicket(
   if (!ticket) throw new Error(ticketError?.message ?? 'Failed to create support ticket');
 
   await sendMessage(conversation.id, userId, firstMessage);
+
+  // Category only. The subject and the first message are the two fields most
+  // likely to contain someone's name, address or payment complaint verbatim,
+  // and ticket_category is a fixed vocabulary — see ALLOWED_PROPERTY_KEYS.
+  track('support_ticket_submitted', {
+    ticket_category: category,
+    ticket_id: ticket.id,
+    source: options?.source ?? 'unknown',
+  });
 
   return ticket;
 }
