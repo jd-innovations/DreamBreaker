@@ -1,4 +1,25 @@
-const appJson = require('./app.json');
+// The app's Expo configuration. There is deliberately NO app.json.
+//
+// This file used to `require('./app.json')` and spread it. That worked, but it
+// failed `expo doctor`'s "Check Expo config for common issues" on every single
+// EAS build:
+//
+//   You have an app.json file in your project, but your app.config.js is not
+//   using the values from it.
+//
+// The warning was wrong — the spread did use them — but doctor only recognises
+// the `({ config }) => ({ ...config })` form, not a direct require. The cost was
+// not the false positive itself: it was a red X on every build log, which
+// competes for attention with real failures. During build #8 it was the first
+// thing examined while diagnosing a 71-minute build, and it was a dead end.
+//
+// The split was also actively misleading in a second way. app.json carried a
+// `plugins` array that was DEAD: the spread put it in, and the `plugins` key
+// below immediately overwrote it. Editing that list had no effect on anything.
+//
+// Everything from app.json is inlined below, unchanged. Nothing else read it —
+// the two source references were comments, and getProjectId reads the resolved
+// config (Constants.expoConfig.extra.eas.projectId), which this file provides.
 
 const androidGoogleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY;
 const iosGoogleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY;
@@ -9,28 +30,69 @@ const CAMERA_PERMISSION_TEXT =
   'Allow Pickleball App to use your camera to take and send photos in chat, and to scan QR codes for check-in and redemption.';
 
 module.exports = {
-  ...appJson.expo,
+  name: 'Pickleball App',
+  slug: 'dreambreaker',
+  version: '1.0.0',
+  orientation: 'portrait',
+  icon: './assets/images/icon.png',
+  scheme: 'pickleballapp',
+  userInterfaceStyle: 'dark',
+
+  updates: {
+    url: 'https://u.expo.dev/04fcdd30-fb9e-47e2-9371-8e4e8b521c17',
+  },
+  runtimeVersion: {
+    policy: 'appVersion',
+  },
+
   ios: {
-    ...appJson.expo.ios,
-    associatedDomains: Array.from(new Set([
-      ...(appJson.expo.ios?.associatedDomains ?? []),
-      'applinks:pickleballapp.app',
-    ])),
+    supportsTablet: false,
+    bundleIdentifier: 'app.pickleballapp',
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+    },
+    associatedDomains: ['applinks:pickleballapp.app'],
     config: {
-      ...appJson.expo.ios?.config,
       googleMapsApiKey: iosGoogleMapsApiKey,
     },
   },
+
   android: {
-    ...appJson.expo.android,
+    package: 'app.pickleballapp',
+    adaptiveIcon: {
+      backgroundColor: '#283C1D',
+      foregroundImage: './assets/images/android-icon-foreground.png',
+      backgroundImage: './assets/images/android-icon-background.png',
+    },
+    predictiveBackGestureEnabled: false,
+    // Android resizes rather than pans by default, which pushes chat input off
+    // screen — see the note in src/app/community/[id].tsx.
+    softwareKeyboardLayoutMode: 'pan',
     config: {
-      ...appJson.expo.android?.config,
       googleMaps: {
-        ...appJson.expo.android?.config?.googleMaps,
         apiKey: androidGoogleMapsApiKey,
       },
     },
   },
+
+  web: {
+    output: 'static',
+    favicon: './assets/images/favicon.png',
+  },
+
+  experiments: {
+    typedRoutes: true,
+    reactCompiler: true,
+  },
+
+  extra: {
+    eas: {
+      // Read at runtime by getProjectId() in src/lib/pushNotifications.ts, and
+      // by EAS itself. Losing this breaks push token registration and builds.
+      projectId: '04fcdd30-fb9e-47e2-9371-8e4e8b521c17',
+    },
+  },
+
   plugins: [
     'expo-router',
     [
