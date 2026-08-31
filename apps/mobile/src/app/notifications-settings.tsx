@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Switch,
@@ -10,6 +10,12 @@ import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/theme';
 import { useSession } from '@/hooks/useSession';
 import { registerPushTokenForUser, type PushRegistrationResult } from '@/lib/pushNotifications';
+import {
+  loadNotificationPreferences,
+  saveNotificationPreference,
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  type NotificationPreferences,
+} from '@/lib/notificationPreferences';
 import { haptics } from '@/lib/haptics';
 
 // Theme-backed alias â€” all brand values resolve from @/theme.
@@ -54,25 +60,6 @@ function IconCircle({ name }: { name: string }) {
 
 // â”€â”€â”€ Category nav row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-function CategoryRow({
-  icon, label, sub, last,
-}: {
-  icon: string; label: string; sub: string; last?: boolean;
-}) {
-  return (
-    <>
-      <TouchableOpacity style={s.row} activeOpacity={0.7}>
-        <IconCircle name={icon} />
-        <View style={s.rowCenter}>
-          <Text style={s.rowLabel}>{label}</Text>
-          <Text style={s.rowSub}>{sub}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={16} color={L.textMuted} />
-      </TouchableOpacity>
-      {!last && <Div />}
-    </>
-  );
-}
 
 // â”€â”€â”€ Toggle row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -105,20 +92,6 @@ function ToggleRow({
 
 // â”€â”€â”€ Time picker row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-function TimeRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
-  return (
-    <>
-      <TouchableOpacity style={s.row} activeOpacity={0.7}>
-        <Text style={s.timeLabel}>{label}</Text>
-        <View style={s.timeRight}>
-          <Text style={s.timeValue}>{value}</Text>
-          <Ionicons name="chevron-forward" size={16} color={L.textMuted} />
-        </View>
-      </TouchableOpacity>
-      {!last && <Div />}
-    </>
-  );
-}
 
 // â”€â”€â”€ Main screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -126,19 +99,57 @@ export default function NotificationsSettingsScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useSession();
 
-  // Delivery methods
+  // Push registration is per-device and separate from the preferences below:
+  // it is about whether THIS device has a token, not about what the user wants
+  // to be told. Both matter — a device with no token receives nothing however
+  // the preferences are set.
   const [pushNotifs,  setPushNotifs]  = useState(false);
-  const [emailNotifs, setEmailNotifs] = useState(true);
   const [registeringPush, setRegisteringPush] = useState(false);
   const [pushResult, setPushResult] = useState<PushRegistrationResult | null>(null);
 
-  // Quiet hours
-  const [quietHours, setQuietHours] = useState(true);
+  // Preferences, loaded from profiles rather than invented in component state.
+  const [prefs, setPrefs] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
+  const [prefsStatus, setPrefsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [prefsError, setPrefsError] = useState<string | null>(null);
 
-  // Badge counts
-  const [appBadge,    setAppBadge]    = useState(true);
-  const [eventsBadge, setEventsBadge] = useState(true);
-  const [chatsBadge,  setChatsBadge]  = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) { setPrefsStatus('error'); setPrefsError('Sign in to manage notifications.'); return; }
+
+    setPrefsStatus('loading');
+    void loadNotificationPreferences(user.id).then((result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        setPrefs(result.preferences);
+        setPrefsStatus('ready');
+        setPrefsError(null);
+      } else {
+        // Deliberately not falling back to defaults with a ready state: the
+        // switches would show values that are not the user's, and saving from
+        // there would write them back. See ScreenState — a failure must not
+        // look like data.
+        setPrefsStatus('error');
+        setPrefsError(result.reason);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  // Optimistic, with a revert. The switch has to move on the tap or it feels
+  // broken, but a failed write must not leave the UI claiming a setting that
+  // the database does not have.
+  async function updatePref(key: keyof NotificationPreferences, next: boolean) {
+    if (!user?.id) return;
+    const previous = prefs[key];
+    setPrefs((p) => ({ ...p, [key]: next }));
+    setPrefsError(null);
+
+    const result = await saveNotificationPreference(user.id, key, next);
+    if (!result.ok) {
+      setPrefs((p) => ({ ...p, [key]: previous }));
+      setPrefsError(result.reason);
+    }
+  }
 
   async function handlePushToggle(next: boolean) {
     if (!next) {
@@ -187,36 +198,59 @@ export default function NotificationsSettingsScreen() {
         <Text style={s.intro}>{"Choose what you'd like to be notified about."}</Text>
 
         {/* â”€â”€ Notification Categories â”€â”€ */}
+        {/* These were five CategoryRow items with a chevron, no onPress and a
+            caption promising "Manage notification types for each category".
+            They are now switches bound to the profiles.notif_* columns that
+            already existed and that web's match-settings panel already writes,
+            so the two platforms finally agree.
+
+            Community Play, Marketplace and Social are gone: there is no column
+            and no sender behind any of them. */}
         <SectionHeader label="NOTIFICATION CATEGORIES" />
         <Group>
-          <CategoryRow
+          <ToggleRow
+            icon="chatbubbles-outline"
+            label="Messages"
+            sub="New chat messages"
+            value={prefs.messages}
+            onChange={(next) => { void updatePref('messages', next); }}
+          />
+          <ToggleRow
             icon="trophy-outline"
             label="Tournament Activity"
-            sub="Registration, updates, results, and more"
+            sub="Registration, updates, and results"
+            value={prefs.tournaments}
+            onChange={(next) => { void updatePref('tournaments', next); }}
           />
-          <CategoryRow
-            icon="people-outline"
-            label="Community Play"
-            sub="Invites, reminders, and session updates"
-          />
-          <CategoryRow
+          <ToggleRow
             icon="person-add-outline"
-            label="Partner Finder"
-            sub="Requests, matches, and messages"
+            label="New Matches"
+            sub="When someone matches with you"
+            value={prefs.newMatch}
+            onChange={(next) => { void updatePref('newMatch', next); }}
           />
-          <CategoryRow
-            icon="pricetag-outline"
-            label="Marketplace"
-            sub="Messages, listings, and price alerts"
-          />
-          <CategoryRow
+          <ToggleRow
             icon="heart-circle-outline"
-            label="Social"
-            sub="Teams, groups, and friend activity"
+            label="Likes"
+            sub="When someone likes your profile"
+            value={prefs.likedYou}
+            onChange={(next) => { void updatePref('likedYou', next); }}
+          />
+          <ToggleRow
+            icon="time-outline"
+            label="Hold Expiry"
+            sub="Before a held tournament spot expires"
+            value={prefs.holdExpiry}
+            onChange={(next) => { void updatePref('holdExpiry', next); }}
             last
           />
         </Group>
-        <Text style={s.groupNote}>Manage notification types for each category.</Text>
+        <Text style={s.groupNote}>
+          {prefsStatus === 'loading'
+            ? 'Loading your settings...'
+            : 'Messages are delivered according to this setting today. The rest are saved and will apply as those notifications are added.'}
+        </Text>
+        {prefsError ? <Text style={s.groupNote}>{prefsError}</Text> : null}
 
         {/* â”€â”€ Delivery Methods â”€â”€ */}
         <SectionHeader label="DELIVERY METHODS" />
@@ -237,8 +271,8 @@ export default function NotificationsSettingsScreen() {
             icon="mail-outline"
             label="Email Notifications"
             sub="Receive notifications via email"
-            value={emailNotifs}
-            onChange={setEmailNotifs}
+            value={prefs.email}
+            onChange={(next) => { void updatePref('email', next); }}
             last
           />
         </Group>
@@ -248,52 +282,21 @@ export default function NotificationsSettingsScreen() {
           </Text>
         )}
 
-        {/* â”€â”€ Quiet Hours â”€â”€ */}
-        <SectionHeader label="QUIET HOURS" />
-        <Group>
-          <ToggleRow
-            icon="moon-outline"
-            label="Quiet Hours"
-            sub="Silence non-urgent notifications during these hours"
-            value={quietHours}
-            onChange={setQuietHours}
-          />
-          <TimeRow label="Start" value="10:00 PM" />
-          <TimeRow label="End"   value="7:00 AM"  last />
-        </Group>
+        {/* Quiet Hours and Badge Counts were here. Both removed 2026-08-31.
 
-        {/* â”€â”€ Badge Counts â”€â”€ */}
-        <SectionHeader label="BADGE COUNTS" />
-        <Group>
-          <ToggleRow
-            icon="notifications-outline"
-            label="Show App Badge Count"
-            sub="Display unread count on the app icon"
-            value={appBadge}
-            onChange={setAppBadge}
-          />
-          <ToggleRow
-            icon="calendar-outline"
-            label="Show Events Badge"
-            sub="Display badge for upcoming events"
-            value={eventsBadge}
-            onChange={setEventsBadge}
-          />
-          <ToggleRow
-            icon="chatbubbles-outline"
-            label="Show Chats Badge"
-            sub="Display unread message count"
-            value={chatsBadge}
-            onChange={setChatsBadge}
-            last
-          />
-        </Group>
+            Quiet hours offered "10:00 PM - 7:00 AM" with no timezone stored
+            anywhere on profiles, so no server-side sender could know when 10 PM
+            is for a given user. It needs a timezone column captured from the
+            device before it can mean anything.
+
+            Badge counts had three switches, and setBadgeCountAsync is called
+            nowhere in this app — the icon has never carried a badge. */}
 
         {/* â”€â”€ Footer â”€â”€ */}
         <View style={s.footer}>
           <Ionicons name="lock-closed-outline" size={14} color={L.textMuted} />
           <View>
-            <Text style={s.footerLine}>Notifications are automatically saved.</Text>
+            <Text style={s.footerLine}>Changes save as you make them.</Text>
             <Text style={s.footerLine}>You can change these preferences at any time.</Text>
           </View>
         </View>
