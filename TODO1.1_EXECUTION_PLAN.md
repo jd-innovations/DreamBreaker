@@ -4123,6 +4123,42 @@ Goal: submit-ready beta package.
 - Done when:
   - Store metadata package is complete.
 
+### Completion Notes - 7.1
+
+**The engineering half is done 2026-08-31: `STORE_SUBMISSION.md` at the repo
+root.** Its Done-when is "App Store Connect and Play Console forms can be
+completed without new engineering answers", and that is now true. What remains
+are accounts, screenshots and a legal review — see its final section.
+
+**1.4's placeholders were already filled, and this plan was stale on it.**
+Checked before writing: `web/src/lib/legal.ts` carries JD Innovations LLC, a
+Bradenton mailing address and support@pickleballapp.app; Terms §16 names
+Florida as governing law; the privacy policy states the 30-day response
+commitment. Phase 7 was never actually gated. What 1.4 still lacks is a
+*lawyer's review*, which is not a placeholder.
+
+All four store-facing URLs verified live (200): `/help`, `/legal/privacy`,
+`/legal/terms`, `/legal/delete-account`. A dead privacy URL is an automatic
+rejection, and the deletion page being reachable **without signing in** is
+itself an Apple requirement.
+
+**The Data Safety answers are derived, not estimated.** Every analytics event
+passes an allowlist in `packages/shared/src/analytics.ts`, so the list of what
+reaches PostHog is exhaustive rather than a best guess, and the rejected set —
+names, emails, phone numbers, message bodies, coordinates, card data — is
+enforced in code. Same for crash reports through the two scrubbers.
+
+**Two things in there will bite if skipped:**
+
+- **Stripe is in test mode (G1).** A reviewer who tries to pay will either fail
+  or be charged nothing. Either go live before submitting — which needs a live
+  webhook, every director re-onboarding Connect, and a new mobile build in the
+  same window because the publishable key is baked into the binary — or hide
+  paid flows for the reviewed build and say so in the notes. Either way the
+  demo account needs a free event.
+- **Payments are for real-world services**, so StoreKit does not apply. Stating
+  that in the review notes heads off a common rejection.
+
 ### 7.2 Final Accessibility Pass
 
 - Issue: No systematic accessibility audit.
