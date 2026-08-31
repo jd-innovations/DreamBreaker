@@ -84,8 +84,9 @@ Purpose: turn `TODO1.1.md` into an ordered, one-issue-at-a-time production readi
 
 ## Current State — 2026-08-25 (status re-verified 2026-08-29)
 
-**21 of 27 items closed.** 5.3 and 4.1 both closed on device 2026-08-29/30.
-Nothing is partial any more; the six that remain are untouched.
+**22 of 27 items closed.** 5.3 and 4.1 closed on device 2026-08-29/30; **4.2
+closed 2026-08-31** on build #8. Nothing is partial; the five that remain are
+untouched. Phase 4 is complete except 4.3.
 
 An item is done iff it has a `### Completion Notes - X.Y` section that does not
 say INCOMPLETE. Grep for those rather than trusting any summary, including this
@@ -93,9 +94,9 @@ one.
 
 | | Items |
 | --- | --- |
-| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, **4.1**, 5.2, 5.3, 6.1, 6.2, 6.3 |
+| **Closed** | 0.1-0.3, 1.1-1.4, 2.1-2.4, 3.1-3.4, 4.1, **4.2**, 5.2, 5.3, 6.1, 6.2, 6.3 |
 | **Partial** | — |
-| **Untouched** | **4.2** (started — shared taxonomy landed, neither platform wired), 4.3, 5.1, 5.4, 7.1, 7.2, 7.3 |
+| **Untouched** | 4.3, 5.1, 5.4, 7.1, 7.2, 7.3 |
 
 Phases 0-3 are complete and deployed to production.
 
@@ -3062,6 +3063,80 @@ routed through `onRequestError`.
   - No sensitive payload is sent.
 - Done when:
   - Beta funnels can be measured.
+
+### Completion Notes - 4.2
+
+**Vendor: PostHog, US cloud** (`https://us.i.posthog.com`). Decided 2026-08-29.
+Keys live in Vercel (`NEXT_PUBLIC_POSTHOG_KEY`/`_HOST`) and in all three EAS
+environments (`EXPO_PUBLIC_POSTHOG_KEY`/`_HOST`), plaintext — a PostHog project
+key is write-only and is meant to ship in a client bundle.
+
+**Both Verification bullets pass.**
+
+*Events appear in the dashboard.* Web verified in production 2026-08-30 after
+the promote. Mobile verified on iOS build #8 (`65756903`, `preview`, `841d5ec`)
+on 2026-08-31 — three funnels reporting from a real binary:
+
+```
+auth_started -> $identify -> auth_succeeded    (10:53:50-53)
+payment_started -> payment_succeeded           (10:51:42-10:52:18)
+checkin (manual)                               (10:54:10)
+```
+
+Every tracked event carried `platform: ios` and `app_env: internal`, which is
+what proves the preview binary's env wiring rather than the dev client's.
+`$identify` carries neither, correctly: it is PostHog's own event and
+`identifyUser` deliberately passes no property bag.
+
+**Identity stitching works across the sign-in boundary** — the subtle part.
+`auth_started` fires before a user exists, so it carries an anonymous device id
+(`01a05774…`), but its `Person.id` resolves to the same person as the events
+after `$identify`. Without that merge every funnel would break at the auth step.
+
+*No sensitive payload is sent.* Enforced by `ALLOWED_PROPERTY_KEYS` in
+`packages/shared/src/analytics.ts` — default is **drop**, so a new field
+anywhere in either app is excluded until someone deliberately allowlists it. A
+blocklist would only exclude what somebody thought of. Verified against 17
+assertions including an email hidden inside an allowlisted key and a nested
+object. Deliberate exceptions, matching the Sentry scrubber: the user's uuid and
+Stripe identifiers.
+
+**Autocapture, session replay and pageview capture are OFF on both platforms.**
+Their defaults would record every click, input and navigation — chat threads,
+support tickets, the payment sheet. Turning any of them on is a decision with a
+privacy review, not a default someone inherits.
+
+**Instrumented at choke points, never per screen.** Web: auth, onboarding (from
+the layout, so no step page can forget), profile completion, tournament
+registration. Mobile: `auth.ts` covering email/Google/Apple, push permission
+prompts, both payment funnels, check-in, support tickets, profile completion.
+
+**Judgment calls, all of one kind — not counting things that did not happen:**
+
+- `signUp` does not report `auth_succeeded`; with confirmations on it returns no
+  session, and counting it would hide every abandoned confirmation.
+- `profile_completed` fires only on a real write, never on `deferred`/pending
+  confirmation — otherwise the retry counts the same person twice.
+- A dismissed OAuth sheet and a closed PaymentSheet are `canceled`, not
+  `failed`. Otherwise both systems look broken in proportion to how many people
+  browse.
+- `payment_succeeded` carries `result: confirmed | pending_confirmation`. Those
+  diverging is exactly what 3.3's reconciliation queue exists to catch.
+
+**Defect found by the verification itself:** a *manual* check-in emitted
+`qr_checkin_succeeded`, because manual and scan share one code path. The data
+was right (`checkin_method: manual`) but the name counted manual check-ins as
+scanner use, hiding the scanner's real adoption. Renamed to
+`checkin_succeeded`/`checkin_failed` in `984978c`, one event into the project's
+history — after data accrues a rename costs either history or a permanent alias.
+**The event recorded on 2026-08-31 is under the old name**; the new one ships
+with the next build.
+
+**Known gap, carried deliberately: OAuth success is not captured on web.**
+`/auth/callback` is a server route handler, so `posthog-js` cannot run there.
+`auth_started` and `auth_failed` are recorded, success is not — so Google and
+Apple will show starts without successes on web until it gets a client-side
+landing point. Mobile captures all three correctly.
 
 ### 4.3 Harden Support and Moderation
 
