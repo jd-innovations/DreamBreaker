@@ -566,80 +566,37 @@ export default function TournamentDetail() {
             )}
           </View>
 
-          {/* FACILITY CARD */}
-          {facility && (() => {
-            const access = facilityAccessType(facility);
-            const BADGE = {
-              public:     { label: 'Public',     bg: '#DCFCE7', color: '#16A34A' },
-              membership: { label: 'Membership', bg: '#FEF9C3', color: '#CA8A04' },
-              private:    { label: 'Private',    bg: '#FEE2E2', color: '#DC2626' },
-            }[access];
-            return (
+          {/* ABOUT THIS EVENT
+              Was a hardcoded paragraph about "3 days of competitive play in
+              Sarasota" shown identically on every tournament, including ones in
+              other states. tournaments.description is real and is null on most
+              rows, so the section now renders only when there is something to
+              say — or, for this tournament's own director, offers a prompt to
+              write one. Showing invented copy under a confident heading is the
+              pattern this app has been removing all week. */}
+          {tournament.description ? (
+            <View style={s.section}>
+              <Text style={[s.sectionTitle, { marginBottom: 12 }]}>ABOUT THIS EVENT</Text>
+              <Text style={s.description}>{tournament.description}</Text>
+            </View>
+          ) : isThisDirector ? (
+            <View style={s.section}>
+              <Text style={[s.sectionTitle, { marginBottom: 12 }]}>ABOUT THIS EVENT</Text>
               <TouchableOpacity
-                style={fc.card}
-                activeOpacity={0.85}
-                onPress={() => router.push(`/facility/${facility.id}` as never)}
+                style={s.aboutPrompt}
+                activeOpacity={0.8}
+                onPress={() => router.push(`/tournament/${tournament.id}/workspace` as never)}
+                accessibilityRole="button"
+                accessibilityLabel="Add a description for this tournament"
               >
-                <View style={fc.left}>
-                  <View style={fc.nameRow}>
-                    <Text style={fc.name} numberOfLines={1}>{facility.name}</Text>
-                    {facility.verified && (
-                      <View style={fc.verBadge}>
-                        <Ionicons name="shield-checkmark" size={10} color="#2563EB" />
-                        <Text style={fc.verText}>Verified</Text>
-                      </View>
-                    )}
-                  </View>
-                  <View style={fc.meta}>
-                    <View style={[fc.accessBadge, { backgroundColor: BADGE.bg }]}>
-                      <Text style={[fc.accessText, { color: BADGE.color }]}>{BADGE.label}</Text>
-                    </View>
-                    <Text style={fc.courts}>{facility.court_count} {facility.court_count === 1 ? 'Court' : 'Courts'}</Text>
-                    <Text style={fc.dot}>·</Text>
-                    <Text style={fc.loc}>{facility.city}, {facility.state}</Text>
-                  </View>
-                </View>
-                <View style={fc.right}>
-                  <Text style={fc.viewText}>View Facility</Text>
-                  <Ionicons name="chevron-forward" size={14} color={L.gold} />
-                </View>
+                <Ionicons name="create-outline" size={16} color={L.gold} />
+                <Text style={s.aboutPromptText}>
+                  Add a description so players know what to expect — format, schedule, what to bring.
+                </Text>
+                <Ionicons name="chevron-forward" size={15} color={L.textMuted} />
               </TouchableOpacity>
-            );
-          })()}
-
-          {/* HOST CARD */}
-          <View style={s.hostCard}>
-            <TouchableOpacity
-              style={s.hostLeft}
-              activeOpacity={0.75}
-              onPress={() => setDirectorModalVisible(true)}
-            >
-              <Image source={{ uri: directorProfile?.avatar_url ?? DIRECTOR_PHOTO }} style={s.hostAvatar} />
-              <View style={s.hostInfo}>
-                <Text style={s.hostedBy}>Hosted by</Text>
-                <View style={s.hostNameRow}>
-                  <Text style={s.hostName}>{directorProfile?.full_name ?? 'Tournament Director'}</Text>
-                  <Ionicons name="checkmark-circle" size={16} color="#3B82F6" style={{ marginLeft: 4 }} />
-                </View>
-                <View style={s.directorPill}>
-                  <Ionicons name="sync-circle-outline" size={12} color={L.gold} />
-                  <Text style={s.directorText}>DIRECTOR</Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={L.textMuted} style={{ alignSelf: 'center' }} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-            style={s.msgDirectorBtn}
-            activeOpacity={0.8}
-            disabled={msgingDirector}
-            onPress={openDirectorDM}
-          >
-            {msgingDirector
-              ? <ActivityIndicator size="small" color={L.navy} />
-              : <Ionicons name="chatbubble-outline" size={15} color={L.navy} />}
-            <Text style={s.msgDirectorText}>Message Director</Text>
-          </TouchableOpacity>
+            </View>
+          ) : null}
 
           {/* Real contextual tournament group chat — directors and registered/held players only */}
           {(playerRegStatus != null || (!!user && user.id === directorUserId)) && (
@@ -718,38 +675,6 @@ export default function TournamentDetail() {
               <Ionicons name="chevron-forward" size={14} color={L.textSub} />
             </TouchableOpacity>
           )}
-
-          {/* ABOUT THIS EVENT
-              Was a hardcoded paragraph about "3 days of competitive play in
-              Sarasota" shown identically on every tournament, including ones in
-              other states. tournaments.description is real and is null on most
-              rows, so the section now renders only when there is something to
-              say — or, for this tournament's own director, offers a prompt to
-              write one. Showing invented copy under a confident heading is the
-              pattern this app has been removing all week. */}
-          {tournament.description ? (
-            <View style={s.section}>
-              <Text style={[s.sectionTitle, { marginBottom: 12 }]}>ABOUT THIS EVENT</Text>
-              <Text style={s.description}>{tournament.description}</Text>
-            </View>
-          ) : isThisDirector ? (
-            <View style={s.section}>
-              <Text style={[s.sectionTitle, { marginBottom: 12 }]}>ABOUT THIS EVENT</Text>
-              <TouchableOpacity
-                style={s.aboutPrompt}
-                activeOpacity={0.8}
-                onPress={() => router.push(`/tournament/${tournament.id}/workspace` as never)}
-                accessibilityRole="button"
-                accessibilityLabel="Add a description for this tournament"
-              >
-                <Ionicons name="create-outline" size={16} color={L.gold} />
-                <Text style={s.aboutPromptText}>
-                  Add a description so players know what to expect — format, schedule, what to bring.
-                </Text>
-                <Ionicons name="chevron-forward" size={15} color={L.textMuted} />
-              </TouchableOpacity>
-            </View>
-          ) : null}
 
           {/* AMENITIES */}
           <View style={s.amenitiesRow}>
@@ -896,7 +821,9 @@ export default function TournamentDetail() {
               </View>
 
               <View style={s.feesNote}>
-                <Ionicons name="star" size={14} color={L.gold} />
+                {/* hand-left, not star: this note is about Hold My Spot, and a
+                    star reads as a rating or a favourite rather than a hold. */}
+                <Ionicons name="hand-left" size={14} color={L.gold} />
                 <Text style={s.feesNoteText}>
                   Hold My Spot secures your place. Full balance due before registration closes.
                 </Text>
@@ -906,6 +833,81 @@ export default function TournamentDetail() {
               </View>
             </View>
           </View>
+          {/* HOST CARD */}
+          <View style={s.hostCard}>
+            <TouchableOpacity
+              style={s.hostLeft}
+              activeOpacity={0.75}
+              onPress={() => setDirectorModalVisible(true)}
+            >
+              <Image source={{ uri: directorProfile?.avatar_url ?? DIRECTOR_PHOTO }} style={s.hostAvatar} />
+              <View style={s.hostInfo}>
+                <Text style={s.hostedBy}>Hosted by</Text>
+                <View style={s.hostNameRow}>
+                  <Text style={s.hostName}>{directorProfile?.full_name ?? 'Tournament Director'}</Text>
+                  <Ionicons name="checkmark-circle" size={16} color="#3B82F6" style={{ marginLeft: 4 }} />
+                </View>
+                <View style={s.directorPill}>
+                  <Ionicons name="sync-circle-outline" size={12} color={L.gold} />
+                  <Text style={s.directorText}>DIRECTOR</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={L.textMuted} style={{ alignSelf: 'center' }} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+            style={s.msgDirectorBtn}
+            activeOpacity={0.8}
+            disabled={msgingDirector}
+            onPress={openDirectorDM}
+          >
+            {msgingDirector
+              ? <ActivityIndicator size="small" color={L.navy} />
+              : <Ionicons name="chatbubble-outline" size={15} color={L.navy} />}
+            <Text style={s.msgDirectorText}>Message Director</Text>
+          </TouchableOpacity>
+
+          {/* FACILITY CARD */}
+          {facility && (() => {
+            const access = facilityAccessType(facility);
+            const BADGE = {
+              public:     { label: 'Public',     bg: '#DCFCE7', color: '#16A34A' },
+              membership: { label: 'Membership', bg: '#FEF9C3', color: '#CA8A04' },
+              private:    { label: 'Private',    bg: '#FEE2E2', color: '#DC2626' },
+            }[access];
+            return (
+              <TouchableOpacity
+                style={fc.card}
+                activeOpacity={0.85}
+                onPress={() => router.push(`/facility/${facility.id}` as never)}
+              >
+                <View style={fc.left}>
+                  <View style={fc.nameRow}>
+                    <Text style={fc.name} numberOfLines={1}>{facility.name}</Text>
+                    {facility.verified && (
+                      <View style={fc.verBadge}>
+                        <Ionicons name="shield-checkmark" size={10} color="#2563EB" />
+                        <Text style={fc.verText}>Verified</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={fc.meta}>
+                    <View style={[fc.accessBadge, { backgroundColor: BADGE.bg }]}>
+                      <Text style={[fc.accessText, { color: BADGE.color }]}>{BADGE.label}</Text>
+                    </View>
+                    <Text style={fc.courts}>{facility.court_count} {facility.court_count === 1 ? 'Court' : 'Courts'}</Text>
+                    <Text style={fc.dot}>·</Text>
+                    <Text style={fc.loc}>{facility.city}, {facility.state}</Text>
+                  </View>
+                </View>
+                <View style={fc.right}>
+                  <Text style={fc.viewText}>View Facility</Text>
+                  <Ionicons name="chevron-forward" size={14} color={L.gold} />
+                </View>
+              </TouchableOpacity>
+            );
+          })()}
+
 
         </View>
       </Animated.ScrollView>
