@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { Tournament } from '@/lib/tournamentTypes';
+import { isTournamentExpired, type Tournament } from '@/lib/tournamentTypes';
 
 // DB tournament_status values that are visible to players.
 // Matches the tournament_status enum in the database exactly — do not add
@@ -9,14 +9,23 @@ const VISIBLE_STATUSES = [
   'in_progress', 'completed',
 ] as const;
 
-function dbStatusToAppStatus(s: string): Tournament['status'] {
+// `registration_closed` means only "you cannot sign up". It arrives for two
+// unrelated reasons — the draw filled, or the event is behind us — and
+// collapsing both to 'full' labels a finished tournament FULL, which is wrong
+// in a way that reads as a bug. The event date is the only thing that
+// separates them, and it is already selected here.
+//
+// Added when the lifecycle sweeper (20260831030000) started closing past-dated
+// tournaments; before that they stayed 'open' and this case never appeared.
+function dbStatusToAppStatus(s: string, eventDate: string): Tournament['status'] {
+  const finished = isTournamentExpired({ eventDate });
   switch (s) {
     case 'draft':                return 'draft';
     case 'pending_approval':     return 'pending_approval';
     case 'open':                 return 'open';
     case 'filling_fast':         return 'filling_fast';
-    case 'registration_closed':  return 'full';
-    case 'in_progress':          return 'open';
+    case 'registration_closed':  return finished ? 'completed' : 'full';
+    case 'in_progress':          return finished ? 'completed' : 'open';
     case 'completed':            return 'completed';
     case 'cancelled':            return 'cancelled';
     default:                     return 'upcoming';
@@ -90,7 +99,7 @@ function dbRowToTournament(row: Record<string, unknown>): Tournament {
         ))
       : [],
     ...divisionSkillRange(row.divisions),
-    status:               dbStatusToAppStatus(String(row.status ?? '')),
+    status:               dbStatusToAppStatus(String(row.status ?? ''), String(row.event_date ?? '')),
     registrationOpensAt:  row.registration_opens_at != null ? String(row.registration_opens_at) : null,
     registrationClosesAt: row.registration_closes_at != null ? String(row.registration_closes_at) : null,
     featured:             Boolean(row.featured),

@@ -1,17 +1,26 @@
 import { supabase } from '@/lib/supabase';
-import type { Tournament } from '@/lib/tournamentTypes';
+import { isTournamentExpired, type Tournament } from '@/lib/tournamentTypes';
 
 type DbStatus =
   | 'draft' | 'pending_approval' | 'approved' | 'published'
   | 'open' | 'filling_fast' | 'registration_closed'
   | 'in_progress' | 'completed' | 'cancelled';
 
-function mapStatus(db: DbStatus): Tournament['status'] {
+// `registration_closed` means only "you cannot sign up". It arrives for two
+// unrelated reasons — the draw filled, or the event is behind us — and
+// collapsing both to 'full' labels a finished tournament FULL, which is wrong
+// in a way that reads as a bug. The event date is the only thing that
+// separates them, and it is already selected here.
+//
+// Added when the lifecycle sweeper (20260831030000) started closing past-dated
+// tournaments; before that they stayed 'open' and this case never appeared.
+function mapStatus(db: DbStatus, eventDate: string): Tournament['status'] {
+  const finished = isTournamentExpired({ eventDate });
   switch (db) {
     case 'open':                  return 'open';
     case 'filling_fast':          return 'filling_fast';
-    case 'registration_closed':   return 'full';
-    case 'in_progress':           return 'open';
+    case 'registration_closed':   return finished ? 'completed' : 'full';
+    case 'in_progress':           return finished ? 'completed' : 'open';
     case 'completed':             return 'completed';
     case 'published':
     case 'approved':              return 'upcoming';
@@ -66,7 +75,7 @@ export async function fetchTournaments(): Promise<Tournament[]> {
     divisionFormats: [],
     divisionSkillMin: null,
     divisionSkillMax: null,
-    status:               mapStatus(row.status as DbStatus),
+    status:               mapStatus(row.status as DbStatus, String(row.event_date ?? '')),
     registrationOpensAt:  null,
     registrationClosesAt: null,
     featured:             Boolean(row.featured),
