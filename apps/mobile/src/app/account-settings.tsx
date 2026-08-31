@@ -54,6 +54,7 @@ const SETTINGS_GRID = [
   [
     { icon: 'notifications-outline', label: 'Notifications' },
     { icon: 'lock-closed-outline',  label: 'Permissions'   },
+    { icon: 'ban-outline',          label: 'Blocked'       },
   ],
 ];
 
@@ -65,6 +66,7 @@ const CELL_ROUTES: Record<string, string> = {
   Notifications: '/notifications-settings',
   'My Plan':     '/membership-settings',
   Permissions:   '/permissions-settings',
+  Blocked:       '/blocked-accounts',
   Payments:      '/payments-settings',
 };
 

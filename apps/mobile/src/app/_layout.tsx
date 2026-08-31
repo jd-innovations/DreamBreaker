@@ -99,6 +99,7 @@ function RootLayout() {
         <Stack.Screen name="design-lab" options={{ headerShown: false }} />
         <Stack.Screen name="dev-qr-scan" options={{ headerShown: false }} />
         <Stack.Screen name="dev-diagnostics" options={{ headerShown: false }} />
+        <Stack.Screen name="blocked-accounts" options={{ headerShown: false }} />
         <Stack.Screen
           name="tournament/[id]"
           options={{ headerShown: false }}
