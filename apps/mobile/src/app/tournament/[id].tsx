@@ -598,36 +598,6 @@ export default function TournamentDetail() {
             </View>
           ) : null}
 
-          {/* Real contextual tournament group chat — directors and registered/held players only */}
-          {(playerRegStatus != null || (!!user && user.id === directorUserId)) && (
-            <TouchableOpacity
-              // msgDirectorBtn's marginBottom of 4 assumes the host card's
-              // divider sits right below it. This copy stands alone above the
-              // director banner, which has no marginTop, so 4 left them almost
-              // touching. Overridden here rather than in the shared style,
-              // where 4 is still correct.
-              style={[s.msgDirectorBtn, s.chatBtnStandalone]}
-              activeOpacity={0.8}
-              onPress={() => router.push(`/conversation/tournament-${id}` as never)}
-            >
-              <Ionicons name="chatbubbles-outline" size={15} color={L.navy} />
-              <Text style={s.msgDirectorText}>Tournament Chat</Text>
-            </TouchableOpacity>
-          )}
-
-
-          {/* DIRECTOR BANNER — only this tournament's own director */}
-          {isThisDirector && (
-            <TouchableOpacity
-              style={s.directorBanner}
-              activeOpacity={0.8}
-              onPress={() => router.push(`/tournament/${tournament.id}/workspace` as never)}
-            >
-              <Ionicons name="construct-outline" size={15} color={L.gold} />
-              <Text style={s.directorBannerText}>Director: Manage Tournament</Text>
-              <Ionicons name="chevron-forward" size={14} color={L.textSub} />
-            </TouchableOpacity>
-          )}
 
           {/* VIEW BRACKETS BANNER — only when brackets have been generated */}
           {hasBrackets && (
@@ -846,6 +816,31 @@ export default function TournamentDetail() {
             <Text style={s.msgDirectorText}>Message Director</Text>
           </TouchableOpacity>
 
+          {/* Real contextual tournament group chat — directors and registered/held players only */}
+          {(playerRegStatus != null || (!!user && user.id === directorUserId)) && (
+            <TouchableOpacity
+              style={s.msgDirectorBtn}
+              activeOpacity={0.8}
+              onPress={() => router.push(`/conversation/tournament-${id}` as never)}
+            >
+              <Ionicons name="chatbubbles-outline" size={15} color={L.navy} />
+              <Text style={s.msgDirectorText}>Tournament Chat</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* DIRECTOR BANNER — only this tournament's own director */}
+          {isThisDirector && (
+            <TouchableOpacity
+              style={s.directorBanner}
+              activeOpacity={0.8}
+              onPress={() => router.push(`/tournament/${tournament.id}/workspace` as never)}
+            >
+              <Ionicons name="construct-outline" size={15} color={L.gold} />
+              <Text style={s.directorBannerText}>Director: Manage Tournament</Text>
+              <Ionicons name="chevron-forward" size={14} color={L.textSub} />
+            </TouchableOpacity>
+          )}
+
             <View style={s.hostDivider} />
 
             <View style={s.hostStats}>
@@ -871,7 +866,7 @@ export default function TournamentDetail() {
                 <Ionicons name="chevron-forward" size={20} color={L.textMuted} />
               </TouchableOpacity>
             </View>
-            </View>
+          </View>
 
           {/* FACILITY CARD */}
           {facility && (() => {
@@ -1359,11 +1354,12 @@ const s = StyleSheet.create({
     paddingVertical: 10, backgroundColor: L.page,
   },
   msgDirectorText: { color: L.navy, fontSize: 14, fontWeight: '700' },
-  chatBtnStandalone: { marginBottom: 14 },
 
   directorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginHorizontal: 16, marginBottom: 8,
+    // marginTop matches the rhythm of the two buttons above it in the card's
+    // CTA stack; without it the banner sat 4px under Tournament Chat.
+    marginHorizontal: 16, marginTop: 10, marginBottom: 8,
     paddingHorizontal: 14, paddingVertical: 10,
     backgroundColor: L.goldLight, borderRadius: 10,
     borderWidth: 1, borderColor: colors.goldBorder,
