@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { isPlayerHeld, isPlayerRegistered } from '@/lib/supabase/registrations';
 import { fetchRegistrationGroup, memberFor } from '@/lib/supabase/registrationGroups';
 import { track } from '@/lib/analytics';
+import { isOnlineNow } from '@/lib/network';
 
 // First domain-specific consumer of the shared payment foundation
 // (supabase/functions/_shared/payments.ts). Replaces the direct client
@@ -48,6 +49,10 @@ export type PayTournamentTeamShareInput = {
 };
 
 export type PayTournamentEntryFailureReason =
+  // No connection at the moment of the tap. Distinct from 'failed' so callers
+  // can say "you're offline" instead of "payment failed", which is both wrong
+  // and alarming — nothing was attempted and no card was touched.
+  | 'offline'
   | 'already_registered'
   | 'partner_already_registered'
   | 'invite_not_active'
@@ -141,6 +146,13 @@ export function useTournamentEntryPayment() {
     // partner, group, waitlist): they all funnel through this one sheet, and
     // four copies would be four chances for the branches to disagree.
     track('payment_started', { source: 'tournament_entry' });
+
+    // See useReservationPayment for the reasoning — same guard, same reason:
+    // refuse before the sheet opens rather than let it fail halfway.
+    if (!(await isOnlineNow())) {
+      track('payment_failed', { source: 'tournament_entry', error_code: 'offline' });
+      return { ok: false, reason: 'offline' };
+    }
 
     const { error: initError } = await initPaymentSheet({
       paymentIntentClientSecret: clientSecret,

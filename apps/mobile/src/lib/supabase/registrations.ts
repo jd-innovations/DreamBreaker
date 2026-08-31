@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { track } from '@/lib/analytics';
+import { isOnlineNow } from '@/lib/network';
 import { balanceDueCents, effectiveEntryFeeCents } from '@/lib/tournamentFees';
 import type { TournamentRegistration, RegistrationStatus } from '@/lib/registrationStore';
 export type { TournamentRegistration };
@@ -381,6 +382,18 @@ export async function checkInRegistration(
    *  a scanner that keeps failing over to manual entry is a broken scanner. */
   method: 'scan' | 'manual' = 'manual',
 ): Promise<CheckInResult> {
+  // 5.4. Check-in happens at a desk with a queue behind it, often on venue
+  // wifi that has joined but does not route. Without this the RPC hangs until
+  // it times out, and the volunteer's instinct is to tap again — which is how a
+  // player gets marked in twice, or waved through unrecorded.
+  //
+  // Reported as a failure so the funnel shows it: a spike in offline check-ins
+  // is a venue network problem, and that is worth being able to see.
+  if (!(await isOnlineNow())) {
+    track('checkin_failed', { tournament_id: tournamentId, checkin_method: method, error_code: 'offline' });
+    throw new Error("You're offline. Check the connection and try again — nothing was recorded.");
+  }
+
   const { data, error } = await supabase.rpc('check_in_registration', {
     p_registration_id: registrationId,
     p_tournament_id: tournamentId,

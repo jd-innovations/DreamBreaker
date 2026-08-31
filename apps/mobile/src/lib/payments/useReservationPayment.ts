@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStripe } from '@stripe/stripe-react-native';
 import { createBookingPaymentIntent, pollForReservationConfirmation } from './reservationPaymentIntent';
 import { track } from '@/lib/analytics';
+import { isOnlineNow } from '@/lib/network';
 
 // Booking Engine Phase 3A — the real PaymentSheet hook, wired into
 // booking/review.tsx as of Phase 3.1. Importing this (and therefore
@@ -36,6 +37,19 @@ export function useReservationPayment() {
     // would drop everything to investigate.
     track('payment_started', { reservation_id: reservationId, source: 'booking' });
     try {
+      // Checked here, not at render: the connection can drop between the screen
+      // painting and the tap, and this is the tap that moves money.
+      //
+      // Stripe would fail on its own, but not cleanly — initPaymentSheet can
+      // hang, and a PaymentSheet that opens and then errors mid-flow is how a
+      // user ends up unsure whether they were charged. 5.4's requirement is "no
+      // false success while offline"; refusing before the sheet opens is the
+      // only version of that with a clear recovery path.
+      if (!(await isOnlineNow())) {
+        track('payment_failed', { reservation_id: reservationId, error_code: 'offline' });
+        return { status: 'error', code: 'offline' };
+      }
+
       const intentResult = await createBookingPaymentIntent(reservationId, attemptId);
       if (!intentResult.ok) {
         track('payment_failed', { reservation_id: reservationId, error_code: intentResult.code });

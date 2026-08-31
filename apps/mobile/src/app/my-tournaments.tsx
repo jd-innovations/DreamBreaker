@@ -331,6 +331,13 @@ function TeamObligationCard({ group, userId, onRefresh }: {
 
     if (!result.ok) {
       if (result.reason === 'canceled') return;
+      if (result.reason === 'offline') {
+        Alert.alert(
+          "You're Offline",
+          'Connect to the internet and try again. Nothing was charged.',
+        );
+        return;
+      }
       if (result.reason === 'already_registered') {
         Alert.alert('Already Registered', 'You are already registered for this tournament.');
       } else if (result.reason === 'invite_not_active') {

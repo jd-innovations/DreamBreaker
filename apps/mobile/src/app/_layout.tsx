@@ -13,6 +13,7 @@ import { useExternalLinks } from '@/hooks/useExternalLinks';
 import { useFeatureRouteGuard } from '@/hooks/useFeatureRouteGuard';
 import { STRIPE_PUBLISHABLE_KEY } from '@/lib/payments/stripeConfig';
 import { initSentry, setSentryUser, withCrashReporting } from '@/lib/observability/sentry';
+import { OfflineBanner } from '@/components/states/OfflineBanner';
 import { initAnalytics, identifyUser, resetAnalytics } from '@/lib/analytics';
 import '../global.css';
 
@@ -257,6 +258,10 @@ function RootLayout() {
         <Stack.Screen name="match/profile/[id]" options={{ headerShown: false }} />
       </Stack>
       </SupportProvider>
+      {/* Last child of the root view so it paints over every screen, the tab
+          bar and any modal — a payment sheet about to fail is exactly when
+          this needs to be readable. Renders nothing while online. */}
+      <OfflineBanner />
       </StripeProvider>
     </GestureHandlerRootView>
   );

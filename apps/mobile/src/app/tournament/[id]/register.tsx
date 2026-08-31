@@ -390,6 +390,13 @@ export default function TournamentRegisterScreen() {
         if (!result.ok) {
           setSubmitting(false);
           if (result.reason === 'canceled') return;
+          if (result.reason === 'offline') {
+            Alert.alert(
+              "You're Offline",
+              'Connect to the internet and try again. Nothing was charged.',
+            );
+            return;
+          }
           if (result.reason === 'pending_confirmation') {
             alertPendingConfirmation();
             return;
@@ -426,6 +433,13 @@ export default function TournamentRegisterScreen() {
         if (!result.ok) {
           setSubmitting(false);
           if (result.reason === 'canceled') return;
+          if (result.reason === 'offline') {
+            Alert.alert(
+              "You're Offline",
+              'Connect to the internet and try again. Nothing was charged.',
+            );
+            return;
+          }
           if (result.reason === 'already_registered') {
             Alert.alert('Already Registered', 'You are already registered for this tournament.');
             return;
@@ -463,6 +477,13 @@ export default function TournamentRegisterScreen() {
         if (!result.ok) {
           setSubmitting(false);
           if (result.reason === 'canceled') return;
+          if (result.reason === 'offline') {
+            Alert.alert(
+              "You're Offline",
+              'Connect to the internet and try again. Nothing was charged.',
+            );
+            return;
+          }
           if (result.reason === 'already_registered') {
             Alert.alert('Already Registered', 'You are already registered for this tournament.');
             return;

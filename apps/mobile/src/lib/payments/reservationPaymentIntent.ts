@@ -24,6 +24,11 @@ export const RESERVATION_PAYMENT_ERROR_MESSAGES: Record<string, string> = {
   hold_expired: 'Your hold expired. Please choose a new time.',
   no_payment_required: 'This reservation has no charge to pay.',
   payment_intent_failed: 'Could not start payment. Please try again.',
+  // 5.4. Named separately from the generic fallback because "Something went
+  // wrong" invites a retry that will fail the same way, while this one names
+  // the fix. It also states that nothing was charged: the request never left
+  // the device, and the fear after a failed payment is always double billing.
+  offline: "You're offline. Connect to the internet and try again — nothing was charged.",
 };
 
 export function reservationPaymentErrorMessage(code: string): string {
