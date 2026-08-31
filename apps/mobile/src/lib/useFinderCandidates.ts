@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from './supabase';
+import { playStyleSummary } from '@shared/play-profile';
 import { computeMatch } from './computeMatch';
 import { useCurrentLocation, type Coordinates } from './location';
 import { useLocationSettings } from '@/hooks/useLocationSettings';
@@ -36,7 +37,10 @@ type ProfileRow = {
   self_rating: string | null;
   skill_level: string | null;
   hand: string | null;
-  play_style: string | null;
+  // text[] since the 2026-08-27 migration, NOT text. This type said `string`
+  // until 2026-08-31 and that is precisely what hid the crash below from the
+  // compiler.
+  play_style: string[] | null;
   availability: string | null;
   looking_status: string;
   date_of_birth: string | null;
@@ -48,8 +52,16 @@ type Mine = { dupr: number | null; availability: string | null };
 // "Actively Looking", "right" → "Right". Replaces underscores with spaces and
 // title-cases each word. Leaves digits/hyphens intact so skill ranges like
 // "4.0-4.5" survive unchanged.
-function humanize(value: string | null | undefined): string {
-  if (!value) return '';
+/**
+ * Turns a snake_case enum value into a label.
+ *
+ * Guards its input type. It used to declare `string` and call .replace()
+ * immediately, so passing an array crashed the app during render — see the
+ * play_style note above. A formatter has no business being the thing that
+ * takes the process down, so anything that is not a string returns '' now.
+ */
+function humanize(value: unknown): string {
+  if (typeof value !== 'string' || !value) return '';
   return value.replace(/_+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()).trim();
 }
 
@@ -88,7 +100,12 @@ function mapProfile(row: ProfileRow, mine: Mine, distance: number | null): Finde
 
   const tags1: { icon: string; label: string }[] = [];
   if (row.hand) tags1.push({ icon: 'hand-left-outline', label: humanize(row.hand) });
-  if (row.play_style) tags1.push({ icon: 'heart-outline', label: humanize(row.play_style) });
+  // playStyleSummary, not humanize. play_style is a text[] of CHECK-constrained
+  // keys, and every other screen already formats it this way — this file was
+  // missed when 7177bee swept the rest, and calling .replace() on an array is
+  // what produced "TypeError: undefined is not a function" during render.
+  const styleSummary = playStyleSummary(row.play_style);
+  if (styleSummary) tags1.push({ icon: 'heart-outline', label: styleSummary });
   if (row.availability) tags1.push({ icon: 'calendar-outline', label: humanize(row.availability) });
 
   const { pct } = computeMatch({ dupr: duprNum || null, availability: row.availability }, mine);

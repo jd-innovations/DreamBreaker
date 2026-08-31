@@ -99,9 +99,51 @@ type SlideMenuContextValue = {
 
 const SlideMenuContext = createContext<SlideMenuContextValue | null>(null);
 
+/**
+ * A no-op menu, used when a consumer renders outside the provider.
+ *
+ * This used to `throw`. That looked like good hygiene and was in fact a
+ * crash generator: SlideMenuProvider is mounted only in `(tabs)/_layout.tsx`,
+ * eight tab screens call this hook, and sixteen places OUTSIDE `(tabs)`
+ * navigate into them (`grep "push('/(tabs)/"`). Whenever such a navigation
+ * renders the screen without the tab layout, the throw happened during render
+ * and took the whole app down.
+ *
+ * NOT prompted by a confirmed crash. It was found while investigating one —
+ * a production crash on "Find Partner" during tournament registration, which
+ * is `router.push('/(tabs)/finder')` from a root-stack route. That crash turned
+ * out to be EXC_BAD_ACCESS inside Hermes, a native fault, not this throw. The
+ * hazard here is real and separate: it is latent, and worth removing on its own
+ * terms rather than because it explained that particular crash.
+ *
+ * Degrading is the right behaviour. A screen rendered outside the menu simply
+ * has no menu; the edge-swipe and the floating trigger belong to a chrome that
+ * is not on screen, so doing nothing is correct rather than merely safe. What
+ * is NOT correct is killing the app over missing chrome.
+ */
+const NOOP_MENU: SlideMenuContextValue = {
+  open: () => {},
+  close: () => {},
+  isOpen: false,
+  setRecentItems: () => {},
+  setSwipeEnabled: () => {},
+  setTriggerVisible: () => {},
+};
+
 export function useSlideMenu() {
   const ctx = useContext(SlideMenuContext);
-  if (!ctx) throw new Error('useSlideMenu must be used within SlideMenuProvider');
+  if (!ctx) {
+    // Still visible while developing — the navigation that led here is usually
+    // worth fixing too — but never fatal.
+    if (__DEV__) {
+      console.warn(
+        '[SlideMenu] useSlideMenu() called outside SlideMenuProvider. Falling back ' +
+          'to a no-op menu. This screen was probably reached by pushing a (tabs) ' +
+          'route from outside the tab layout.',
+      );
+    }
+    return NOOP_MENU;
+  }
   return ctx;
 }
 
