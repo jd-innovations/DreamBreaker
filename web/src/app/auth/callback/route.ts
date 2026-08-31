@@ -36,7 +36,30 @@ function withAuthEvent(url: string, provider: string): string {
 async function federatedProvider(supabase: CallbackClient): Promise<string | null> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    const provider = user?.app_metadata?.provider;
+    if (!user) return null;
+
+    // NOT app_metadata.provider, which is what the first version of this used
+    // and why it never fired. Supabase sets that field from the provider the
+    // ACCOUNT WAS CREATED WITH, not the one just used. An account created with
+    // email/password and later linked to Google still reports "email" forever,
+    // so a real Google sign-in looked non-federated and was silently skipped.
+    // Confirmed against a live sign-in on 2026-08-31: auth_started arrived,
+    // auth_succeeded did not.
+    //
+    // identities carries one entry per linked provider, each with its own
+    // last_sign_in_at. The most recent one is the provider actually used just
+    // now, which is the question being asked.
+    type Identity = { provider?: string; last_sign_in_at?: string | null };
+    const identities = (user.identities ?? []) as Identity[];
+    if (identities.length === 0) return null;
+
+    const mostRecent = identities.reduce((latest: Identity, identity: Identity) => {
+      const a = Date.parse(identity.last_sign_in_at ?? "") || 0;
+      const b = Date.parse(latest?.last_sign_in_at ?? "") || 0;
+      return a > b ? identity : latest;
+    }, identities[0]);
+
+    const provider = mostRecent?.provider;
     return provider === "google" || provider === "apple" ? provider : null;
   } catch {
     return null;

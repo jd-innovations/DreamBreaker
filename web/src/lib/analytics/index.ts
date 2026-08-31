@@ -54,6 +54,12 @@ export function initAnalytics(config: { key?: string; host?: string }): void {
     capture_pageview: false,
     capture_pageleave: false,
     disable_session_recording: true,
+    // Web vitals slipped through the first time. It is not autocapture, so the
+    // flags above do not cover it — but it still sends events nobody asked for,
+    // each carrying the current URL, and the claim in this file's header is
+    // that nothing is collected by default. Observed in production 2026-08-31
+    // as $web_vitals on /profile.
+    capture_performance: false,
   });
 
   started = true;
