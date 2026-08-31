@@ -149,7 +149,15 @@ create policy "conversations: not blocked"
   for select
   to authenticated
   using (
-    coalesce(conversation_type, 'direct') <> 'direct'
+    -- Admins are exempt, and this exemption is load-bearing.
+    --
+    -- A RESTRICTIVE policy is ANDed with EVERY permissive policy, including
+    -- "messages: admin read" and "conversations: participants read". Without
+    -- this clause a moderator would lose access to exactly the conversations
+    -- they most need: the report sheet blocks by default, so reporting someone
+    -- for harassment would hide the harassment from whoever reviews the report.
+    public.is_admin()
+    or coalesce(conversation_type, 'direct') <> 'direct'
     or participant_a is null
     or participant_b is null
     or not public.is_blocked_between(participant_a, participant_b)
@@ -171,7 +179,10 @@ create policy "messages: not blocked"
   for select
   to authenticated
   using (
-    exists (
+    -- Same admin exemption, same reason: user_reports carries a
+    -- conversation_id precisely so a moderator can read the thread.
+    public.is_admin()
+    or exists (
       select 1 from public.conversations c
        where c.id = messages.conversation_id
          and (
