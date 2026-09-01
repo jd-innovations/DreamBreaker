@@ -22,8 +22,8 @@ import {
   facilityRoleAtLeast, type FacilityMember, type FacilityMemberRole,
 } from '@/lib/supabase/facilityMembers';
 import {
-  fetchManagedFacilities, fetchPayoutStatus, facilityManagementError,
-  type ManagedFacility, type PayoutStatus,
+  fetchManagedFacilities, fetchPayoutStatus, fetchFacilityEarnings, facilityManagementError,
+  type ManagedFacility, type PayoutStatus, type FacilityEarnings,
 } from '@/lib/supabase/facilityManagement';
 import { startConnectOnboarding } from '@/lib/payments/connectOnboarding';
 
@@ -75,6 +75,7 @@ export default function FacilityManageScreen() {
   const [machines, setMachines] = useState<BallMachine[]>([]);
   const [staff, setStaff] = useState<FacilityMember[]>([]);
   const [payout, setPayout] = useState<PayoutStatus | null>(null);
+  const [earnings, setEarnings] = useState<FacilityEarnings | null>(null);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<AssetDraft | null>(null);
   const [busy, setBusy] = useState(false);
@@ -103,15 +104,16 @@ export default function FacilityManageScreen() {
   const loadDetail = useCallback(async (facilityId: string) => {
     try {
       // includeInactive: a manager has to see a retired asset to bring it back.
-      const [c, m, st, p] = await Promise.all([
+      const [c, m, st, p, e] = await Promise.all([
         fetchCourts(facilityId, { includeInactive: true }),
         fetchBallMachines(facilityId, { includeInactive: true }),
         fetchFacilityMembers(facilityId),
         fetchPayoutStatus(facilityId),
+        fetchFacilityEarnings(facilityId),
       ]);
-      setCourts(c); setMachines(m); setStaff(st); setPayout(p);
+      setCourts(c); setMachines(m); setStaff(st); setPayout(p); setEarnings(e);
     } catch {
-      setCourts([]); setMachines([]); setStaff([]); setPayout(null);
+      setCourts([]); setMachines([]); setStaff([]); setPayout(null); setEarnings(null);
     }
   }, []);
 
@@ -504,10 +506,32 @@ export default function FacilityManageScreen() {
             </View>
 
             {payout?.onboarded ? (
-              <View style={s.payoutReady}>
-                <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                <Text style={s.payoutReadyText}>This facility can receive payouts.</Text>
-              </View>
+              <>
+                <View style={s.payoutReady}>
+                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  <Text style={s.payoutReadyText}>This facility can receive payouts.</Text>
+                </View>
+
+                {earnings && (
+                  <View style={s.payoutCard}>
+                    <View style={s.earningsRow}>
+                      <Text style={s.earningsLabel}>Pending</Text>
+                      <Text style={s.earningsValue}>{money(earnings.pendingCents)}</Text>
+                    </View>
+                    <View style={s.earningsRow}>
+                      <Text style={s.earningsLabel}>Paid out</Text>
+                      <Text style={s.earningsValue}>{money(earnings.paidCents)}</Text>
+                    </View>
+                    {/* Said explicitly. A facility under the floor otherwise
+                        concludes it is simply not being paid. */}
+                    <Text style={s.footnote}>
+                      {earnings.pendingCents < earnings.minimumCents
+                        ? `Payouts go out on Mondays once pending reaches ${money(earnings.minimumCents)}.`
+                        : 'Paid out on Mondays, 48 hours after each booking ends.'}
+                    </Text>
+                  </View>
+                )}
+              </>
             ) : (
               <View style={s.payoutCard}>
                 <Text style={s.payoutTitle}>
@@ -645,4 +669,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.success,
   },
   payoutReadyText: { color: colors.navy, ...typography.body, flex: 1 },
+  earningsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  earningsLabel: { color: colors.textSub, ...typography.body },
+  earningsValue: { color: colors.navy, fontSize: 18, fontWeight: '900' },
 });

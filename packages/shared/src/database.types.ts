@@ -1956,6 +1956,102 @@ export type Database = {
           },
         ]
       }
+      facility_payout_batches: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          currency: string
+          facility_id: string
+          failed_at: string | null
+          failure_reason: string | null
+          id: string
+          paid_at: string | null
+          status: string
+          stripe_account_id: string
+          stripe_transfer_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          currency?: string
+          facility_id: string
+          failed_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          paid_at?: string | null
+          status?: string
+          stripe_account_id: string
+          stripe_transfer_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          facility_id?: string
+          failed_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          paid_at?: string | null
+          status?: string
+          stripe_account_id?: string
+          stripe_transfer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facility_payout_batches_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facility_payout_items: {
+        Row: {
+          amount_cents: number
+          batch_id: string
+          created_at: string
+          id: string
+          reservation_id: string
+        }
+        Insert: {
+          amount_cents: number
+          batch_id: string
+          created_at?: string
+          id?: string
+          reservation_id: string
+        }
+        Update: {
+          amount_cents?: number
+          batch_id?: string
+          created_at?: string
+          id?: string
+          reservation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facility_payout_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "facility_payout_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facility_payout_items_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facility_payout_items_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "v_facility_payable_reservations"
+            referencedColumns: ["reservation_id"]
+          },
+        ]
+      }
       facility_photos: {
         Row: {
           created_at: string
@@ -6740,6 +6836,14 @@ export type Database = {
           refund_id: string
         }[]
       }
+      claim_facility_payout_batch: {
+        Args: { p_facility_id: string }
+        Returns: {
+          amount_cents: number
+          batch_id: string
+          stripe_account_id: string
+        }[]
+      }
       claim_personal_match: {
         Args: { p_token: string }
         Returns: {
@@ -7160,6 +7264,15 @@ export type Database = {
           distance_meters: number
           id: string
           name: string
+        }[]
+      }
+      facility_earnings: {
+        Args: { p_facility_id: string }
+        Returns: {
+          last_paid_at: string
+          minimum_cents: number
+          paid_cents: number
+          pending_cents: number
         }[]
       }
       facility_id_for_owner: {
@@ -7979,6 +8092,10 @@ export type Database = {
           p_shortfall_cents?: number
           p_stripe_refund_id: string
         }
+        Returns: undefined
+      }
+      settle_facility_payout_batch: {
+        Args: { p_batch_id: string; p_failure?: string; p_transfer_id?: string }
         Returns: undefined
       }
       show_limit: { Args: never; Returns: number }

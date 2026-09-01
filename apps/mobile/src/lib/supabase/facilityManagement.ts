@@ -83,3 +83,30 @@ export function facilityManagementError(err: unknown): string {
   }
   return raw || 'Something went wrong. Please try again.';
 }
+
+export type FacilityEarnings = {
+  paidCents: number;
+  pendingCents: number;
+  minimumCents: number;
+  lastPaidAt: string | null;
+};
+
+/**
+ * Owner-facing earnings.
+ *
+ * pending is what has accrued but not yet been transferred. It has to be shown
+ * alongside the minimum, because a facility sitting under the payout floor
+ * otherwise concludes it is simply not being paid.
+ */
+export async function fetchFacilityEarnings(facilityId: string): Promise<FacilityEarnings | null> {
+  const { data, error } = await supabase.rpc('facility_earnings', { p_facility_id: facilityId });
+  if (error) return null;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return {
+    paidCents: Number(row.paid_cents ?? 0),
+    pendingCents: Number(row.pending_cents ?? 0),
+    minimumCents: Number(row.minimum_cents ?? 0),
+    lastPaidAt: row.last_paid_at,
+  };
+}
