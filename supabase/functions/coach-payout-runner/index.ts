@@ -69,7 +69,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const service = getServiceClient();
-  const summary = { retried: 0, claimed: 0, paid: 0, failed: 0, totalCents: 0 };
+  const summary = { retried: 0, claimed: 0, paid: 0, failed: 0, withheldOnly: 0, totalCents: 0 };
 
   try {
     // ── 1. Retry anything left pending by an earlier run ───────────────────
@@ -92,6 +92,11 @@ Deno.serve(async (req: Request) => {
 
     for (const b of pending ?? []) {
       summary.retried++;
+      if (b.amount_cents === 0) {
+        await service.rpc("settle_coach_payout_batch", { p_batch_id: b.id, p_transfer_id: null });
+        summary.withheldOnly++;
+        continue;
+      }
       const res = await payBatch(b.id, b.amount_cents, b.stripe_account_id, b.coach_id);
       if (res.ok) {
         await service.rpc("settle_coach_payout_batch", { p_batch_id: b.id, p_transfer_id: res.transferId });
@@ -133,6 +138,19 @@ Deno.serve(async (req: Request) => {
       if (!batch?.batch_id) continue;
 
       summary.claimed++;
+
+      // A batch can be zero when an unrecovered refund clawback swallowed the
+      // whole run. The redemptions are still legitimately claimed and the debt
+      // recorded against them — there is simply nothing to transfer, and
+      // Stripe rejects a zero-amount transfer rather than ignoring it.
+      if (batch.amount_cents === 0) {
+        await service.rpc("settle_coach_payout_batch", {
+          p_batch_id: batch.batch_id, p_transfer_id: null,
+        });
+        summary.withheldOnly++;
+        continue;
+      }
+
       const res = await payBatch(batch.batch_id, batch.amount_cents, batch.stripe_account_id, coachId);
 
       if (res.ok) {

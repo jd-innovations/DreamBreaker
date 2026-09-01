@@ -666,6 +666,181 @@ export type Database = {
           },
         ]
       }
+      coach_payout_batches: {
+        Row: {
+          amount_cents: number
+          coach_id: string
+          created_at: string
+          currency: string
+          failed_at: string | null
+          failure_reason: string | null
+          id: string
+          paid_at: string | null
+          status: string
+          stripe_account_id: string
+          stripe_transfer_id: string | null
+          withheld_cents: number
+        }
+        Insert: {
+          amount_cents: number
+          coach_id: string
+          created_at?: string
+          currency?: string
+          failed_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          paid_at?: string | null
+          status?: string
+          stripe_account_id: string
+          stripe_transfer_id?: string | null
+          withheld_cents?: number
+        }
+        Update: {
+          amount_cents?: number
+          coach_id?: string
+          created_at?: string
+          currency?: string
+          failed_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          paid_at?: string | null
+          status?: string
+          stripe_account_id?: string
+          stripe_transfer_id?: string | null
+          withheld_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_payout_batches_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_payout_items: {
+        Row: {
+          amount_cents: number
+          batch_id: string
+          created_at: string
+          id: string
+          purchase_id: string
+          redemption_id: string
+        }
+        Insert: {
+          amount_cents: number
+          batch_id: string
+          created_at?: string
+          id?: string
+          purchase_id: string
+          redemption_id: string
+        }
+        Update: {
+          amount_cents?: number
+          batch_id?: string
+          created_at?: string
+          id?: string
+          purchase_id?: string
+          redemption_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_payout_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "coach_payout_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_payout_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "coach_offer_purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_payout_items_redemption_id_fkey"
+            columns: ["redemption_id"]
+            isOneToOne: false
+            referencedRelation: "coach_voucher_redemptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_payout_items_redemption_id_fkey"
+            columns: ["redemption_id"]
+            isOneToOne: false
+            referencedRelation: "v_coach_payable_redemptions"
+            referencedColumns: ["redemption_id"]
+          },
+        ]
+      }
+      coach_refunds: {
+        Row: {
+          amount_cents: number
+          clawback_recovered_cents: number
+          clawback_shortfall_cents: number
+          completed_at: string | null
+          created_at: string
+          failed_at: string | null
+          failure_reason: string | null
+          id: string
+          payout_reversed_cents: number
+          purchase_id: string
+          reason: string
+          requested_by: string
+          status: string
+          stripe_refund_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          clawback_recovered_cents?: number
+          clawback_shortfall_cents?: number
+          completed_at?: string | null
+          created_at?: string
+          failed_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          payout_reversed_cents?: number
+          purchase_id: string
+          reason: string
+          requested_by: string
+          status?: string
+          stripe_refund_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          clawback_recovered_cents?: number
+          clawback_shortfall_cents?: number
+          completed_at?: string | null
+          created_at?: string
+          failed_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          payout_reversed_cents?: number
+          purchase_id?: string
+          reason?: string
+          requested_by?: string
+          status?: string
+          stripe_refund_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_refunds_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "coach_offer_purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_refunds_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_voucher_entitlements: {
         Row: {
           buyer_id: string
@@ -5789,6 +5964,33 @@ export type Database = {
           },
         ]
       }
+      v_coach_payable_redemptions: {
+        Row: {
+          amount_cents: number | null
+          coach_id: string | null
+          coach_status: Database["public"]["Enums"]["coach_status"] | null
+          purchase_id: string | null
+          redeemed_at: string | null
+          redemption_id: string | null
+          stripe_connect_account_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_voucher_redemptions_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "coach_offer_purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_voucher_redemptions_redeemed_by_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_director_earnings: {
         Row: {
           confirmed_registrations: number | null
@@ -6124,6 +6326,23 @@ export type Database = {
           tournament_name: string
         }[]
       }
+      claim_coach_payout_batch: {
+        Args: { p_coach_id: string }
+        Returns: {
+          amount_cents: number
+          batch_id: string
+          stripe_account_id: string
+        }[]
+      }
+      claim_coach_refund: {
+        Args: { p_purchase_id: string; p_reason: string }
+        Returns: {
+          already_paid_out: boolean
+          amount_cents: number
+          payment_intent_id: string
+          refund_id: string
+        }[]
+      }
       claim_personal_match: {
         Args: { p_token: string }
         Returns: {
@@ -6133,6 +6352,14 @@ export type Database = {
         }[]
       }
       close_expired_tournament_registration: { Args: never; Returns: number }
+      coach_outstanding_clawback_cents: {
+        Args: { p_coach_id: string }
+        Returns: number
+      }
+      coach_redemption_payout_cents: {
+        Args: { p_redemption_id: string }
+        Returns: number
+      }
       complete_personal_session: {
         Args: {
           p_facility_id?: string
@@ -7218,6 +7445,20 @@ export type Database = {
               website: string
             }[]
           }
+      settle_coach_payout_batch: {
+        Args: { p_batch_id: string; p_failure?: string; p_transfer_id: string }
+        Returns: undefined
+      }
+      settle_coach_refund: {
+        Args: {
+          p_failure?: string
+          p_refund_id: string
+          p_reversed_cents?: number
+          p_shortfall_cents?: number
+          p_stripe_refund_id: string
+        }
+        Returns: undefined
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       st_3dclosestpoint: {

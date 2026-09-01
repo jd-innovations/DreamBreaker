@@ -262,6 +262,25 @@ export default function WalletItemDetailScreen() {
           )
         )}
 
+        {item.type === 'coach_voucher' && item.coachVoucher && (
+          <TouchableOpacity
+            style={s.refundLink}
+            activeOpacity={0.7}
+            onPress={() => router.push({
+              pathname: '/wallet/refund-request',
+              params: {
+                purchaseId: item.coachVoucher!.purchaseId,
+                walletItemId: item.id,
+                offerTitle: item.title,
+                coachName: item.subtitle ?? '',
+              },
+            } as never)}
+          >
+            <Ionicons name="help-circle-outline" size={15} color={L.textSub} />
+            <Text style={s.refundLinkText}>Something wrong with this lesson?</Text>
+          </TouchableOpacity>
+        )}
+
         {item.type !== 'coach_voucher' && item.actionType !== 'none' && (
           <TouchableOpacity
             style={[
@@ -386,6 +405,11 @@ const s = StyleSheet.create({
   },
   redeemRemaining: { color: colors.text, fontSize: 13, fontWeight: '700' },
   redeemNote:      { color: colors.textSub, fontSize: 11, textAlign: 'center' },
+  refundLink: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 14,
+  },
+  refundLinkText: { color: colors.textSub, fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' },
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     borderRadius: radius.button, paddingVertical: 14, marginBottom: 20,
