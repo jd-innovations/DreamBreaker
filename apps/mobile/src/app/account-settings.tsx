@@ -38,25 +38,28 @@ const L = {
   white: colors.white,
 };
 
-const SETTINGS_GRID = [
-  [
-    { icon: 'person-outline',       label: 'Profile'       },
-    { icon: 'speedometer-outline',  label: 'Rating'        },
-  ],
-  [
-    { icon: 'location-outline',     label: 'Location'      },
-    { icon: 'person-add-outline',   label: 'Contact'       },
-  ],
-  [
-    { icon: 'refresh-outline',      label: 'My Plan'       },
-    { icon: 'cash-outline',         label: 'Payments'      },
-  ],
-  [
-    { icon: 'notifications-outline', label: 'Notifications' },
-    { icon: 'lock-closed-outline',  label: 'Permissions'   },
-    { icon: 'ban-outline',          label: 'Blocked'       },
-  ],
+// A flat list, laid out two per row below. It used to be hand-grouped rows,
+// one of which held three cells — and a three-up row does not fit: the cell is
+// flex: 1, but React Native defaults flexShrink to 0 (unlike CSS), so a cell
+// cannot compress below its content and the row overflowed the screen instead,
+// wrapping "Notifications" onto two lines and pushing chevrons off the edge.
+const SETTINGS_CELLS = [
+  { icon: 'person-outline',        label: 'Profile'       },
+  { icon: 'speedometer-outline',   label: 'Rating'        },
+  { icon: 'location-outline',      label: 'Location'      },
+  { icon: 'person-add-outline',    label: 'Contact'       },
+  { icon: 'refresh-outline',       label: 'My Plan'       },
+  { icon: 'cash-outline',          label: 'Payments'      },
+  { icon: 'notifications-outline', label: 'Notifications' },
+  { icon: 'lock-closed-outline',   label: 'Permissions'   },
+  { icon: 'ban-outline',           label: 'Blocked'       },
 ];
+
+function chunkPairs<T>(items: T[]): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
+  return rows;
+}
 
 const CELL_ROUTES: Record<string, string> = {
   Profile:       '/edit-profile',
@@ -101,7 +104,7 @@ function SettingCell({ icon, label }: { icon: string; label: string }) {
       onPress={() => { if (route) router.push(route as never); }}
     >
       <Ionicons name={icon as never} size={22} color={L.navy} />
-      <Text style={cell.label}>{label}</Text>
+      <Text style={cell.label} numberOfLines={1}>{label}</Text>
       <Ionicons name="chevron-forward" size={16} color={L.textMuted} style={{ marginLeft: 'auto' }} />
     </TouchableOpacity>
   );
@@ -110,6 +113,9 @@ function SettingCell({ icon, label }: { icon: string; label: string }) {
 const cell = StyleSheet.create({
   wrap: {
     flex: 1,
+    // minWidth 0 is what actually lets a flex child shrink; without it the
+    // cell is pinned to its content width and overflows the row.
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -120,7 +126,9 @@ const cell = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 16,
   },
-  label: { color: L.text, fontSize: 14, fontWeight: '600' },
+  // flexShrink so a long label gives way to the chevron rather than pushing it
+  // out of the cell.
+  label: { color: L.text, fontSize: 14, fontWeight: '600', flexShrink: 1 },
 });
 
 export default function AccountSettingsScreen() {
@@ -132,12 +140,13 @@ export default function AccountSettingsScreen() {
   // the other money you receive — and that row grows to three, matching the
   // Notifications row's width.
   const canReceivePayouts = !!profile?.is_coach || !!profile?.is_director;
-  const settingsGrid = canReceivePayouts
-    ? SETTINGS_GRID.map(row =>
-        row.some(item => item.label === 'Payments')
-          ? [...row, { icon: 'wallet-outline', label: 'Payouts' }]
-          : row)
-    : SETTINGS_GRID;
+  const cells = canReceivePayouts
+    ? SETTINGS_CELLS.flatMap(item =>
+        item.label === 'Payments'
+          ? [item, { icon: 'wallet-outline', label: 'Payouts' }]
+          : [item])
+    : SETTINGS_CELLS;
+  const settingsGrid = chunkPairs(cells);
   const completion = getProfileCompletion(profile);
 
   const initials = profile?.full_name
