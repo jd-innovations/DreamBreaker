@@ -71,6 +71,17 @@ This is the real scope — not deals.
    it cannot gate payment.
 5. **The 9 existing bookings are test data.** No backfill; they are
    pre-marketplace and not real.
+6. **The application is a form: search, edit, submit.** The applicant searches
+   the 194 existing facilities, corrects the listing's data, and submits — or
+   adds a new facility if theirs is genuinely absent. Admin reviews the
+   ownership claim and the proposed edits together.
+
+   The edits ARE the evidence. Someone who runs the venue knows its court
+   count, hours and phone; someone who does not cannot fake that convincingly.
+   Better than a domain-matched email, which any employee has.
+7. **Edits stay reviewed after approval**, and **deals unlock only once
+   approved.** The directory is shared data, so an owner's later corrections
+   still queue for admin review rather than writing straight through.
 
 ### A correction to the framing
 
@@ -180,7 +191,8 @@ record; deliberately touches no money. Gives no-show reporting something real
 to count, and feeds review eligibility.
 
 ### Phase 6 — Deal posting UI
-The RLS is already waiting. A form and a list, over `flash_deals`. Facility-,
+Gated on an approved facility (decision 7) — an unapproved venue cannot post
+deals. The RLS is already waiting. A form and a list, over `flash_deals`. Facility-,
 court- and machine-level deals all already representable.
 
 ### Phase 7 — Payouts
@@ -194,10 +206,25 @@ support-ticket path.
 
 ---
 
+## Prerequisite completed
+
+`20260901090000_facilities_rls_hardening.sql` (applied 2026-09-01) fixes two
+live bugs found while designing Phase 1:
+
+- Both update policies pinned immutable columns with a self-correlated subquery
+  (`facilities_1.id = facilities_1.id`), a tautology returning all 194 rows, so
+  every update through them errored. **This is why 0 of 194 facilities were
+  ever claimed — the path could not run.** Immutability now lives in a trigger,
+  because RLS `WITH CHECK` cannot reference `OLD`.
+- The insert policy constrained no columns: any authenticated user could create
+  a facility marked `verified`, `claim_status = 'claimed'` and self-owned.
+  Under this plan an owned facility gates Connect onboarding, so that was a
+  path to a forged payout destination.
+
 ## Open question
 
-**What evidence does an application carry?** The director flow asks for none —
-an admin simply approves a person. Taking over a venue's revenue is a higher
-bar, so the form probably needs something: a work email on the facility's
-domain, a phone match against `facilities.phone`, or a free-text case an admin
-reads. Not blocking Phase 1's shape, but it decides what the form contains.
+**Duplicate control when adding a new facility.** 178 of 194 came from Google
+Places and 112 already carry `created_by`. Search-first ordering prevents most
+duplicates and admin review catches more, but matching on `google_place_id`
+where present is worth doing — two rows for one venue means two owners and two
+payout destinations.
