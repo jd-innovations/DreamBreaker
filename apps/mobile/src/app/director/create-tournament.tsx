@@ -304,7 +304,10 @@ function validateStep(step: StepKey, form: FormState, stripeOnboarded: boolean):
     if (!form.entryFee.trim() || isNaN(entry) || entry < 0)
       e.entryFee = 'Entry fee must be $0 or more';
     else if (entry > 0 && !stripeOnboarded)
-      e.entryFee = 'Connect Stripe payouts on the Pickleball App website before charging an entry fee';
+      // Names where to go rather than a website with no link. The screen is
+      // reachable from Account Settings > Payouts; a validation message cannot
+      // navigate, so it points instead of dead-ending.
+      e.entryFee = 'Set up payouts in Account Settings before charging an entry fee';
 
     if (!form.holdFee.trim() || isNaN(hold) || hold < 0)
       e.holdFee = 'Deposit must be $0 or more';

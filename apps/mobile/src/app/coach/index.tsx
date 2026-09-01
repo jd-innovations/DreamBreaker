@@ -119,15 +119,21 @@ export default function CoachModeScreen() {
           <View style={s.statusCard}>
             <Ionicons name="time-outline" size={18} color={L.gold} />
             <Text style={s.statusText}>
-              Coach Mode is active. Connect Stripe payouts on the Pickleball App website to start publishing offers.
+              Coach Mode is active. Set up payouts to start publishing offers.
             </Text>
+            <TouchableOpacity onPress={() => router.push('/payout-settings' as never)} activeOpacity={0.75}>
+              <Text style={s.statusLink}>Set up</Text>
+            </TouchableOpacity>
           </View>
         ) : coachStatus === 'restricted' ? (
           <View style={[s.statusCard, { backgroundColor: L.dangerBg, borderColor: 'rgba(239,68,68,0.30)' }]}>
             <Ionicons name="alert-circle-outline" size={18} color={L.danger} />
             <Text style={[s.statusText, { color: L.danger }]}>
-              Your payout account needs attention. Reconnect Stripe on the Pickleball App website.
+              Your payout account needs attention.
             </Text>
+            <TouchableOpacity onPress={() => router.push('/payout-settings' as never)} activeOpacity={0.75}>
+              <Text style={[s.statusLink, { color: L.danger }]}>Fix</Text>
+            </TouchableOpacity>
           </View>
         ) : coachStatus === 'active' ? (
           <View style={[s.statusCard, { backgroundColor: L.successBg, borderColor: 'rgba(34,197,94,0.30)' }]}>
@@ -204,6 +210,7 @@ const s = StyleSheet.create({
     backgroundColor: L.goldLight, borderWidth: 1, borderColor: L.goldBorder,
     borderRadius: radius.card, padding: 14,
   },
+  statusLink: { color: L.gold, fontSize: 13, fontWeight: '800', textDecorationLine: 'underline' },
   statusText: { color: L.gold, fontSize: 13, fontWeight: '700', flex: 1 },
 
   offersLink: {

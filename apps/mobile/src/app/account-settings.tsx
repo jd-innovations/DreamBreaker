@@ -68,6 +68,7 @@ const CELL_ROUTES: Record<string, string> = {
   Permissions:   '/permissions-settings',
   Blocked:       '/blocked-accounts',
   Payments:      '/payments-settings',
+  Payouts:       '/payout-settings',
 };
 
 const DEV_TOOLS = [
@@ -125,6 +126,18 @@ const cell = StyleSheet.create({
 export default function AccountSettingsScreen() {
   const insets = useSafeAreaInsets();
   const { profile } = useProfile();
+
+  // Payouts only exists for people who can be paid. Appended to the row that
+  // already holds Payments so the two sit together — one is money you spend,
+  // the other money you receive — and that row grows to three, matching the
+  // Notifications row's width.
+  const canReceivePayouts = !!profile?.is_coach || !!profile?.is_director;
+  const settingsGrid = canReceivePayouts
+    ? SETTINGS_GRID.map(row =>
+        row.some(item => item.label === 'Payments')
+          ? [...row, { icon: 'wallet-outline', label: 'Payouts' }]
+          : row)
+    : SETTINGS_GRID;
   const completion = getProfileCompletion(profile);
 
   const initials = profile?.full_name
@@ -223,7 +236,7 @@ export default function AccountSettingsScreen() {
 
         {/* Ã¢â€â‚¬Ã¢â€â‚¬ SETTINGS GRID Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <View style={styles.grid}>
-          {SETTINGS_GRID.map((row, ri) => (
+          {settingsGrid.map((row, ri) => (
             <View key={ri} style={styles.gridRow}>
               {row.map((item) => (
                 <SettingCell key={item.label} icon={item.icon} label={item.label} />
