@@ -70,7 +70,7 @@ Deno.serve(async (req: Request) => {
   // function will ever charge. Never read an amount from the request body.
   const { data: reservation, error: reservationError } = await service
     .from("reservations")
-    .select("id, facility_id, asset_type, asset_id, organizer_id, status, hold_expires_at, final_price_cents")
+    .select("id, facility_id, asset_type, asset_id, organizer_id, status, hold_expires_at, final_price_cents, platform_commission_cents, facility_net_cents, commission_pct")
     .eq("id", reservationId)
     .maybeSingle();
 
@@ -120,6 +120,14 @@ Deno.serve(async (req: Request) => {
         assetType: reservation.asset_type,
         assetId: reservation.asset_id,
         organizerId: user.id,
+        // Phase 4. The charge itself stays a platform charge — separate
+        // charges and transfers, as for coaches — because the facility is not
+        // paid until the slot has elapsed. Carrying the split here means a
+        // Stripe charge can be reconciled against what the database says is
+        // owed without joining anything.
+        platformCommissionCents: String(reservation.platform_commission_cents ?? ""),
+        facilityNetCents: String(reservation.facility_net_cents ?? ""),
+        commissionPct: String(reservation.commission_pct ?? ""),
       },
     });
 

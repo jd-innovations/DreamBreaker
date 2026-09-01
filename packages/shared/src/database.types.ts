@@ -1599,8 +1599,10 @@ export type Database = {
           bookable_by_public: boolean
           booking_url: string | null
           business_status: string | null
+          cancellation_window_hours: number
           city: string
           claim_status: string
+          commission_override_pct: number | null
           coords: unknown
           country: string
           court_count: number
@@ -1661,8 +1663,10 @@ export type Database = {
           bookable_by_public?: boolean
           booking_url?: string | null
           business_status?: string | null
+          cancellation_window_hours?: number
           city: string
           claim_status?: string
+          commission_override_pct?: number | null
           coords?: unknown
           country?: string
           court_count?: number
@@ -1723,8 +1727,10 @@ export type Database = {
           bookable_by_public?: boolean
           booking_url?: string | null
           business_status?: string | null
+          cancellation_window_hours?: number
           city?: string
           claim_status?: string
+          commission_override_pct?: number | null
           coords?: unknown
           country?: string
           court_count?: number
@@ -4950,6 +4956,13 @@ export type Database = {
             referencedRelation: "reservations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reservation_invites_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "v_facility_payable_reservations"
+            referencedColumns: ["reservation_id"]
+          },
         ]
       }
       reservation_players: {
@@ -4989,6 +5002,13 @@ export type Database = {
             referencedRelation: "reservations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reservation_players_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "v_facility_payable_reservations"
+            referencedColumns: ["reservation_id"]
+          },
         ]
       }
       reservations: {
@@ -4997,9 +5017,13 @@ export type Database = {
           asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
           base_price_cents: number
           cancelled_at: string | null
+          commission_pct: number | null
+          commission_source: string | null
           confirmed_at: string | null
           created_at: string
+          duration_hours: number | null
           facility_id: string
+          facility_net_cents: number | null
           final_price_cents: number
           flash_deal_discount_percent: number | null
           flash_deal_id: string | null
@@ -5010,6 +5034,7 @@ export type Database = {
           id: string
           max_players: number
           organizer_id: string
+          platform_commission_cents: number | null
           status: Database["public"]["Enums"]["reservation_status"]
           time_range: unknown
           updated_at: string
@@ -5019,9 +5044,13 @@ export type Database = {
           asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
           base_price_cents: number
           cancelled_at?: string | null
+          commission_pct?: number | null
+          commission_source?: string | null
           confirmed_at?: string | null
           created_at?: string
+          duration_hours?: number | null
           facility_id: string
+          facility_net_cents?: number | null
           final_price_cents: number
           flash_deal_discount_percent?: number | null
           flash_deal_id?: string | null
@@ -5032,6 +5061,7 @@ export type Database = {
           id?: string
           max_players: number
           organizer_id: string
+          platform_commission_cents?: number | null
           status?: Database["public"]["Enums"]["reservation_status"]
           time_range: unknown
           updated_at?: string
@@ -5041,9 +5071,13 @@ export type Database = {
           asset_type?: Database["public"]["Enums"]["facility_asset_owner_type"]
           base_price_cents?: number
           cancelled_at?: string | null
+          commission_pct?: number | null
+          commission_source?: string | null
           confirmed_at?: string | null
           created_at?: string
+          duration_hours?: number | null
           facility_id?: string
+          facility_net_cents?: number | null
           final_price_cents?: number
           flash_deal_discount_percent?: number | null
           flash_deal_id?: string | null
@@ -5054,6 +5088,7 @@ export type Database = {
           id?: string
           max_players?: number
           organizer_id?: string
+          platform_commission_cents?: number | null
           status?: Database["public"]["Enums"]["reservation_status"]
           time_range?: unknown
           updated_at?: string
@@ -6258,6 +6293,26 @@ export type Database = {
           },
         ]
       }
+      v_facility_payable_reservations: {
+        Row: {
+          facility_id: string | null
+          facility_net_cents: number | null
+          final_price_cents: number | null
+          platform_commission_cents: number | null
+          reservation_id: string | null
+          slot_start: string | null
+          status: Database["public"]["Enums"]["reservation_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservations_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_mutual_matches: {
         Row: {
           matched_at: string | null
@@ -6556,9 +6611,13 @@ export type Database = {
           asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
           base_price_cents: number
           cancelled_at: string | null
+          commission_pct: number | null
+          commission_source: string | null
           confirmed_at: string | null
           created_at: string
+          duration_hours: number | null
           facility_id: string
+          facility_net_cents: number | null
           final_price_cents: number
           flash_deal_discount_percent: number | null
           flash_deal_id: string | null
@@ -6569,6 +6628,7 @@ export type Database = {
           id: string
           max_players: number
           organizer_id: string
+          platform_commission_cents: number | null
           status: Database["public"]["Enums"]["reservation_status"]
           time_range: unknown
           updated_at: string
@@ -6691,9 +6751,13 @@ export type Database = {
           asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
           base_price_cents: number
           cancelled_at: string | null
+          commission_pct: number | null
+          commission_source: string | null
           confirmed_at: string | null
           created_at: string
+          duration_hours: number | null
           facility_id: string
+          facility_net_cents: number | null
           final_price_cents: number
           flash_deal_discount_percent: number | null
           flash_deal_id: string | null
@@ -6704,6 +6768,7 @@ export type Database = {
           id: string
           max_players: number
           organizer_id: string
+          platform_commission_cents: number | null
           status: Database["public"]["Enums"]["reservation_status"]
           time_range: unknown
           updated_at: string
@@ -6820,9 +6885,13 @@ export type Database = {
           asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
           base_price_cents: number
           cancelled_at: string | null
+          commission_pct: number | null
+          commission_source: string | null
           confirmed_at: string | null
           created_at: string
+          duration_hours: number | null
           facility_id: string
+          facility_net_cents: number | null
           final_price_cents: number
           flash_deal_discount_percent: number | null
           flash_deal_id: string | null
@@ -6833,6 +6902,7 @@ export type Database = {
           id: string
           max_players: number
           organizer_id: string
+          platform_commission_cents: number | null
           status: Database["public"]["Enums"]["reservation_status"]
           time_range: unknown
           updated_at: string
@@ -6986,6 +7056,13 @@ export type Database = {
       expire_registration_group_invites: { Args: never; Returns: number }
       expire_stale_holds: { Args: never; Returns: number }
       expire_stale_reservation_holds: { Args: never; Returns: number }
+      facility_commission_pct: {
+        Args: { p_facility_id: string }
+        Returns: {
+          pct: number
+          source: string
+        }[]
+      }
       facility_duplicate_candidates: {
         Args: {
           p_latitude: number
