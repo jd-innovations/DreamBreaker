@@ -171,15 +171,41 @@ const REG_SELECT = `
 
 // ─── Player queries ───────────────────────────────────────────────────────────
 
+/**
+ * Every registration this player is part of - as the registering player OR as
+ * someone else's partner.
+ *
+ * Previously matched `player_id` only, so a doubles player whose partner did
+ * the registering saw the event nowhere: not in /my-tournaments, and not on
+ * the Events tab. RLS already permits this read ("registrations: player read
+ * own" is `player_id = auth.uid() OR partner_id = auth.uid()`), so widening
+ * the query needed no policy change.
+ *
+ * Deduplicated by tournament + division, because a player can legitimately
+ * hold BOTH roles on two rows of the same division - that is real in
+ * production today, not a hypothetical - and the union would otherwise render
+ * the same event twice. The row where they are the registering player wins:
+ * it carries their own payment and status rather than their partner's.
+ */
 export async function fetchPlayerRegistrations(playerId: string): Promise<TournamentRegistration[]> {
   const { data, error } = await supabase
     .from('registrations')
     .select(REG_SELECT)
-    .eq('player_id', playerId)
+    .or(`player_id.eq.${playerId},partner_id.eq.${playerId}`)
     .in('status', ['registered', 'checked_in', 'waitlisted', 'waitlist_offered', 'no_show']);
 
   if (error || !data) return [];
-  return (data as unknown as RegistrationRow[]).map(rowToRegistration);
+
+  const rows = data as unknown as RegistrationRow[];
+  const best = new Map<string, RegistrationRow>();
+  for (const row of rows) {
+    const key = `${row.tournament_id}:${row.division_id}`;
+    const existing = best.get(key);
+    if (!existing || (row.player_id === playerId && existing.player_id !== playerId)) {
+      best.set(key, row);
+    }
+  }
+  return Array.from(best.values()).map(rowToRegistration);
 }
 
 export async function fetchPlayerHolds(playerId: string): Promise<HeldSpot[]> {
