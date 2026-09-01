@@ -18,6 +18,22 @@ export type SupportContext = {
   action?: string;
   errorCode?: string;
   visibility?: SupportVisibility;
+  /**
+   * Extra space (px) the floating button must keep clear at the bottom of
+   * this screen, on top of the safe-area inset it already respects.
+   *
+   * The button is mounted once globally and knows only about the tab bar, so
+   * a screen with its own bottom-anchored UI — a fixed CTA bar, a composer —
+   * would otherwise have the button land on top of it. Declaring the height
+   * here moves the button instead of moving the content.
+   *
+   * Prefer a MEASURED height (onLayout) over a constant: the tournament
+   * screen's CTA bar changes height when its stack expands, and a hardcoded
+   * number would be wrong in one of the two states. Round it before passing
+   * it in — the registry re-registers whenever the serialized context
+   * changes, and a fractional height would churn on every layout pass.
+   */
+  bottomClearance?: number;
   metadata?: Record<string, string | number | boolean>;
 };
 

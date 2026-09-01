@@ -261,11 +261,18 @@ export default function TournamentDetail() {
   const [loading, setLoading]       = useState(true);
   const { id } = useLocalSearchParams<{ id: string }>();
 
+  // Measured, not hardcoded: this bar's height changes when the CTA stack
+  // expands, so a constant would be wrong in one of the two states. Rounded
+  // because the support registry re-registers on any change to the
+  // serialized context, and a fractional height would churn every layout pass.
+  const [ctaBarHeight, setCtaBarHeight] = useState(0);
+
   useSupportContext({
     feature: 'tournament',
     entityType: 'tournament',
     entityId: id,
     entityLabel: tournament?.name,
+    bottomClearance: ctaBarHeight,
   });
 
   // Unknown keys are dropped and the list is capped at three, so a row written
@@ -1031,7 +1038,16 @@ export default function TournamentDetail() {
       </Modal>
 
       {/* ── FIXED BOTTOM BAR ── */}
-      <View style={[s.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+      <View
+        style={[s.bottomBar, { paddingBottom: insets.bottom + 12 }]}
+        onLayout={e => {
+          // The bar already includes the safe-area inset the button adds
+          // itself, so report only the part above it — otherwise the inset
+          // is counted twice and the button floats too high.
+          const h = Math.round(Math.max(0, e.nativeEvent.layout.height - insets.bottom));
+          setCtaBarHeight(prev => (prev === h ? prev : h));
+        }}
+      >
         <View style={s.ctaStack}>
           {/* Registration CTA (state-driven) */}
           {(() => {

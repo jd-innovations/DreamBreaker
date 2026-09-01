@@ -98,7 +98,12 @@ export function FloatingSupportButton() {
   }
 
   const isTabScreen = TAB_ROUTE_PATHNAMES.has(pathname);
-  const bottom = isTabScreen ? tabBarClearance(insets.bottom) : insets.bottom + spacing.lg;
+  // Two sources of bottom obstruction, and they do not overlap: the tab bar
+  // is global and known here, while a screen's own bottom-anchored UI is only
+  // known to that screen, which reports it as `bottomClearance`. A screen that
+  // declares nothing sits exactly where it always has.
+  const baseBottom = isTabScreen ? tabBarClearance(insets.bottom) : insets.bottom + spacing.lg;
+  const bottom = baseBottom + Math.max(0, context?.bottomClearance ?? 0);
   const size = visibility === 'minimized' ? SIZE_MINIMIZED : SIZE_FULL;
   const iconSize = visibility === 'minimized' ? 20 : 24;
   const radius = size / 2;
