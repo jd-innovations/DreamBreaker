@@ -519,10 +519,19 @@ export function playEventToGameCard(e: PlayEvent & { _participantCount?: number 
   const dateStr = new Date(`${e.event_date}T${e.start_time ?? '00:00:00'}`)
     .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-  const route =
-    e.event_type === 'round_robin'      ? `/round-robin-created?id=${e.id}` :
-    e.event_type === 'mini_tournament'  ? `/mini-tournament-created?id=${e.id}` :
-                                          `/quick-game-created?id=${e.id}`;
+  // community/[id] for every kind, not the *-created screens.
+  //
+  // A play event has two detail screens: this one and the post-creation
+  // *-created confirmation screens, which were being reused as detail views.
+  // community/[id] is materially richer - chat, waitlist, guest claiming, the
+  // manage sheet, and the Add-to-Calendar button whose absence surfaced this -
+  // and CALENDAR_INTEGRATION_PHASE6.md already assumed it was the single
+  // shared detail screen for all three kinds. Only the Events tab disagreed.
+  //
+  // The two things the *-created screens had that this one lacked are now
+  // here: a working share (its button had no onPress at all) and, for mini
+  // tournaments, a link to the bracket.
+  const route = `/community/${e.id}`;
 
   const typeLabel =
     e.event_type === 'round_robin'     ? 'ROUND ROBIN' :

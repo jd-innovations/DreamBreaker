@@ -2,10 +2,11 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
-  Modal, Pressable, Alert, Linking, Animated,
+  Modal, Pressable, Alert, Linking, Animated, Share,
   type NativeSyntheticEvent, type NativeScrollEvent,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import { createCommunityShareMessage } from '@/lib/communityShare';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -644,6 +645,20 @@ export default function CommunityEventScreen() {
   }, [id, isUUID]);
 
   const event: EventShape = liveEvent ?? EMPTY_EVENT;
+
+  // The share button in the hero rendered with no onPress - a dead control,
+  // not a stubbed one, since nothing on this screen imported Share at all.
+  // Uses rawPlayEvent (the unmapped row) because createCommunityShareMessage
+  // takes a PlayEvent, and EventShape is this screen's own display shape.
+  async function handleShare() {
+    if (!rawPlayEvent) return;
+    try {
+      await Share.share({
+        message: createCommunityShareMessage(rawPlayEvent),
+        title: event.name,
+      });
+    } catch { /* user dismissed the sheet */ }
+  }
   const isPastEvent = event.badge === 'COMPLETED' || event.badge === 'CANCELLED';
 
   // Add to Calendar: only for a real fetched event (not the mock fallback)
@@ -1135,6 +1150,22 @@ export default function CommunityEventScreen() {
 
     return (
       <>
+        {/* Bracket - mini tournaments only.
+            Added because the Events tab now opens this screen instead of
+            mini-tournament-created, which was the only detail screen linking
+            to the bracket. The route already existed; nothing pointed here. */}
+        {rawPlayEvent?.event_type === 'mini_tournament' && (
+          <TouchableOpacity
+            style={s.bracketBanner}
+            activeOpacity={0.8}
+            onPress={() => router.push(`/mini-tournament/${event.id}/bracket` as never)}
+          >
+            <Ionicons name="git-network-outline" size={16} color={L.gold} />
+            <Text style={s.bracketBannerText}>View Bracket</Text>
+            <Ionicons name="chevron-forward" size={14} color={L.textSub} />
+          </TouchableOpacity>
+        )}
+
         {/* Stat pills + fill bar */}
         <View style={s.statPills}>
           <View style={s.statPill}>
@@ -1790,7 +1821,7 @@ export default function CommunityEventScreen() {
               <Ionicons name="chevron-back" size={20} color={colors.white} />
             </TouchableOpacity>
             <View style={s.topRight}>
-              <TouchableOpacity style={s.circleBtn} activeOpacity={0.85}>
+              <TouchableOpacity style={s.circleBtn} activeOpacity={0.85} onPress={handleShare}>
                 <Ionicons name="share-outline" size={20} color={colors.white} />
               </TouchableOpacity>
               <TouchableOpacity style={s.circleBtn} onPress={() => setSaved(v => !v)} activeOpacity={0.85}>
@@ -2339,6 +2370,13 @@ const s = StyleSheet.create({
   content: { paddingHorizontal: spacing.screenH, paddingTop: spacing.xl },
 
   // Stat pills
+  bracketBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: radius.sm,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  bracketBannerText: { flex: 1, color: L.navy, fontSize: 14, fontWeight: '800' },
   statPills: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap', marginBottom: spacing.md, justifyContent: 'center' },
   statPill: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
