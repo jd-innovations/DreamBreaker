@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Image, ActivityIndicator, Linking, Alert, Modal, Pressable, Share,
+  ScrollView, Image, ActivityIndicator, Linking, Alert, Modal, Pressable, Share, TextInput,
 } from 'react-native';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +11,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, radius, displayText } from '@/theme';
 import { DEFAULT_FACILITY_COVER } from '@/lib/facilityCover';
 import { goBack } from '@/lib/navigation';
+import { useSession } from '@/hooks/useSession';
 import { useSupportContext } from '@/lib/support/supportContext';
+import { createSupportTicket } from '@/lib/supportTicketService';
 import { appLinks } from '@/lib/appLinks';
 import { AppIcon, StatusChip } from '@/components';
 import { VenueMapCard } from '@/components/VenueMapCard';
@@ -461,6 +463,11 @@ export default function FacilityDetailScreen() {
     setBookingSearch({ date: next });
   }
 
+  const { user } = useSession();
+  const [editOpen, setEditOpen] = useState(false);
+  const [editText, setEditText] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
   useSupportContext({
     feature: 'facility',
     entityType: 'facility',
@@ -610,6 +617,57 @@ export default function FacilityDetailScreen() {
     Linking.openURL(`https://maps.apple.com/?q=${q}`).catch(() =>
       Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${q}`),
     );
+  }
+
+  // "Suggest an Edit" -> a real support ticket, rather than a Coming Soon alert.
+  //
+  // Facility data is largely imported and thin (most rows have no court count
+  // or description), and the people who know the truth are the players who go
+  // there. This is the smallest honest version of that: a free-text report
+  // that lands in the existing support queue, where it already gets a status,
+  // an assignee, a resolution and a thread the submitter can be answered on.
+  //
+  // Deliberately NOT the full crowdsourced model - no structured per-field
+  // proposals, no corroboration, no auto-apply. Those need a suggestions
+  // schema and dedupe that do not exist yet. The ticket's `context` carries
+  // the facility id, so those can be built later without losing what is
+  // collected in the meantime.
+  async function submitFacilityEdit() {
+    if (!user?.id || !facility || !editText.trim()) return;
+    setEditSubmitting(true);
+    try {
+      await createSupportTicket(
+        user.id,
+        `Facility update: ${facility.name}`,
+        // No 'facility' category exists in the support_ticket_category enum,
+        // so these land under feedback. Adding a dedicated key is an enum
+        // migration and would let the admin queue filter them out of real
+        // support - worth doing if the volume justifies it.
+        'feedback',
+        editText.trim(),
+        {
+          context: {
+            routeName: `/facility/${id}`,
+            feature: 'facility',
+            entityType: 'facility',
+            entityId: String(id),
+            entityLabel: facility.name,
+            action: 'suggest_edit',
+          },
+          source: 'help_screen',
+        },
+      );
+      setEditOpen(false);
+      setEditText('');
+      Alert.alert(
+        'Thanks — we got it',
+        'Your update was sent to our team. You can follow it in Support, and we may reply there if we need more detail.',
+      );
+    } catch {
+      Alert.alert('Could not send', 'Something went wrong sending your update. Please try again.');
+    } finally {
+      setEditSubmitting(false);
+    }
   }
 
   async function handleShare() {
@@ -901,20 +959,71 @@ export default function FacilityDetailScreen() {
               <Text style={s.ctaPrimaryText}>Directions</Text>
             </TouchableOpacity>
 
-            {facility.claim_status === 'unclaimed' && (
-              <TouchableOpacity
-                style={s.ctaGhost}
-                activeOpacity={0.85}
-                onPress={() => Alert.alert('Coming Soon', 'Facility claiming is in progress.')}
-              >
-                <Ionicons name="ribbon-outline" size={17} color={L.textMuted} />
-                <Text style={s.ctaGhostText}>Claim This Facility</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={s.ctaGhost}
+              activeOpacity={0.85}
+              onPress={() => {
+                if (!user?.id) {
+                  Alert.alert('Sign in required', 'Please sign in to suggest an update to this facility.');
+                  return;
+                }
+                setEditOpen(true);
+              }}
+            >
+              <Ionicons name="create-outline" size={17} color={L.navy} />
+              <Text style={s.ctaGhostText}>Suggest an Edit</Text>
+            </TouchableOpacity>
           </View>
 
         </View>
       </ScrollView>
+
+      {/* ── SUGGEST AN EDIT ── */}
+      <Modal visible={editOpen} animationType="slide" transparent onRequestClose={() => setEditOpen(false)}>
+        <Pressable style={es.backdrop} onPress={() => setEditOpen(false)}>
+          <Pressable style={es.sheet} onPress={(e) => e.stopPropagation()}>
+            <View style={es.handle} />
+            <Text style={es.title}>Suggest an Edit</Text>
+            <Text style={es.sub}>
+              Know something we have wrong about {facility.name}? Court count, hours, amenities,
+              phone — tell us what should change and we will review it.
+            </Text>
+
+            <TextInput
+              style={es.input}
+              value={editText}
+              onChangeText={setEditText}
+              placeholder="e.g. There are 8 courts, not 0. 4 are covered."
+              placeholderTextColor={L.textMuted}
+              multiline
+              textAlignVertical="top"
+              maxLength={1000}
+              editable={!editSubmitting}
+            />
+
+            {/* The support system's disclosure rule: say what rides along with
+                the message before it is sent, not after. */}
+            <Text style={es.disclosure}>
+              We include this facility's name and ID so we know what you are referring to.
+            </Text>
+
+            <TouchableOpacity
+              style={[es.submit, (!editText.trim() || editSubmitting) && es.submitDisabled]}
+              activeOpacity={0.85}
+              disabled={!editText.trim() || editSubmitting}
+              onPress={submitFacilityEdit}
+            >
+              {editSubmitting
+                ? <ActivityIndicator size="small" color={L.white} />
+                : <Text style={es.submitText}>Send</Text>}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={es.cancel} onPress={() => setEditOpen(false)} disabled={editSubmitting}>
+              <Text style={es.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <MapSheet
         visible={mapSheetOpen}
@@ -1039,4 +1148,28 @@ const s = StyleSheet.create({
   errorText:    { color: L.textMuted, fontSize: 15, fontWeight: '500', textAlign: 'center', paddingHorizontal: 32 },
   errorBackBtn: { marginTop: 8, backgroundColor: L.navy, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
   errorBackText:{ color: L.white, fontSize: 14, fontWeight: '700' },
+});
+
+const es = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: L.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22,
+    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 28, gap: 10,
+  },
+  handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: L.border, marginBottom: 6 },
+  title: { color: L.navy, fontSize: 18, fontWeight: '900' },
+  sub: { color: L.textSub, fontSize: 13, lineHeight: 19 },
+  input: {
+    minHeight: 110, borderWidth: 1, borderColor: L.border, borderRadius: 12,
+    padding: 12, color: L.navy, fontSize: 14, lineHeight: 20, backgroundColor: L.page,
+  },
+  disclosure: { color: L.textMuted, fontSize: 11, lineHeight: 16 },
+  submit: {
+    backgroundColor: L.navy, borderRadius: 30, paddingVertical: 14,
+    alignItems: 'center', justifyContent: 'center', marginTop: 2,
+  },
+  submitDisabled: { opacity: 0.45 },
+  submitText: { color: L.white, fontSize: 15, fontWeight: '800' },
+  cancel: { alignItems: 'center', paddingVertical: 10 },
+  cancelText: { color: L.textSub, fontSize: 14, fontWeight: '700' },
 });
