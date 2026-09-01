@@ -29,6 +29,7 @@ import { fetchBallMachines, type BallMachine } from '@/lib/supabase/ballMachines
 import { fetchActiveFlashDeal } from '@/lib/supabase/flashDeals';
 import { fetchAssetAvailability, type AssetAvailabilitySlot, type ReservableAssetType } from '@/lib/supabase/reservations';
 import { fetchEventWeather, type EventWeatherResult } from '@/lib/supabase/weather';
+import { EventWeatherCard } from '@/components/EventWeatherCard';
 import { getBookingSearch, setBookingSearch, setBookingFacility, setBookingSelection } from '@/lib/bookingStore';
 
 const L = {
@@ -164,48 +165,6 @@ function computeHourlyOpenCounts(
   });
 }
 
-// ─── Weather row (compact) ─────────────────────────────────────────────────────
-// Same event-weather edge function / EventWeatherResult shape used on the
-// community event detail screen, condensed to one row for this page.
-
-function WeatherRow({ w }: { w: EventWeatherResult | 'loading' | null }) {
-  if (w == null) return null;
-
-  if (w === 'loading') {
-    return (
-      <View style={[wr.row, wr.centered]}>
-        <ActivityIndicator size="small" color={L.gold} />
-      </View>
-    );
-  }
-
-  if (!w.available) return null; // out-of-range/unavailable forecasts add no value here — omit rather than show a dead row
-
-  return (
-    <View style={wr.row}>
-      <Ionicons name={w.icon as never} size={26} color={L.gold} />
-      <View>
-        <Text style={wr.temp}>{w.temp != null ? `${w.temp}°F` : '—'}</Text>
-        <Text style={wr.condition}>{w.condition}</Text>
-      </View>
-      {w.wind != null && (
-        <>
-          <View style={wr.divider} />
-          <Ionicons name="compass-outline" size={16} color={L.textMuted} />
-          <Text style={wr.windText}>{w.wind} mph</Text>
-        </>
-      )}
-    </View>
-  );
-}
-const wr = StyleSheet.create({
-  row:       { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
-  centered:  { justifyContent: 'center', minHeight: 36 },
-  temp:      { color: L.navy, fontSize: 15, fontWeight: '800', lineHeight: 18 },
-  condition: { color: L.textMuted, fontSize: 11, fontWeight: '600' },
-  divider:   { width: 1, height: 24, backgroundColor: L.border, marginHorizontal: 4 },
-  windText:  { color: L.textMuted, fontSize: 12, fontWeight: '600' },
-});
 
 // ─── Inventory card (court / ball machine) ─────────────────────────────────────
 
@@ -719,7 +678,7 @@ export default function FacilityDetailScreen() {
           {/* ── WEATHER ── */}
           {weather != null && (
             <View style={s.weatherStrip}>
-              <WeatherRow w={weather} />
+              <EventWeatherCard w={weather} locationLabel={`${facility.city}, ${facility.state}`} />
             </View>
           )}
 
@@ -1011,7 +970,7 @@ const s = StyleSheet.create({
   verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#DBEAFE', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4 },
   verifiedText:  { fontSize: 10, fontWeight: '800', color: '#2563EB', letterSpacing: 0.3 },
 
-  weatherStrip: { marginTop: 4 },
+  weatherStrip: { marginTop: 4, marginBottom: 18 },
 
   section:      { marginTop: 20 },
   sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '800', letterSpacing: 0.8, marginBottom: 10, textTransform: 'uppercase' },
