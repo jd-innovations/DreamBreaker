@@ -128,6 +128,31 @@ export async function fetchTournaments(): Promise<Tournament[]> {
   return data.map(dbRowToTournament);
 }
 
+/**
+ * Batch sibling of fetchTournamentById, for screens that already know which
+ * tournaments they need - the Events tab resolves the user's registrations
+ * into full rows so it can render the same card the Home tab does.
+ *
+ * Embeds divisions(format, skill_min, skill_max) because the card reads its
+ * format pill and skill range from divisions first: tournaments.formats is not
+ * maintained by division creation, so a mixed-doubles event can carry an empty
+ * array and be announced as plain "Doubles".
+ *
+ * No status filter. The caller asked for these specific ids and is showing
+ * them because the user is registered; a tournament that has since closed
+ * registration must still appear on their own list.
+ */
+export async function fetchTournamentsByIds(ids: string[]): Promise<Tournament[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,cover_img_url,divisions(format,skill_min,skill_max)')
+    .in('id', ids);
+
+  if (error || !data) return [];
+  return data.map(row => dbRowToTournament(row as Record<string, unknown>));
+}
+
 export async function fetchTournamentById(id: string): Promise<Tournament | null> {
   const { data, error } = await supabase
     .from('tournaments')

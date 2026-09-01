@@ -34,7 +34,10 @@ import {
 } from '@/lib/supabase/playEvents';
 import { tabBarClearance } from '@/constants/tabBar';
 import { fetchPlayerRegistrations } from '@/lib/supabase/registrations';
-import { registrationToGameCard } from '@/lib/tournamentCards';
+import { fetchTournamentsByIds } from '@/lib/supabase/tournaments';
+import { TournamentTrendingCard, tournamentToTrending } from '@/components/TournamentTrendingCard';
+import type { Tournament } from '@/lib/tournamentTypes';
+import { useTournamentBookmarks } from '@/hooks/useTournamentBookmarks';
 import {
   fetchReceivedInvites,
   acceptPlayEventInvite,
@@ -531,6 +534,9 @@ function UpcomingContent({
   onDeclineInvite,
   events,
   unreadEventIds,
+  tournaments,
+  isBookmarked,
+  onToggleBookmark,
 }: {
   pendingInvite: ReceivedPlayEventInvite | null;
   respondingInvite: boolean;
@@ -538,8 +544,11 @@ function UpcomingContent({
   onDeclineInvite: () => void;
   events: (GameCard | SBGameCard)[];
   unreadEventIds: Set<string>;
+  tournaments: Tournament[];
+  isBookmarked: (id: string) => boolean;
+  onToggleBookmark: (id: string) => void;
 }) {
-  const isEmpty = events.length === 0;
+  const isEmpty = events.length === 0 && tournaments.length === 0;
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 140 }}>
@@ -603,6 +612,19 @@ function UpcomingContent({
           )
         )
       )}
+
+      {/* Registered tournaments, rendered with the same card the Home tab
+          uses. `registered` drops the Hold/Register CTAs - the viewer is
+          already in this event. */}
+      {tournaments.map(t => (
+        <TournamentTrendingCard
+          key={t.id}
+          item={tournamentToTrending(t)}
+          saved={isBookmarked(t.id)}
+          onSave={() => onToggleBookmark(t.id)}
+          registered
+        />
+      ))}
     </ScrollView>
   );
 }
@@ -746,6 +768,9 @@ const tf = StyleSheet.create({
 
 function PastContent({
   events,
+  tournaments,
+  isBookmarked,
+  onToggleBookmark,
   range,
   onRangeChange,
   typeFilter,
@@ -753,6 +778,9 @@ function PastContent({
   loading,
 }: {
   events: (GameCard | SBGameCard)[];
+  tournaments: Tournament[];
+  isBookmarked: (id: string) => boolean;
+  onToggleBookmark: (id: string) => void;
   range: PastRange;
   onRangeChange: (r: PastRange) => void;
   typeFilter: PastTypeFilter;
@@ -760,8 +788,12 @@ function PastContent({
   loading: boolean;
 }) {
   const filtered = typeFilter === 'all' ? events : events.filter(c => c.type === typeFilter);
+  // PastTypeFilter lists play-event types only, so a filtered view has no
+  // bucket a tournament belongs to; showing them anyway would quietly ignore
+  // the filter.
+  const shownTournaments = typeFilter === 'all' ? tournaments : [];
 
-  if (filtered.length === 0) {
+  if (filtered.length === 0 && shownTournaments.length === 0) {
     return (
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 140 }}>
         <PastRangeFilter value={range} onChange={onRangeChange} />
@@ -827,6 +859,17 @@ function PastContent({
           />
         )
       )}
+
+      {/* Past registered tournaments, same card as Upcoming and Home. */}
+      {shownTournaments.map(t => (
+        <TournamentTrendingCard
+          key={t.id}
+          item={tournamentToTrending(t)}
+          saved={isBookmarked(t.id)}
+          onSave={() => onToggleBookmark(t.id)}
+          registered
+        />
+      ))}
     </ScrollView>
   );
 }
@@ -887,6 +930,7 @@ function CompletedContent({ events }: { events: (GameCard | SBGameCard)[] }) {
           />
         )
       )}
+
     </ScrollView>
   );
 }
@@ -1104,7 +1148,17 @@ export default function GamesScreen() {
   const [upcoming, setUpcoming]         = useState<(GameCard | SBGameCard)[]>([]);
   // Separate from `past` so loadPastEvents keeps sole ownership of its range
   // filtering and pagination; the two are combined at render time instead.
-  const [pastRegCards, setPastRegCards] = useState<GameCard[]>([]);
+  // Full tournament rows for the events this user is registered for, kept
+  // apart from the GameCard list because they render through the Home tab's
+  // tournament card rather than the play-event row.
+  const [regTournaments, setRegTournaments] = useState<Tournament[]>([]);
+  const { isBookmarked, toggleBookmark } = useTournamentBookmarks();
+  const upcomingTournaments = regTournaments
+    .filter(t => t.eventDate >= localDateString())
+    .sort((a, b) => a.eventDate.localeCompare(b.eventDate));
+  const pastTournaments = regTournaments
+    .filter(t => t.eventDate < localDateString())
+    .sort((a, b) => b.eventDate.localeCompare(a.eventDate));
   const [joined,   setJoined]           = useState<SBGameCard[]>([]);
   const [past,     setPast]             = useState<(GameCard | SBGameCard)[]>([]);
   const [pastRange, setPastRange]       = useState<PastRange>('30d');
@@ -1176,15 +1230,16 @@ export default function GamesScreen() {
         const hostIds = new Set(hostCards.map(c => c.id));
         const merged = [...hostCards, ...joinCards.filter(c => !hostIds.has(c.id))];
 
-        const today = localDateString();
-        const regCards = registrations
-          .filter(r => r.eventDate && r.eventDate >= today)
-          .map(registrationToGameCard);
+        setUpcoming(byDate(mergeEvents(localUpcoming, merged)));
 
-        setUpcoming(byDate([...mergeEvents(localUpcoming, merged), ...regCards]));
-        setPastRegCards(registrations
-          .filter(r => r.eventDate && r.eventDate < today)
-          .map(registrationToGameCard));
+        // Registrations carry only a thin projection - no draw size, fees,
+        // cover image or divisions - so the ids are resolved back to full
+        // tournament rows. Without that the card cannot show Players /
+        // Hold Spots / % Filled or its format pill.
+        const ids = Array.from(new Set(registrations.map(r => r.tournamentId).filter(Boolean)));
+        fetchTournamentsByIds(ids)
+          .then(rows => setRegTournaments(rows))
+          .catch(() => { /* leave the play events alone */ });
       }).catch(() => { /* keep local on error */ });
 
       // Joined tab: all events where user is participant
@@ -1262,6 +1317,9 @@ export default function GamesScreen() {
             onDeclineInvite={handleDeclineInvite}
             events={upcoming}
             unreadEventIds={unreadEventIds}
+            tournaments={upcomingTournaments}
+            isBookmarked={isBookmarked}
+            onToggleBookmark={toggleBookmark}
           />
         )}
         {subTab === 'Held Spots' && (
@@ -1272,9 +1330,10 @@ export default function GamesScreen() {
         )}
         {subTab === 'Past' && (
           <PastContent
-            // Most recent first, and past tournament registrations folded in
-            // alongside the play events.
-            events={byDate([...past, ...pastRegCards], 'desc')}
+            events={byDate(past, 'desc')}
+            tournaments={pastTournaments}
+            isBookmarked={isBookmarked}
+            onToggleBookmark={toggleBookmark}
             range={pastRange}
             onRangeChange={setPastRange}
             typeFilter={pastTypeFilter}
