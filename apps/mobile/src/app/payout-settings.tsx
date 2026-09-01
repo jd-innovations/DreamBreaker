@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from 'expo-router';
 import { colors, radius } from '@/theme';
 import { goBack } from '@/lib/navigation';
 import { useProfile } from '@/hooks/useProfile';
@@ -10,6 +11,7 @@ import { notifyProfileUpdated } from '@/lib/profileEvents';
 import { useSupportContext } from '@/lib/support/supportContext';
 import { startConnectOnboarding, connectErrorMessage, type ConnectRole } from '@/lib/payments/connectOnboarding';
 import { isOnlineNow } from '@/lib/network';
+import { fetchCoachEarnings, formatCents, type CoachEarnings } from '@/lib/coach/earnings';
 
 // Stripe Connect payouts.
 //
@@ -34,6 +36,18 @@ export default function PayoutSettingsScreen() {
   const insets = useSafeAreaInsets();
   const { profile, loading } = useProfile();
   const [starting, setStarting] = useState(false);
+  const [earnings, setEarnings] = useState<CoachEarnings | null>(null);
+
+  // Re-read on focus: a sale can land while this screen sits open, and a stale
+  // balance is the one number here nobody would forgive being wrong.
+  useFocusEffect(useCallback(() => {
+    if (!profile?.id || !profile.is_coach) { setEarnings(null); return; }
+    let active = true;
+    fetchCoachEarnings(profile.id)
+      .then(e => { if (active) setEarnings(e); })
+      .catch(() => { if (active) setEarnings(null); });
+    return () => { active = false; };
+  }, [profile?.id, profile?.is_coach]));
 
   useSupportContext({ feature: 'payouts' });
 
@@ -105,6 +119,41 @@ export default function PayoutSettingsScreen() {
           </View>
         ) : (
           <>
+            {earnings && earnings.lessonsSold > 0 && (
+              <View style={s.earningsCard}>
+                <Text style={s.earningsLabel}>You&rsquo;ve earned</Text>
+                <Text style={s.earningsAmount}>{formatCents(earnings.netCents)}</Text>
+                <Text style={s.earningsSub}>
+                  from {earnings.lessonsSold} {earnings.lessonsSold === 1 ? 'lesson' : 'lessons'} sold
+                </Text>
+
+                <View style={s.breakdown}>
+                  <View style={s.breakdownRow}>
+                    <Text style={s.breakdownLabel}>Players paid</Text>
+                    <Text style={s.breakdownValue}>{formatCents(earnings.grossCents)}</Text>
+                  </View>
+                  <View style={s.breakdownRow}>
+                    <Text style={s.breakdownLabel}>Platform commission</Text>
+                    <Text style={s.breakdownValue}>-{formatCents(earnings.commissionCents)}</Text>
+                  </View>
+                  <View style={[s.breakdownRow, s.breakdownTotal]}>
+                    <Text style={s.breakdownTotalLabel}>Your earnings</Text>
+                    <Text style={s.breakdownTotalValue}>{formatCents(earnings.netCents)}</Text>
+                  </View>
+                </View>
+
+                {/* Says plainly that nothing has moved. Calling this "available
+                    to withdraw" would promise a payout run that does not exist
+                    yet, and the first coach to tap a Withdraw button that did
+                    nothing would stop trusting the number entirely. */}
+                <Text style={s.earningsNote}>
+                  {onboarded
+                    ? 'Automatic payouts are not switched on yet. Your earnings are recorded and will be paid once they are.'
+                    : 'Connect a payout account below so this can be paid to you.'}
+                </Text>
+              </View>
+            )}
+
             <View style={[
               s.statusCard,
               onboarded ? s.statusOk : restricted ? s.statusBad : s.statusPending,
@@ -179,6 +228,29 @@ const s = StyleSheet.create({
   },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+
+  earningsCard: {
+    alignItems: 'center', gap: 2, padding: 20,
+    backgroundColor: L.bg, borderRadius: radius.card,
+    borderWidth: 1, borderColor: L.border,
+  },
+  earningsLabel:  { color: L.textSub, fontSize: 13, fontWeight: '700' },
+  earningsAmount: { color: L.navy, fontSize: 38, fontWeight: '900', letterSpacing: -0.5 },
+  earningsSub:    { color: L.textSub, fontSize: 13 },
+  breakdown: {
+    alignSelf: 'stretch', marginTop: 16, gap: 8,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border, paddingTop: 14,
+  },
+  breakdownRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  breakdownLabel: { color: L.textSub, fontSize: 13 },
+  breakdownValue: { color: L.text, fontSize: 13, fontWeight: '700' },
+  breakdownTotal: {
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border,
+    paddingTop: 8, marginTop: 2,
+  },
+  breakdownTotalLabel: { color: L.navy, fontSize: 14, fontWeight: '800' },
+  breakdownTotalValue: { color: L.navy, fontSize: 15, fontWeight: '900' },
+  earningsNote: { color: L.textSub, fontSize: 11, lineHeight: 17, textAlign: 'center', marginTop: 14 },
 
   statusCard: {
     flexDirection: 'row', gap: 12, padding: 16,
