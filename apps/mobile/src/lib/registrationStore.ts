@@ -23,6 +23,9 @@ export type TournamentRegistration = {
   city: string;
   state: string;
   date: string;
+  /** Raw event_date (YYYY-MM-DD). `date` above is display-formatted and
+   *  cannot be compared or sorted; this is what callers filter on. */
+  eventDate: string;
   playerId: string;
   playerName: string;
   registrationDate: string;

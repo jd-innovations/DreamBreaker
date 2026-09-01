@@ -6,6 +6,8 @@ import { getHeldSpots } from './tournamentStore';
 
 export type GameCard = {
   id: string;
+  /** Raw YYYY-MM-DD for ordering. `date` is display text and sorts wrong. */
+  sortKey?: string;
   route: string;
   source?: 'local';
   type: string;

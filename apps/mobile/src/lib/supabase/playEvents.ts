@@ -443,6 +443,8 @@ export function skillLabel(min: number | null, max: number | null): string {
 
 export type SBGameCard = {
   id: string;
+  /** Raw YYYY-MM-DD for ordering. `date` is display text and sorts wrong. */
+  sortKey?: string;
   route: string;
   source: 'supabase';
   role?: 'Hosting' | 'Joined';
@@ -534,6 +536,7 @@ export function playEventToGameCard(e: PlayEvent & { _participantCount?: number 
 
   return {
     id:         e.id,
+    sortKey:    e.event_date,
     route,
     source:     'supabase',
     role,

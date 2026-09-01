@@ -32,6 +32,9 @@ import {
   localDateString,
   type SBGameCard,
 } from '@/lib/supabase/playEvents';
+import { tabBarClearance } from '@/constants/tabBar';
+import { fetchPlayerRegistrations } from '@/lib/supabase/registrations';
+import { registrationToGameCard } from '@/lib/tournamentCards';
 import {
   fetchReceivedInvites,
   acceptPlayEventInvite,
@@ -1070,6 +1073,20 @@ const SUB_TABS: SubTab[] = ['Upcoming', 'Held Spots', 'Joined', 'Past'];
 
 // Merge local GameCards with Supabase SBGameCards, deduplicating by id.
 // Supabase cards take priority — local card is dropped if same id exists in SB.
+// Chronological where we can be. Cards built from a Supabase row carry a raw
+// YYYY-MM-DD `sortKey`; the local demo cards do not, and are left at the end
+// rather than being guessed at from their display date ("Thu, Oct 15" sorts
+// alphabetically, which is worse than not sorting).
+function byDate(cards: (GameCard | SBGameCard)[], dir: 'asc' | 'desc' = 'asc') {
+  const keyed = cards.filter(c => c.sortKey);
+  const unkeyed = cards.filter(c => !c.sortKey);
+  keyed.sort((a, b) =>
+    dir === 'asc'
+      ? (a.sortKey as string).localeCompare(b.sortKey as string)
+      : (b.sortKey as string).localeCompare(a.sortKey as string));
+  return [...keyed, ...unkeyed];
+}
+
 function mergeEvents(local: GameCard[], sb: SBGameCard[]): (GameCard | SBGameCard)[] {
   const sbIds = new Set(sb.map(e => e.id));
   const filteredLocal = local.filter(e => !sbIds.has(e.id));
@@ -1085,6 +1102,9 @@ export default function GamesScreen() {
   const [pendingInvite, setPendingInvite]     = useState<ReceivedPlayEventInvite | null>(null);
   const [respondingInvite, setRespondingInvite] = useState(false);
   const [upcoming, setUpcoming]         = useState<(GameCard | SBGameCard)[]>([]);
+  // Separate from `past` so loadPastEvents keeps sole ownership of its range
+  // filtering and pagination; the two are combined at render time instead.
+  const [pastRegCards, setPastRegCards] = useState<GameCard[]>([]);
   const [joined,   setJoined]           = useState<SBGameCard[]>([]);
   const [past,     setPast]             = useState<(GameCard | SBGameCard)[]>([]);
   const [pastRange, setPastRange]       = useState<PastRange>('30d');
@@ -1136,19 +1156,35 @@ export default function GamesScreen() {
         .then(invites => setPendingInvite(invites.find(i => i.status === 'pending') ?? null))
         .catch(() => {});
 
-      // Upcoming: hosting upcoming + joined upcoming merged
+      // Upcoming: hosting + joined play events, PLUS tournaments this player is
+      // registered for. Tournaments were previously absent from this screen
+      // entirely - they live in the `tournaments`/`registrations` tables, and
+      // every query here reads `play_events` - so a registration showed up in
+      // neither Upcoming nor Joined, on the tab named Events.
       Promise.all([
         fetchUpcomingPlayEvents(user.id),
         fetchJoinedPlayEvents(user.id).then(rows => rows.filter(e =>
           ['open', 'full', 'in_progress'].includes(e.status) &&
           e.event_date >= localDateString()
         )),
-      ]).then(([hosting, joinedUpcoming]) => {
+        // Failing soft: a registrations error must not empty the play events
+        // that were loading fine before this was added.
+        fetchPlayerRegistrations(user.id).catch(() => []),
+      ]).then(([hosting, joinedUpcoming, registrations]) => {
         const hostCards = hosting.map(e => playEventToGameCard(e, 'Hosting'));
         const joinCards = joinedUpcoming.map(e => playEventToGameCard(e, 'Joined'));
         const hostIds = new Set(hostCards.map(c => c.id));
         const merged = [...hostCards, ...joinCards.filter(c => !hostIds.has(c.id))];
-        setUpcoming(mergeEvents(localUpcoming, merged));
+
+        const today = localDateString();
+        const regCards = registrations
+          .filter(r => r.eventDate && r.eventDate >= today)
+          .map(registrationToGameCard);
+
+        setUpcoming(byDate([...mergeEvents(localUpcoming, merged), ...regCards]));
+        setPastRegCards(registrations
+          .filter(r => r.eventDate && r.eventDate < today)
+          .map(registrationToGameCard));
       }).catch(() => { /* keep local on error */ });
 
       // Joined tab: all events where user is participant
@@ -1236,7 +1272,9 @@ export default function GamesScreen() {
         )}
         {subTab === 'Past' && (
           <PastContent
-            events={past}
+            // Most recent first, and past tournament registrations folded in
+            // alongside the play events.
+            events={byDate([...past, ...pastRegCards], 'desc')}
             range={pastRange}
             onRangeChange={setPastRange}
             typeFilter={pastTypeFilter}
@@ -1248,7 +1286,10 @@ export default function GamesScreen() {
 
       {/* ── CREATE FAB ── */}
       <TouchableOpacity
-        style={[s.fab, { bottom: insets.bottom + 15 }]}
+        // tabBarClearance, not a raw inset: this is a tab screen, and the
+        // floating bar sits above the inset, so insets.bottom alone left the
+        // button tucked behind it.
+        style={[s.fab, { bottom: tabBarClearance(insets.bottom) }]}
         activeOpacity={0.85}
         onPress={() => router.push('/play-pickleball' as never)}
       >

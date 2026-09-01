@@ -94,6 +94,7 @@ function rowToRegistration(row: RegistrationRow): TournamentRegistration {
     city:             t?.city ?? '',
     state:            t?.state ?? '',
     date:             t ? formatDate(t.event_date) : '',
+    eventDate:        t?.event_date ?? '',
     playerId:         row.player_id,
     playerName:       row.player?.full_name ?? '',
     registrationDate: row.created_at,
