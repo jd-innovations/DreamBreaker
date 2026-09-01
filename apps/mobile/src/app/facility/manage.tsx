@@ -337,6 +337,18 @@ export default function FacilityManageScreen() {
               <Ionicons name="chevron-forward" size={18} color={colors.textSub} />
             </TouchableOpacity>
 
+            {isManagerOrAbove && (
+              <TouchableOpacity
+                style={s.checkInBtn}
+                onPress={() => router.push(`/facility/deals?facilityId=${active.id}` as never)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="flash-outline" size={20} color={colors.navy} />
+                <Text style={s.checkInBtnText}>Flash deals</Text>
+                <Ionicons name="chevron-forward" size={18} color={colors.textSub} />
+              </TouchableOpacity>
+            )}
+
             {/* ── Courts ─────────────────────────────────────────────────── */}
             <View style={s.sectionHead}>
               <Text style={s.sectionLabel}>COURTS</Text>
