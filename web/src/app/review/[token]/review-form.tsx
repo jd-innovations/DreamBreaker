@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { Logo } from '@/components/layout/logo';
 
 // Star rating for an emailed invitation. The token is the only credential the
 // form carries: resolve_review_invitation refuses one that is not the signed-in
@@ -118,7 +119,12 @@ export function ReviewForm({ token }: { token: string }) {
   return (
     <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-6 py-12">
       <section className="w-full max-w-md space-y-6 text-center">
-        <p className="font-mono text-xs tracking-[0.28em] text-primary uppercase">Pickleball App</p>
+        {/* The real wordmark, not a text stand-in. Logo ships both variants and
+            swaps them with a `dark:` class, so it follows the viewer's theme
+            without a JS read that would flash the wrong one on load. */}
+        <div className="flex justify-center">
+          <Logo />
+        </div>
 
         {phase.kind === 'loading' && (
           <p className="text-sm text-muted-foreground">Loading your review…</p>
