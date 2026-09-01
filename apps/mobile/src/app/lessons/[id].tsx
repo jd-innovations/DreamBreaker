@@ -1,14 +1,22 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { colors, radius } from '@/theme';
 import { fetchCoachOfferBrowseDetail, type CoachOfferBrowseCard } from '@/lib/coach/offers';
 import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent } from '@/lib/coach/constants';
+import { useSession } from '@/hooks/useSession';
+import { useCoachOfferPayment } from '@/lib/payments/useCoachOfferPayment';
+import { coachOfferPaymentErrorMessage } from '@/lib/payments/coachOfferPaymentIntent';
 
-// Read-only offer detail. No purchase/checkout button — Phase 3+ builds
-// that. This screen exists to visually review the Phase 2 catalog.
+// Offer detail + checkout.
+//
+// The server side of this purchase (RPC, ledger, voucher issuance, webhook
+// finalization) has been live since Phase 3/4 but had no caller anywhere in
+// the app, which is why coach_offer_purchases had zero rows while tournament
+// and booking payments ran through the same webhook every week. This screen
+// is that missing caller.
 
 const L = {
   navy: colors.navy, gold: colors.gold, text: colors.text, textSub: colors.textSub,
@@ -20,6 +28,13 @@ export default function LessonOfferDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [offer, setOffer] = useState<CoachOfferBrowseCard | null>(null);
   const [loading, setLoading] = useState(true);
+  const [quantity, setQuantity] = useState(1);
+  const { user } = useSession();
+  const { payForCoachOffer, processing } = useCoachOfferPayment();
+  // One id per checkout attempt, feeding the edge function's idempotency key.
+  // Regenerated only after a completed attempt, so a double-tap reuses the same
+  // PaymentIntent rather than minting a second purchase.
+  const attemptRef = useRef(`${Date.now()}`);
 
   useFocusEffect(useCallback(() => {
     if (!id) return;
@@ -28,6 +43,46 @@ export default function LessonOfferDetailScreen() {
     fetchCoachOfferBrowseDetail(id).then((o) => { if (active) setOffer(o); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [id]));
+
+  async function handleBook() {
+    if (!offer) return;
+    if (!user?.id) {
+      Alert.alert('Sign in required', 'Please sign in to book this lesson.');
+      return;
+    }
+
+    const outcome = await payForCoachOffer(offer.id, quantity, attemptRef.current);
+
+    switch (outcome.status) {
+      case 'finalized':
+        attemptRef.current = `${Date.now()}`;
+        Alert.alert(
+          'Lesson booked',
+          'Your voucher is in your Wallet. Show it to your coach at the lesson.',
+          [{ text: 'View Wallet', onPress: () => router.push('/wallet' as never) }, { text: 'Done' }],
+        );
+        break;
+      case 'succeeded_pending_confirmation':
+        attemptRef.current = `${Date.now()}`;
+        // Payment captured, webhook not visible yet. Deliberately not phrased as
+        // failure - the money is taken and the voucher will appear - but not as
+        // success either, because nothing has confirmed it yet.
+        Alert.alert(
+          'Payment received',
+          'We are still confirming your booking. Your voucher will appear in your Wallet shortly.',
+          [{ text: 'View Wallet', onPress: () => router.push('/wallet' as never) }, { text: 'OK' }],
+        );
+        break;
+      case 'canceled':
+        break; // closing the sheet is a normal outcome, not an error
+      case 'failed':
+        Alert.alert('Payment failed', outcome.message);
+        break;
+      case 'error':
+        Alert.alert('Could not book', coachOfferPaymentErrorMessage(outcome.code));
+        break;
+    }
+  }
 
   if (loading || !offer) {
     return (
@@ -39,6 +94,15 @@ export default function LessonOfferDetailScreen() {
 
   const typeLabel = OFFER_TYPE_OPTIONS.find((o) => o.value === offer.offer_type)?.label ?? offer.offer_type;
   const pct = discountPercent(offer.regular_price_cents, offer.discounted_price_cents);
+
+  // Each of these is also enforced server-side by create_coach_offer_purchase();
+  // reproducing them here only decides what the button looks like. The RPC is
+  // the authority - a stale screen that gets past these still gets refused.
+  const isOwnOffer = !!user?.id && user.id === offer.coach_id;
+  const soldOut = offer.quantity_remaining != null && offer.quantity_remaining <= 0;
+  const maxParticipants = offer.max_participants ?? 1;
+  const canBook = !isOwnOffer && !soldOut && !offer.premium_only;
+  const unitPriceCents = offer.discounted_price_cents ?? offer.regular_price_cents;
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
@@ -115,6 +179,64 @@ export default function LessonOfferDetailScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* ── CHECKOUT ── */}
+      <View style={[s.checkoutBar, { paddingBottom: insets.bottom + 12 }]}>
+        {maxParticipants > 1 && canBook && (
+          <View style={s.qtyRow}>
+            <Text style={s.qtyLabel}>Participants</Text>
+            <View style={s.stepper}>
+              <TouchableOpacity
+                style={[s.stepBtn, quantity <= 1 && s.stepBtnDisabled]}
+                disabled={quantity <= 1 || processing}
+                onPress={() => setQuantity(q => Math.max(1, q - 1))}
+              >
+                <Ionicons name="remove" size={18} color={quantity <= 1 ? L.textSub : L.navy} />
+              </TouchableOpacity>
+              <Text style={s.qtyValue}>{quantity}</Text>
+              <TouchableOpacity
+                style={[s.stepBtn, quantity >= maxParticipants && s.stepBtnDisabled]}
+                disabled={quantity >= maxParticipants || processing}
+                onPress={() => setQuantity(q => Math.min(maxParticipants, q + 1))}
+              >
+                <Ionicons name="add" size={18} color={quantity >= maxParticipants ? L.textSub : L.navy} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={[s.bookBtn, (!canBook || processing) && s.bookBtnDisabled]}
+          activeOpacity={0.85}
+          disabled={!canBook || processing}
+          onPress={handleBook}
+        >
+          {processing ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <Text style={s.bookBtnText}>
+                {isOwnOffer ? 'Your Lesson'
+                  : soldOut ? 'Sold Out'
+                  : offer.premium_only ? 'Premium Members Only'
+                  : 'Book Lesson'}
+              </Text>
+              {canBook && (
+                <Text style={s.bookBtnPrice}>
+                  {formatPriceCents(unitPriceCents * quantity)}
+                </Text>
+              )}
+            </>
+          )}
+        </TouchableOpacity>
+
+        {canBook && (
+          // The server adds a buyer service fee on top, resolved from
+          // platform_settings at purchase time. Saying so here avoids the
+          // PaymentSheet being the first place a higher number appears.
+          <Text style={s.feeNote}>Service fees calculated at checkout.</Text>
+        )}
+      </View>
     </View>
   );
 }
@@ -140,6 +262,27 @@ const dr = StyleSheet.create({
 });
 
 const s = StyleSheet.create({
+  checkoutBar: {
+    borderTopWidth: 1, borderTopColor: L.border, backgroundColor: L.bg,
+    paddingHorizontal: 16, paddingTop: 12, gap: 10,
+  },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  qtyLabel: { color: L.navy, fontSize: 14, fontWeight: '700' },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  stepBtn: {
+    width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: L.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stepBtnDisabled: { opacity: 0.4 },
+  qtyValue: { color: L.navy, fontSize: 16, fontWeight: '800', minWidth: 20, textAlign: 'center' },
+  bookBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: L.navy, borderRadius: 30, paddingVertical: 15, minHeight: 52,
+  },
+  bookBtnDisabled: { opacity: 0.45 },
+  bookBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  bookBtnPrice: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', opacity: 0.85 },
+  feeNote: { color: L.textSub, fontSize: 11, textAlign: 'center' },
   root: { flex: 1, backgroundColor: L.page },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

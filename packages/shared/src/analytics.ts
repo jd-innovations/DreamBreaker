@@ -140,6 +140,11 @@ export const ALLOWED_PROPERTY_KEYS: readonly string[] = [
   "facility_id",
   "court_id",
   "listing_id",
+  // Coach Marketplace: the offer is what the user chose, the purchase is the
+  // row the server minted for it. Both opaque ids, never the lesson title -
+  // that is coach-authored text and can contain anything.
+  "offer_id",
+  "purchase_id",
   "conversation_id",
   "ticket_id",
   "group_id",
