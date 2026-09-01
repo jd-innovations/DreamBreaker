@@ -4906,6 +4906,62 @@ export type Database = {
           },
         ]
       }
+      reservation_check_ins: {
+        Row: {
+          checked_in_at: string
+          checked_in_by: string | null
+          facility_id: string
+          id: string
+          method: string
+          reservation_id: string
+        }
+        Insert: {
+          checked_in_at?: string
+          checked_in_by?: string | null
+          facility_id: string
+          id?: string
+          method: string
+          reservation_id: string
+        }
+        Update: {
+          checked_in_at?: string
+          checked_in_by?: string | null
+          facility_id?: string
+          id?: string
+          method?: string
+          reservation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservation_check_ins_checked_in_by_fkey"
+            columns: ["checked_in_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservation_check_ins_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservation_check_ins_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservation_check_ins_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "v_facility_payable_reservations"
+            referencedColumns: ["reservation_id"]
+          },
+        ]
+      }
       reservation_invites: {
         Row: {
           created_at: string
@@ -5017,6 +5073,7 @@ export type Database = {
           asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
           base_price_cents: number
           cancelled_at: string | null
+          check_in_code: string | null
           commission_pct: number | null
           commission_source: string | null
           confirmed_at: string | null
@@ -5044,6 +5101,7 @@ export type Database = {
           asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
           base_price_cents: number
           cancelled_at?: string | null
+          check_in_code?: string | null
           commission_pct?: number | null
           commission_source?: string | null
           confirmed_at?: string | null
@@ -5071,6 +5129,7 @@ export type Database = {
           asset_type?: Database["public"]["Enums"]["facility_asset_owner_type"]
           base_price_cents?: number
           cancelled_at?: string | null
+          check_in_code?: string | null
           commission_pct?: number | null
           commission_source?: string | null
           confirmed_at?: string | null
@@ -6611,6 +6670,7 @@ export type Database = {
           asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
           base_price_cents: number
           cancelled_at: string | null
+          check_in_code: string | null
           commission_pct: number | null
           commission_source: string | null
           confirmed_at: string | null
@@ -6650,6 +6710,17 @@ export type Database = {
           registration_id: string
           result: string
           tournament_name: string
+        }[]
+      }
+      check_in_reservation: {
+        Args: { p_code: string; p_method?: string }
+        Returns: {
+          already_checked_in: boolean
+          asset_name: string
+          facility_name: string
+          player_name: string
+          reservation_id: string
+          slot_start: string
         }[]
       }
       claim_coach_payout_batch: {
@@ -6751,6 +6822,7 @@ export type Database = {
           asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
           base_price_cents: number
           cancelled_at: string | null
+          check_in_code: string | null
           commission_pct: number | null
           commission_source: string | null
           confirmed_at: string | null
@@ -6885,6 +6957,7 @@ export type Database = {
           asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
           base_price_cents: number
           cancelled_at: string | null
+          check_in_code: string | null
           commission_pct: number | null
           commission_source: string | null
           confirmed_at: string | null
@@ -7110,6 +7183,7 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: undefined
       }
+      generate_check_in_code: { Args: never; Returns: string }
       generate_dynamic_stories: { Args: never; Returns: undefined }
       generate_review_token: { Args: never; Returns: string }
       generate_voucher_redemption_code: { Args: never; Returns: string }

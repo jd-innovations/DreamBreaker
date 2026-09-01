@@ -217,6 +217,18 @@ export default function FacilityManageScreen() {
               </Text>
             </View>
 
+            {/* Check-in is front-desk work, so staff see it too — not just
+                managers. Phase 5 records attendance only; it moves no money. */}
+            <TouchableOpacity
+              style={s.checkInBtn}
+              onPress={() => router.push('/facility/check-in' as never)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="qr-code-outline" size={20} color={colors.navy} />
+              <Text style={s.checkInBtnText}>Check in a player</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textSub} />
+            </TouchableOpacity>
+
             {/* ── Courts ─────────────────────────────────────────────────── */}
             <View style={s.sectionHead}>
               <Text style={s.sectionLabel}>COURTS</Text>
@@ -486,6 +498,13 @@ const s = StyleSheet.create({
   submitDisabled: { opacity: 0.4 },
 
   footnote: { color: colors.textSub, ...typography.metadata, marginTop: spacing.sm },
+
+  checkInBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.lg,
+    backgroundColor: colors.goldBg, borderRadius: radius.card,
+    borderWidth: 1.5, borderColor: colors.goldBorder,
+  },
+  checkInBtnText: { flex: 1, color: colors.navy, ...typography.cardTitle },
 
   payoutCard: {
     padding: spacing.lg, backgroundColor: colors.bg, borderRadius: radius.card,

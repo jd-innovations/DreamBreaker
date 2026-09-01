@@ -6,7 +6,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '@/theme';
 import { goBack } from '@/lib/navigation';
+import QRCode from 'react-native-qrcode-svg';
 import { StatusChip, type StatusVariant } from '@/components';
+import { fetchCheckInCode, checkInQrValue } from '@/lib/supabase/reservationCheckIn';
 import { useSession } from '@/hooks/useSession';
 import { useReservation } from '@/hooks/useReservation';
 import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilities';
@@ -196,6 +198,17 @@ export default function GameStatusScreen() {
   const status = occupancy?.status ?? reservation.status;
   const isOrganizer = user?.id === reservation.organizer_id;
   const isActive = status === 'held' || status === 'confirmed';
+
+  // Phase 5. Fetched rather than taken from the reservation payload so the code
+  // appears for bookings made before check-in existed, and only once confirmed
+  // — an unpaid hold has nothing to check in to.
+  const [checkInCode, setCheckInCode] = useState<string | null>(null);
+  useEffect(() => {
+    if (status !== 'confirmed' || !reservationId) { setCheckInCode(null); return; }
+    let cancelled = false;
+    void fetchCheckInCode(reservationId).then(c => { if (!cancelled) setCheckInCode(c); });
+    return () => { cancelled = true; };
+  }, [status, reservationId]);
   const showFindPlayers = isOrganizer && !isBallMachine && needed > 0 && isActive;
   const canCancel = isOrganizer && isActive;
   const organizer = roster.find(p => p.isOrganizer);
@@ -227,6 +240,21 @@ export default function GameStatusScreen() {
             <Text style={s.metaText}>{date} · {time}</Text>
           </View>
         </View>
+
+        {status === 'confirmed' && checkInCode && (
+          <View style={s.card}>
+            <Text style={s.sectionTitle}>Check in at the desk</Text>
+            <View style={{ alignItems: 'center', gap: 12, paddingVertical: 8 }}>
+              <View style={{ backgroundColor: '#FFFFFF', padding: 12, borderRadius: 12 }}>
+                <QRCode value={checkInQrValue(checkInCode)} size={150} backgroundColor="#FFFFFF" />
+              </View>
+              <Text style={s.checkInCode}>{checkInCode}</Text>
+              <Text style={s.checkInHint}>
+                Show this when you arrive, or read out the code.
+              </Text>
+            </View>
+          </View>
+        )}
 
         {!isBallMachine && (
           <View style={s.card}>
@@ -344,6 +372,8 @@ const s = StyleSheet.create({
   metaText: { color: L.text, fontSize: 13, fontWeight: '600' },
 
   sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: spacing.sm },
+  checkInCode: { color: colors.navy, fontSize: 26, fontWeight: '900', letterSpacing: 6 },
+  checkInHint: { color: colors.textSub, fontSize: 12, textAlign: 'center' },
   occupancyText: { color: L.textSub, fontSize: 12, fontWeight: '600' },
 
   rosterRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
