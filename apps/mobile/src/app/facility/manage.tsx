@@ -9,37 +9,61 @@ import { router } from 'expo-router';
 import { colors, radius, spacing, typography } from '@/theme';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
+import { useFacilityRole } from '@/hooks/useFacilityRole';
 import {
-  fetchManagedFacilities, fetchCourts, saveCourt, deactivateCourt, fetchStaff, fetchPayoutStatus,
-  type ManagedFacility, type Court, type StaffMember, type PayoutStatus,
+  fetchCourts, createCourt, updateCourt, deactivateCourt, reactivateCourt, type Court,
+} from '@/lib/supabase/courts';
+import {
+  fetchBallMachines, createBallMachine, updateBallMachine,
+  deactivateBallMachine, reactivateBallMachine, type BallMachine,
+} from '@/lib/supabase/ballMachines';
+import {
+  fetchFacilityMembers, updateFacilityMemberRole, removeFacilityMember,
+  facilityRoleAtLeast, type FacilityMember, type FacilityMemberRole,
+} from '@/lib/supabase/facilityMembers';
+import {
+  fetchManagedFacilities, fetchPayoutStatus, facilityManagementError,
+  type ManagedFacility, type PayoutStatus,
 } from '@/lib/supabase/facilityManagement';
 import { startConnectOnboarding } from '@/lib/payments/connectOnboarding';
 
-// Facility Marketplace Phase 2 — courts and staff.
+// Facility Marketplace Phase 2 — courts, machines and staff.
 //
 // A claimed facility with no courts is still unbookable, so this is what turns
-// an approved application into something players can actually reserve. Only one
-// of 194 facilities currently has courts at all.
+// an approved application into something players can reserve.
 //
-// Rates are entered in dollars and stored in cents: hourly_rate_cents is the
-// figure Phase 4 will split between the platform and the facility, and a
-// rounding slip there is somebody's money.
+// Everything here calls modules that already existed and had no caller:
+// courts.ts, ballMachines.ts, facilityMembers.ts and useFacilityRole. An
+// earlier revision reimplemented them — which is how it ended up unable to
+// reactivate a court, unable to manage ball machines at all, and showing a
+// read-only staff list beside an addFacilityMember that was right there.
+//
+// Rates are entered in dollars and stored in cents: hourly_rate_cents is what
+// Phase 4 splits between the platform and the facility, and a rounding slip
+// there is somebody's money.
 
-type CourtDraft = {
+type AssetKind = 'court' | 'machine';
+
+type AssetDraft = {
   id?: string;
+  kind: AssetKind;
   name: string;
   indoorOutdoor: 'indoor' | 'outdoor';
   rateDollars: string;
   isActive: boolean;
 };
 
-const NEW_COURT: CourtDraft = { name: '', indoorOutdoor: 'outdoor', rateDollars: '', isActive: true };
+const newDraft = (kind: AssetKind): AssetDraft => ({
+  kind, name: '', indoorOutdoor: 'outdoor', rateDollars: '', isActive: true,
+});
 
 function dollarsToCents(v: string): number | null {
   const n = Number(v.replace(/[^0-9.]/g, ''));
   if (!Number.isFinite(n) || n < 0) return null;
   return Math.round(n * 100);
 }
+
+const money = (cents: number | null | undefined) => `$${((cents ?? 0) / 100).toFixed(2)}`;
 
 export default function FacilityManageScreen() {
   const insets = useSafeAreaInsets();
@@ -48,21 +72,25 @@ export default function FacilityManageScreen() {
   const [facilities, setFacilities] = useState<ManagedFacility[]>([]);
   const [active, setActive] = useState<ManagedFacility | null>(null);
   const [courts, setCourts] = useState<Court[]>([]);
-  const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [draft, setDraft] = useState<CourtDraft | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [machines, setMachines] = useState<BallMachine[]>([]);
+  const [staff, setStaff] = useState<FacilityMember[]>([]);
   const [payout, setPayout] = useState<PayoutStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [draft, setDraft] = useState<AssetDraft | null>(null);
+  const [busy, setBusy] = useState(false);
   const [connecting, setConnecting] = useState(false);
+
+  // The existing hook rather than an inline role comparison — it already
+  // exposes exactly these predicates.
+  const { isManagerOrAbove, isOwner } = useFacilityRole(active?.id ?? null);
 
   const load = useCallback(async () => {
     if (!user?.id) { setLoading(false); return; }
     setLoading(true);
     try {
-      const rows = await fetchManagedFacilities();
+      const rows = await fetchManagedFacilities(user.id);
       setFacilities(rows);
-      const first = rows[0] ?? null;
-      setActive(prev => (prev && rows.some(r => r.id === prev.id) ? prev : first));
+      setActive(prev => (prev && rows.some(r => r.id === prev.id) ? prev : rows[0] ?? null));
     } catch {
       setFacilities([]);
     } finally {
@@ -74,65 +102,125 @@ export default function FacilityManageScreen() {
 
   const loadDetail = useCallback(async (facilityId: string) => {
     try {
-      const [c, s, p] = await Promise.all([
-        fetchCourts(facilityId), fetchStaff(facilityId), fetchPayoutStatus(facilityId),
+      // includeInactive: a manager has to see a retired asset to bring it back.
+      const [c, m, st, p] = await Promise.all([
+        fetchCourts(facilityId, { includeInactive: true }),
+        fetchBallMachines(facilityId, { includeInactive: true }),
+        fetchFacilityMembers(facilityId),
+        fetchPayoutStatus(facilityId),
       ]);
-      setCourts(c);
-      setStaff(s);
-      setPayout(p);
+      setCourts(c); setMachines(m); setStaff(st); setPayout(p);
     } catch {
-      setCourts([]);
-      setStaff([]);
-      setPayout(null);
+      setCourts([]); setMachines([]); setStaff([]); setPayout(null);
     }
   }, []);
 
   useEffect(() => { if (active?.id) void loadDetail(active.id); }, [active?.id, loadDetail]);
 
-  async function submitCourt() {
+  async function submitAsset() {
     if (!draft || !active) return;
     const cents = dollarsToCents(draft.rateDollars);
-    if (!draft.name.trim()) { Alert.alert('Name required', 'Give the court a name players will recognise.'); return; }
+    if (!draft.name.trim()) { Alert.alert('Name required', 'Give it a name players will recognise.'); return; }
     if (cents === null)     { Alert.alert('Rate required', 'Enter an hourly rate, or 0 for free.'); return; }
 
     setBusy(true);
     try {
-      const res = await saveCourt({
-        id: draft.id,
-        facilityId: active.id,
-        name: draft.name,
-        indoorOutdoor: draft.indoorOutdoor,
-        hourlyRateCents: cents,
-        isActive: draft.isActive,
-      });
-      if (!res.ok) { Alert.alert('Could not save', res.message); return; }
+      if (draft.kind === 'court') {
+        if (draft.id) {
+          await updateCourt(draft.id, {
+            name: draft.name.trim(), indoorOutdoor: draft.indoorOutdoor,
+            hourlyRateCents: cents, isActive: draft.isActive,
+          });
+        } else {
+          await createCourt({
+            facilityId: active.id, name: draft.name.trim(),
+            indoorOutdoor: draft.indoorOutdoor, hourlyRateCents: cents,
+          });
+        }
+      } else {
+        if (draft.id) {
+          await updateBallMachine(draft.id, {
+            name: draft.name.trim(), hourlyRateCents: cents, isActive: draft.isActive,
+          });
+        } else {
+          await createBallMachine({
+            facilityId: active.id, name: draft.name.trim(), hourlyRateCents: cents,
+          });
+        }
+      }
       setDraft(null);
       await loadDetail(active.id);
+    } catch (e) {
+      Alert.alert('Could not save', facilityManagementError(e));
     } finally {
       setBusy(false);
     }
   }
 
-  function confirmDeactivate(c: Court) {
+  function toggleAsset(kind: AssetKind, id: string, name: string, isActive: boolean) {
+    const verb = isActive ? 'Retire' : 'Bring back';
     Alert.alert(
-      `Retire ${c.name}?`,
-      'It stops appearing for new bookings. Existing reservations and their history are kept.',
+      `${verb} ${name}?`,
+      isActive
+        ? 'It stops appearing for new bookings. Existing reservations and their history are kept.'
+        : 'It becomes bookable again.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Retire',
-          style: 'destructive',
+          text: verb,
+          style: isActive ? 'destructive' : 'default',
           onPress: async () => {
-            const res = await deactivateCourt(c.id);
-            if (!res.ok) { Alert.alert('Could not retire', res.message); return; }
-            if (active?.id) await loadDetail(active.id);
+            try {
+              if (kind === 'court') {
+                await (isActive ? deactivateCourt(id) : reactivateCourt(id));
+              } else {
+                await (isActive ? deactivateBallMachine(id) : reactivateBallMachine(id));
+              }
+              if (active?.id) await loadDetail(active.id);
+            } catch (e) {
+              Alert.alert('Could not update', facilityManagementError(e));
+            }
           },
         },
       ],
     );
   }
 
-  const canManage = active?.role === 'owner' || active?.role === 'manager';
+  function changeStaffRole(member: FacilityMember) {
+    if (!active) return;
+    const options: FacilityMemberRole[] = ['staff', 'manager', 'owner'];
+    Alert.alert(
+      'Change role',
+      'Owners manage payouts and staff. Managers run courts and deals. Staff check players in.',
+      [
+        ...options.map(r => ({
+          text: r === member.role ? `${r} (current)` : r,
+          onPress: async () => {
+            if (r === member.role) return;
+            try {
+              await updateFacilityMemberRole(active.id, member.user_id, r);
+              await loadDetail(active.id);
+            } catch (e) {
+              Alert.alert('Could not change role', facilityManagementError(e));
+            }
+          },
+        })),
+        {
+          text: 'Remove from facility',
+          style: 'destructive' as const,
+          onPress: async () => {
+            try {
+              await removeFacilityMember(active.id, member.user_id);
+              await loadDetail(active.id);
+            } catch (e) {
+              Alert.alert('Could not remove', facilityManagementError(e));
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' as const },
+      ],
+    );
+  }
 
   async function connectPayouts() {
     if (!active || connecting) return;
@@ -149,13 +237,41 @@ export default function FacilityManageScreen() {
         return;
       }
       // `completed` only means the browser returned. Stripe decides readiness
-      // and tells us through the account.updated webhook, so re-read rather
-      // than assume — the same discipline the payment hooks use.
+      // and tells us through the account.updated webhook, so re-read.
       await loadDetail(active.id);
     } finally {
       setConnecting(false);
     }
   }
+
+  const assetRow = (
+    kind: AssetKind, id: string, name: string, sub: string, isActive: boolean, onEdit: () => void,
+  ) => (
+    <View key={`${kind}:${id}`} style={[s.assetRow, !isActive && s.assetRetired]}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={s.assetName} numberOfLines={1}>{name}{!isActive && ' · retired'}</Text>
+        <Text style={s.assetSub}>{sub}</Text>
+      </View>
+      {isManagerOrAbove && (
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <TouchableOpacity onPress={onEdit} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="create-outline" size={20} color={colors.navy} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => toggleAsset(kind, id, name, isActive)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons
+              name={isActive ? 'archive-outline' : 'refresh-outline'}
+              size={20}
+              color={colors.textSub}
+            />
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <View style={s.root}>
@@ -181,11 +297,7 @@ export default function FacilityManageScreen() {
             <Text style={s.cardBody}>
               Apply to manage your courts, and once approved you can set them up here.
             </Text>
-            <TouchableOpacity
-              style={s.secondary}
-              onPress={() => router.push('/facility/apply' as never)}
-              activeOpacity={0.85}
-            >
+            <TouchableOpacity style={s.secondary} onPress={() => router.push('/facility/apply' as never)} activeOpacity={0.85}>
               <Text style={s.secondaryText}>Apply</Text>
             </TouchableOpacity>
           </View>
@@ -212,13 +324,9 @@ export default function FacilityManageScreen() {
           <>
             <View style={s.facilityCard}>
               <Text style={s.facilityName}>{active.name}</Text>
-              <Text style={s.facilitySub}>
-                {[active.city, active.state].filter(Boolean).join(', ')} · you are {active.role}
-              </Text>
+              <Text style={s.facilitySub}>you are {active.role}</Text>
             </View>
 
-            {/* Check-in is front-desk work, so staff see it too — not just
-                managers. Phase 5 records attendance only; it moves no money. */}
             <TouchableOpacity
               style={s.checkInBtn}
               onPress={() => router.push('/facility/check-in' as never)}
@@ -232,8 +340,8 @@ export default function FacilityManageScreen() {
             {/* ── Courts ─────────────────────────────────────────────────── */}
             <View style={s.sectionHead}>
               <Text style={s.sectionLabel}>COURTS</Text>
-              {canManage && !draft && (
-                <TouchableOpacity onPress={() => setDraft({ ...NEW_COURT })} activeOpacity={0.7}>
+              {isManagerOrAbove && !draft && (
+                <TouchableOpacity onPress={() => setDraft(newDraft('court'))} activeOpacity={0.7}>
                   <Text style={s.addLink}>+ Add court</Text>
                 </TouchableOpacity>
               )}
@@ -245,70 +353,74 @@ export default function FacilityManageScreen() {
               </Text>
             )}
 
-            {courts.map(c => (
-              <View key={c.id} style={[s.courtRow, !c.isActive && s.courtRetired]}>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={s.courtName} numberOfLines={1}>
-                    {c.name}{!c.isActive && ' · retired'}
-                  </Text>
-                  <Text style={s.courtSub}>
-                    {c.indoorOutdoor ?? 'outdoor'} · ${((c.hourlyRateCents ?? 0) / 100).toFixed(2)}/hr
-                  </Text>
-                </View>
-                {canManage && (
-                  <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                    <TouchableOpacity
-                      onPress={() => setDraft({
-                        id: c.id, name: c.name,
-                        indoorOutdoor: (c.indoorOutdoor === 'indoor' ? 'indoor' : 'outdoor'),
-                        rateDollars: ((c.hourlyRateCents ?? 0) / 100).toFixed(2),
-                        isActive: c.isActive,
-                      })}
-                      activeOpacity={0.7}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Ionicons name="create-outline" size={20} color={colors.navy} />
-                    </TouchableOpacity>
-                    {c.isActive && (
-                      <TouchableOpacity
-                        onPress={() => confirmDeactivate(c)}
-                        activeOpacity={0.7}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Ionicons name="archive-outline" size={20} color={colors.textSub} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-              </View>
+            {courts.map(c => assetRow(
+              'court', c.id, c.name,
+              `${c.indoor_outdoor ?? 'outdoor'} · ${money(c.hourly_rate_cents)}/hr`,
+              c.is_active,
+              () => setDraft({
+                id: c.id, kind: 'court', name: c.name,
+                indoorOutdoor: c.indoor_outdoor === 'indoor' ? 'indoor' : 'outdoor',
+                rateDollars: ((c.hourly_rate_cents ?? 0) / 100).toFixed(2),
+                isActive: c.is_active,
+              }),
             ))}
 
+            {/* ── Ball machines ──────────────────────────────────────────── */}
+            <View style={s.sectionHead}>
+              <Text style={s.sectionLabel}>BALL MACHINES</Text>
+              {isManagerOrAbove && !draft && (
+                <TouchableOpacity onPress={() => setDraft(newDraft('machine'))} activeOpacity={0.7}>
+                  <Text style={s.addLink}>+ Add machine</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {machines.length === 0 && !draft && (
+              <Text style={s.empty}>No ball machines listed.</Text>
+            )}
+
+            {machines.map(m => assetRow(
+              'machine', m.id, m.name, `${money(m.hourly_rate_cents)}/hr`, m.is_active,
+              () => setDraft({
+                id: m.id, kind: 'machine', name: m.name, indoorOutdoor: 'outdoor',
+                rateDollars: ((m.hourly_rate_cents ?? 0) / 100).toFixed(2),
+                isActive: m.is_active,
+              }),
+            ))}
+
+            {/* ── Editor ─────────────────────────────────────────────────── */}
             {draft && (
               <View style={s.editor}>
-                <Text style={s.editorTitle}>{draft.id ? 'Edit court' : 'New court'}</Text>
+                <Text style={s.editorTitle}>
+                  {draft.id ? 'Edit' : 'New'} {draft.kind === 'court' ? 'court' : 'ball machine'}
+                </Text>
 
                 <Text style={s.fieldLabel}>Name</Text>
                 <TextInput
                   style={s.input}
                   value={draft.name}
                   onChangeText={v => setDraft({ ...draft, name: v })}
-                  placeholder="Court 1"
+                  placeholder={draft.kind === 'court' ? 'Court 1' : 'Machine 1'}
                   placeholderTextColor={colors.textSub}
                 />
 
-                <Text style={s.fieldLabel}>Type</Text>
-                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                  {(['indoor', 'outdoor'] as const).map(t => (
-                    <TouchableOpacity
-                      key={t}
-                      style={[s.typeChip, draft.indoorOutdoor === t && s.typeChipOn]}
-                      onPress={() => setDraft({ ...draft, indoorOutdoor: t })}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={[s.typeText, draft.indoorOutdoor === t && s.typeTextOn]}>{t}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                {draft.kind === 'court' && (
+                  <>
+                    <Text style={s.fieldLabel}>Type</Text>
+                    <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                      {(['indoor', 'outdoor'] as const).map(t => (
+                        <TouchableOpacity
+                          key={t}
+                          style={[s.typeChip, draft.indoorOutdoor === t && s.typeChipOn]}
+                          onPress={() => setDraft({ ...draft, indoorOutdoor: t })}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={[s.typeText, draft.indoorOutdoor === t && s.typeTextOn]}>{t}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )}
 
                 <Text style={s.fieldLabel}>Hourly rate (USD)</Text>
                 <TextInput
@@ -320,14 +432,16 @@ export default function FacilityManageScreen() {
                   keyboardType="decimal-pad"
                 />
 
-                <View style={s.switchRow}>
-                  <Text style={s.fieldLabel}>Bookable</Text>
-                  <Switch
-                    value={draft.isActive}
-                    onValueChange={v => setDraft({ ...draft, isActive: v })}
-                    trackColor={{ true: colors.gold, false: colors.border }}
-                  />
-                </View>
+                {draft.id && (
+                  <View style={s.switchRow}>
+                    <Text style={s.fieldLabel}>Bookable</Text>
+                    <Switch
+                      value={draft.isActive}
+                      onValueChange={v => setDraft({ ...draft, isActive: v })}
+                      trackColor={{ true: colors.gold, false: colors.border }}
+                    />
+                  </View>
+                )}
 
                 <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
                   <TouchableOpacity style={[s.secondary, { flex: 1 }]} onPress={() => setDraft(null)} activeOpacity={0.85}>
@@ -335,7 +449,7 @@ export default function FacilityManageScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[s.saveBtn, { flex: 1 }, busy && s.submitDisabled]}
-                    onPress={submitCourt}
+                    onPress={submitAsset}
                     disabled={busy}
                     activeOpacity={0.85}
                   >
@@ -351,15 +465,26 @@ export default function FacilityManageScreen() {
             <View style={s.sectionHead}>
               <Text style={s.sectionLabel}>STAFF</Text>
             </View>
-            {staff.map(m => (
-              <View key={m.userId} style={s.courtRow}>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={s.courtName} numberOfLines={1}>{m.fullName ?? 'Unnamed'}</Text>
-                  <Text style={s.courtSub} numberOfLines={1}>{m.email}</Text>
-                </View>
-                <Text style={s.roleChip}>{m.role}</Text>
-              </View>
-            ))}
+            {staff.map(m => {
+              const canEdit = facilityRoleAtLeast(active.role, 'manager') && m.user_id !== user?.id;
+              return (
+                <TouchableOpacity
+                  key={m.user_id}
+                  style={s.assetRow}
+                  activeOpacity={canEdit ? 0.8 : 1}
+                  disabled={!canEdit}
+                  onPress={() => changeStaffRole(m)}
+                >
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={s.assetName} numberOfLines={1}>
+                      {m.user_id === user?.id ? 'You' : m.user_id.slice(0, 8)}
+                    </Text>
+                    <Text style={s.assetSub}>{m.role}</Text>
+                  </View>
+                  {canEdit && <Ionicons name="chevron-forward" size={18} color={colors.textSub} />}
+                </TouchableOpacity>
+              );
+            })}
 
             {/* ── Payouts ────────────────────────────────────────────────── */}
             <View style={s.sectionHead}>
@@ -369,9 +494,7 @@ export default function FacilityManageScreen() {
             {payout?.onboarded ? (
               <View style={s.payoutReady}>
                 <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                <Text style={s.payoutReadyText}>
-                  This facility can receive payouts.
-                </Text>
+                <Text style={s.payoutReadyText}>This facility can receive payouts.</Text>
               </View>
             ) : (
               <View style={s.payoutCard}>
@@ -383,7 +506,7 @@ export default function FacilityManageScreen() {
                   the company&rsquo;s EIN, its owners, and a photo ID for whoever signs — have those
                   to hand before you start.
                 </Text>
-                {payout?.canManage ? (
+                {isOwner ? (
                   <TouchableOpacity
                     style={[s.saveBtn, connecting && s.submitDisabled]}
                     onPress={connectPayouts}
@@ -397,9 +520,7 @@ export default function FacilityManageScreen() {
                         </Text>}
                   </TouchableOpacity>
                 ) : (
-                  <Text style={s.footnote}>
-                    Only the facility owner can set this up.
-                  </Text>
+                  <Text style={s.footnote}>Only the facility owner can set this up.</Text>
                 )}
               </View>
             )}
@@ -434,7 +555,14 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, gap: spacing.xs,
   },
   facilityName: { color: colors.navy, ...typography.sectionTitle },
-  facilitySub:  { color: colors.textSub, ...typography.metadata },
+  facilitySub:  { color: colors.textSub, ...typography.metadata, textTransform: 'capitalize' },
+
+  checkInBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.lg,
+    backgroundColor: colors.goldBg, borderRadius: radius.card,
+    borderWidth: 1.5, borderColor: colors.goldBorder,
+  },
+  checkInBtnText: { flex: 1, color: colors.navy, ...typography.cardTitle },
 
   sectionHead: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -444,19 +572,13 @@ const s = StyleSheet.create({
   addLink: { color: colors.gold, fontSize: 13, fontWeight: '800' },
   empty: { color: colors.textSub, ...typography.body, lineHeight: 21 },
 
-  courtRow: {
+  assetRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md,
     backgroundColor: colors.bg, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border,
   },
-  courtRetired: { opacity: 0.55 },
-  courtName: { color: colors.navy, ...typography.cardTitle },
-  courtSub:  { color: colors.textSub, ...typography.metadata, textTransform: 'capitalize' },
-  roleChip: {
-    color: colors.navy, fontSize: 11, fontWeight: '900', letterSpacing: 0.6,
-    textTransform: 'uppercase', backgroundColor: colors.goldBg,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.chip,
-    overflow: 'hidden',
-  },
+  assetRetired: { opacity: 0.55 },
+  assetName: { color: colors.navy, ...typography.cardTitle },
+  assetSub:  { color: colors.textSub, ...typography.metadata, textTransform: 'capitalize' },
 
   editor: {
     padding: spacing.lg, backgroundColor: colors.bg, borderRadius: radius.card,
@@ -498,13 +620,6 @@ const s = StyleSheet.create({
   submitDisabled: { opacity: 0.4 },
 
   footnote: { color: colors.textSub, ...typography.metadata, marginTop: spacing.sm },
-
-  checkInBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.lg,
-    backgroundColor: colors.goldBg, borderRadius: radius.card,
-    borderWidth: 1.5, borderColor: colors.goldBorder,
-  },
-  checkInBtnText: { flex: 1, color: colors.navy, ...typography.cardTitle },
 
   payoutCard: {
     padding: spacing.lg, backgroundColor: colors.bg, borderRadius: radius.card,
