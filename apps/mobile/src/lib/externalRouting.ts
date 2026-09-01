@@ -9,7 +9,8 @@ export type ExternalDestinationType =
   | 'marketplace'
   | 'booking'
   | 'coach_offer'
-  | 'claim';
+  | 'claim'
+  | 'review';
 
 export type ExternalDestination = {
   href: string;
@@ -90,6 +91,11 @@ export function resolveExternalUrl(rawUrl: string): ExternalDestination | null {
       return null;
     case 'claim':
       return { href: appRoutes.claim(id), type: 'claim', requiresAuth: false };
+    // requiresAuth: the invitation belongs to one person, and
+    // resolve_review_invitation refuses a token that is not theirs. Sending an
+    // unauthenticated visitor to the form would only fail at submit.
+    case 'review':
+      return { href: appRoutes.review(id), type: 'review', requiresAuth: true };
     default:
       return null;
   }

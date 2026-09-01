@@ -23,6 +23,27 @@ function resolveRole(selected: Set<string>): string {
   return "player";
 }
 
+
+// Where to land after signing in.
+//
+// Exists for emailed links that require a session: a review invitation opened
+// on a desktop hits /review/<token>, bounces here, and has to come back — being
+// dumped on the dashboard means the review never gets written.
+//
+// Read from window.location rather than useSearchParams: this page is
+// prerendered, and useSearchParams would force it behind a Suspense boundary
+// for a value only ever needed inside a click handler.
+//
+// Only a same-site path is accepted. An absolute URL, or a protocol-relative
+// "//evil.example" (which the browser resolves as a HOST, not a path), would
+// turn a trusted login screen into an open redirect.
+function safeNext(fallback = "/dashboard"): string {
+  if (typeof window === "undefined") return fallback;
+  const next = new URLSearchParams(window.location.search).get("next");
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return fallback;
+  return next;
+}
+
 export default function AuthPage() {
   const router = useRouter();
   const [showPw, setShowPw] = useState(false);
@@ -165,7 +186,7 @@ export default function AuthPage() {
       if (data.user?.id) identifyUser(data.user.id);
       track("auth_succeeded", { method: "email", source: "auth_page" });
       toast.success("Welcome back!");
-      window.location.href = "/dashboard";
+      window.location.href = safeNext();
     } catch (err: unknown) {
       track("auth_failed", { method: "email", source: "auth_page" });
       toast.error(err instanceof Error ? err.message : "Sign-in failed");

@@ -4963,6 +4963,132 @@ export type Database = {
           },
         ]
       }
+      review_invitations: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          issued_by: string | null
+          revoked_at: string | null
+          sent_at: string | null
+          source_id: string
+          source_type: string
+          subject_id: string
+          subject_type: string
+          token: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          issued_by?: string | null
+          revoked_at?: string | null
+          sent_at?: string | null
+          source_id: string
+          source_type: string
+          subject_id: string
+          subject_type: string
+          token: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          issued_by?: string | null
+          revoked_at?: string | null
+          sent_at?: string | null
+          source_id?: string
+          source_type?: string
+          subject_id?: string
+          subject_type?: string
+          token?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_invitations_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_invitations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          author_id: string
+          body: string | null
+          created_at: string
+          id: string
+          rating: number
+          response_at: string | null
+          response_body: string | null
+          response_by: string | null
+          source_id: string
+          source_type: string
+          subject_id: string
+          subject_type: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          response_at?: string | null
+          response_body?: string | null
+          response_by?: string | null
+          source_id: string
+          source_type: string
+          subject_id: string
+          subject_type: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          response_at?: string | null
+          response_body?: string | null
+          response_by?: string | null
+          source_id?: string
+          source_type?: string
+          subject_id?: string
+          subject_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_response_by_fkey"
+            columns: ["response_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_play_events: {
         Row: {
           created_at: string
@@ -6036,6 +6162,15 @@ export type Database = {
           },
         ]
       }
+      v_review_summary: {
+        Row: {
+          average_rating: number | null
+          review_count: number | null
+          subject_id: string | null
+          subject_type: string | null
+        }
+        Relationships: []
+      }
       v_tournament_listing: {
         Row: {
           bracket_type: Database["public"]["Enums"]["bracket_type"] | null
@@ -6282,6 +6417,10 @@ export type Database = {
       apply_to_be_director: {
         Args: never
         Returns: Database["public"]["Enums"]["director_status"]
+      }
+      can_review: {
+        Args: { p_subject_id: string; p_subject_type: string }
+        Returns: boolean
       }
       cancel_reservation: {
         Args: { p_reservation_id: string }
@@ -6744,6 +6883,7 @@ export type Database = {
         Returns: undefined
       }
       generate_dynamic_stories: { Args: never; Returns: undefined }
+      generate_review_token: { Args: never; Returns: string }
       generate_voucher_redemption_code: { Args: never; Returns: string }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
@@ -6952,6 +7092,18 @@ export type Database = {
         Args: { p_reservation_id: string; p_user_id: string }
         Returns: boolean
       }
+      issue_review_invitation: {
+        Args: {
+          p_subject_id: string
+          p_subject_type: string
+          p_user_id: string
+        }
+        Returns: {
+          already_existed: boolean
+          invitation_id: string
+          token: string
+        }[]
+      }
       join_play_event: {
         Args: {
           p_added_by_organizer?: boolean
@@ -6998,6 +7150,18 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      list_review_candidates: {
+        Args: { p_limit?: number }
+        Returns: {
+          occurred_at: string
+          subject_id: string
+          subject_label: string
+          subject_type: string
+          user_email: string
+          user_id: string
+          user_name: string
+        }[]
+      }
       longtransactionsenabled: { Args: never; Returns: boolean }
       mark_personal_guest_share_initiated: {
         Args: { p_guest_share_id: string }
@@ -7028,6 +7192,10 @@ export type Database = {
           p_stripe_intent_id?: string
         }
         Returns: string
+      }
+      mark_review_invitation_sent: {
+        Args: { p_invitation_id: string }
+        Returns: undefined
       }
       mark_wallet_item_seen: { Args: { p_item_id: string }; Returns: undefined }
       par_clamp: {
@@ -7260,6 +7428,15 @@ export type Database = {
           time_range: unknown
         }[]
       }
+      resolve_review_invitation: {
+        Args: { p_token: string }
+        Returns: {
+          already_reviewed: boolean
+          subject_id: string
+          subject_label: string
+          subject_type: string
+        }[]
+      }
       retry_failed_personal_game_par: {
         Args: { p_game_id: string }
         Returns: {
@@ -7333,6 +7510,17 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      review_eligibility: {
+        Args: {
+          p_subject_id: string
+          p_subject_type: string
+          p_user_id: string
+        }
+        Returns: {
+          source_id: string
+          source_type: string
+        }[]
       }
       save_personal_game_score: {
         Args: {
@@ -8041,6 +8229,10 @@ export type Database = {
       st_wrapx: {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
+      }
+      submit_review: {
+        Args: { p_body?: string; p_rating: number; p_token: string }
+        Returns: string
       }
       unaccent: { Args: { "": string }; Returns: string }
       unlockrows: { Args: { "": string }; Returns: number }
