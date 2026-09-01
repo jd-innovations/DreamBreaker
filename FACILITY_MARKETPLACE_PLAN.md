@@ -62,6 +62,15 @@ This is the real scope — not deals.
 2. **The facility is paid for no-shows and for late cancellations** —
    cancellations outside the allowed window. The court was held; nobody else
    could book it.
+3. **Commission is adjustable, defaulting to 20%.** Three tiers, reusing the
+   coach pattern exactly: a `platform_settings` default, a per-facility
+   override, and a per-deal override, with `commission_pct` and
+   `commission_source` snapshotted onto the reservation so the winning tier is
+   recoverable later.
+4. **Facilities scan a check-in code, like coaches.** See the note below on why
+   it cannot gate payment.
+5. **The 9 existing bookings are test data.** No backfill; they are
+   pre-marketplace and not real.
 
 ### A correction to the framing
 
@@ -79,12 +88,19 @@ and the directory derives its treatment from that.
 
 ## What does NOT port from coaches
 
-- **No voucher, no redemption, no QR.** Coach payout is gated on
-  `redeem_coach_voucher` because redemption is the only proof the lesson
-  happened. A booking already has a time slot:
-  `status = 'confirmed' AND lower(time_range) <= now()` is the equivalent, and
-  is already what `review_eligibility` uses. Phase 5 of the coach build simply
-  does not recur.
+- **The scan happens, but it must not gate payment.** Facilities get a
+  check-in scanner (decision 4), and it is genuinely useful: a front desk
+  confirming an arrival holds a valid booking is real operational work.
+
+  But for coaches the scan IS the payout trigger — no redemption, no money.
+  Copying that here contradicts decision 2: a no-show never scans, so it would
+  never pay out. It would also hand every facility a way to withhold its own
+  revenue by simply not scanning.
+
+  So the two are decoupled. The scan records **attendance and access control**;
+  the payout triggers on the slot elapsing
+  (`status = 'confirmed' AND lower(time_range) <= now()`, already what
+  `review_eligibility` uses). Same scanner UX, different meaning.
 - **No-show economics invert.** Unredeemed coach voucher → no payout.
   No-show court → facility is paid.
 - **`flash_deals` is not `coach_offers`.** `coach_offers` is a product with its
@@ -132,26 +148,28 @@ The core. Snapshot columns on `reservations` mirroring the coach purchase model
 Payout eligibility becomes: the slot has elapsed **and** the reservation is
 `confirmed`, **or** was cancelled later than the window allowed.
 
-### Phase 5 — Deal posting UI
+### Phase 5 — Check-in scanner
+Ports the coach redeem screen's UX over reservations. Writes an attendance
+record; deliberately touches no money. Gives no-show reporting something real
+to count, and feeds review eligibility.
+
+### Phase 6 — Deal posting UI
 The RLS is already waiting. A form and a list, over `flash_deals`. Facility-,
 court- and machine-level deals all already representable.
 
-### Phase 6 — Payouts
+### Phase 7 — Payouts
 Port the coach batch runner against elapsed reservations. Note the retry lesson:
 failed batches must release their items, and settle must accept `failed`.
 
-### Phase 7 — Refunds and cancellations
+### Phase 8 — Refunds and cancellations
 Buyer-initiated cancellation inside the window → refund, no facility payout.
 Outside the window → no refund, facility paid. Admin override via the existing
 support-ticket path.
 
 ---
 
-## Open questions
+## Open question
 
-1. **Commission rate for facilities.** Coaches are 18% base / 7% boost. Not
-   obviously the right number for court inventory.
-2. **Who verifies a claim?** Admin review, domain-matched email, or a phone
-   callback. Phase 1 cannot ship without an answer.
-3. **What happens to the 9 existing bookings** taken with no economics
-   recorded — backfill a net-proceeds figure, or leave them as pre-marketplace.
+**Who verifies a claim?** Admin review, domain-matched email, or a phone
+callback. Phase 1 cannot ship without an answer, and 194 unclaimed rows is a
+large surface — claiming a venue you do not operate is the obvious abuse.
