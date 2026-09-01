@@ -122,11 +122,37 @@ naming a `facility_*` set follows. `platform_fee_percent` (6) already exists.
 Ordered so each one has a user who can exercise it. Deals come late because
 they discount inventory that mostly does not exist yet.
 
-### Phase 1 — Claiming
-Nobody owns anything, so nothing downstream has an authorised actor. Calls the
-existing bootstrap policy; moves `claim_status` off `unclaimed`. Needs an admin
-review step — claiming a venue you do not operate is the obvious abuse.
-Connects to the "Suggest an Edit" support-ticket flow already chosen.
+### Phase 1 — "Become a Facility Manager"
+Nobody owns anything, so nothing downstream has an authorised actor.
+
+Modelled on the shipped director flow rather than a new mechanism:
+`profiles.director_status` (null -> pending -> approved) with
+`director_approved_at` / `director_approved_by`, an `apply_to_be_director()`
+RPC, an `is_approved_director()` gate and `fn_notify_director_status` to tell
+the applicant. `coach_status` is the same shape. All of it copies.
+
+**The one dimension director does not have.** `director_status` is a property of
+the person — an approved director creates their own tournaments, so there is
+nothing to bind them to. A facility manager must be bound to ONE of 194
+existing venues; a global flag would grant authority over every one of them.
+
+So the application carries a facility:
+
+    (user, facility, evidence) -> admin approves -> facility_members row, role 'owner'
+
+`facility_member_role` is already `owner | manager | staff`, so approval lands
+in a structure that exists, and the new owner adds their own staff without
+coming back to an admin. Admin vets the FIRST relationship per venue; the owner
+handles everyone after.
+
+`facilities.claim_status` becomes derived — it flips when a venue's first owner
+is approved. Nothing user-facing says "claim".
+
+**On that word.** It is already spent twice: `/claim/[token]` is a personal
+MATCH claim, and the facility card's old "Claim this facility" CTA is now
+"Suggest an Edit", a support ticket open to any user. Suggesting an edit and
+taking over a venue's revenue must never collapse into one flow — same surface,
+completely different trust requirement.
 
 ### Phase 2 — Facility management + courts
 A claimed facility with no courts is still unbookable — this is what unlocks the
@@ -170,6 +196,8 @@ support-ticket path.
 
 ## Open question
 
-**Who verifies a claim?** Admin review, domain-matched email, or a phone
-callback. Phase 1 cannot ship without an answer, and 194 unclaimed rows is a
-large surface — claiming a venue you do not operate is the obvious abuse.
+**What evidence does an application carry?** The director flow asks for none —
+an admin simply approves a person. Taking over a venue's revenue is a higher
+bar, so the form probably needs something: a work email on the facility's
+domain, a phone match against `facilities.phone`, or a free-text case an admin
+reads. Not blocking Phase 1's shape, but it decides what the form contains.
