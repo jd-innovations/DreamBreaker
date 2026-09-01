@@ -620,6 +620,7 @@ function UpcomingContent({
         <TournamentTrendingCard
           key={t.id}
           item={tournamentToTrending(t)}
+          style={{ marginBottom: 10 }}
           saved={isBookmarked(t.id)}
           onSave={() => onToggleBookmark(t.id)}
           registered
@@ -865,6 +866,7 @@ function PastContent({
         <TournamentTrendingCard
           key={t.id}
           item={tournamentToTrending(t)}
+          style={{ marginBottom: 10 }}
           saved={isBookmarked(t.id)}
           onSave={() => onToggleBookmark(t.id)}
           registered

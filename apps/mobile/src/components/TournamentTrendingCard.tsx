@@ -235,7 +235,8 @@ const tc = StyleSheet.create({
   card: {
     borderRadius: 16, overflow: 'hidden',
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg,
-    marginBottom: 12,
+    // No outer margin at all. Both insets here belonged to the Home list and
+    // were wrong on the Events list, so spacing is the host's to set.
   },
   // Mirrors cl.typeText -- plain gold label, deliberately not a pill, because
   // COMMUNITY PLAY is not one either.
