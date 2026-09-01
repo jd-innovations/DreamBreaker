@@ -113,15 +113,23 @@ export function FacilityPickerModal({
   const [list,     setList]     = useState<FacilityWithPrimaryPhoto[]>([]);
   const [loading,  setLoading]  = useState(false);
   const [loaded,   setLoaded]   = useState(false);
+  // The failure used to be discarded (`.catch(() => setLoaded(true))`), leaving
+  // an empty list with no message, no retry and nothing to diagnose from — the
+  // same blank screen whether the network was down, the RPC errored, or there
+  // genuinely are no courts nearby.
+  const [error,    setError]    = useState<string | null>(null);
 
   const load = useCallback(() => {
     if (loaded) return;
     setLoading(true);
+    setError(null);
     fetchFacilities({ lat, lng, radiusMiles, limit: 50 })
       .then(data => { setList(data); setLoaded(true); })
-      .catch(() => setLoaded(true))
+      .catch(() => { setError('Could not load nearby facilities.'); setLoaded(true); })
       .finally(() => setLoading(false));
   }, [lat, lng, loaded, radiusMiles]);
+
+  const retry = useCallback(() => { setLoaded(false); setList([]); setError(null); }, []);
 
   React.useEffect(() => {
     setLoaded(false);
@@ -131,12 +139,46 @@ export function FacilityPickerModal({
   // Load on open
   React.useEffect(() => { if (visible) load(); }, [visible, load]);
 
-  const filtered = query.trim()
+  // Typing searches the whole directory, not just the radius already fetched.
+  //
+  // Filtering the local list was the entire search: a facility outside the
+  // radius — or absent because the initial load failed — could never be found
+  // by typing its name, which reads as "search is broken" rather than "search
+  // only covers what already loaded".
+  const [remote, setRemote] = useState<FacilityWithPrimaryPhoto[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  React.useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) { setRemote([]); setSearching(false); return; }
+
+    let cancelled = false;
+    setSearching(true);
+    // Debounced so a query is not fired per keystroke.
+    const timer = setTimeout(() => {
+      fetchFacilities({ query: q, limit: 50 })
+        .then(data => { if (!cancelled) setRemote(data); })
+        .catch(() => { if (!cancelled) setRemote([]); })
+        .finally(() => { if (!cancelled) setSearching(false); });
+    }, 350);
+
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [query]);
+
+  const localMatches = query.trim()
     ? list.filter(f =>
         f.name.toLowerCase().includes(query.toLowerCase()) ||
         f.city.toLowerCase().includes(query.toLowerCase()),
       )
     : list;
+
+  // Nearby matches first, then anything else the server found, de-duplicated.
+  const filtered = query.trim()
+    ? (() => {
+        const seen = new Set(localMatches.map(f => f.id));
+        return [...localMatches, ...remote.filter(f => !seen.has(f.id))];
+      })()
+    : localMatches;
 
   return (
     <Modal
@@ -174,8 +216,16 @@ export function FacilityPickerModal({
         </View>
 
         {/* List */}
-        {loading ? (
+        {loading || searching ? (
           <ActivityIndicator style={{ marginTop: 40 }} color={L.navy} />
+        ) : error && list.length === 0 ? (
+          <View style={m.empty}>
+            <Ionicons name="cloud-offline-outline" size={30} color={L.border} />
+            <Text style={m.emptyText}>{error}</Text>
+            <TouchableOpacity onPress={retry} style={m.retryBtn} activeOpacity={0.8}>
+              <Text style={m.retryText}>Try again</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <FlatList
             data={filtered}
@@ -189,7 +239,11 @@ export function FacilityPickerModal({
             ListEmptyComponent={
               <View style={m.empty}>
                 <PickleballIcon size={32} color={L.border} />
-                <Text style={m.emptyText}>No facilities found</Text>
+                <Text style={m.emptyText}>
+                  {query.trim()
+                    ? `No facilities matching "${query.trim()}"`
+                    : 'No facilities found nearby'}
+                </Text>
               </View>
             }
             keyboardShouldPersistTaps="handled"
@@ -215,6 +269,8 @@ const m = StyleSheet.create({
   root:    { flex: 1, backgroundColor: L.white },
   header:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border },
   title:   { fontSize: 17, fontWeight: '800', color: L.navy },
+  retryBtn: { marginTop: 10, borderWidth: 1.5, borderColor: L.navy, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 8 },
+  retryText: { color: L.navy, fontSize: 13, fontWeight: '800' },
   searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 12, borderWidth: 1.5, borderColor: L.border, borderRadius: radius.sm, paddingHorizontal: 12, height: 44 },
   searchInput:{ flex: 1, fontSize: 14, color: L.text },
   empty:   { alignItems: 'center', paddingTop: 60, gap: 10 },
