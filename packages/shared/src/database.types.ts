@@ -3863,6 +3863,7 @@ export type Database = {
           availability_schedule: Json
           avatar_url: string | null
           bio: string | null
+          coach_certification: string | null
           coach_commission_override_pct: number | null
           coach_status: Database["public"]["Enums"]["coach_status"]
           cover_url: string | null
@@ -3907,6 +3908,7 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"]
           self_rating: string | null
           skill_level: string | null
+          social_links: Json
           story_radius_miles: number
           stripe_connect_account_id: string | null
           stripe_connect_onboarded_at: string | null
@@ -3918,6 +3920,7 @@ export type Database = {
           availability_schedule?: Json
           avatar_url?: string | null
           bio?: string | null
+          coach_certification?: string | null
           coach_commission_override_pct?: number | null
           coach_status?: Database["public"]["Enums"]["coach_status"]
           cover_url?: string | null
@@ -3964,6 +3967,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           self_rating?: string | null
           skill_level?: string | null
+          social_links?: Json
           story_radius_miles?: number
           stripe_connect_account_id?: string | null
           stripe_connect_onboarded_at?: string | null
@@ -3975,6 +3979,7 @@ export type Database = {
           availability_schedule?: Json
           avatar_url?: string | null
           bio?: string | null
+          coach_certification?: string | null
           coach_commission_override_pct?: number | null
           coach_status?: Database["public"]["Enums"]["coach_status"]
           cover_url?: string | null
@@ -4021,6 +4026,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           self_rating?: string | null
           skill_level?: string | null
+          social_links?: Json
           story_radius_miles?: number
           stripe_connect_account_id?: string | null
           stripe_connect_onboarded_at?: string | null

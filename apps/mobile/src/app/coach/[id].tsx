@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Share, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -127,6 +127,10 @@ export default function CoachProfileScreen() {
 
           <Text style={s.name}>{coach.fullName}</Text>
 
+          {!!coach.certification?.trim() && (
+            <Text style={s.certification}>{coach.certification}</Text>
+          )}
+
           {/* One badge, not two. In the unverified state a prominent overlay
               badge plus an inline one reads as an accusation; a single muted,
               tappable chip reads as a fact the user can ask about. */}
@@ -147,6 +151,27 @@ export default function CoachProfileScreen() {
             </Text>
             <Ionicons name="information-circle-outline" size={13} color={coach.identityVerified ? '#2563EB' : L.textSub} />
           </TouchableOpacity>
+
+          {coach.socialLinks.length > 0 && (
+            <View style={s.socialRow}>
+              {coach.socialLinks.map(link => (
+                <TouchableOpacity
+                  key={link.key}
+                  style={s.socialBtn}
+                  activeOpacity={0.75}
+                  accessibilityRole="link"
+                  accessibilityLabel={link.label}
+                  // openURL rejects when nothing can handle the scheme — no
+                  // mail client, WhatsApp not installed. Swallowed: the tap
+                  // simply does nothing, which beats an error dialog naming a
+                  // third-party app the user may have deliberately not got.
+                  onPress={() => Linking.openURL(link.url).catch(() => {})}
+                >
+                  <Ionicons name={link.icon} size={18} color={L.navy} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           {!!location && (
             <View style={s.locationRow}>
@@ -251,6 +276,13 @@ const s = StyleSheet.create({
   avatar:        { width: AVATAR, height: AVATAR, borderRadius: AVATAR / 2 },
   avatarFallback:{ backgroundColor: L.bg, alignItems: 'center', justifyContent: 'center' },
   name:          { color: L.navy, fontSize: 22, fontWeight: '900', textAlign: 'center' },
+  certification: { color: L.textSub, fontSize: 13, fontWeight: '700', textAlign: 'center' },
+  socialRow:     { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 4 },
+  socialBtn: {
+    width: 40, height: 40, borderRadius: 12,
+    borderWidth: 1, borderColor: L.border, backgroundColor: L.bg,
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,

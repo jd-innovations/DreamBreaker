@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { fetchCoachOffers } from './offers';
 import type { CoachOfferWithImages } from './offers';
+import { resolveSocialLinks, type ResolvedSocialLink } from './socialLinks';
 
 // The public coach profile.
 //
@@ -25,6 +26,9 @@ export type CoachProfile = {
    * fixture 13 of 14 coaches currently sit in, so neither is safe to badge on.
    */
   identityVerified: boolean;
+  /** Self-declared, unverified — see the badge tooltip. */
+  certification: string | null;
+  socialLinks: ResolvedSocialLink[];
 };
 
 type ProfileRow = {
@@ -37,12 +41,14 @@ type ProfileRow = {
   location_state: string | null;
   is_coach: boolean | null;
   stripe_connect_onboarded_at: string | null;
+  coach_certification: string | null;
+  social_links: unknown;
 };
 
 export async function fetchCoachProfile(coachId: string): Promise<CoachProfile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, avatar_url, cover_url, bio, location_city, location_state, is_coach, stripe_connect_onboarded_at')
+    .select('id, full_name, avatar_url, cover_url, bio, location_city, location_state, is_coach, stripe_connect_onboarded_at, coach_certification, social_links')
     .eq('id', coachId)
     .maybeSingle();
 
@@ -60,6 +66,8 @@ export async function fetchCoachProfile(coachId: string): Promise<CoachProfile |
     locationCity: row.location_city,
     locationState: row.location_state,
     identityVerified: row.stripe_connect_onboarded_at != null,
+    certification: row.coach_certification,
+    socialLinks: resolveSocialLinks(row.social_links),
   };
 }
 
