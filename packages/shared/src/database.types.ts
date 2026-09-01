@@ -678,6 +678,7 @@ export type Database = {
           offer_id: string
           participant_index: number | null
           purchase_id: string
+          redemption_code: string
           remaining_redemptions: number
           revoked_at: string | null
           revoked_reason: string | null
@@ -697,6 +698,7 @@ export type Database = {
           offer_id: string
           participant_index?: number | null
           purchase_id: string
+          redemption_code: string
           remaining_redemptions: number
           revoked_at?: string | null
           revoked_reason?: string | null
@@ -716,6 +718,7 @@ export type Database = {
           offer_id?: string
           participant_index?: number | null
           purchase_id?: string
+          redemption_code?: string
           remaining_redemptions?: number
           revoked_at?: string | null
           revoked_reason?: string | null
@@ -758,6 +761,78 @@ export type Database = {
             columns: ["wallet_item_id"]
             isOneToOne: false
             referencedRelation: "wallet_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_voucher_redemptions: {
+        Row: {
+          buyer_id: string
+          entitlement_id: string
+          id: string
+          method: string
+          offer_id: string
+          purchase_id: string
+          redeemed_at: string
+          redeemed_by: string
+          remaining_after: number
+        }
+        Insert: {
+          buyer_id: string
+          entitlement_id: string
+          id?: string
+          method: string
+          offer_id: string
+          purchase_id: string
+          redeemed_at?: string
+          redeemed_by: string
+          remaining_after: number
+        }
+        Update: {
+          buyer_id?: string
+          entitlement_id?: string
+          id?: string
+          method?: string
+          offer_id?: string
+          purchase_id?: string
+          redeemed_at?: string
+          redeemed_by?: string
+          remaining_after?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_voucher_redemptions_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_voucher_redemptions_entitlement_id_fkey"
+            columns: ["entitlement_id"]
+            isOneToOne: false
+            referencedRelation: "coach_voucher_entitlements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_voucher_redemptions_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "coach_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_voucher_redemptions_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "coach_offer_purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_voucher_redemptions_redeemed_by_fkey"
+            columns: ["redeemed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -6442,6 +6517,7 @@ export type Database = {
         Returns: undefined
       }
       generate_dynamic_stories: { Args: never; Returns: undefined }
+      generate_voucher_redemption_code: { Args: never; Returns: string }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
@@ -6894,6 +6970,17 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      redeem_coach_voucher: {
+        Args: { p_code: string; p_method?: string }
+        Returns: {
+          buyer_name: string
+          entitlement_id: string
+          fully_redeemed: boolean
+          offer_title: string
+          remaining_after: number
+          total_redemptions: number
+        }[]
       }
       reject_deleted_users: { Args: never; Returns: undefined }
       reservation_asset_hourly_rate_cents: {

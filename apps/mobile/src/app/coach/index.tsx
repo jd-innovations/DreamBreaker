@@ -103,6 +103,22 @@ export default function CoachModeScreen() {
           ))}
         </View>
 
+        {/* Redeeming is what a coach does at the court, so it sits above
+            managing offers. Gated to statuses that can actually hold a sold
+            voucher — the RPC refuses anything else anyway, but offering it to
+            a coach who cannot have sold one is noise. */}
+        {(coachStatus === 'active' || coachStatus === 'test_ready') && (
+          <TouchableOpacity
+            style={s.offersLink}
+            activeOpacity={0.85}
+            onPress={() => router.push('/coach/redeem' as never)}
+          >
+            <Ionicons name="qr-code-outline" size={18} color={L.navy} />
+            <Text style={s.offersLinkText}>Redeem a Voucher</Text>
+            <Ionicons name="chevron-forward" size={16} color={L.textSub} />
+          </TouchableOpacity>
+        )}
+
         {(coachStatus === 'active' || coachStatus === 'test_ready' || coachStatus === 'onboarding') && (
           <TouchableOpacity
             style={s.offersLink}

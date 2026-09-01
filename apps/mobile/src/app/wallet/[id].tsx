@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking, Share, Image } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { goBack } from '@/lib/navigation';
 import { colors, radius } from '@/theme';
@@ -13,6 +14,7 @@ import { useWalletItem } from '@/hooks/useWalletItem';
 import { useSupportContext } from '@/lib/support/supportContext';
 import { OFFER_TYPE_OPTIONS } from '@/lib/coach/constants';
 import type { WalletItem } from '@/lib/walletTypes';
+import { fetchVoucherRedemptionCode, voucherQrValue } from '@/lib/coach/voucherRedemption';
 
 const OFFER_TYPE_LABELS = Object.fromEntries(OFFER_TYPE_OPTIONS.map((o) => [o.value, o.label])) as Record<string, string>;
 
@@ -64,6 +66,22 @@ export default function WalletItemDetailScreen() {
   // §12: identifies which benefit, never a $ amount or transaction detail.
   useSupportContext({ feature: 'wallet', entityType: 'wallet_item', entityId: id, entityLabel: item?.title });
   const [showRedeemSheet, setShowRedeemSheet] = useState(false);
+  // The code the coach scans or types. Read separately from the wallet item:
+  // it lives on the entitlement, which is the authority on how many
+  // redemptions are left — the wallet item only carries the purchase snapshot.
+  const [voucher, setVoucher] = useState<{ code: string; remaining: number; total: number; status: string } | null>(null);
+
+  // Loaded on focus rather than once: the coach may redeem while this screen
+  // is open, and a stale "1 of 1 remaining" beside a spent code is the one
+  // thing a buyer must not be shown.
+  useFocusEffect(useCallback(() => {
+    if (!id || item?.type !== 'coach_voucher') { setVoucher(null); return; }
+    let active = true;
+    fetchVoucherRedemptionCode(id)
+      .then(v => { if (active) setVoucher(v); })
+      .catch(() => { if (active) setVoucher(null); });
+    return () => { active = false; };
+  }, [id, item?.type]));
 
   function handleAction() {
     if (!item) return;
@@ -205,7 +223,41 @@ export default function WalletItemDetailScreen() {
           </View>
         )}
 
-        {item.actionType !== 'none' && (
+        {/* Coach voucher: the thing the buyer actually shows at the lesson.
+            Replaces a primary button labelled "View Voucher" that sat on the
+            voucher's own detail screen and did nothing — action_type is
+            'view_details' with a null action_url, which handleAction ignores. */}
+        {item.type === 'coach_voucher' && voucher && (
+          voucher.remaining > 0 ? (
+            <View style={s.redeemBlock}>
+              <Text style={s.redeemTitle}>Show this to your coach</Text>
+              <View style={s.qrFrame}>
+                <QRCode value={voucherQrValue(voucher.code)} size={190} backgroundColor="#FFFFFF" />
+              </View>
+              {/* The same code, readable. Cameras fail — bad light, cracked
+                  screen, a coach whose phone is in the car — and a lesson
+                  should not hinge on one. */}
+              <Text style={s.redeemCodeLabel}>Or give them this code</Text>
+              <Text style={s.redeemCode} selectable>{voucher.code}</Text>
+              {voucher.total > 1 && (
+                <Text style={s.redeemRemaining}>
+                  {voucher.remaining} of {voucher.total} sessions remaining
+                </Text>
+              )}
+              {/* Only the coach can redeem it, so showing the code is safe —
+                  worth saying, because a code on screen invites the question. */}
+              <Text style={s.redeemNote}>Only your coach can redeem this.</Text>
+            </View>
+          ) : (
+            <View style={[s.redeemBlock, s.redeemDone]}>
+              <Ionicons name="checkmark-circle" size={30} color={colors.success} />
+              <Text style={s.redeemDoneText}>Redeemed</Text>
+              <Text style={s.redeemNote}>This voucher has been used.</Text>
+            </View>
+          )
+        )}
+
+        {item.type !== 'coach_voucher' && item.actionType !== 'none' && (
           <TouchableOpacity
             style={[
               s.primaryBtn,
@@ -314,6 +366,22 @@ const s = StyleSheet.create({
     borderRadius: radius.card, paddingHorizontal: 14,
   },
 
+  redeemBlock: {
+    alignItems: 'center', gap: 8, paddingVertical: 20, paddingHorizontal: 16,
+    backgroundColor: colors.bg, borderRadius: radius.card,
+    borderWidth: 1, borderColor: colors.border, marginTop: 4,
+  },
+  redeemDone:      { paddingVertical: 26 },
+  redeemDoneText:  { color: colors.navy, fontSize: 17, fontWeight: '900' },
+  redeemTitle:     { color: colors.navy, fontSize: 15, fontWeight: '800' },
+  qrFrame:         { padding: 12, backgroundColor: '#FFFFFF', borderRadius: 12, marginVertical: 4 },
+  redeemCodeLabel: { color: colors.textSub, fontSize: 12, marginTop: 2 },
+  redeemCode: {
+    color: colors.navy, fontSize: 26, fontWeight: '900',
+    letterSpacing: 4, fontVariant: ['tabular-nums'],
+  },
+  redeemRemaining: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  redeemNote:      { color: colors.textSub, fontSize: 11, textAlign: 'center' },
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     borderRadius: radius.button, paddingVertical: 14, marginBottom: 20,
