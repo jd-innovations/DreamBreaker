@@ -177,13 +177,6 @@ export default function LessonOfferDetailScreen() {
             <Text style={s.terms}>{offer.terms}</Text>
           </>
         )}
-
-        <View style={s.noticeCard}>
-          <Ionicons name="information-circle-outline" size={16} color={L.gold} />
-          <Text style={s.noticeText}>
-            Purchasing isn't available yet — Coach Marketplace checkout is a later build phase.
-          </Text>
-        </View>
       </ScrollView>
 
       {/* ── CHECKOUT ── */}
@@ -325,9 +318,4 @@ const s = StyleSheet.create({
   sectionLabel: { color: L.navy, fontSize: 13, fontWeight: '700', marginBottom: 6 },
   terms: { color: L.textSub, fontSize: 13, lineHeight: 19, marginBottom: 16 },
 
-  noticeCard: {
-    flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: L.goldBg,
-    borderRadius: radius.card, padding: 12,
-  },
-  noticeText: { flex: 1, color: L.text, fontSize: 12, lineHeight: 17 },
 });
