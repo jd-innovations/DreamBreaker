@@ -14,13 +14,6 @@ const DEFAULT_EVENT_COVER_ASSET = require('../../assets/images/default-court-cov
 /** Bundled default as an RN image source (for `<Image source={...} />`). */
 export const DEFAULT_EVENT_COVER = DEFAULT_EVENT_COVER_ASSET;
 
-/**
- * The same bundled photo, named for callers that are not events - the facility
- * detail hero shows it when a facility has no photo of its own. Aliased rather
- * than duplicated so there is still one file to swap when the artwork changes.
- */
-export const DEFAULT_COURT_COVER = DEFAULT_EVENT_COVER_ASSET;
-
 // Resolved lazily and defensively: this module is imported by screens that are
 // also server-rendered for web, where asset resolution differs. Never resolve
 // at module scope — a throw there takes down the whole render.

@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, radius, displayText } from '@/theme';
-import { DEFAULT_COURT_COVER } from '@/lib/eventCover';
+import { DEFAULT_FACILITY_COVER } from '@/lib/facilityCover';
 import { goBack } from '@/lib/navigation';
 import { useSupportContext } from '@/lib/support/supportContext';
 import { appLinks } from '@/lib/appLinks';
@@ -255,15 +255,15 @@ function HeroPhoto({ uri, name }: { uri: string | null; name: string }) {
   if (uri) return <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />;
   // Facilities without a photo used to get a flat navy block with the venue's
   // initials, which read as a missing image rather than a considered one. They
-  // now get the same bundled court photo cover-less events already use; the
-  // hero's existing dark overlay and gradient keep the title legible over it.
+  // now get a bundled indoor-courts photo; the hero's existing dark overlay and
+  // gradient keep the title legible over it.
   // Initials stay as the last resort if even the bundled asset fails to load.
   const initials = name.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('');
   return (
     <View style={[StyleSheet.absoluteFill, s.heroFallback]}>
       <PickleballIcon size={44} color={L.gold} />
       <Text style={s.heroInitials}>{initials}</Text>
-      <Image source={DEFAULT_COURT_COVER} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <Image source={DEFAULT_FACILITY_COVER} style={StyleSheet.absoluteFill} resizeMode="cover" />
     </View>
   );
 }
