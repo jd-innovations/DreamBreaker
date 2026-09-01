@@ -7,6 +7,7 @@ import { colors, radius } from '@/theme';
 import { fetchActiveCoachOffersBrowse, type CoachOfferBrowseCard } from '@/lib/coach/offers';
 import { LoadingState, EmptyState, ErrorState } from '@/components';
 import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent } from '@/lib/coach/constants';
+import { DEFAULT_LESSON_COVER } from '@/lib/coach/defaultLessonCover';
 
 // Minimal player-facing browse surface for Coach Marketplace offers.
 // Deliberately NOT the real discovery/search experience (Phase 10 UI,
@@ -76,13 +77,11 @@ export default function LessonMarketplaceScreen() {
           renderItem={({ item }) => (
             <TouchableOpacity style={s.card} activeOpacity={0.85} onPress={() => router.push(`/lessons/${item.id}` as never)}>
               <View style={s.cardRow}>
-                {item.images[0] ? (
-                  <Image source={{ uri: item.images[0].url }} style={s.thumb} />
-                ) : (
-                  <View style={[s.thumb, s.thumbPlaceholder]}>
-                    <Ionicons name="school-outline" size={20} color={L.textSub} />
-                  </View>
-                )}
+                <Image
+                  source={item.images[0] ? { uri: item.images[0].url } : DEFAULT_LESSON_COVER}
+                  style={s.thumb}
+                  resizeMode="cover"
+                />
                 <View style={{ flex: 1 }}>
                   <Text style={s.cardTitle} numberOfLines={1}>{item.title}</Text>
                   <Text style={s.cardSub}>
@@ -127,7 +126,6 @@ const s = StyleSheet.create({
   card: { backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1, borderColor: L.border, padding: 12 },
   cardRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   thumb: { width: 64, height: 64, borderRadius: 10 },
-  thumbPlaceholder: { backgroundColor: L.page, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { color: L.navy, fontSize: 14, fontWeight: '700' },
   cardSub: { color: L.textSub, fontSize: 12, marginTop: 2 },
   cardLocation: { color: L.textSub, fontSize: 11, marginTop: 2 },

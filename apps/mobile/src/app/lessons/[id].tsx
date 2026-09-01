@@ -9,6 +9,7 @@ import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent } from '@/lib/coa
 import { useSession } from '@/hooks/useSession';
 import { useCoachOfferPayment } from '@/lib/payments/useCoachOfferPayment';
 import { coachOfferPaymentErrorMessage } from '@/lib/payments/coachOfferPaymentIntent';
+import { DEFAULT_LESSON_COVER } from '@/lib/coach/defaultLessonCover';
 
 // Offer detail + checkout.
 //
@@ -115,13 +116,11 @@ export default function LessonOfferDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
-        {offer.images[0] ? (
-          <Image source={{ uri: offer.images[0].url }} style={s.hero} />
-        ) : (
-          <View style={[s.hero, s.heroPlaceholder]}>
-            <Ionicons name="school-outline" size={40} color={L.textSub} />
-          </View>
-        )}
+        <Image
+          source={offer.images[0] ? { uri: offer.images[0].url } : DEFAULT_LESSON_COVER}
+          style={s.hero}
+          resizeMode="cover"
+        />
 
         {offer.premium_only && (
           <View style={s.premiumBadge}><Text style={s.premiumBadgeText}>PREMIUM MEMBERS ONLY</Text></View>
@@ -294,7 +293,6 @@ const s = StyleSheet.create({
 
   scroll: { paddingHorizontal: 20, paddingTop: 16 },
   hero: { width: '100%', height: 180, borderRadius: radius.card, marginBottom: 12 },
-  heroPlaceholder: { backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, alignItems: 'center', justifyContent: 'center' },
 
   premiumBadge: { alignSelf: 'flex-start', backgroundColor: L.navy, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 8 },
   premiumBadgeText: { color: L.bg, fontSize: 10, fontWeight: '800' },
