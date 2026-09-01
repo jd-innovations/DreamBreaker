@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Image, ActivityIndicator, Linking, Alert, Modal, Pressable, Share,
+  ScrollView, Image, ActivityIndicator, Linking, Modal, Pressable, Share,
 } from 'react-native';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -884,14 +884,6 @@ export default function FacilityDetailScreen() {
                     <Text style={s.emptyText}>No tournaments scheduled here yet.</Text>
                   </View>
                 )}
-            <TouchableOpacity
-              style={[s.ctaGhost, { marginTop: 14 }]}
-              activeOpacity={0.85}
-              onPress={() => Alert.alert('Coming Soon', 'Tournament hosting from facility pages is in progress.')}
-            >
-              <Ionicons name="trophy-outline" size={17} color={L.navy} />
-              <Text style={s.ctaGhostText}>Host Tournament Here</Text>
-            </TouchableOpacity>
           </View>
 
           {/* ── CTAS ── */}
@@ -900,17 +892,6 @@ export default function FacilityDetailScreen() {
               <Ionicons name="navigate-outline" size={18} color={L.white} />
               <Text style={s.ctaPrimaryText}>Directions</Text>
             </TouchableOpacity>
-
-            {facility.claim_status === 'unclaimed' && (
-              <TouchableOpacity
-                style={s.ctaGhost}
-                activeOpacity={0.85}
-                onPress={() => Alert.alert('Coming Soon', 'Facility claiming is in progress.')}
-              >
-                <Ionicons name="ribbon-outline" size={17} color={L.textMuted} />
-                <Text style={s.ctaGhostText}>Claim This Facility</Text>
-              </TouchableOpacity>
-            )}
           </View>
 
         </View>
