@@ -582,7 +582,15 @@ export default function CommunityEventScreen() {
   // the mapped EventShape above only carries pre-formatted display strings.
   const [rawPlayEvent, setRawPlayEvent] = useState<PlayEventWithOrganizer | null>(null);
 
+  // Measured rather than hardcoded so the floating support button clears
+  // this bar even if its height changes. The safe-area inset is subtracted
+  // because the button applies that itself - reporting the raw height would
+  // count it twice - and rounded because the support registry re-registers
+  // on any change to the serialized context.
+  const [barHeight, setBarHeight] = useState(0);
+
   useSupportContext({
+    bottomClearance: barHeight,
     feature: 'community_play_event',
     entityType: 'community_play_event',
     entityId: id,
@@ -1848,7 +1856,13 @@ export default function CommunityEventScreen() {
       </Animated.View>
 
       {/* ── FIXED BOTTOM BAR ── */}
-      <View style={[s.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+      <View
+        style={[s.bottomBar, { paddingBottom: insets.bottom + 12 }]}
+        onLayout={e => {
+          const h = Math.round(Math.max(0, e.nativeEvent.layout.height - insets.bottom));
+          setBarHeight(prev => (prev === h ? prev : h));
+        }}
+      >
         {renderBottomContent()}
       </View>
 

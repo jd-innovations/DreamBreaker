@@ -433,7 +433,15 @@ export default function QuickGameRosterScreen() {
   const [isOrganizer,   setIsOrganizer]   = useState(false);
   const [organizerProfile, setOrganizerProfile] = useState<OrganizerProfile | null>(null);
 
-  useSupportContext({ feature: 'quick_game', entityType: 'quick_game', entityId: gameId, entityLabel: gameTitle });
+  // Measured rather than hardcoded so the floating support button clears
+  // this bar even if its height changes. The safe-area inset is subtracted
+  // because the button applies that itself - reporting the raw height would
+  // count it twice - and rounded because the support registry re-registers
+  // on any change to the serialized context.
+  const [barHeight, setBarHeight] = useState(0);
+  const footerShown = !loading && isOrganizer;
+
+  useSupportContext({ feature: 'quick_game', entityType: 'quick_game', entityId: gameId, entityLabel: gameTitle, bottomClearance: footerShown ? barHeight : 0 });
 
   // ── Fetch ────────────────────────────────────────────────────────────────────
   // Non-organizer viewers can't SELECT the full play_participants table (RLS
@@ -754,8 +762,14 @@ export default function QuickGameRosterScreen() {
       )}
 
       {/* ── STICKY FOOTER — manual add is organizer-only ── */}
-      {!loading && isOrganizer && (
-        <View style={[s.footer, { paddingBottom: insets.bottom + 12 }]}>
+      {footerShown && (
+        <View
+        style={[s.footer, { paddingBottom: insets.bottom + 12 }]}
+        onLayout={e => {
+          const h = Math.round(Math.max(0, e.nativeEvent.layout.height - insets.bottom));
+          setBarHeight(prev => (prev === h ? prev : h));
+        }}
+      >
           <PrimaryButton
             label={isFull ? 'Game is Full' : 'Add Player'}
             icon={isFull ? 'lock-closed-outline' : 'person-add-outline'}

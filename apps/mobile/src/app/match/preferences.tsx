@@ -72,7 +72,14 @@ const cg = StyleSheet.create({
 export default function PartnerPreferencesScreen() {
   const insets = useSafeAreaInsets();
 
-  useSupportContext({ feature: 'match' });
+  // Measured rather than hardcoded so the floating support button clears
+  // this bar even if its height changes. The safe-area inset is subtracted
+  // because the button applies that itself - reporting the raw height would
+  // count it twice - and rounded because the support registry re-registers
+  // on any change to the serialized context.
+  const [barHeight, setBarHeight] = useState(0);
+
+  useSupportContext({ feature: 'match', bottomClearance: barHeight });
 
   const [loading, setLoading]           = useState(true);
   const [saving, setSaving]             = useState(false);
@@ -286,7 +293,13 @@ export default function PartnerPreferencesScreen() {
       </ScrollView>
 
       {/* Sticky Save */}
-      <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
+      <View
+        style={[s.footer, { paddingBottom: insets.bottom + 16 }]}
+        onLayout={e => {
+          const h = Math.round(Math.max(0, e.nativeEvent.layout.height - insets.bottom));
+          setBarHeight(prev => (prev === h ? prev : h));
+        }}
+      >
         <TouchableOpacity style={[s.saveBtn, saved && s.saveBtnDone]} onPress={handleSave} activeOpacity={0.85} disabled={saving}>
           {saving ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
