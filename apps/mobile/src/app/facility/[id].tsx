@@ -264,7 +264,7 @@ function HeroPhoto({ uri }: { uri: string | null }) {
   return (
     <Image
       source={uri ? { uri } : DEFAULT_FACILITY_COVER}
-      style={StyleSheet.absoluteFill}
+      style={s.heroImage}
       resizeMode="cover"
     />
   );
@@ -976,6 +976,13 @@ const s = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: L.bg },
 
   hero:         { width: '100%', height: HERO_H, position: 'relative', overflow: 'hidden' },
+  // Explicit height rather than StyleSheet.absoluteFill. absoluteFill was
+  // resolving against something taller than the hero, so `cover` fitted the
+  // photo to that larger box and the hero showed only its top strip - all
+  // ceiling, no courts. Pinning the height to HERO_H makes the box the image
+  // is fitted to the same box the user sees. The asset is 4:3 and the hero is
+  // ~1.3:1, so cover now crops almost nothing.
+  heroImage:    { position: 'absolute', top: 0, left: 0, width: '100%', height: HERO_H },
 
   topControls: {
     position: 'absolute', left: spacing.screenH, right: spacing.screenH,
