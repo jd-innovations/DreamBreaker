@@ -81,7 +81,14 @@ Deno.serve(async (req: Request) => {
     const { data: pending } = await service
       .from("coach_payout_batches")
       .select("id, coach_id, amount_cents, stripe_account_id")
-      .eq("status", "pending");
+      // 'failed' as well as 'pending'. A failed batch keeps its items, and the
+      // payable view excludes any redemption that appears in an item row
+      // whatever the batch status — so without retrying failures, one
+      // transient error (an insufficient balance on the day the run fires)
+      // would strand that coach's money permanently, invisible to everyone.
+      // Safe to retry because the Stripe idempotency key is the batch id: a
+      // transfer Stripe already accepted comes back rather than repeating.
+      .in("status", ["pending", "failed"]);
 
     for (const b of pending ?? []) {
       summary.retried++;
