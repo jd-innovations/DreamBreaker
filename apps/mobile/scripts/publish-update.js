@@ -45,6 +45,7 @@ if (!channel) {
   process.exit(1);
 }
 
+// Belt to the --environment braces: harmless if EAS supplies the same values.
 const env = { ...process.env, ...(build.env ?? {}) };
 // spawnSync runs through a shell (npx needs one on Windows), which re-splits
 // on whitespace — and npm has already stripped the caller's quotes by the time
@@ -52,9 +53,23 @@ const env = { ...process.env, ...(build.env ?? {}) };
 // as one argument instead of arriving as three unexpected ones.
 const passthrough = process.argv.slice(3).map(a => (/\s/.test(a) ? JSON.stringify(a) : a));
 
-const args = ['eas-cli', 'update', '--branch', channel, '--platform', 'ios', ...passthrough];
+// --environment is the whole point. `eas update` does NOT read eas.json's
+// build.<profile>.env, and it does NOT inherit EXPO_PUBLIC_* from the invoking
+// shell — it loads them from the named EAS environment. Without this flag the
+// bundle shipped with EXPO_PUBLIC_APP_ENV unset, resolveAppEnv() fell back to
+// 'production', and every feature marked 'hidden' vanished from an internal
+// build. Verify by the "Environment variables ... loaded from" line the CLI
+// prints: EXPO_PUBLIC_APP_ENV must appear in it.
+const environment = build.environment ?? profile;
+const args = [
+  'eas-cli', 'update', '--branch', channel, '--platform', 'ios',
+  '--environment', environment,
+  ...passthrough,
+];
 
-console.log(`Publishing to branch "${channel}" with:`);
+console.log(`Publishing to branch "${channel}" using EAS environment "${environment}".`);
+console.log("Check the CLI output: EXPO_PUBLIC_APP_ENV must appear in its loaded-from line.");
+console.log('Build-profile env (fallback only):');
 for (const [k, v] of Object.entries(build.env ?? {})) console.log(`  ${k}=${v}`);
 if (!build.env || Object.keys(build.env).length === 0) {
   console.log('  (no env in this build profile — nothing to inline)');
