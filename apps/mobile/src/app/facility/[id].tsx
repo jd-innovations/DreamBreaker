@@ -13,7 +13,7 @@ import { DEFAULT_FACILITY_COVER } from '@/lib/facilityCover';
 import { goBack } from '@/lib/navigation';
 import { useSupportContext } from '@/lib/support/supportContext';
 import { appLinks } from '@/lib/appLinks';
-import { AppIcon, PickleballIcon, StatusChip } from '@/components';
+import { AppIcon, StatusChip } from '@/components';
 import { VenueMapCard } from '@/components/VenueMapCard';
 import {
   fetchFacilityById,
@@ -249,22 +249,24 @@ const ic = StyleSheet.create({
   priceUnavailable: { color: L.textMuted, fontSize: 11, fontWeight: '500' },
 });
 
-// ─── Hero photo backdrop (image or initials fallback) ──────────────────────────
+// ─── Hero photo backdrop ──────────────────────────────────────────────────────
 
-function HeroPhoto({ uri, name }: { uri: string | null; name: string }) {
-  if (uri) return <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />;
-  // Facilities without a photo used to get a flat navy block with the venue's
-  // initials, which read as a missing image rather than a considered one. They
-  // now get a bundled indoor-courts photo; the hero's existing dark overlay and
-  // gradient keep the title legible over it.
-  // Initials stay as the last resort if even the bundled asset fails to load.
-  const initials = name.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('');
+// A facility with no photo of its own shows a bundled courts image rather than
+// the flat navy block with venue initials it used to get, which read as a
+// missing image rather than a chosen one. The hero's existing dark overlay and
+// gradient sit above it and keep the title legible.
+//
+// Both branches return the SAME shape deliberately. The first version nested
+// the fallback image inside the initials View, which escaped the hero and
+// painted the whole screen; there is no reason for the two paths to differ
+// structurally when only the source changes.
+function HeroPhoto({ uri }: { uri: string | null }) {
   return (
-    <View style={[StyleSheet.absoluteFill, s.heroFallback]}>
-      <PickleballIcon size={44} color={L.gold} />
-      <Text style={s.heroInitials}>{initials}</Text>
-      <Image source={DEFAULT_FACILITY_COVER} style={StyleSheet.absoluteFill} resizeMode="cover" />
-    </View>
+    <Image
+      source={uri ? { uri } : DEFAULT_FACILITY_COVER}
+      style={StyleSheet.absoluteFill}
+      resizeMode="cover"
+    />
   );
 }
 
@@ -671,7 +673,7 @@ export default function FacilityDetailScreen() {
       >
         {/* ── HERO ── */}
         <View style={s.hero}>
-          <HeroPhoto uri={facility.primaryPhotoUrl} name={facility.name} />
+          <HeroPhoto uri={facility.primaryPhotoUrl} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.35)' }]} />
           <LinearGradient
             colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.75)']}
@@ -973,9 +975,7 @@ const s = StyleSheet.create({
   root:   { flex: 1, backgroundColor: L.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: L.bg },
 
-  hero:         { width: '100%', height: HERO_H, position: 'relative' },
-  heroFallback: { backgroundColor: L.navy, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  heroInitials: { color: L.gold, fontSize: 28, fontWeight: '900', letterSpacing: 1 },
+  hero:         { width: '100%', height: HERO_H, position: 'relative', overflow: 'hidden' },
 
   topControls: {
     position: 'absolute', left: spacing.screenH, right: spacing.screenH,
