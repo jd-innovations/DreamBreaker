@@ -56,6 +56,7 @@ function getMenuItems(directorStatus: string | null, coachStatus: string | null)
     { icon: 'school-outline',        label: 'Lesson Marketplace', sub: 'Browse coach offers',        route: '/lessons', feature: 'lessonMarketplace' },
     directorRow,
     { ...coachRow, feature: 'coachMarketplace' },
+    { icon: 'business-outline',      label: 'Manage a Facility', sub: 'Run your courts on Pickleball App', route: '/facility/apply', protected: true },
     { icon: 'people-outline',        label: 'My Connections',  sub: 'Partner Finder connections',  route: '/match/connections', protected: true },
     { icon: 'notifications-outline', label: 'Notifications',   sub: 'Manage alerts',               route: '/notifications-settings' },
     { icon: 'card-outline',          label: 'Payment History', sub: 'Holds & entries',             route: '/payments-settings',         protected: true  },

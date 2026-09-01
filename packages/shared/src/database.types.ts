@@ -1785,6 +1785,80 @@ export type Database = {
           },
         ]
       }
+      facility_manager_applications: {
+        Row: {
+          applicant_id: string
+          applicant_note: string | null
+          created_at: string
+          created_facility_id: string | null
+          facility_id: string | null
+          id: string
+          proposed: Json
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          applicant_id: string
+          applicant_note?: string | null
+          created_at?: string
+          created_facility_id?: string | null
+          facility_id?: string | null
+          id?: string
+          proposed?: Json
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          applicant_id?: string
+          applicant_note?: string | null
+          created_at?: string
+          created_facility_id?: string | null
+          facility_id?: string | null
+          id?: string
+          proposed?: Json
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facility_manager_applications_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facility_manager_applications_created_facility_id_fkey"
+            columns: ["created_facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facility_manager_applications_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facility_manager_applications_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       facility_members: {
         Row: {
           created_at: string
@@ -6418,6 +6492,14 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["director_status"]
       }
+      apply_to_manage_facility: {
+        Args: { p_facility_id: string; p_note?: string; p_proposed?: Json }
+        Returns: string
+      }
+      approve_facility_manager_application: {
+        Args: { p_id: string; p_review_note?: string }
+        Returns: string
+      }
       can_review: {
         Args: { p_subject_id: string; p_subject_type: string }
         Returns: boolean
@@ -6859,6 +6941,21 @@ export type Database = {
       expire_registration_group_invites: { Args: never; Returns: number }
       expire_stale_holds: { Args: never; Returns: number }
       expire_stale_reservation_holds: { Args: never; Returns: number }
+      facility_duplicate_candidates: {
+        Args: {
+          p_latitude: number
+          p_longitude: number
+          p_name: string
+          p_radius_meters?: number
+        }
+        Returns: {
+          address: string
+          city: string
+          distance_meters: number
+          id: string
+          name: string
+        }[]
+      }
       facility_id_for_owner: {
         Args: {
           p_owner_id: string
@@ -7150,6 +7247,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      list_facility_manager_applications: {
+        Args: { p_status?: string }
+        Returns: {
+          applicant_email: string
+          applicant_id: string
+          applicant_name: string
+          applicant_note: string
+          competing_applications: number
+          created_at: string
+          facility_id: string
+          facility_name: string
+          id: string
+          is_new_facility: boolean
+          proposed: Json
+          status: string
+        }[]
+      }
       list_review_candidates: {
         Args: { p_limit?: number }
         Returns: {
@@ -7378,6 +7492,10 @@ export type Database = {
         }[]
       }
       reject_deleted_users: { Args: never; Returns: undefined }
+      reject_facility_manager_application: {
+        Args: { p_id: string; p_review_note?: string }
+        Returns: undefined
+      }
       reservation_asset_hourly_rate_cents: {
         Args: {
           p_asset_id: string
@@ -8263,6 +8381,10 @@ export type Database = {
           status: string
           teams: Json
         }[]
+      }
+      withdraw_facility_manager_application: {
+        Args: { p_id: string }
+        Returns: undefined
       }
     }
     Enums: {
