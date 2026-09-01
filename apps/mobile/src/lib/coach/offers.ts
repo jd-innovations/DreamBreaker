@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { IS_PRODUCTION_BUILD } from '@/lib/featureFlags';
 import type { Tables, TablesUpdate } from '@shared/database.types';
 
 // Coach Marketplace V1 Phase 2 — Coach Offers service layer. Mirrors
@@ -63,18 +64,33 @@ export type CoachOfferBrowseCard = CoachOfferWithImages & {
   facility: { name: string; city: string; state: string } | null;
 };
 
+// !inner so the coach row can be filtered on, not merely embedded.
 const OFFER_BROWSE_SELECT = `
   *,
   images:coach_offer_images(*),
-  coach:profiles!coach_offers_coach_id_fkey(full_name, avatar_url),
+  coach:profiles!coach_offers_coach_id_fkey!inner(full_name, avatar_url, coach_status),
   facility:facilities!coach_offers_facility_id_fkey(name, city, state)
 `.trim();
 
 export async function fetchActiveCoachOffersBrowse(): Promise<CoachOfferBrowseCard[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('coach_offers')
     .select(OFFER_BROWSE_SELECT)
-    .eq('status', 'active')
+    .eq('status', 'active');
+
+  // Production shows only payout-ready coaches.
+  //
+  // coach_status 'test_ready' is a development fixture — 13 of 14 coaches sit
+  // in it, holding 25 of the 26 active offers, none with a Stripe Connect
+  // account. create_coach_offer_purchase accepts test_ready, so without this a
+  // real buyer could pay for a lesson from a fixture account that can never be
+  // paid out or delivered. Internal builds keep seeing them, because that
+  // fixture data is what internal QA tests against.
+  if (IS_PRODUCTION_BUILD) {
+    query = query.eq('coach.coach_status', 'active');
+  }
+
+  const { data, error } = await query
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data as unknown as CoachOfferBrowseCard[]).map((row) => ({

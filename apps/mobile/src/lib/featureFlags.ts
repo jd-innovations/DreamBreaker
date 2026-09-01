@@ -87,13 +87,17 @@ export const FEATURE_VISIBILITY: Record<FeatureKey, FeatureVisibility> = {
   paidBooking: 'hidden',
   // Filter/Sort buttons on booking results are unimplemented dead-end CTAs.
   bookingFilters: 'deferred',
-  // Coach activation drives real Stripe Connect onboarding; purchase, payout,
-  // and redemption phases are unbuilt.
-  coachMarketplace: 'hidden',
-  // Browse-only surface for offers that cannot be purchased yet.
-  lessonMarketplace: 'hidden',
-  // Wallet renders real entitlements whose redemption action is unbuilt.
-  wallet: 'hidden',
+  // Phases 0-7 built. Purchase, redemption and payout batching are proven
+  // against production with real money; Connect onboarding was exercised end
+  // to end. Production browse is additionally filtered to coaches with
+  // coach_status 'active', so the test_ready fixtures are not sellable to real
+  // buyers (see lib/coach/offers.ts).
+  coachMarketplace: 'included',
+  // No longer browse-only: checkout, vouchers and redemption all work.
+  lessonMarketplace: 'included',
+  // Redemption is built (Phase 5): a voucher shows a QR and an 8-character
+  // code, and a coach can consume it.
+  wallet: 'included',
   // Anthropic-backed listing rewrite; key provisioning is unverified.
   marketplaceAiAssist: 'hidden',
   // Read-only, real-data, and the destination the working log-session flow

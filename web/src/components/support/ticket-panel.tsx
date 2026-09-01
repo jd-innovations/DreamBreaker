@@ -24,6 +24,16 @@ interface SupportTicketRow {
   resolved_at: string | null;
   reporter_name?: string;
   reporter_avatar?: string | null;
+  // The support context the app attached when the ticket was filed. A coach
+  // refund request carries the purchase id here, which is the only argument
+  // refund-coach-purchase needs — without it an admin is hunting for the row.
+  context?: {
+    entityType?: string;
+    entityId?: string;
+    entityLabel?: string;
+    action?: string;
+    metadata?: Record<string, unknown>;
+  } | null;
 }
 
 interface TicketMessage {
@@ -62,6 +72,8 @@ export function TicketPanel({ currentUserId }: { currentUserId: string }) {
   const [tickets, setTickets] = useState<SupportTicketRow[]>([]);
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("open");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [refunding, setRefunding] = useState(false);
+  const [refundResult, setRefundResult] = useState<string | null>(null);
   const [messages, setMessages] = useState<TicketMessage[]>([]);
   const [loadingTickets, setLoadingTickets] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
@@ -75,7 +87,7 @@ export function TicketPanel({ currentUserId }: { currentUserId: string }) {
     const supabase = createClient();
     const { data: rows } = await supabase
       .from("support_tickets")
-      .select("id,user_id,conversation_id,subject,category,status,created_at,updated_at,resolved_at")
+      .select("id,user_id,conversation_id,subject,category,status,created_at,updated_at,resolved_at,context")
       .order("updated_at", { ascending: false });
 
     const ticketRows = (rows ?? []) as SupportTicketRow[];
@@ -111,6 +123,64 @@ export function TicketPanel({ currentUserId }: { currentUserId: string }) {
   }, [loadTickets]);
 
   const selected = tickets.find((t) => t.id === selectedId) ?? null;
+
+  // Only for tickets the app filed as a coach refund request. Anything else
+  // has no purchase to refund, and guessing one from the subject line would be
+  // a very expensive mistake.
+  const refundPurchaseId =
+    selected?.context?.action === "refund_request" &&
+    selected.context.entityType === "coach_offer_purchase"
+      ? selected.context.entityId ?? null
+      : null;
+
+  async function handleRefund() {
+    if (!refundPurchaseId || refunding) return;
+    const reason = window.prompt(
+      "Reason for this refund (recorded permanently against the purchase):",
+      selected?.subject ?? "",
+    );
+    if (!reason?.trim()) return;
+
+    // Typed in full, because this moves money and cannot be undone from here.
+    if (window.prompt('Type REFUND to confirm') !== "REFUND") return;
+
+    setRefunding(true);
+    setRefundResult(null);
+    try {
+      // The caller's own session token: claim_coach_refund runs is_admin()
+      // against auth.uid(), so the refund is attributed to the actual admin
+      // rather than to a service role nobody can be held to.
+      const { data: { session } } = await createClient().auth.getSession();
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/refund-coach-purchase`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token ?? ""}`,
+          },
+          body: JSON.stringify({ purchaseId: refundPurchaseId, reason: reason.trim() }),
+        },
+      );
+      const body = await res.json();
+      if (!res.ok) {
+        setRefundResult(`Failed: ${body.error ?? res.status}${body.detail ? ` — ${body.detail}` : ""}`);
+        return;
+      }
+      const shortfall = Number(body.clawbackShortfallCents ?? 0);
+      setRefundResult(
+        `Refunded $${(Number(body.amountCents ?? 0) / 100).toFixed(2)}.` +
+        (Number(body.payoutReversedCents ?? 0) > 0
+          ? ` Reversed $${(Number(body.payoutReversedCents) / 100).toFixed(2)} from the coach.` : "") +
+        (shortfall > 0
+          ? ` $${(shortfall / 100).toFixed(2)} could not be reversed and will be withheld from future payouts.` : ""),
+      );
+    } catch (err) {
+      setRefundResult(`Failed: ${err instanceof Error ? err.message : "unknown error"}`);
+    } finally {
+      setRefunding(false);
+    }
+  }
   const selectedConversationId = selected?.conversation_id ?? null;
 
   const loadThread = useCallback(async (conversationId: string) => {
@@ -243,6 +313,34 @@ export function TicketPanel({ currentUserId }: { currentUserId: string }) {
               <div className="min-w-0">
                 <div className="text-sm font-semibold truncate">{selected.subject}</div>
                 <div className="text-xs text-muted-foreground">{selected.reporter_name} · {selected.category.replace("_", " ")}</div>
+                {refundPurchaseId && (
+                  <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
+                    <div className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+                      Coach refund request
+                    </div>
+                    <div className="mt-1 text-xs text-amber-800 dark:text-amber-300">
+                      {selected.context?.entityLabel ?? "Lesson"}
+                      {selected.context?.metadata?.reason
+                        ? ` · ${String(selected.context.metadata.reason).replace(/_/g, " ")}`
+                        : ""}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRefund}
+                      disabled={refunding}
+                      className="mt-2 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                    >
+                      {refunding ? "Refunding…" : "Refund this purchase"}
+                    </button>
+                    {refundResult && (
+                      <div className="mt-2 text-xs text-amber-900 dark:text-amber-200">{refundResult}</div>
+                    )}
+                    <div className="mt-2 text-[11px] text-amber-700 dark:text-amber-400">
+                      Refunds the full amount, revokes any unredeemed voucher, and reverses the
+                      coach&rsquo;s payout where one was made. Cannot be undone here.
+                    </div>
+                  </div>
+                )}
               </div>
               <select
                 value={selected.status}
