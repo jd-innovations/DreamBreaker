@@ -15,7 +15,8 @@ import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilitie
 import { fetchCourtById } from '@/lib/supabase/courts';
 import { fetchBallMachineById } from '@/lib/supabase/ballMachines';
 import {
-  fetchReservationPlayersWithProfiles, cancelReservation, playersNeeded, parseTstzrange,
+  fetchReservationPlayersWithProfiles, cancelReservationWithRefund, fetchReservationRefundQuote,
+  playersNeeded, parseTstzrange,
   type ReservationPlayerWithProfile, type ReservationStatus,
 } from '@/lib/supabase/reservations';
 import {
@@ -142,11 +143,27 @@ export default function GameStatusScreen() {
     router.push('/booking/players' as never);
   }
 
-  function handleCancel() {
+  // Phase 8. The quote is fetched BEFORE the confirmation is shown, so the
+  // player is told what they get back — or that they get nothing — while they
+  // can still decide. Cancelling first and explaining afterwards is how people
+  // end up surprised by a charge.
+  async function handleCancel() {
     if (!reservation) return;
+
+    const quote = await fetchReservationRefundQuote(reservation.id);
+    const money = (c: number) => `$${(c / 100).toFixed(2)}`;
+
+    const body = !quote || quote.reason === 'no_settled_payment'
+      ? `Cancel your reservation for ${assetName ?? 'this booking'}? This cannot be undone.`
+      : quote.refundable
+        ? `You will be refunded ${money(quote.refundableCents)}.\n\nThis cannot be undone.`
+        : quote.reason === 'already_refunded'
+          ? 'This booking has already been refunded. Cancelling will not return anything further.'
+          : `This is inside the facility's ${quote.windowHours}-hour cancellation window, so it is not refundable. You will still be charged.\n\nThis cannot be undone.`;
+
     Alert.alert(
       'Cancel Reservation',
-      `Cancel your reservation for ${assetName ?? 'this booking'}? This cannot be undone.`,
+      body,
       [
         { text: 'Keep Reservation', style: 'cancel' },
         {
@@ -155,11 +172,32 @@ export default function GameStatusScreen() {
           onPress: async () => {
             setCancelling(true);
             try {
-              await cancelReservation(reservation.id);
+              const res = await cancelReservationWithRefund(reservation.id);
+              if (!res.ok) {
+                Alert.alert(
+                  'Could Not Cancel',
+                  res.code.includes('already_terminal')
+                    ? 'This reservation is already cancelled or expired.'
+                    : res.code.includes('not_authorized')
+                      ? 'Only the organizer or facility staff can cancel this.'
+                      : 'Something went wrong. Please try again.',
+                );
+                return;
+              }
               await refresh();
-            } catch (e) {
-              const code = e instanceof Error ? e.message : 'unknown_error';
-              Alert.alert('Could Not Cancel', code === 'already_terminal' ? 'This reservation is already cancelled or expired.' : 'Something went wrong. Please try again.');
+
+              if (res.result.refunded) {
+                Alert.alert('Cancelled', `${money(res.result.refundedCents)} is on its way back to your card.`);
+              } else if (res.result.refundPending) {
+                // The booking is cancelled and the amount is recorded; only the
+                // Stripe call failed. Saying "no refund" here would be wrong.
+                Alert.alert(
+                  'Cancelled',
+                  'Your refund is recorded and being processed. Contact support if it has not arrived in a few days.',
+                );
+              }
+            } catch {
+              Alert.alert('Could Not Cancel', 'Something went wrong. Please try again.');
             } finally {
               setCancelling(false);
             }

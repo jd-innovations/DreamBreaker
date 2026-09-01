@@ -109,10 +109,92 @@ export async function joinReservation(reservationId: string): Promise<Reservatio
   return data as ReservationPlayer;
 }
 
+/**
+ * Cancels without touching money.
+ *
+ * Kept for callers that have nothing to refund. Anything a player PAID for
+ * should go through cancelReservationWithRefund() instead: this RPC only sets
+ * status and cancelled_at, so using it on a paid booking cancels the slot and
+ * silently leaves the money with the platform.
+ */
 export async function cancelReservation(reservationId: string): Promise<Reservation> {
   const { data, error } = await supabase.rpc('cancel_reservation', { p_reservation_id: reservationId });
   if (error) throw error;
   return data as Reservation;
+}
+
+export type ReservationRefundQuote = {
+  refundable: boolean;
+  refundableCents: number;
+  windowHours: number;
+  hoursUntilSlot: number;
+  reason: string | null;
+};
+
+/**
+ * What cancelling now would return, so the confirmation can say it BEFORE the
+ * player commits. Derived server-side from what was actually paid.
+ */
+export async function fetchReservationRefundQuote(
+  reservationId: string,
+): Promise<ReservationRefundQuote | null> {
+  const { data, error } = await supabase.rpc('compute_reservation_refund', {
+    p_reservation_id: reservationId,
+  });
+  if (error) return null;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return {
+    refundable: !!row.refundable,
+    refundableCents: row.refundable_cents ?? 0,
+    windowHours: row.window_hours ?? 0,
+    hoursUntilSlot: Number(row.hours_until_slot ?? 0),
+    reason: row.reason,
+  };
+}
+
+export type CancelWithRefundResult = {
+  cancelled: boolean;
+  refunded: boolean;
+  refundedCents: number;
+  /** The booking is cancelled and the refund is recorded but not yet sent. */
+  refundPending: boolean;
+  reason: string | null;
+};
+
+/**
+ * Cancel, and issue whatever the facility's cancellation policy owes.
+ *
+ * Goes through the cancel-reservation edge function because a refund needs
+ * Stripe. The function decides the amount itself — nothing here sends one.
+ *
+ * A booking cancelled inside the window still cancels; it just is not
+ * refunded, and the facility is paid for the slot instead.
+ */
+export async function cancelReservationWithRefund(
+  reservationId: string,
+): Promise<{ ok: true; result: CancelWithRefundResult } | { ok: false; code: string }> {
+  const { data, error } = await supabase.functions.invoke('cancel-reservation', {
+    body: { reservationId },
+  });
+
+  if (error) {
+    // The function returns a JSON body with the real reason on non-2xx;
+    // functions.invoke surfaces only a generic message.
+    const code = typeof data?.error === 'string' ? data.error : 'cancel_failed';
+    return { ok: false, code };
+  }
+
+  return {
+    ok: true,
+    result: {
+      cancelled: !!data?.cancelled,
+      refunded: !!data?.refunded,
+      refundedCents: data?.refundedCents ?? 0,
+      refundPending: !!data?.refundPending,
+      reason: data?.reason ?? null,
+    },
+  };
 }
 
 // Self-serve leave -- no capacity math needed, so this is a direct delete

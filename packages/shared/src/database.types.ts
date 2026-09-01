@@ -6815,6 +6815,17 @@ export type Database = {
           refundable_cents: number
         }[]
       }
+      compute_reservation_refund: {
+        Args: { p_reservation_id: string }
+        Returns: {
+          hours_until_slot: number
+          payment_id: string
+          reason: string
+          refundable: boolean
+          refundable_cents: number
+          window_hours: number
+        }[]
+      }
       confirm_reservation: {
         Args: { p_reservation_id: string }
         Returns: {
