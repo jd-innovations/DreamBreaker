@@ -129,7 +129,13 @@ export default function LessonOfferDetailScreen() {
         <Text style={s.title}>{offer.title}</Text>
 
         {offer.coach && (
-          <View style={s.coachRow}>
+          // The only route into the coach profile. Without it that screen is
+          // unreachable, and the coach's other lessons undiscoverable from here.
+          <TouchableOpacity
+            style={s.coachRow}
+            activeOpacity={0.7}
+            onPress={() => router.push(`/coach/${offer.coach_id}` as never)}
+          >
             {offer.coach.avatar_url ? (
               <Image source={{ uri: offer.coach.avatar_url }} style={s.coachAvatar} />
             ) : (
@@ -138,7 +144,8 @@ export default function LessonOfferDetailScreen() {
               </View>
             )}
             <Text style={s.coachName}>{offer.coach.full_name}</Text>
-          </View>
+            <Ionicons name="chevron-forward" size={14} color={L.textSub} />
+          </TouchableOpacity>
         )}
 
         <View style={s.priceCard}>

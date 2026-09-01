@@ -14,6 +14,7 @@ import { goBack } from '@/lib/navigation';
 import { isTournamentCompleted, getAllBrackets } from '@/lib/directorBracketStore';
 import { isTournamentCompleted as fetchHasPublishedResults } from '@/lib/supabase/brackets';
 import { StatusChip, AddToCalendarButton } from '@/components';
+import { InfoTooltip } from '@/components/InfoTooltip';
 import type { CalendarEventInput } from '@/lib/calendarEvents';
 import { withLink } from '@/lib/calendarEvents';
 import {
@@ -949,39 +950,14 @@ export default function TournamentDetail() {
       </Animated.ScrollView>
 
       {/* ── HOLD MY SPOT TOOLTIP ── */}
-      <Modal
+      <InfoTooltip
         visible={holdTooltip}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setHoldTooltip(false)}
-      >
-        <Pressable style={tt.backdrop} onPress={() => setHoldTooltip(false)}>
-          <Pressable style={tt.card} onPress={() => {}}>
-            {/* Gold icon header */}
-            <View style={tt.iconRow}>
-              <View style={tt.iconCircle}>
-                <Ionicons name="shield-checkmark-outline" size={26} color={L.gold} />
-              </View>
-            </View>
-
-            <Text style={tt.title}>Hold My Spot</Text>
-
-            <Text style={tt.body}>
-              Reserve your spot with a {fmt(tournament.holdFeeCents)} deposit. The deposit is applied toward your entry fee and is non-refundable.
-            </Text>
-
-            <View style={tt.divider} />
-
-            <Text style={tt.footer}>
-              Full registration is still required before registration closes.
-            </Text>
-
-            <TouchableOpacity style={tt.doneBtn} onPress={() => setHoldTooltip(false)} activeOpacity={0.85}>
-              <Text style={tt.doneBtnText}>Done</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        onClose={() => setHoldTooltip(false)}
+        icon="shield-checkmark-outline"
+        title="Hold My Spot"
+        body={`Reserve your spot with a ${fmt(tournament.holdFeeCents)} deposit. The deposit is applied toward your entry fee and is non-refundable.`}
+        footer="Full registration is still required before registration closes."
+      />
 
       {/* ── DIRECTOR PROFILE SHEET ── */}
       <Modal
@@ -1522,47 +1498,6 @@ const s = StyleSheet.create({
 
 // ─── Tooltip styles ───────────────────────────────────────────────────────────
 
-const tt = StyleSheet.create({
-  backdrop: {
-    flex: 1, backgroundColor: 'rgba(10,18,40,0.55)',
-    alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  card: {
-    width: '100%', backgroundColor: L.bg,
-    borderRadius: 20, padding: 24,
-    shadowColor: '#000', shadowOpacity: 0.18,
-    shadowRadius: 20, shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
-  },
-  iconRow:   { alignItems: 'center', marginBottom: 14 },
-  iconCircle:{
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: L.goldLight,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  title: {
-    fontSize: 20, fontWeight: '900', color: L.navy,
-    textAlign: 'center', marginBottom: 12,
-  },
-  body: {
-    fontSize: 15, color: L.text, lineHeight: 22,
-    textAlign: 'center', fontWeight: '400',
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth, backgroundColor: L.border,
-    marginVertical: 16,
-  },
-  footer: {
-    fontSize: 13, color: L.textSub, lineHeight: 19,
-    textAlign: 'center', fontWeight: '500', marginBottom: 20,
-  },
-  doneBtn: {
-    backgroundColor: L.gold, borderRadius: 14,
-    paddingVertical: 14, alignItems: 'center',
-  },
-  doneBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
-});
 
 // ─── Bottom sheet styles (venue map / director profile) ───────────────────────
 

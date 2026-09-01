@@ -17,6 +17,7 @@ export const appRoutes = {
   marketplaceListing: (id: string) => `/marketplace/${segment(id)}`,
   booking: (id: string) => `/booking/${segment(id)}`,
   coachOffer: (id: string) => `/coach/offers/${segment(id)}`,
+  coach: (id: string) => `/coach/${segment(id)}`,
   claim: (token: string) => `/claim/${segment(token)}`,
   facility: (id: string) => `/facility/${segment(id)}`,
 };
@@ -29,6 +30,7 @@ export const appLinks = {
   marketplaceListing: (id: string) => absolute(appRoutes.marketplaceListing(id)),
   booking: (id: string) => absolute(appRoutes.booking(id)),
   coachOffer: (id: string) => absolute(appRoutes.coachOffer(id)),
+  coach: (id: string) => absolute(appRoutes.coach(id)),
   claim: (token: string) => absolute(appRoutes.claim(token)),
   facility: (id: string) => absolute(appRoutes.facility(id)),
 };
