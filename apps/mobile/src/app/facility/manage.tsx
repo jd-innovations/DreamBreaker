@@ -10,9 +10,10 @@ import { colors, radius, spacing, typography } from '@/theme';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
 import {
-  fetchManagedFacilities, fetchCourts, saveCourt, deactivateCourt, fetchStaff,
-  type ManagedFacility, type Court, type StaffMember,
+  fetchManagedFacilities, fetchCourts, saveCourt, deactivateCourt, fetchStaff, fetchPayoutStatus,
+  type ManagedFacility, type Court, type StaffMember, type PayoutStatus,
 } from '@/lib/supabase/facilityManagement';
+import { startConnectOnboarding } from '@/lib/payments/connectOnboarding';
 
 // Facility Marketplace Phase 2 — courts and staff.
 //
@@ -51,6 +52,8 @@ export default function FacilityManageScreen() {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<CourtDraft | null>(null);
   const [busy, setBusy] = useState(false);
+  const [payout, setPayout] = useState<PayoutStatus | null>(null);
+  const [connecting, setConnecting] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.id) { setLoading(false); return; }
@@ -71,12 +74,16 @@ export default function FacilityManageScreen() {
 
   const loadDetail = useCallback(async (facilityId: string) => {
     try {
-      const [c, s] = await Promise.all([fetchCourts(facilityId), fetchStaff(facilityId)]);
+      const [c, s, p] = await Promise.all([
+        fetchCourts(facilityId), fetchStaff(facilityId), fetchPayoutStatus(facilityId),
+      ]);
       setCourts(c);
       setStaff(s);
+      setPayout(p);
     } catch {
       setCourts([]);
       setStaff([]);
+      setPayout(null);
     }
   }, []);
 
@@ -126,6 +133,29 @@ export default function FacilityManageScreen() {
   }
 
   const canManage = active?.role === 'owner' || active?.role === 'manager';
+
+  async function connectPayouts() {
+    if (!active || connecting) return;
+    setConnecting(true);
+    try {
+      const res = await startConnectOnboarding('facility', active.id);
+      if (!res.ok) {
+        Alert.alert(
+          'Could not start',
+          res.code === 'not_facility_owner'
+            ? 'Only the facility owner can set up payouts.'
+            : 'Please try again in a moment.',
+        );
+        return;
+      }
+      // `completed` only means the browser returned. Stripe decides readiness
+      // and tells us through the account.updated webhook, so re-read rather
+      // than assume — the same discipline the payment hooks use.
+      await loadDetail(active.id);
+    } finally {
+      setConnecting(false);
+    }
+  }
 
   return (
     <View style={s.root}>
@@ -319,9 +349,48 @@ export default function FacilityManageScreen() {
               </View>
             ))}
 
-            <Text style={s.footnote}>
-              Taking payment for bookings needs a payout account for the business. That comes next.
-            </Text>
+            {/* ── Payouts ────────────────────────────────────────────────── */}
+            <View style={s.sectionHead}>
+              <Text style={s.sectionLabel}>PAYOUTS</Text>
+            </View>
+
+            {payout?.onboarded ? (
+              <View style={s.payoutReady}>
+                <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                <Text style={s.payoutReadyText}>
+                  This facility can receive payouts.
+                </Text>
+              </View>
+            ) : (
+              <View style={s.payoutCard}>
+                <Text style={s.payoutTitle}>
+                  {payout?.hasAccount ? 'Finish your payout setup' : 'Set up payouts'}
+                </Text>
+                <Text style={s.payoutBody}>
+                  Bookings are paid to the business, not to a personal account. Stripe will ask for
+                  the company&rsquo;s EIN, its owners, and a photo ID for whoever signs — have those
+                  to hand before you start.
+                </Text>
+                {payout?.canManage ? (
+                  <TouchableOpacity
+                    style={[s.saveBtn, connecting && s.submitDisabled]}
+                    onPress={connectPayouts}
+                    disabled={connecting}
+                    activeOpacity={0.85}
+                  >
+                    {connecting
+                      ? <ActivityIndicator size="small" color={colors.white} />
+                      : <Text style={s.saveText}>
+                          {payout?.hasAccount ? 'Continue setup' : 'Set up payouts'}
+                        </Text>}
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={s.footnote}>
+                    Only the facility owner can set this up.
+                  </Text>
+                )}
+              </View>
+            )}
           </>
         )}
       </ScrollView>
@@ -417,4 +486,17 @@ const s = StyleSheet.create({
   submitDisabled: { opacity: 0.4 },
 
   footnote: { color: colors.textSub, ...typography.metadata, marginTop: spacing.sm },
+
+  payoutCard: {
+    padding: spacing.lg, backgroundColor: colors.bg, borderRadius: radius.card,
+    borderWidth: 1, borderColor: colors.border, gap: spacing.sm,
+  },
+  payoutTitle: { color: colors.navy, ...typography.cardTitle },
+  payoutBody:  { color: colors.textSub, ...typography.body, lineHeight: 21 },
+  payoutReady: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md,
+    backgroundColor: colors.successBg, borderRadius: radius.card,
+    borderWidth: 1, borderColor: colors.success,
+  },
+  payoutReadyText: { color: colors.navy, ...typography.body, flex: 1 },
 });

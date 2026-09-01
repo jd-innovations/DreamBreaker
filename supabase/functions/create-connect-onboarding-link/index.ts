@@ -28,7 +28,7 @@ const CORS: HeadersInit = {
   "Content-Type": "application/json",
 };
 
-type ConnectRole = "director" | "coach";
+type ConnectRole = "director" | "coach" | "facility";
 
 type ProfileRow = {
   id: string;
@@ -71,13 +71,122 @@ Deno.serve(async (req: Request) => {
   }
 
   let role: ConnectRole = "coach";
+  let facilityId = "";
   try {
     const body = await req.json();
     if (body?.role === "director") role = "director";
+    if (body?.role === "facility") role = "facility";
+    if (typeof body?.facilityId === "string") facilityId = body.facilityId;
   } catch {
     // No body — default to coach. Note this differs from the web route, whose
     // no-body default is "director" purely for backward compatibility with the
     // director page that predates the role parameter. Mobile always sends one.
+  }
+
+  const serviceForFacility = getServiceClient();
+
+  // ── Facility: a company account, owned by the venue ────────────────────────
+  //
+  // Split out before the profile lookup because none of the profile-role
+  // eligibility below applies. What matters here is a facility_members OWNER
+  // row: a manager runs the courts, but accepting Stripe's terms on the
+  // company's behalf is the owner's call.
+  //
+  // business_type "company" is set explicitly rather than left for Stripe to
+  // ask. It is the whole point — a club's payouts belong to its EIN, not to
+  // the individual completing the form, who is only the representative.
+  if (role === "facility") {
+    if (!facilityId) {
+      return new Response(JSON.stringify({ error: "facility_required" }), { status: 400, headers: CORS });
+    }
+
+    const { data: membership } = await serviceForFacility
+      .from("facility_members")
+      .select("role")
+      .eq("facility_id", facilityId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (membership?.role !== "owner") {
+      return new Response(JSON.stringify({ error: "not_facility_owner" }), { status: 403, headers: CORS });
+    }
+
+    const { data: facility } = await serviceForFacility
+      .from("facilities")
+      .select("id, name, website, phone, city, state, postal_code, address")
+      .eq("id", facilityId)
+      .single();
+
+    if (!facility) {
+      return new Response(JSON.stringify({ error: "facility_not_found" }), { status: 404, headers: CORS });
+    }
+
+    const { data: existing } = await serviceForFacility
+      .from("facility_payout_accounts")
+      .select("stripe_connect_account_id")
+      .eq("facility_id", facilityId)
+      .maybeSingle();
+
+    try {
+      const stripe = getStripe();
+      let accountId = existing?.stripe_connect_account_id ?? "";
+
+      if (!accountId) {
+        const account = await stripe.accounts.create({
+          type: "express",
+          business_type: "company",
+          // Prefilled so the club manager is confirming what we hold rather
+          // than retyping it. Everything else — EIN, the representative's ID,
+          // beneficial owners — Stripe collects, and we never see or store it.
+          company: {
+            name: facility.name,
+            phone: facility.phone ?? undefined,
+            address: {
+              line1: facility.address ?? undefined,
+              city: facility.city ?? undefined,
+              state: facility.state ?? undefined,
+              postal_code: facility.postal_code ?? undefined,
+              country: "US",
+            },
+          },
+          business_profile: { url: facility.website ?? undefined, name: facility.name },
+          metadata: { facility_id: facilityId, claimed_by: user.id },
+          capabilities: {
+            card_payments: { requested: true },
+            transfers: { requested: true },
+          },
+        });
+        accountId = account.id;
+
+        const { error: saveError } = await serviceForFacility
+          .from("facility_payout_accounts")
+          .insert({
+            facility_id: facilityId,
+            stripe_connect_account_id: accountId,
+            created_by: user.id,
+          });
+
+        if (saveError) {
+          // Same reasoning as the profile path: a retry would mint a SECOND
+          // company account, and the orphan is invisible from the app.
+          console.error("[create-connect-onboarding-link] facility account created but not saved", saveError);
+          return new Response(JSON.stringify({ error: "account_save_failed" }), { status: 500, headers: CORS });
+        }
+      }
+
+      const origin = Deno.env.get("APP_ORIGIN") ?? "https://pickleballapp.app";
+      const accountLink = await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: `${origin}/api/stripe/connect/start?facility=${facilityId}`,
+        return_url: `${origin}/api/stripe/connect/return?account=${accountId}`,
+        type: "account_onboarding",
+      });
+
+      return new Response(JSON.stringify({ url: accountLink.url }), { headers: CORS });
+    } catch (err) {
+      console.error("[create-connect-onboarding-link] facility", err);
+      return new Response(JSON.stringify({ error: "onboarding_link_failed" }), { status: 500, headers: CORS });
+    }
   }
 
   // Service client for the profile read/write: stripe_connect_account_id is

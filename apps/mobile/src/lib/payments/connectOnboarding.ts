@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase';
 // manager for that. openAuthSessionAsync also closes itself on redirect back
 // to our origin, so the user lands back in the app when Stripe is done.
 
-export type ConnectRole = 'director' | 'coach';
+export type ConnectRole = 'director' | 'coach' | 'facility';
 
 export const CONNECT_ERROR_MESSAGES: Record<string, string> = {
   not_authenticated: 'Please sign in to set up payouts.',
@@ -57,9 +57,14 @@ export type StartConnectResult =
  * than assuming, exactly as the payment hooks poll instead of trusting the
  * PaymentSheet result.
  */
-export async function startConnectOnboarding(role: ConnectRole): Promise<StartConnectResult> {
+export async function startConnectOnboarding(
+  role: ConnectRole,
+  // Required when role is 'facility': the account belongs to that venue, not
+  // to the caller, so there is nothing to infer from the session.
+  facilityId?: string,
+): Promise<StartConnectResult> {
   const { data, error } = await supabase.functions.invoke('create-connect-onboarding-link', {
-    body: { role },
+    body: facilityId ? { role, facilityId } : { role },
   });
   if (error || !data?.url) {
     return { ok: false, code: await extractErrorCode(error) };

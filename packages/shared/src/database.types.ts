@@ -1632,6 +1632,7 @@ export type Database = {
           outdoor_courts: number
           owner_user_id: string | null
           parking: boolean
+          payouts_ready: boolean
           phone: string | null
           postal_code: string | null
           price_level: number | null
@@ -1693,6 +1694,7 @@ export type Database = {
           outdoor_courts?: number
           owner_user_id?: string | null
           parking?: boolean
+          payouts_ready?: boolean
           phone?: string | null
           postal_code?: string | null
           price_level?: number | null
@@ -1754,6 +1756,7 @@ export type Database = {
           outdoor_courts?: number
           owner_user_id?: string | null
           parking?: boolean
+          payouts_ready?: boolean
           phone?: string | null
           postal_code?: string | null
           price_level?: number | null
@@ -1901,6 +1904,48 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facility_payout_accounts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          facility_id: string
+          onboarded_at: string | null
+          stripe_connect_account_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          facility_id: string
+          onboarded_at?: string | null
+          stripe_connect_account_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          facility_id?: string
+          onboarded_at?: string | null
+          stripe_connect_account_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facility_payout_accounts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facility_payout_accounts_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: true
+            referencedRelation: "facilities"
             referencedColumns: ["id"]
           },
         ]
@@ -6962,6 +7007,15 @@ export type Database = {
           p_owner_type: Database["public"]["Enums"]["facility_asset_owner_type"]
         }
         Returns: string
+      }
+      facility_payout_status: {
+        Args: { p_facility_id: string }
+        Returns: {
+          can_manage: boolean
+          has_account: boolean
+          onboarded: boolean
+          onboarded_at: string
+        }[]
       }
       facility_role_rank: {
         Args: { p_role: Database["public"]["Enums"]["facility_member_role"] }

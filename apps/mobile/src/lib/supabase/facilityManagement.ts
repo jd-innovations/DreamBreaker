@@ -150,3 +150,31 @@ export async function fetchStaff(facilityId: string): Promise<StaffMember[]> {
     return { userId: row.user_id, role: row.role as FacilityRole, fullName: p.full_name, email: p.email };
   });
 }
+
+export type PayoutStatus = {
+  hasAccount: boolean;
+  onboarded: boolean;
+  onboardedAt: string | null;
+  canManage: boolean;
+};
+
+/**
+ * Payout readiness for a venue.
+ *
+ * Deliberately never returns the Stripe account id — that lives in
+ * facility_payout_accounts, which has no anon or authenticated policy at all.
+ * The screen only needs to know whether the venue can be paid and whether this
+ * user is allowed to do something about it.
+ */
+export async function fetchPayoutStatus(facilityId: string): Promise<PayoutStatus | null> {
+  const { data, error } = await supabase.rpc('facility_payout_status', { p_facility_id: facilityId });
+  if (error) return null;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return {
+    hasAccount: !!row.has_account,
+    onboarded: !!row.onboarded,
+    onboardedAt: row.onboarded_at,
+    canManage: !!row.can_manage,
+  };
+}

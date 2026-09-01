@@ -34,6 +34,34 @@ export async function POST(request: Request) {
     // Shared across director and coach — this table update is role-neutral;
     // the coach_status transition below is the only role-specific bit, and
     // only touches rows where is_coach is true.
+    // Facilities first, and unconditionally: a company account belongs to a
+    // venue, not a person, so it will never match a profiles row. Keyed off
+    // metadata.facility_id is tempting but the account id is the durable link —
+    // metadata can be edited from the Stripe dashboard.
+    const facilityReady = Boolean(account.charges_enabled && account.payouts_enabled);
+    const { data: facilityAccount } = await service
+      .from("facility_payout_accounts")
+      .select("facility_id")
+      .eq("stripe_connect_account_id", account.id)
+      .maybeSingle();
+
+    if (facilityAccount) {
+      await service
+        .from("facility_payout_accounts")
+        .update({
+          onboarded_at: facilityReady ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("stripe_connect_account_id", account.id);
+
+      // The public mirror the app reads. Written here rather than derived, so
+      // a booking screen never has to join a table it cannot see.
+      await service
+        .from("facilities")
+        .update({ payouts_ready: facilityReady })
+        .eq("id", facilityAccount.facility_id);
+    }
+
     if (account.charges_enabled) {
       // Onboarding complete — set timestamp if not already set
       await service
