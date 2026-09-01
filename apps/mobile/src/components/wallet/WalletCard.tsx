@@ -9,6 +9,7 @@ import { WalletRedeemSheet } from '@/components/wallet/WalletRedeemSheet';
 import { getWalletItemStatusInfo } from '@/lib/walletItemStatus';
 import { getWalletTypeAccent } from '@/lib/walletItemAccent';
 import type { WalletItem } from '@/lib/walletTypes';
+import { DEFAULT_LESSON_COVER } from '@/lib/coach/defaultLessonCover';
 
 const L = {
   bg:        colors.bg,
@@ -82,13 +83,13 @@ export function WalletCard({ item }: { item: WalletItem }) {
       </View>
 
       {item.type === 'coach_voucher' && (
-        item.coachVoucher?.heroImageUrl ? (
-          <Image source={{ uri: item.coachVoucher.heroImageUrl }} style={c.hero} />
-        ) : (
-          <View style={[c.hero, c.heroPlaceholder, { backgroundColor: accent.bg }]}>
-            <Ionicons name="school-outline" size={28} color={accent.color} />
-          </View>
-        )
+        <Image
+          source={item.coachVoucher?.heroImageUrl
+            ? { uri: item.coachVoucher.heroImageUrl }
+            : DEFAULT_LESSON_COVER}
+          style={c.hero}
+          resizeMode="cover"
+        />
       )}
 
       <View style={c.header}>
@@ -148,7 +149,6 @@ const c = StyleSheet.create({
     width: 8, height: 8, borderRadius: 4, backgroundColor: L.gold,
   },
   hero: { width: '100%', height: 100, borderRadius: 10, marginTop: 2 },
-  heroPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   eyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 0.6 },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },

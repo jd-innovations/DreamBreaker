@@ -15,6 +15,7 @@ import { useSupportContext } from '@/lib/support/supportContext';
 import { OFFER_TYPE_OPTIONS } from '@/lib/coach/constants';
 import type { WalletItem } from '@/lib/walletTypes';
 import { fetchVoucherRedemptionCode, voucherQrValue } from '@/lib/coach/voucherRedemption';
+import { DEFAULT_LESSON_COVER } from '@/lib/coach/defaultLessonCover';
 
 const OFFER_TYPE_LABELS = Object.fromEntries(OFFER_TYPE_OPTIONS.map((o) => [o.value, o.label])) as Record<string, string>;
 
@@ -153,13 +154,17 @@ export default function WalletItemDetailScreen() {
         </View>
 
         {item.type === 'coach_voucher' && (
-          item.coachVoucher?.heroImageUrl ? (
-            <Image source={{ uri: item.coachVoucher.heroImageUrl }} style={s.hero} />
-          ) : (
-            <View style={[s.hero, s.heroPlaceholder, { backgroundColor: accent.bg }]}>
-              <Ionicons name="school-outline" size={36} color={accent.color} />
-            </View>
-          )
+          // The offer's own photo as snapshotted at purchase, else the bundled
+          // lesson cover — the same image the marketplace shows, rather than a
+          // glyph that reads as a missing picture. heroImageUrl stays null for
+          // any offer sold without a photo, which today is all of them.
+          <Image
+            source={item.coachVoucher?.heroImageUrl
+              ? { uri: item.coachVoucher.heroImageUrl }
+              : DEFAULT_LESSON_COVER}
+            style={s.hero}
+            resizeMode="cover"
+          />
         )}
 
         <Text style={s.title}>{item.title}</Text>
@@ -343,7 +348,6 @@ const s = StyleSheet.create({
   eyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6 },
 
   hero: { width: '100%', height: 160, borderRadius: radius.card, marginBottom: 12 },
-  heroPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   detailsCard: { backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: radius.card },
 
   title: { color: L.navy, fontSize: 20, fontWeight: '900', marginBottom: 2 },
