@@ -34,6 +34,7 @@ import { fetchPlayerHolds, fetchPlayerRegistrations } from '@/lib/supabase/regis
 import { fetchFacilityById, facilityAccessType, type FacilityDetail } from '@/lib/supabase/facilities';
 import LocationCard from '@/components/LocationCard';
 import { resolveAmenities } from '@/lib/tournamentAmenities';
+import { fetchDirectorStats, type DirectorStats } from '@/lib/supabase/directorStats';
 import { fetchProfile, type UserProfile } from '@/lib/services/profile';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateConversation } from '@/lib/conversationService';
@@ -270,6 +271,32 @@ export default function TournamentDetail() {
   // Unknown keys are dropped and the list is capped at three, so a row written
   // by a newer build renders fewer chips here rather than breaking the strip.
   const amenities = resolveAmenities(tournament?.amenities);
+
+  // Both the host card and the director sheet rendered this strip, each with
+  // its own copy of the same hardcoded numbers — fixing only the visible one
+  // would have left the other lying. One component now, so they cannot drift.
+  function DirectorStatsRow() {
+    if (!directorStats) return null;
+    const { playersServed, tournamentsHosted } = directorStats;
+    // A director with no history yet gets no strip, rather than a row of
+    // zeroes presented as achievement.
+    if (playersServed === 0 && tournamentsHosted === 0) return null;
+    return (
+      <>
+        <View style={s.hostStat}>
+          <Ionicons name="people-outline" size={22} color={L.textSub} />
+          <Text style={s.hostStatNum}>{playersServed.toLocaleString()}</Text>
+          <Text style={s.hostStatLabel}>{playersServed === 1 ? 'Player' : 'Players'}{'\n'}Served</Text>
+        </View>
+        <View style={s.hostStat}>
+          <Ionicons name="calendar-outline" size={22} color={L.textSub} />
+          <Text style={s.hostStatNum}>{tournamentsHosted.toLocaleString()}</Text>
+          <Text style={s.hostStatLabel}>{tournamentsHosted === 1 ? 'Tournament' : 'Tournaments'}{'\n'}Hosted</Text>
+        </View>
+      </>
+    );
+  }
+
   const heroLine1 = tournament ? splitHeroName(tournament.name)[0] : '';
   const heroLine2 = tournament ? splitHeroName(tournament.name)[1] : '';
 
@@ -293,6 +320,7 @@ export default function TournamentDetail() {
   const [facility, setFacility] = useState<FacilityDetail | null>(null);
   const [directorUserId, setDirectorUserId] = useState<string | null>(null);
   const [directorProfile, setDirectorProfile] = useState<UserProfile | null>(null);
+  const [directorStats, setDirectorStats] = useState<DirectorStats | null>(null);
   const [msgingDirector, setMsgingDirector] = useState(false);
   const [directorModalVisible, setDirectorModalVisible] = useState(false);
 
@@ -401,8 +429,10 @@ export default function TournamentDetail() {
           fetchFacilityById(t.facilityId).then(f => { if (active) setFacility(f); }).catch(() => {});
         }
         setDirectorProfile(null);
+        setDirectorStats(null);
         if (t?.directorId) {
           fetchProfile(t.directorId).then(p => { if (active) setDirectorProfile(p); }).catch(() => {});
+          fetchDirectorStats(t.directorId).then(st => { if (active) setDirectorStats(st); }).catch(() => {});
         }
 
         if (user?.id) {
@@ -852,21 +882,7 @@ export default function TournamentDetail() {
             <View style={s.hostDivider} />
 
             <View style={s.hostStats}>
-              <View style={s.hostStat}>
-                <Ionicons name="people-outline" size={22} color={L.textSub} />
-                <Text style={s.hostStatNum}>3,842</Text>
-                <Text style={s.hostStatLabel}>Players Served</Text>
-              </View>
-              <View style={s.hostStat}>
-                <Ionicons name="star-outline" size={22} color={L.textSub} />
-                <Text style={s.hostStatNum}>4.8</Text>
-                <Text style={s.hostStatLabel}>Avg. Rating{'\n'}(126 reviews)</Text>
-              </View>
-              <View style={s.hostStat}>
-                <Ionicons name="calendar-outline" size={22} color={L.textSub} />
-                <Text style={s.hostStatNum}>28</Text>
-                <Text style={s.hostStatLabel}>Tournaments{'\n'}Hosted</Text>
-              </View>
+              <DirectorStatsRow />
               <TouchableOpacity
                 style={s.hostMore}
                 onPress={() => setDirectorModalVisible(true)}
@@ -996,21 +1012,7 @@ export default function TournamentDetail() {
             )}
 
             <View style={[s.hostStats, { paddingHorizontal: 0 }]}>
-              <View style={s.hostStat}>
-                <Ionicons name="people-outline" size={22} color={L.textSub} />
-                <Text style={s.hostStatNum}>3,842</Text>
-                <Text style={s.hostStatLabel}>Players Served</Text>
-              </View>
-              <View style={s.hostStat}>
-                <Ionicons name="star-outline" size={22} color={L.textSub} />
-                <Text style={s.hostStatNum}>4.8</Text>
-                <Text style={s.hostStatLabel}>Avg. Rating{'\n'}(126 reviews)</Text>
-              </View>
-              <View style={s.hostStat}>
-                <Ionicons name="calendar-outline" size={22} color={L.textSub} />
-                <Text style={s.hostStatNum}>28</Text>
-                <Text style={s.hostStatLabel}>Tournaments{'\n'}Hosted</Text>
-              </View>
+              <DirectorStatsRow />
             </View>
 
             <TouchableOpacity
