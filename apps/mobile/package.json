@@ -75,7 +75,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "validate:eas-env": "node ./scripts/validate-eas-env.js"
+    "validate:eas-env": "node ./scripts/validate-eas-env.js",
+    "update:preview": "node ./scripts/publish-update.js preview",
+    "update:production": "node ./scripts/publish-update.js production"
   },
   "private": true
 }
