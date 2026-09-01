@@ -1047,6 +1047,7 @@ export default function HomeScreen() {
 
         {trendingData.map(item => (
           <TournamentTrendingCard
+            style={{ marginHorizontal: 16 }}
             key={item.id}
             item={item}
             saved={isBookmarked(item.id)}

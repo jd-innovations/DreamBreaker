@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { colors } from '@/theme';
@@ -85,12 +85,14 @@ export function tournamentToTrending(t: Tournament): TrendingTournament {
   };
 }
 
-export function TournamentTrendingCard({ item, onSave, saved, registered }: {
+export function TournamentTrendingCard({ item, onSave, saved, registered, style }: {
   item: TrendingTournament; onSave: () => void; saved: boolean; registered?: boolean;
+  /** Outer spacing belongs to the host list, not to the card. */
+  style?: StyleProp<ViewStyle>;
 }) {
   return (
     <TouchableOpacity
-      style={tc.card}
+      style={[tc.card, style]}
       activeOpacity={0.88}
       onPress={() => router.push(`/tournament/${item.id}` as never)}
     >
@@ -233,7 +235,7 @@ const tc = StyleSheet.create({
   card: {
     borderRadius: 16, overflow: 'hidden',
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg,
-    marginHorizontal: 16, marginBottom: 12,
+    marginBottom: 12,
   },
   // Mirrors cl.typeText -- plain gold label, deliberately not a pill, because
   // COMMUNITY PLAY is not one either.
