@@ -12,6 +12,7 @@ import {
 } from '@/lib/coach/offers';
 import { draftCoachOfferId } from '@/lib/coach/offerPhotos';
 import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent } from '@/lib/coach/constants';
+import { coachOfferErrorMessage } from '@/lib/coach/offerErrors';
 
 const L = {
   navy: colors.navy, gold: colors.gold, text: colors.text, textSub: colors.textSub,
@@ -60,7 +61,7 @@ export default function CoachOffersScreen() {
       else await resumeCoachOffer(offer.id);
       load();
     } catch (err) {
-      Alert.alert('Could Not Update', err instanceof Error ? err.message : 'Please try again.');
+      Alert.alert('Could Not Update', coachOfferErrorMessage(err));
     } finally {
       setBusyId(null);
     }
@@ -72,7 +73,7 @@ export default function CoachOffersScreen() {
       await duplicateCoachOffer(offer.id, draftCoachOfferId());
       load();
     } catch (err) {
-      Alert.alert('Could Not Duplicate', err instanceof Error ? err.message : 'Please try again.');
+      Alert.alert('Could Not Duplicate', coachOfferErrorMessage(err));
     } finally {
       setBusyId(null);
     }

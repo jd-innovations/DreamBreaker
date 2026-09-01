@@ -9,6 +9,7 @@ import {
   resumeCoachOffer, archiveCoachOffer, type CoachOfferWithImages,
 } from '@/lib/coach/offers';
 import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent } from '@/lib/coach/constants';
+import { coachOfferErrorMessage } from '@/lib/coach/offerErrors';
 
 // Editing here only ever writes to this offer's own coach_offers row —
 // there is no purchase/wallet table for it to reach into (Phase 3+), so
@@ -75,7 +76,7 @@ export default function EditCoachOfferScreen() {
       });
       return true;
     } catch (err) {
-      Alert.alert('Could Not Save', err instanceof Error ? err.message : 'Please try again.');
+      Alert.alert('Could Not Save', coachOfferErrorMessage(err));
       return false;
     }
   }

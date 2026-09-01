@@ -13,6 +13,7 @@ import { FacilityPicker, type FacilityPickerValue } from '@/components/FacilityP
 import { draftCoachOfferId, uploadCoachOfferPhoto, cleanupAbandonedCoachOfferPhotos } from '@/lib/coach/offerPhotos';
 import { createCoachOffer, type CoachOfferType } from '@/lib/coach/offers';
 import { OFFER_TYPE_OPTIONS, discountPercent, MAX_OFFER_PHOTOS } from '@/lib/coach/constants';
+import { coachOfferErrorMessage } from '@/lib/coach/offerErrors';
 
 // Coach Marketplace V1 Phase 2 — offer creation. One screen, not a stepper —
 // the field count is smaller than the paddle marketplace's 9-step flow, so a
@@ -125,7 +126,7 @@ export default function CreateCoachOfferScreen() {
     } catch (err) {
       Alert.alert(
         publish ? 'Could Not Publish' : 'Could Not Save',
-        err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+        coachOfferErrorMessage(err),
       );
     } finally {
       setSaving(false);
