@@ -5007,6 +5007,7 @@ export type Database = {
       }
       tournaments: {
         Row: {
+          amenities: string[]
           approved_at: string | null
           approved_by: string | null
           bracket_type: Database["public"]["Enums"]["bracket_type"]
@@ -5053,6 +5054,7 @@ export type Database = {
           zip_code: string | null
         }
         Insert: {
+          amenities?: string[]
           approved_at?: string | null
           approved_by?: string | null
           bracket_type?: Database["public"]["Enums"]["bracket_type"]
@@ -5099,6 +5101,7 @@ export type Database = {
           zip_code?: string | null
         }
         Update: {
+          amenities?: string[]
           approved_at?: string | null
           approved_by?: string | null
           bracket_type?: Database["public"]["Enums"]["bracket_type"]
@@ -6324,6 +6327,13 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      director_public_stats: {
+        Args: { p_director_id: string }
+        Returns: {
+          players_served: number
+          tournaments_hosted: number
+        }[]
       }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
