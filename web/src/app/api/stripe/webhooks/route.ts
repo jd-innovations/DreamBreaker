@@ -8,8 +8,24 @@ import type Stripe from "stripe";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!secret) {
+  // Two endpoints post here, and each Stripe endpoint signs with its OWN
+  // secret:
+  //
+  //   STRIPE_WEBHOOK_SECRET         the account endpoint (payments, refunds)
+  //   STRIPE_CONNECT_WEBHOOK_SECRET the Connect endpoint (account.updated for
+  //                                 connected accounts)
+  //
+  // A Connect endpoint is required because account.updated for a CONNECTED
+  // account is never delivered to a plain account endpoint — confirmed
+  // 2026-09-01, which is why a fully onboarded facility went unrecorded. One
+  // secret cannot verify the other's signature, so both are tried and the
+  // request is rejected only if neither matches.
+  const secrets = [
+    process.env.STRIPE_WEBHOOK_SECRET,
+    process.env.STRIPE_CONNECT_WEBHOOK_SECRET,
+  ].filter((v): v is string => Boolean(v));
+
+  if (secrets.length === 0) {
     return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
   }
 
@@ -18,11 +34,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing stripe-signature header" }, { status: 400 });
   }
 
-  let event: Stripe.Event;
-  try {
-    const body = await request.text();
-    event = getStripe().webhooks.constructEvent(body, signature, secret);
-  } catch {
+  const body = await request.text();
+  let event: Stripe.Event | null = null;
+
+  for (const secret of secrets) {
+    try {
+      event = getStripe().webhooks.constructEvent(body, signature, secret);
+      break;
+    } catch {
+      // Wrong secret for this endpoint; try the next.
+    }
+  }
+
+  if (!event) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
