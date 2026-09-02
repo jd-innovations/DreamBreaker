@@ -555,11 +555,12 @@ export default function ChooseTimeScreen() {
                   const slot = findSlotAt(availability[asset.id] ?? [], dateStr, selectedHour, durationHours);
                   const row = computeRowState(asset.kind, slot, search.playersInGroup, newGameMax);
                   const discount = bestFlashDealPercent(deals, asset.kind, asset.id, hourRange(dateStr, selectedHour).startsAt);
-                  // What THIS booker pays: their slots x hours x the per-slot
-                  // rate. Showing the whole-court price would quote a number
-                  // nobody is charged.
+                  // What THIS booker pays. The listed rate is for the WHOLE
+                  // court per hour, so a slot-hour is that divided by the
+                  // game's capacity — 4 for doubles, 2 for singles.
+                  const capacity = search.gameFormat === 'singles' ? 2 : 4;
                   const finalPrice = asset.hourlyRateCents != null
-                    ? Math.round(asset.hourlyRateCents * durationHours * slotCount
+                    ? Math.round((asset.hourlyRateCents / capacity) * durationHours * slotCount
                                  * (100 - (discount ?? 0)) / 100)
                     : asset.hourlyRateCents;
                   const busy = actionAssetId === asset.id;
