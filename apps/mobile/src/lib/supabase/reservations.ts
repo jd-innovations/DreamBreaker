@@ -36,6 +36,12 @@ export type CreateReservationInput = {
   gameFormat?: ReservationGameFormat;
   /** Defaults to the server-side RPC default (10 minutes) when omitted. */
   holdMinutes?: number;
+  /**
+   * How many people the court is being booked for. Drives the per-player
+   * convenience fee. Clamped server-side to the court's capacity, so it cannot
+   * be used to inflate or dodge the fee.
+   */
+  players?: number;
 };
 
 export type ReservationOccupancy = {
@@ -97,6 +103,9 @@ export async function createReservation(input: CreateReservationInput): Promise<
     p_ends_at:      new Date(input.endsAt).toISOString(),
     ...(input.gameFormat != null ? { p_game_format: input.gameFormat } : {}),
     ...(input.holdMinutes != null ? { p_hold_minutes: input.holdMinutes } : {}),
+    // Group size drives the per-player convenience fee. The server clamps it
+    // to the court's capacity, so this is a hint rather than a trusted input.
+    ...(input.players != null ? { p_players: input.players } : {}),
   });
 
   if (error) throw error;

@@ -352,6 +352,9 @@ export default function ChooseTimeScreen() {
             assetId: asset.id,
             startsAt, endsAt,
             gameFormat: asset.kind === 'court' ? search.gameFormat : undefined,
+            // The group size already chosen during search, shown in this
+            // screen's own header as "Doubles (N players)".
+            players: search.playersInGroup,
           });
           setBookingSelection({
             assetType: asset.kind, assetId: asset.id, assetName: asset.name, startsAt, endsAt,

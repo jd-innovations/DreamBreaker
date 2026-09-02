@@ -6762,7 +6762,7 @@ export type Database = {
         Returns: string
       }
       booking_convenience_fee_cents: {
-        Args: { p_max_players?: number }
+        Args: { p_players?: number }
         Returns: number
       }
       can_review: {
@@ -7071,53 +7071,102 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      create_reservation: {
-        Args: {
-          p_asset_id: string
-          p_asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
-          p_ends_at: string
-          p_facility_id: string
-          p_game_format?: Database["public"]["Enums"]["reservation_game_format"]
-          p_hold_minutes?: number
-          p_starts_at: string
-        }
-        Returns: {
-          asset_id: string
-          asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
-          base_price_cents: number
-          buyer_service_fee_cents: number
-          buyer_total_cents: number | null
-          cancelled_at: string | null
-          check_in_code: string | null
-          commission_pct: number | null
-          commission_source: string | null
-          confirmed_at: string | null
-          created_at: string
-          duration_hours: number | null
-          facility_id: string
-          facility_net_cents: number | null
-          final_price_cents: number
-          flash_deal_discount_percent: number | null
-          flash_deal_id: string | null
-          game_format:
-            | Database["public"]["Enums"]["reservation_game_format"]
-            | null
-          hold_expires_at: string | null
-          id: string
-          max_players: number
-          organizer_id: string
-          platform_commission_cents: number | null
-          status: Database["public"]["Enums"]["reservation_status"]
-          time_range: unknown
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "reservations"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      create_reservation:
+        | {
+            Args: {
+              p_asset_id: string
+              p_asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
+              p_ends_at: string
+              p_facility_id: string
+              p_game_format?: Database["public"]["Enums"]["reservation_game_format"]
+              p_hold_minutes?: number
+              p_starts_at: string
+            }
+            Returns: {
+              asset_id: string
+              asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
+              base_price_cents: number
+              buyer_service_fee_cents: number
+              buyer_total_cents: number | null
+              cancelled_at: string | null
+              check_in_code: string | null
+              commission_pct: number | null
+              commission_source: string | null
+              confirmed_at: string | null
+              created_at: string
+              duration_hours: number | null
+              facility_id: string
+              facility_net_cents: number | null
+              final_price_cents: number
+              flash_deal_discount_percent: number | null
+              flash_deal_id: string | null
+              game_format:
+                | Database["public"]["Enums"]["reservation_game_format"]
+                | null
+              hold_expires_at: string | null
+              id: string
+              max_players: number
+              organizer_id: string
+              platform_commission_cents: number | null
+              status: Database["public"]["Enums"]["reservation_status"]
+              time_range: unknown
+              updated_at: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "reservations"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_asset_id: string
+              p_asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
+              p_ends_at: string
+              p_facility_id: string
+              p_game_format?: Database["public"]["Enums"]["reservation_game_format"]
+              p_hold_minutes?: number
+              p_players?: number
+              p_starts_at: string
+            }
+            Returns: {
+              asset_id: string
+              asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
+              base_price_cents: number
+              buyer_service_fee_cents: number
+              buyer_total_cents: number | null
+              cancelled_at: string | null
+              check_in_code: string | null
+              commission_pct: number | null
+              commission_source: string | null
+              confirmed_at: string | null
+              created_at: string
+              duration_hours: number | null
+              facility_id: string
+              facility_net_cents: number | null
+              final_price_cents: number
+              flash_deal_discount_percent: number | null
+              flash_deal_id: string | null
+              game_format:
+                | Database["public"]["Enums"]["reservation_game_format"]
+                | null
+              hold_expires_at: string | null
+              id: string
+              max_players: number
+              organizer_id: string
+              platform_commission_cents: number | null
+              status: Database["public"]["Enums"]["reservation_status"]
+              time_range: unknown
+              updated_at: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "reservations"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       current_user_director_status: {
         Args: never
         Returns: Database["public"]["Enums"]["director_status"]
