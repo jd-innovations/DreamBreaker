@@ -1233,7 +1233,10 @@ const s = StyleSheet.create({
   accessFilterWrap: {
     backgroundColor: L.bg,
     borderBottomWidth: 1, borderBottomColor: L.border,
-    paddingBottom: 10,
+    // Had no paddingTop, so the pills sat flush against the divider under the
+    // category tabs. spacing.md matches tabsWrap's own paddingBottom, which
+    // keeps one rhythm down the header instead of two.
+    paddingTop: spacing.md, paddingBottom: spacing.md,
   },
   accessFilterRow: { paddingHorizontal: spacing.screenH, gap: 8 },
   accessChip: {
