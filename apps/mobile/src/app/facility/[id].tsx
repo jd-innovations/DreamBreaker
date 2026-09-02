@@ -221,11 +221,11 @@ const ic = StyleSheet.create({
 // the fallback image inside the initials View, which escaped the hero and
 // painted the whole screen; there is no reason for the two paths to differ
 // structurally when only the source changes.
-function HeroPhoto({ uri }: { uri: string | null }) {
+function HeroPhoto({ uri, height }: { uri: string | null; height: number }) {
   return (
     <Image
       source={uri ? { uri } : DEFAULT_FACILITY_COVER}
-      style={s.heroImage}
+      style={[s.heroImage, { height }]}
       resizeMode="cover"
     />
   );
@@ -687,7 +687,11 @@ export default function FacilityDetailScreen() {
   }
 
   return (
-    <View style={[s.root, { paddingTop: insets.top }]}>
+    // No paddingTop: the hero runs to the top of the screen and under the
+    // status bar, as the tournament and community heroes do. Padding here left
+    // a band of page background above the photo, which read as a rendering
+    // gap rather than a design.
+    <View style={s.root}>
       <StatusBar style="light" />
 
       <ScrollView
@@ -695,8 +699,8 @@ export default function FacilityDetailScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
       >
         {/* ── HERO ── */}
-        <View style={s.hero}>
-          <HeroPhoto uri={facility.primaryPhotoUrl} />
+        <View style={[s.hero, { height: HERO_H + insets.top }]}>
+          <HeroPhoto uri={facility.primaryPhotoUrl} height={HERO_H + insets.top} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.35)' }]} />
           <LinearGradient
             colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.75)']}
@@ -1052,14 +1056,17 @@ const s = StyleSheet.create({
   root:   { flex: 1, backgroundColor: L.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: L.bg },
 
-  hero:         { width: '100%', height: HERO_H, position: 'relative', overflow: 'hidden' },
+  // Height is applied at the call site as HERO_H + the top inset, so the photo
+  // fills the status-bar area too and HERO_H stays the height of what is
+  // actually readable below it.
+  hero:         { width: '100%', position: 'relative', overflow: 'hidden' },
   // Explicit height rather than StyleSheet.absoluteFill. absoluteFill was
   // resolving against something taller than the hero, so `cover` fitted the
   // photo to that larger box and the hero showed only its top strip - all
   // ceiling, no courts. Pinning the height to HERO_H makes the box the image
   // is fitted to the same box the user sees. The asset is 4:3 and the hero is
   // ~1.3:1, so cover now crops almost nothing.
-  heroImage:    { position: 'absolute', top: 0, left: 0, width: '100%', height: HERO_H },
+  heroImage:    { position: 'absolute', top: 0, left: 0, width: '100%' },
 
   topControls: {
     position: 'absolute', left: spacing.screenH, right: spacing.screenH,
@@ -1082,7 +1089,7 @@ const s = StyleSheet.create({
   mapPillText: { color: L.navy, fontSize: 11, fontWeight: '800' },
 
   body:      { padding: spacing.screenH },
-  badgeRow:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  badgeRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   badge:     { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   badgeText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.4 },
   verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#DBEAFE', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4 },
