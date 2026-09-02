@@ -1,7 +1,8 @@
-// Charges a joiner their own convenience fee.
+// Charges a joiner for their own slots.
 //
-// The organizer pays theirs as part of the booking; everyone who joins pays
-// their own. join_reservation() has already reserved the seat as 'held' with a
+// Everyone reserves individually, so a joiner owes exactly what the organizer
+// owed for the same slots: their court share plus their own convenience fee.
+// join_reservation() wrote both onto the seat and reserved it as 'held' with a
 // 10-minute expiry, so this only has to charge for a seat that is already
 // theirs — no capacity logic here, and none possible: two people cannot both
 // hold the last seat.
@@ -57,7 +58,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: seat, error: seatError } = await service
     .from("reservation_players")
-    .select("id, status, hold_expires_at, service_fee_cents, is_organizer")
+    .select("id, status, hold_expires_at, court_share_cents, service_fee_cents, total_cents, is_organizer")
     .eq("reservation_id", reservationId)
     .eq("profile_id", user.id)
     .maybeSingle();
@@ -82,10 +83,13 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "hold_expired" }), { status: 409, headers: CORS });
   }
 
-  const amountCents = seat.service_fee_cents ?? 0;
+  // total_cents, not service_fee_cents: under per-slot pricing a joiner owes
+  // their own court share as well as their own fee. Charging the fee alone
+  // would hand them the court for free and leave the facility short.
+  const amountCents = seat.total_cents ?? 0;
   if (amountCents <= 0) {
-    // No fee configured — nothing to charge, and join_reservation already
-    // seated them as confirmed.
+    // A free court with no fee configured — nothing to charge, and
+    // join_reservation already seated them as confirmed.
     return new Response(JSON.stringify({ error: "no_payment_required" }), { status: 400, headers: CORS });
   }
 
@@ -99,7 +103,8 @@ Deno.serve(async (req: Request) => {
       metadata: {
         reservationId,
         joinerId: user.id,
-        convenienceFeeCents: String(amountCents),
+        courtShareCents: String(seat.court_share_cents ?? 0),
+        convenienceFeeCents: String(seat.service_fee_cents ?? 0),
       },
     });
 

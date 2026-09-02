@@ -123,6 +123,8 @@ async function dispatchPaymentSucceeded(service: ServiceClient, payment: Payment
     await finalizeTournamentTeamEntry(service, payment);
   } else if (payment.purpose_type === "coach_offer_purchase") {
     await finalizeCoachOfferPurchase(service, payment);
+  } else if (payment.purpose_type === "reservation_join_fee") {
+    await finalizeReservationJoinFee(service, payment);
   } else if (payment.purpose_type === "reservation_payment") {
     await finalizeReservationPayment(service, payment);
   } else {
@@ -531,4 +533,43 @@ async function finalizeReservationPayment(service: ServiceClient, payment: Payme
 
   reportFinalizationFailure("finalizeReservationPayment", payment,
     { step: "confirm_reservation", reservationId }, confirmError);
+
+  // The payer's SEAT, not just the reservation.
+  //
+  // Under per-slot pricing the seat is what carries their slots and their
+  // share, and the reservation's money totals accrue only from CONFIRMED
+  // seats. Leaving it held after a successful payment does two bad things: the
+  // facility is never credited for the booking, and expire_stale_reservation_holds
+  // deletes the seat the player just paid for.
+  const { error: seatError } = await service
+    .from("reservation_players")
+    .update({ status: "confirmed", hold_expires_at: null, payment_id: payment.id })
+    .eq("reservation_id", reservationId)
+    .eq("profile_id", payment.payer_user_id);
+
+  reportFinalizationFailure("finalizeReservationPayment", payment,
+    { step: "confirm_seat", reservationId }, seatError);
+}
+
+// A joiner paying their own share. There is no reservation status to change —
+// the booking already exists and carries on — only their seat to confirm.
+//
+// The client confirms this itself after PaymentSheet returns, but that only
+// covers the happy path: an app killed mid-flow would leave a paid seat held
+// and then swept. The webhook is the authority that survives the app dying.
+async function finalizeReservationJoinFee(
+  service: ServiceClient,
+  payment: PaymentRow,
+): Promise<void> {
+  const meta = (payment.metadata ?? {}) as { reservationId?: string };
+  const reservationId = meta.reservationId ?? payment.purpose_id;
+
+  const { error } = await service
+    .from("reservation_players")
+    .update({ status: "confirmed", hold_expires_at: null, payment_id: payment.id })
+    .eq("reservation_id", reservationId)
+    .eq("profile_id", payment.payer_user_id);
+
+  reportFinalizationFailure("finalizeReservationJoinFee", payment,
+    { step: "confirm_seat", reservationId }, error);
 }
