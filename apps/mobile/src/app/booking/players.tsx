@@ -19,7 +19,7 @@ import {
 } from '@/lib/supabase/reservationInvites';
 import {
   fetchReservationById, fetchReservationPlayersWithProfiles,
-  playersNeeded, occupancyStatusLabel, occupancyCountLabel,
+  playersNeeded, occupiedSlots, occupancyStatusLabel, occupancyCountLabel,
   type Reservation, type ReservationPlayerWithProfile,
 } from '@/lib/supabase/reservations';
 import { getBookingFacility, getBookingSelection, getBookingReservationId } from '@/lib/bookingStore';
@@ -187,7 +187,7 @@ export default function FindPlayersScreen() {
   }
 
   const isOrganizer = user?.id === reservation.organizer_id;
-  const current = players.length;
+  const current = occupiedSlots(players);
   const max = reservation.max_players;
   const needed = playersNeeded(current, max);
   const isBallMachine = reservation.asset_type === 'ball_machine';

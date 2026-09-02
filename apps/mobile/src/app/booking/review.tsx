@@ -9,7 +9,7 @@ import { goBack } from '@/lib/navigation';
 import { StatusChip, AppIcon, type AppIconName } from '@/components';
 import {
   fetchReservationById, fetchReservationPlayersWithProfiles,
-  playersNeeded, occupancyStatusLabel, parseTstzrange, fetchMyReservationSeat,
+  playersNeeded, occupiedSlots, occupancyStatusLabel, parseTstzrange, fetchMyReservationSeat,
   type MyReservationSeat,
   type Reservation,
 } from '@/lib/supabase/reservations';
@@ -106,7 +106,7 @@ export default function ReviewScreen() {
       if (!res) { setError('This reservation no longer exists.'); return; }
       setReservation(res);
       // Slots, not people: one person holding 3 slots fills 3 of 4.
-      setCurrentPlayers(roster.reduce((n, p) => n + (p.slots ?? 1), 0));
+      setCurrentPlayers(occupiedSlots(roster));
       void fetchMyReservationSeat(reservationId).then(setSeat);
 
       // Only fetch what the wizard store could not carry over.

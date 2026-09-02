@@ -10,7 +10,7 @@ import { useSession } from '@/hooks/useSession';
 import { StatusChip, AddToCalendarButton, AppIcon, type StatusVariant, type AppIconName } from '@/components';
 import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilities';
 import {
-  fetchReservationById, fetchReservationPlayersWithProfiles, playersNeeded, parseTstzrange,
+  fetchReservationById, fetchReservationPlayersWithProfiles, occupiedSlots, playersNeeded, parseTstzrange,
   type Reservation,
 } from '@/lib/supabase/reservations';
 import {
@@ -73,7 +73,7 @@ export default function ConfirmationScreen() {
         if (cancelled) return;
         if (!res) { setError('This reservation no longer exists.'); return; }
         setReservation(res);
-        setCurrentPlayers(roster.length);
+        setCurrentPlayers(occupiedSlots(roster));
         setFacility(fac);
         setPayment(pay);
       } catch (e: unknown) {

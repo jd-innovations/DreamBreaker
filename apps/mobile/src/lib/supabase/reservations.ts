@@ -373,6 +373,22 @@ export async function fetchReservationOccupancy(reservationId: string): Promise<
 
 export type OccupancyCompletionState = 'complete' | 'needs_players';
 
+/**
+ * How many of the game's spots a roster occupies.
+ *
+ * A roster row is a PERSON; a spot is a SLOT, and one person can hold several
+ * -- someone booking for themselves and two friends is one row holding three.
+ * So the count is a sum over `slots`, never `roster.length`. Counting rows
+ * reports a full doubles court as "1 of 4" and advertises three openings that
+ * do not exist.
+ *
+ * Mirrors what reservation_occupancy() does server-side, so a screen holding a
+ * roster it already fetched need not make a second round trip to agree with it.
+ */
+export function occupiedSlots(roster: { slots?: number | null }[]): number {
+  return roster.reduce((n, p) => n + (p.slots ?? 1), 0);
+}
+
 /** How many more players are needed to fill the reservation. Never negative. */
 export function playersNeeded(currentPlayers: number, maxPlayers: number): number {
   return Math.max(maxPlayers - currentPlayers, 0);
