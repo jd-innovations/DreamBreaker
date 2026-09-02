@@ -329,9 +329,21 @@ export default function ReviewScreen() {
               </Text>
             </View>
           )}
+          {(reservation.buyer_service_fee_cents ?? 0) > 0 && (
+            <View style={s.priceRow}>
+              <Text style={s.priceLabel}>Convenience Fee</Text>
+              <Text style={s.priceValue}>{formatCents(reservation.buyer_service_fee_cents ?? 0)}</Text>
+            </View>
+          )}
+
           <View style={[s.priceRow, s.priceRowFinal]}>
             <Text style={s.priceFinalLabel}>Total</Text>
-            <Text style={s.priceFinalValue}>{formatCents(reservation.final_price_cents)}</Text>
+            {/* buyer_total_cents is what is actually charged. Showing
+                final_price_cents here would quote the court price and then take
+                more, which is the one number a player will check. */}
+            <Text style={s.priceFinalValue}>
+              {formatCents(reservation.buyer_total_cents ?? reservation.final_price_cents)}
+            </Text>
           </View>
           <Text style={s.priceNote}>No taxes or service fees are applied yet.</Text>
         </View>
@@ -383,7 +395,7 @@ export default function ReviewScreen() {
             <Ionicons name="lock-closed-outline" size={16} color={L.textSub} />
             <Text style={s.paymentNoticeText}>
               Paid court bookings aren&apos;t available in this release yet. This court charges{' '}
-              {formatCents(reservation.final_price_cents)} — your hold will expire on its own, and you have not
+              {formatCents(reservation.buyer_total_cents ?? reservation.final_price_cents)} — your hold will expire on its own, and you have not
               been charged. Free courts can still be booked.
             </Text>
           </View>
@@ -398,7 +410,7 @@ export default function ReviewScreen() {
             <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handlePay} disabled={paying}>
               {paying ? <ActivityIndicator size="small" color={L.white} /> : (
                 <Text style={s.primaryBtnText}>
-                  {paymentError ? 'Try Again' : `Pay ${formatCents(reservation.final_price_cents)}`}
+                  {paymentError ? 'Try Again' : `Pay ${formatCents(reservation.buyer_total_cents ?? reservation.final_price_cents)}`}
                 </Text>
               )}
             </TouchableOpacity>

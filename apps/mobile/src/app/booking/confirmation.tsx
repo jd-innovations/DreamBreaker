@@ -195,7 +195,7 @@ export default function ConfirmationScreen() {
         <View style={s.card}>
           <View style={s.priceRow}>
             <Text style={s.priceLabel}>Amount</Text>
-            <Text style={s.priceValue}>{formatCents(reservation.final_price_cents)}</Text>
+            <Text style={s.priceValue}>{formatCents(reservation.buyer_total_cents ?? reservation.final_price_cents)}</Text>
           </View>
           <View style={{ marginTop: 8, alignSelf: 'flex-start' }}>
             <StatusChip

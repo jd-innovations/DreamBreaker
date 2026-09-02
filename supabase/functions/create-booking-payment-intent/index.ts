@@ -70,7 +70,7 @@ Deno.serve(async (req: Request) => {
   // function will ever charge. Never read an amount from the request body.
   const { data: reservation, error: reservationError } = await service
     .from("reservations")
-    .select("id, facility_id, asset_type, asset_id, organizer_id, status, hold_expires_at, final_price_cents, platform_commission_cents, facility_net_cents, commission_pct")
+    .select("id, facility_id, asset_type, asset_id, organizer_id, status, hold_expires_at, final_price_cents, platform_commission_cents, facility_net_cents, commission_pct, buyer_service_fee_cents, buyer_total_cents")
     .eq("id", reservationId)
     .maybeSingle();
 
@@ -98,7 +98,12 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "hold_expired" }), { status: 409, headers: CORS });
   }
 
-  const amountCents = reservation.final_price_cents ?? 0;
+  // buyer_total_cents = court price + convenience fee. Charging
+  // final_price_cents here would record a fee we never actually collect.
+  //
+  // Falls back to the court price for reservations created before the fee
+  // existed, whose buyer_total_cents is null.
+  const amountCents = reservation.buyer_total_cents ?? reservation.final_price_cents ?? 0;
 
   if (amountCents <= 0) {
     // Free reservation (e.g. a facility with no rate set) — nothing to pay.
@@ -128,6 +133,9 @@ Deno.serve(async (req: Request) => {
         platformCommissionCents: String(reservation.platform_commission_cents ?? ""),
         facilityNetCents: String(reservation.facility_net_cents ?? ""),
         commissionPct: String(reservation.commission_pct ?? ""),
+        // Platform revenue, outside the facility split.
+        convenienceFeeCents: String(reservation.buyer_service_fee_cents ?? 0),
+        courtPriceCents: String(reservation.final_price_cents ?? ""),
       },
     });
 

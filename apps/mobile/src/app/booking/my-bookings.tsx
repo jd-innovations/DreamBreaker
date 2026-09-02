@@ -120,7 +120,8 @@ function BookingCard({ res, onPress }: { res: EnrichedReservation; onPress: () =
           )}
         </View>
         <View style={{ alignItems: 'flex-end' }}>
-          <Text style={c.amount}>{formatCents(res.final_price_cents)}</Text>
+          {/* What they paid, fee included — not the court price. */}
+          <Text style={c.amount}>{formatCents(res.buyer_total_cents ?? res.final_price_cents)}</Text>
           <Text style={c.paymentStatusText}>{reservationPaymentStatusLabel(res.payment)}</Text>
         </View>
       </View>
