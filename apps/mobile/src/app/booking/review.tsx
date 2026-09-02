@@ -19,6 +19,7 @@ import { fetchBallMachineById } from '@/lib/supabase/ballMachines';
 import { confirmReservation } from '@/lib/supabase/reservationPayment';
 import { reservationPaymentErrorMessage } from '@/lib/payments/reservationPaymentIntent';
 import { useReservationPayment } from '@/lib/payments/useReservationPayment';
+import { useJoinFeePayment, joinFeeErrorMessage } from '@/lib/payments/joinFeePayment';
 import { getBookingFacility, getBookingSelection, getBookingReservationId } from '@/lib/bookingStore';
 import { isFeatureEnabled } from '@/lib/featureFlags';
 
@@ -93,6 +94,7 @@ export default function ReviewScreen() {
   // dismissed. Cleared at the start of every attempt.
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const { payForReservation, processing: paying } = useReservationPayment();
+  const { payJoinFee, processing: payingJoin } = useJoinFeePayment();
 
   const load = useCallback(async () => {
     if (!reservationId) { setError('No active reservation. Go back and choose a time.'); setLoading(false); return; }
@@ -138,7 +140,15 @@ export default function ReviewScreen() {
   // Pay past expiry and only discover it by tapping Pay. Tick while the hold is
   // live so the countdown below stays honest; stop once it lapses or the
   // reservation is no longer held.
-  const holdExpiresAt = reservation?.status === 'held' ? reservation.hold_expires_at : null;
+  // The seat's hold takes precedence: a joiner is held against a reservation
+  // that is already confirmed, so the reservation carries no expiry and the
+  // countdown would silently vanish for exactly the person on a clock.
+  const holdExpiresAt =
+    seat?.status === 'held' && seat.holdExpiresAt
+      ? seat.holdExpiresAt
+      : reservation?.status === 'held'
+        ? reservation.hold_expires_at
+        : null;
   useEffect(() => {
     if (!holdExpiresAt) return;
     if (new Date(holdExpiresAt).getTime() <= Date.now()) return;
@@ -187,8 +197,47 @@ export default function ReviewScreen() {
   // received, still confirming" -- never as a failure. Telling someone their
   // card payment failed seconds after it succeeded is how you get a duplicate
   // charge.
+  // A joiner pays for their own seat, not for the booking. Same screen, same
+  // numbers, different endpoint: payForReservation is the organizer's charge
+  // and confirms the whole reservation, while a join fee confirms one seat and
+  // leaves everyone else's alone.
+  async function handleJoinPay() {
+    if (!reservation) return;
+    setPaymentError(null);
+
+    const outcome = await payJoinFee(reservation.id, attemptId);
+
+    switch (outcome.status) {
+      case 'confirmed':
+      case 'no_fee':
+        router.push('/booking/confirmation' as never);
+        return;
+
+      case 'canceled':
+        // Dismissed the sheet. The hold is untouched and the button is still
+        // there; nothing to say.
+        return;
+
+      case 'failed':
+        setPaymentError(outcome.message);
+        Alert.alert('Payment Failed', `${outcome.message} You have not been charged.`);
+        return;
+
+      case 'error': {
+        const message = joinFeeErrorMessage(outcome.code);
+        setPaymentError(message);
+        Alert.alert('Could Not Join', message);
+        return;
+      }
+    }
+  }
+
   async function handlePay() {
-    if (!reservation || paying) return;
+    if (!reservation || paying || payingJoin) return;
+    if (seat && !seat.isOrganizer) {
+      await handleJoinPay();
+      return;
+    }
     setPaymentError(null);
 
     const outcome = await payForReservation(reservation.id, attemptId);
@@ -456,7 +505,7 @@ export default function ReviewScreen() {
                 <Text style={s.paymentErrorText}>{paymentError}</Text>
               </View>
             )}
-            <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handlePay} disabled={paying}>
+            <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handlePay} disabled={paying || payingJoin}>
               {paying ? <ActivityIndicator size="small" color={L.white} /> : (
                 <Text style={s.primaryBtnText}>
                   {paymentError ? 'Try Again' : `Pay ${formatCents(seat?.totalCents ?? 0)}`}

@@ -4,7 +4,6 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useJoinFeePayment, joinFeeErrorMessage } from '@/lib/payments/joinFeePayment';
 import { colors, spacing, radius } from '@/theme';
 import { goBack } from '@/lib/navigation';
 import { StatusChip, type StatusVariant } from '@/components';
@@ -246,7 +245,6 @@ export default function ChooseTimeScreen() {
   // was a duplicate of that question, and letting the two disagree meant
   // someone could say 3 players and be charged for 1.
   const slotCount = search.playersInGroup;
-  const { payJoinFee } = useJoinFeePayment();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionAssetId, setActionAssetId] = useState<string | null>(null);
@@ -359,23 +357,6 @@ export default function ChooseTimeScreen() {
           // the last seat.
           await joinReservation(row.reservationId, assetSlots(asset.kind, slotCount));
 
-          const outcome = await payJoinFee(row.reservationId, `${Date.now()}`);
-          if (outcome.status === 'canceled') {
-            // The held seat is left to the sweeper rather than deleted here —
-            // they may simply retry, and the hold is what keeps it theirs.
-            Alert.alert('Not joined', 'Your seat is held for 10 minutes if you want to try again.');
-            return;
-          }
-          if (outcome.status === 'failed' || outcome.status === 'error') {
-            Alert.alert(
-              'Could not join',
-              outcome.status === 'failed'
-                ? outcome.message
-                : joinFeeErrorMessage(outcome.code),
-            );
-            return;
-          }
-
           const discount = bestFlashDealPercent(deals, asset.kind, asset.id, startsAt);
           // Joining inherits the existing game's length — the duration picker
           // describes a NEW booking and must not reprice someone else's.
@@ -398,7 +379,16 @@ export default function ChooseTimeScreen() {
             basePriceCents: asset.hourlyRateCents, flashDealDiscountPercent: discount, finalPriceCents,
           });
           setBookingReservationId(row.reservationId);
-          setSuccess({ action: 'joined', reservationId: row.reservationId, assetName: asset.name, startsAt, endsAt, finalPriceCents, holdExpiresAt: null });
+          // Through Review & Pay, exactly like booking one.
+          //
+          // This used to open PaymentSheet straight from the picker, which was
+          // reasonable when joining cost a flat $2 fee. Under per-slot pricing a
+          // joiner owes a real court share — $24.50 on a $30/hour court for
+          // three hours — and asking for that with no breakdown, no total and no
+          // hold countdown is not something to do to somebody. The seat
+          // join_reservation just held already carries their share and their
+          // fee, so Review & Pay renders their numbers with nothing extra.
+          router.push('/booking/review' as never);
         } else {
           const reservation: Reservation = await createReservation({
             facilityId: facility.facilityId!,

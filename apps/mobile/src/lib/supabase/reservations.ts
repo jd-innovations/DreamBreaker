@@ -432,6 +432,12 @@ export type MyReservationSeat = {
   totalCents: number;
   status: 'held' | 'confirmed';
   isOrganizer: boolean;
+  /**
+   * When THIS seat's hold lapses. A joiner's seat is held against a
+   * reservation that is already confirmed, so the reservation's own
+   * hold_expires_at is null and says nothing about their deadline.
+   */
+  holdExpiresAt: string | null;
 };
 
 /**
@@ -450,7 +456,7 @@ export async function fetchMyReservationSeat(
 
   const { data, error } = await supabase
     .from('reservation_players')
-    .select('slots, court_share_cents, service_fee_cents, total_cents, status, is_organizer')
+    .select('slots, court_share_cents, service_fee_cents, total_cents, status, is_organizer, hold_expires_at')
     .eq('reservation_id', reservationId)
     .eq('profile_id', uid)
     .maybeSingle();
@@ -463,5 +469,6 @@ export async function fetchMyReservationSeat(
     totalCents: data.total_cents ?? 0,
     status: (data.status as 'held' | 'confirmed') ?? 'held',
     isOrganizer: !!data.is_organizer,
+    holdExpiresAt: (data.hold_expires_at as string | null) ?? null,
   };
 }
