@@ -445,7 +445,13 @@ export default function FacilityDetailScreen() {
   const [tournsLoading,  setTournsLoading]  = useState(false);
 
   // ── Booking inventory / availability (read-only this phase) ──
-  const [inventoryTab,     setInventoryTab]     = useState<ReservableAssetType>('court');
+  // Honours what the search screen was asked for. Arriving here after picking
+  // "Ball Machine" and landing on Courts makes the choice look ignored, and the
+  // date beside this already reads from the same place. null means "no
+  // preference", which keeps the old default.
+  const [inventoryTab,     setInventoryTab]     = useState<ReservableAssetType>(
+    (getBookingSearch().assetTypeFilter as ReservableAssetType | null) ?? 'court',
+  );
   const [courts,           setCourts]           = useState<Court[]>([]);
   const [ballMachines,     setBallMachines]     = useState<BallMachine[]>([]);
   const [inventoryLoading, setInventoryLoading] = useState(true);
@@ -743,7 +749,10 @@ export default function FacilityDetailScreen() {
           {/* ── COURTS / BALL MACHINES ── */}
           {(courts.length > 0 || ballMachines.length > 0 || inventoryLoading) && (
             <View style={s.section}>
-              <SectionHeader title="Book a Court" loading={inventoryLoading} />
+              <SectionHeader
+                title={inventoryTab === 'ball_machine' ? 'Book a Ball Machine' : 'Book a Court'}
+                loading={inventoryLoading}
+              />
 
               {/* Date navigation */}
               <View style={s.dateNavRow}>

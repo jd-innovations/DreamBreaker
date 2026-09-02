@@ -331,17 +331,22 @@ export default function ReviewScreen() {
 
         <View style={s.card}>
           <Text style={s.sectionTitle}>Price</Text>
-          {/* The court's listed hourly rate, for context — not what is
-              charged. A slot-hour is this divided by the game's capacity. */}
+          {/* The listed hourly rate, for context — not what is charged. On a
+              court a slot-hour is this divided by the game's capacity; a ball
+              machine is rented whole by one person, so the two are the same
+              and the sharing language below would be false. */}
           <View style={s.priceRow}>
-            <Text style={s.priceLabel}>Court rate (per hour)</Text>
+            <Text style={s.priceLabel}>
+              {isBallMachine ? 'Machine rate (per hour)' : 'Court rate (per hour)'}
+            </Text>
             <Text style={hasDeal ? s.priceStrike : s.priceValue}>{formatCents(reservation.base_price_cents)}</Text>
           </View>
           {seat && (
             <View style={s.priceRow}>
               <Text style={s.priceLabel}>
-                Your share · {seat.slots} {seat.slots === 1 ? 'slot' : 'slots'} x{' '}
-                {Number(reservation.duration_hours ?? 1)}h
+                {isBallMachine
+                  ? `Rental · ${Number(reservation.duration_hours ?? 1)}h`
+                  : `Your share · ${seat.slots} ${seat.slots === 1 ? 'slot' : 'slots'} x ${Number(reservation.duration_hours ?? 1)}h`}
               </Text>
               <Text style={s.priceValue}>{formatCents(seat.courtShareCents)}</Text>
             </View>
@@ -360,7 +365,9 @@ export default function ReviewScreen() {
           {seat && seat.serviceFeeCents > 0 && (
             <View style={s.priceRow}>
               <Text style={s.priceLabel}>
-                Convenience Fee · {seat.slots} x {formatCents(seat.serviceFeeCents / seat.slots)}
+                {isBallMachine
+                  ? 'Convenience Fee'
+                  : `Convenience Fee · ${seat.slots} x ${formatCents(seat.serviceFeeCents / seat.slots)}`}
               </Text>
               <Text style={s.priceValue}>{formatCents(seat.serviceFeeCents)}</Text>
             </View>
@@ -376,7 +383,12 @@ export default function ReviewScreen() {
             </Text>
           </View>
           <Text style={s.priceNote}>
-            You pay for the slots you take. Anyone who joins later pays their own share.
+            {isBallMachine
+              // max_players is 1 for a machine, so nobody can join one. The
+              // court wording was not merely court-flavoured here, it was
+              // untrue.
+              ? 'The machine is reserved for you alone for this time.'
+              : 'You pay for the slots you take. Anyone who joins later pays their own share.'}
           </Text>
         </View>
 
