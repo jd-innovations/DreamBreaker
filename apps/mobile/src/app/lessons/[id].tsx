@@ -10,6 +10,7 @@ import { useSession } from '@/hooks/useSession';
 import { useCoachOfferPayment } from '@/lib/payments/useCoachOfferPayment';
 import { coachOfferPaymentErrorMessage } from '@/lib/payments/coachOfferPaymentIntent';
 import { DEFAULT_LESSON_COVER } from '@/lib/coach/defaultLessonCover';
+import { useCoachServiceFee } from '@/lib/coach/serviceFee';
 
 // Offer detail + checkout.
 //
@@ -32,6 +33,7 @@ export default function LessonOfferDetailScreen() {
   const [quantity, setQuantity] = useState(1);
   const { user } = useSession();
   const { payForCoachOffer, processing } = useCoachOfferPayment();
+  const serviceFee = useCoachServiceFee();
   // One id per checkout attempt, feeding the edge function's idempotency key.
   // Regenerated only after a completed attempt, so a double-tap reuses the same
   // PaymentIntent rather than minting a second purchase.
@@ -104,6 +106,10 @@ export default function LessonOfferDetailScreen() {
   const maxParticipants = offer.max_participants ?? 1;
   const canBook = !isOwnOffer && !soldOut && !offer.premium_only;
   const unitPriceCents = offer.discounted_price_cents ?? offer.regular_price_cents;
+  const subtotalCents = unitPriceCents * quantity;
+  // Per purchase in fixed mode, whatever the headcount — a lesson is one
+  // transaction. The server computes this identically and snapshots it.
+  const feeCents = serviceFee.feeFor(unitPriceCents, quantity);
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
@@ -222,18 +228,23 @@ export default function LessonOfferDetailScreen() {
               </Text>
               {canBook && (
                 <Text style={s.bookBtnPrice}>
-                  {formatPriceCents(unitPriceCents * quantity)}
+                  {formatPriceCents(subtotalCents + feeCents)}
                 </Text>
               )}
             </>
           )}
         </TouchableOpacity>
 
-        {canBook && (
-          // The server adds a buyer service fee on top, resolved from
-          // platform_settings at purchase time. Saying so here avoids the
-          // PaymentSheet being the first place a higher number appears.
-          <Text style={s.feeNote}>Service fees calculated at checkout.</Text>
+        {canBook && feeCents > 0 && (
+          // Named and totalled, not merely warned about. The old note said
+          // "Service fees calculated at checkout", which was a promise that the
+          // number on the button was not the number you would pay — leaving
+          // PaymentSheet as the first place the real total appeared. The server
+          // resolves this same fee from platform_settings and snapshots it onto
+          // the purchase, so these two agree by construction.
+          <Text style={s.feeNote}>
+            {formatPriceCents(subtotalCents)} + {formatPriceCents(feeCents)} convenience fee
+          </Text>
         )}
       </View>
     </View>
