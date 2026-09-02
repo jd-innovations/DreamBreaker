@@ -9,7 +9,8 @@ import { goBack } from '@/lib/navigation';
 import { StatusChip, AppIcon, type AppIconName } from '@/components';
 import {
   fetchReservationById, fetchReservationPlayersWithProfiles,
-  playersNeeded, occupancyStatusLabel, parseTstzrange,
+  playersNeeded, occupancyStatusLabel, parseTstzrange, fetchMyReservationSeat,
+  type MyReservationSeat,
   type Reservation,
 } from '@/lib/supabase/reservations';
 import { fetchFacilityById } from '@/lib/supabase/facilities';
@@ -70,6 +71,10 @@ export default function ReviewScreen() {
 
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [currentPlayers, setCurrentPlayers] = useState(0);
+  // The caller's OWN seat. Reservation totals only accrue from confirmed
+  // players, so before paying they are zero — reading them here is what showed
+  // a $0.00 total on a $28.50 booking.
+  const [seat, setSeat] = useState<MyReservationSeat | null>(null);
   // bookingStore is plain in-memory module state — it is empty after an app
   // relaunch, and this screen is reachable in exactly that condition (kill the
   // app mid-payment, reopen). Names are recovered from the reservation row
@@ -100,7 +105,9 @@ export default function ReviewScreen() {
       ]);
       if (!res) { setError('This reservation no longer exists.'); return; }
       setReservation(res);
-      setCurrentPlayers(roster.length);
+      // Slots, not people: one person holding 3 slots fills 3 of 4.
+      setCurrentPlayers(roster.reduce((n, p) => n + (p.slots ?? 1), 0));
+      void fetchMyReservationSeat(reservationId).then(setSeat);
 
       // Only fetch what the wizard store could not carry over.
       if (!fromWizard.facilityName || !fromWizard.assetName) {
@@ -314,10 +321,21 @@ export default function ReviewScreen() {
 
         <View style={s.card}>
           <Text style={s.sectionTitle}>Price</Text>
+          {/* The court's listed hourly rate, for context — not what is
+              charged. A slot-hour is this divided by the game's capacity. */}
           <View style={s.priceRow}>
-            <Text style={s.priceLabel}>Base Price</Text>
+            <Text style={s.priceLabel}>Court rate (per hour)</Text>
             <Text style={hasDeal ? s.priceStrike : s.priceValue}>{formatCents(reservation.base_price_cents)}</Text>
           </View>
+          {seat && (
+            <View style={s.priceRow}>
+              <Text style={s.priceLabel}>
+                Your share · {seat.slots} {seat.slots === 1 ? 'slot' : 'slots'} x{' '}
+                {Number(reservation.duration_hours ?? 1)}h
+              </Text>
+              <Text style={s.priceValue}>{formatCents(seat.courtShareCents)}</Text>
+            </View>
+          )}
           {hasDeal && (
             <View style={s.priceRow}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -329,10 +347,12 @@ export default function ReviewScreen() {
               </Text>
             </View>
           )}
-          {(reservation.buyer_service_fee_cents ?? 0) > 0 && (
+          {seat && seat.serviceFeeCents > 0 && (
             <View style={s.priceRow}>
-              <Text style={s.priceLabel}>Convenience Fee</Text>
-              <Text style={s.priceValue}>{formatCents(reservation.buyer_service_fee_cents ?? 0)}</Text>
+              <Text style={s.priceLabel}>
+                Convenience Fee · {seat.slots} x {formatCents(seat.serviceFeeCents / seat.slots)}
+              </Text>
+              <Text style={s.priceValue}>{formatCents(seat.serviceFeeCents)}</Text>
             </View>
           )}
 
@@ -342,10 +362,12 @@ export default function ReviewScreen() {
                 final_price_cents here would quote the court price and then take
                 more, which is the one number a player will check. */}
             <Text style={s.priceFinalValue}>
-              {formatCents(reservation.buyer_total_cents ?? reservation.final_price_cents)}
+              {formatCents(seat?.totalCents ?? 0)}
             </Text>
           </View>
-          <Text style={s.priceNote}>No taxes or service fees are applied yet.</Text>
+          <Text style={s.priceNote}>
+            You pay for the slots you take. Anyone who joins later pays their own share.
+          </Text>
         </View>
 
         {holdMsLeft != null && !holdExpired && (
@@ -395,7 +417,7 @@ export default function ReviewScreen() {
             <Ionicons name="lock-closed-outline" size={16} color={L.textSub} />
             <Text style={s.paymentNoticeText}>
               Paid court bookings aren&apos;t available in this release yet. This court charges{' '}
-              {formatCents(reservation.buyer_total_cents ?? reservation.final_price_cents)} — your hold will expire on its own, and you have not
+              {formatCents(seat?.totalCents ?? 0)} — your hold will expire on its own, and you have not
               been charged. Free courts can still be booked.
             </Text>
           </View>
@@ -410,7 +432,7 @@ export default function ReviewScreen() {
             <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handlePay} disabled={paying}>
               {paying ? <ActivityIndicator size="small" color={L.white} /> : (
                 <Text style={s.primaryBtnText}>
-                  {paymentError ? 'Try Again' : `Pay ${formatCents(reservation.buyer_total_cents ?? reservation.final_price_cents)}`}
+                  {paymentError ? 'Try Again' : `Pay ${formatCents(seat?.totalCents ?? 0)}`}
                 </Text>
               )}
             </TouchableOpacity>

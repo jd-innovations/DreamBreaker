@@ -254,6 +254,8 @@ export type ReservationPlayerWithProfile = {
   joinedAt:    string;
   fullName:    string;
   avatarUrl:   string | null;
+  /** Slots this person holds. One player can fill several of the game's spots. */
+  slots:       number;
 };
 
 // Roster with display names, for the Find Players / Invite Players screen --
@@ -263,13 +265,13 @@ export type ReservationPlayerWithProfile = {
 export async function fetchReservationPlayersWithProfiles(reservationId: string): Promise<ReservationPlayerWithProfile[]> {
   const { data, error } = await supabase
     .from('reservation_players')
-    .select('id, profile_id, is_organizer, joined_at, profile:profiles!profile_id(full_name, avatar_url)')
+    .select('id, profile_id, is_organizer, joined_at, slots, profile:profiles!profile_id(full_name, avatar_url)')
     .eq('reservation_id', reservationId)
     .order('joined_at', { ascending: true });
   if (error) throw error;
 
   return ((data ?? []) as unknown as {
-    id: string; profile_id: string; is_organizer: boolean; joined_at: string;
+    id: string; profile_id: string; is_organizer: boolean; joined_at: string; slots: number | null;
     profile: { full_name: string; avatar_url: string | null } | null;
   }[]).map(row => ({
     id:          row.id,
@@ -278,6 +280,7 @@ export async function fetchReservationPlayersWithProfiles(reservationId: string)
     joinedAt:    row.joined_at,
     fullName:    row.profile?.full_name ?? 'Player',
     avatarUrl:   row.profile?.avatar_url ?? null,
+    slots:       row.slots ?? 1,
   }));
 }
 
@@ -404,4 +407,45 @@ export function occupancyStatusLabel(currentPlayers: number, maxPlayers: number)
 /** "2 / 4 Players" style short label for list/card contexts. */
 export function occupancyCountLabel(currentPlayers: number, maxPlayers: number): string {
   return `${currentPlayers} / ${maxPlayers} Players`;
+}
+
+export type MyReservationSeat = {
+  slots: number;
+  courtShareCents: number;
+  serviceFeeCents: number;
+  totalCents: number;
+  status: 'held' | 'confirmed';
+  isOrganizer: boolean;
+};
+
+/**
+ * The caller's own seat on a reservation: their slots and what they owe.
+ *
+ * Review & Pay must read THIS, not the reservation totals. Those only accrue
+ * from CONFIRMED players, so before paying they are all zero — which is how the
+ * screen came to show a $0.00 total for a $28.50 booking.
+ */
+export async function fetchMyReservationSeat(
+  reservationId: string,
+): Promise<MyReservationSeat | null> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) return null;
+
+  const { data, error } = await supabase
+    .from('reservation_players')
+    .select('slots, court_share_cents, service_fee_cents, total_cents, status, is_organizer')
+    .eq('reservation_id', reservationId)
+    .eq('profile_id', uid)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return {
+    slots: data.slots ?? 1,
+    courtShareCents: data.court_share_cents ?? 0,
+    serviceFeeCents: data.service_fee_cents ?? 0,
+    totalCents: data.total_cents ?? 0,
+    status: (data.status as 'held' | 'confirmed') ?? 'held',
+    isOrganizer: !!data.is_organizer,
+  };
 }
