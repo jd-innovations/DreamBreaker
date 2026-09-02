@@ -9,7 +9,7 @@ import {
   Gear, SignOut, ShieldCheck, MagnifyingGlass,
   ArrowSquareOut, Envelope, Megaphone,
   CheckFat, WarningCircle, Broadcast, ChatCircleDots,
-  Star, PencilSimple, Trash, Prohibit, DotsThree,
+  Star, PencilSimple, Trash, Prohibit, DotsThree, Buildings,
   Flag, Ticket,
 } from "@phosphor-icons/react";
 import { Logo } from "@/components/layout/logo";
@@ -826,6 +826,27 @@ export default function AdminPage() {
           <PencilSimple size={16} weight={navSection === "email_templates" ? "fill" : "regular"} />
           Email Templates
         </button>
+
+        {/* Standalone admin pages. Both existed with no way to reach them from
+            here, so the only route was typing the URL. */}
+        <Link href="/admin/facility-applications">
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Buildings size={16} /> Facility Applications
+          </button>
+        </Link>
+        <Link href="/admin/reviews">
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Star size={16} /> Review Invitations
+          </button>
+        </Link>
+        <Link href="/admin/email-preview">
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Envelope size={16} /> Email Preview
+          </button>
+        </Link>
       </nav>
 
       <div className="border-t border-border px-3 py-3 space-y-0.5 flex-shrink-0">

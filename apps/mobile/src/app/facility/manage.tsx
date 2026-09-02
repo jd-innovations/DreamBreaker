@@ -26,6 +26,7 @@ import {
   type ManagedFacility, type PayoutStatus, type FacilityEarnings,
 } from '@/lib/supabase/facilityManagement';
 import { startConnectOnboarding } from '@/lib/payments/connectOnboarding';
+import { OperatingHoursEditor } from '@/components/OperatingHoursEditor';
 
 // Facility Marketplace Phase 2 — courts, machines and staff.
 //
@@ -474,6 +475,12 @@ export default function FacilityManageScreen() {
                 </View>
               </View>
             )}
+
+            {/* ── Hours ──────────────────────────────────────────────────── */}
+            <View style={s.sectionHead}>
+              <Text style={s.sectionLabel}>HOURS</Text>
+            </View>
+            <OperatingHoursEditor ownerType="facility" ownerId={active.id} canEdit={isManagerOrAbove} />
 
             {/* ── Staff ──────────────────────────────────────────────────── */}
             <View style={s.sectionHead}>

@@ -41,10 +41,24 @@ const EMPTY: Draft = {
   hours_summary: '', description: '', court_count: '', indoor_courts: '', outdoor_courts: '',
 };
 
+
+/**
+ * (941) 555-0100 as you type.
+ *
+ * Formats the DISPLAY only; digits are what gets submitted, so a number typed
+ * with punctuation and one without produce the same stored value.
+ */
+function formatPhone(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(0, 10);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
 function draftFrom(f: Partial<FacilityWithPrimaryPhoto>): Draft {
   return {
     name: f.name ?? '', address: f.address ?? '', city: f.city ?? '', state: f.state ?? '',
-    phone: f.phone ?? '', website: f.website ?? '', hours_summary: f.hours_summary ?? '',
+    phone: formatPhone(f.phone ?? ''), website: f.website ?? '', hours_summary: f.hours_summary ?? '',
     description: f.description ?? '',
     court_count: String(f.court_count ?? ''), indoor_courts: String(f.indoor_courts ?? ''),
     outdoor_courts: String(f.outdoor_courts ?? ''),
@@ -56,7 +70,8 @@ function toProposed(d: Draft): ProposedFacility {
   return {
     name: d.name.trim(), address: d.address.trim(), city: d.city.trim(),
     state: d.state.trim().toUpperCase(),
-    phone: d.phone.trim() || null, website: d.website.trim() || null,
+    // Digits only. The formatting is a display convenience, not data.
+    phone: d.phone.replace(/\D/g, '') || null, website: d.website.trim() || null,
     hours_summary: d.hours_summary.trim() || null, description: d.description.trim() || null,
     court_count: num(d.court_count), indoor_courts: num(d.indoor_courts),
     outdoor_courts: num(d.outdoor_courts),
@@ -144,9 +159,15 @@ export default function FacilityApplyScreen() {
       const full = toProposed(draft);
       // For an existing facility send only what changed, so the reviewer sees
       // edits rather than a full copy of the row.
-      const proposed = isNew
-        ? full
-        : diffProposed(picked as unknown as Record<string, unknown>, full);
+      // The stored phone may be punctuated while toProposed() submits digits, so
+      // the original is normalised first — otherwise every application would
+      // report a phone "change" that is only a difference in formatting.
+      const original = picked
+        ? { ...(picked as unknown as Record<string, unknown>),
+            phone: (picked.phone ?? '').replace(/\D/g, '') || null }
+        : {};
+
+      const proposed = isNew ? full : diffProposed(original, full);
 
       const res = await applyToManageFacility({
         facilityId: isNew ? null : picked?.id ?? null,
@@ -298,9 +319,18 @@ export default function FacilityApplyScreen() {
             <Field label="Address"  value={draft.address} onChange={v => setDraft({ ...draft, address: v })} />
             <Field label="City"     value={draft.city}    onChange={v => setDraft({ ...draft, city: v })} />
             <Field label="State"    value={draft.state}   onChange={v => setDraft({ ...draft, state: v })} autoCapitalize="characters" maxLength={2} />
-            <Field label="Phone"    value={draft.phone}   onChange={v => setDraft({ ...draft, phone: v })} keyboardType="phone-pad" />
+            <Field label="Phone"    value={draft.phone}   onChange={v => setDraft({ ...draft, phone: formatPhone(v) })} keyboardType="phone-pad" />
             <Field label="Website"  value={draft.website} onChange={v => setDraft({ ...draft, website: v })} autoCapitalize="none" />
-            <Field label="Hours"    value={draft.hours_summary} onChange={v => setDraft({ ...draft, hours_summary: v })} />
+            {/* Deliberately NOT the booking hours. This writes
+                facilities.hours_summary, a display string; the hours that
+                decide when a court can be booked live in `operating_hours` and
+                are edited from My Facility once approved — which requires a
+                manager role the applicant does not have yet. */}
+            <Field label="Hours (shown on your listing)" value={draft.hours_summary} onChange={v => setDraft({ ...draft, hours_summary: v })} />
+            <Text style={s.hoursNote}>
+              A short description, e.g. &ldquo;Daily 8am&ndash;9pm&rdquo;. You&rsquo;ll set the exact
+              bookable hours in My Facility once you&rsquo;re approved.
+            </Text>
 
             <View style={s.courtRow}>
               <Field label="Total courts"  value={draft.court_count}    onChange={v => setDraft({ ...draft, court_count: v })} keyboardType="number-pad" flex />
@@ -420,6 +450,7 @@ const s = StyleSheet.create({
   },
   courtRow: { flexDirection: 'row', gap: spacing.sm },
   error: { color: colors.danger, ...typography.metadata },
+  hoursNote: { color: colors.textSub, ...typography.metadata, marginTop: -spacing.xs },
 
   textarea: {
     minHeight: 110, borderWidth: 1, borderColor: colors.border, borderRadius: radius.card,
