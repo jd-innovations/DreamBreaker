@@ -223,9 +223,11 @@ export default function ChooseTimeScreen() {
   const [hours, setHours] = useState<number[]>([]);
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [durationHours, setDurationHours] = useState(1);
-  // Slots the booker is taking for themselves (and anyone they are booking
-  // for). The rest of the game stays open.
-  const [slotCount, setSlotCount] = useState(1);
+  // Slots the booker is taking = the group size they already chose on the
+  // search screen ("How many players are in your group?"). Asking again here
+  // was a duplicate of that question, and letting the two disagree meant
+  // someone could say 3 players and be charged for 1.
+  const slotCount = search.playersInGroup;
   const { payJoinFee } = useJoinFeePayment();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -525,38 +527,6 @@ export default function ChooseTimeScreen() {
                       numberOfLines={1}
                     >
                       {d}h
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
-
-          {/* How many slots you are taking. Whatever you leave stays open for
-              other players to join and pay for themselves. */}
-          {selectedHour != null && hours.length > 0 && (
-            <View style={s.durationRow}>
-              <Text style={s.durationLabel}>Slots</Text>
-              {[1, 2, 3, 4].map(n => {
-                const capacity = search.gameFormat === 'singles' ? 2 : 4;
-                const disabled = n > capacity;
-                return (
-                  <TouchableOpacity
-                    key={n}
-                    style={[
-                      s.durationChip,
-                      slotCount === n && s.durationChipActive,
-                      disabled && s.durationChipDisabled,
-                    ]}
-                    disabled={disabled}
-                    activeOpacity={0.85}
-                    onPress={() => setSlotCount(n)}
-                  >
-                    <Text
-                      style={[s.durationChipText, slotCount === n && s.durationChipTextActive]}
-                      numberOfLines={1}
-                    >
-                      {n}
                     </Text>
                   </TouchableOpacity>
                 );
