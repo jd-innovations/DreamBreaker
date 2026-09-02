@@ -161,6 +161,23 @@ function maxHoursFrom(
   return n;
 }
 
+// A ball machine is one thing, rented by one person. It has no game format
+// and no group -- the search screen hides both for machines, but gameFormat
+// and playersInGroup keep whatever was last chosen for a court, so anything
+// deriving numbers from them must ask the asset kind first.
+//
+// These mirror create_reservation exactly: it sets max_players = 1 for a
+// machine and clamps slots to it. Quoting a price off a different capacity is
+// how the picker came to advertise a $20/hour machine at $5.00.
+function assetCapacity(kind: AssetKind, gameFormat: string | null | undefined): number {
+  if (kind === 'ball_machine') return 1;
+  return gameFormat === 'singles' ? 2 : 4;
+}
+
+function assetSlots(kind: AssetKind, playersInGroup: number): number {
+  return kind === 'ball_machine' ? 1 : playersInGroup;
+}
+
 function computeRowState(
   kind: AssetKind,
   slot: AssetAvailabilitySlot | null,
@@ -339,7 +356,7 @@ export default function ChooseTimeScreen() {
           // join_reservation HOLDS the seat and records the fee owed; the
           // charge follows. Holding first is what stops two people paying for
           // the last seat.
-          await joinReservation(row.reservationId, slotCount);
+          await joinReservation(row.reservationId, assetSlots(asset.kind, slotCount));
 
           const outcome = await payJoinFee(row.reservationId, `${Date.now()}`);
           if (outcome.status === 'canceled') {
@@ -382,7 +399,9 @@ export default function ChooseTimeScreen() {
             gameFormat: asset.kind === 'court' ? search.gameFormat : undefined,
             // Slots this booker is taking. Everyone reserves individually;
             // whatever they leave stays open for others to join and pay for.
-            slots: slotCount,
+            // A ball machine has exactly one slot, whatever the last court
+            // search asked for.
+            slots: assetSlots(asset.kind, slotCount),
           });
           setBookingSelection({
             assetType: asset.kind, assetId: asset.id, assetName: asset.name, startsAt, endsAt,
@@ -557,10 +576,12 @@ export default function ChooseTimeScreen() {
                   const discount = bestFlashDealPercent(deals, asset.kind, asset.id, hourRange(dateStr, selectedHour).startsAt);
                   // What THIS booker pays. The listed rate is for the WHOLE
                   // court per hour, so a slot-hour is that divided by the
-                  // game's capacity — 4 for doubles, 2 for singles.
-                  const capacity = search.gameFormat === 'singles' ? 2 : 4;
+                  // game's capacity — 4 for doubles, 2 for singles, and 1 for
+                  // a ball machine, which is rented whole.
+                  const capacity = assetCapacity(asset.kind, search.gameFormat);
+                  const assetSlotCount = assetSlots(asset.kind, slotCount);
                   const finalPrice = asset.hourlyRateCents != null
-                    ? Math.round((asset.hourlyRateCents / capacity) * durationHours * slotCount
+                    ? Math.round((asset.hourlyRateCents / capacity) * durationHours * assetSlotCount
                                  * (100 - (discount ?? 0)) / 100)
                     : asset.hourlyRateCents;
                   const busy = actionAssetId === asset.id;
