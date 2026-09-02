@@ -154,7 +154,10 @@ export type ReservationRefundQuote = {
 export async function fetchReservationRefundQuote(
   reservationId: string,
 ): Promise<ReservationRefundQuote | null> {
-  const { data, error } = await supabase.rpc('compute_reservation_refund', {
+  // Per-slot pricing means each player paid their own share, so the quote is
+  // for the CALLER, not for the booking. compute_player_refund defaults to
+  // auth.uid().
+  const { data, error } = await supabase.rpc('compute_player_refund', {
     p_reservation_id: reservationId,
   });
   if (error) return null;

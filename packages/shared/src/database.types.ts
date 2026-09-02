@@ -5119,6 +5119,7 @@ export type Database = {
       }
       reservation_players: {
         Row: {
+          court_share_cents: number
           hold_expires_at: string | null
           id: string
           is_organizer: boolean
@@ -5127,9 +5128,12 @@ export type Database = {
           profile_id: string
           reservation_id: string
           service_fee_cents: number
+          slots: number
           status: string
+          total_cents: number
         }
         Insert: {
+          court_share_cents?: number
           hold_expires_at?: string | null
           id?: string
           is_organizer?: boolean
@@ -5138,9 +5142,12 @@ export type Database = {
           profile_id: string
           reservation_id: string
           service_fee_cents?: number
+          slots?: number
           status?: string
+          total_cents?: number
         }
         Update: {
+          court_share_cents?: number
           hold_expires_at?: string | null
           id?: string
           is_organizer?: boolean
@@ -5149,7 +5156,9 @@ export type Database = {
           profile_id?: string
           reservation_id?: string
           service_fee_cents?: number
+          slots?: number
           status?: string
+          total_cents?: number
         }
         Relationships: [
           {
@@ -6648,6 +6657,7 @@ export type Database = {
       accept_reservation_invite: {
         Args: { p_invite_id: string }
         Returns: {
+          court_share_cents: number
           hold_expires_at: string | null
           id: string
           is_organizer: boolean
@@ -6656,7 +6666,9 @@ export type Database = {
           profile_id: string
           reservation_id: string
           service_fee_cents: number
+          slots: number
           status: string
+          total_cents: number
         }
         SetofOptions: {
           from: "*"
@@ -6942,6 +6954,17 @@ export type Database = {
           session_participant_id: string
         }[]
       }
+      compute_player_refund: {
+        Args: { p_profile_id?: string; p_reservation_id: string }
+        Returns: {
+          hours_until_slot: number
+          payment_id: string
+          reason: string
+          refundable: boolean
+          refundable_cents: number
+          window_hours: number
+        }[]
+      }
       compute_registration_refund: {
         Args: { p_registration_id: string }
         Returns: {
@@ -7007,6 +7030,7 @@ export type Database = {
       confirm_reservation_player: {
         Args: { p_payment_id?: string; p_reservation_id: string }
         Returns: {
+          court_share_cents: number
           hold_expires_at: string | null
           id: string
           is_organizer: boolean
@@ -7015,7 +7039,9 @@ export type Database = {
           profile_id: string
           reservation_id: string
           service_fee_cents: number
+          slots: number
           status: string
+          total_cents: number
         }
         SetofOptions: {
           from: "*"
@@ -7114,102 +7140,54 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      create_reservation:
-        | {
-            Args: {
-              p_asset_id: string
-              p_asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
-              p_ends_at: string
-              p_facility_id: string
-              p_game_format?: Database["public"]["Enums"]["reservation_game_format"]
-              p_hold_minutes?: number
-              p_starts_at: string
-            }
-            Returns: {
-              asset_id: string
-              asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
-              base_price_cents: number
-              buyer_service_fee_cents: number
-              buyer_total_cents: number | null
-              cancelled_at: string | null
-              check_in_code: string | null
-              commission_pct: number | null
-              commission_source: string | null
-              confirmed_at: string | null
-              created_at: string
-              duration_hours: number | null
-              facility_id: string
-              facility_net_cents: number | null
-              final_price_cents: number
-              flash_deal_discount_percent: number | null
-              flash_deal_id: string | null
-              game_format:
-                | Database["public"]["Enums"]["reservation_game_format"]
-                | null
-              hold_expires_at: string | null
-              id: string
-              max_players: number
-              organizer_id: string
-              platform_commission_cents: number | null
-              status: Database["public"]["Enums"]["reservation_status"]
-              time_range: unknown
-              updated_at: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "reservations"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              p_asset_id: string
-              p_asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
-              p_ends_at: string
-              p_facility_id: string
-              p_game_format?: Database["public"]["Enums"]["reservation_game_format"]
-              p_hold_minutes?: number
-              p_players?: number
-              p_starts_at: string
-            }
-            Returns: {
-              asset_id: string
-              asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
-              base_price_cents: number
-              buyer_service_fee_cents: number
-              buyer_total_cents: number | null
-              cancelled_at: string | null
-              check_in_code: string | null
-              commission_pct: number | null
-              commission_source: string | null
-              confirmed_at: string | null
-              created_at: string
-              duration_hours: number | null
-              facility_id: string
-              facility_net_cents: number | null
-              final_price_cents: number
-              flash_deal_discount_percent: number | null
-              flash_deal_id: string | null
-              game_format:
-                | Database["public"]["Enums"]["reservation_game_format"]
-                | null
-              hold_expires_at: string | null
-              id: string
-              max_players: number
-              organizer_id: string
-              platform_commission_cents: number | null
-              status: Database["public"]["Enums"]["reservation_status"]
-              time_range: unknown
-              updated_at: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "reservations"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      create_reservation: {
+        Args: {
+          p_asset_id: string
+          p_asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
+          p_ends_at: string
+          p_facility_id: string
+          p_game_format?: Database["public"]["Enums"]["reservation_game_format"]
+          p_hold_minutes?: number
+          p_slots?: number
+          p_starts_at: string
+        }
+        Returns: {
+          asset_id: string
+          asset_type: Database["public"]["Enums"]["facility_asset_owner_type"]
+          base_price_cents: number
+          buyer_service_fee_cents: number
+          buyer_total_cents: number | null
+          cancelled_at: string | null
+          check_in_code: string | null
+          commission_pct: number | null
+          commission_source: string | null
+          confirmed_at: string | null
+          created_at: string
+          duration_hours: number | null
+          facility_id: string
+          facility_net_cents: number | null
+          final_price_cents: number
+          flash_deal_discount_percent: number | null
+          flash_deal_id: string | null
+          game_format:
+            | Database["public"]["Enums"]["reservation_game_format"]
+            | null
+          hold_expires_at: string | null
+          id: string
+          max_players: number
+          organizer_id: string
+          platform_commission_cents: number | null
+          status: Database["public"]["Enums"]["reservation_status"]
+          time_range: unknown
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reservations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_user_director_status: {
         Args: never
         Returns: Database["public"]["Enums"]["director_status"]
@@ -7669,8 +7647,9 @@ export type Database = {
         }
       }
       join_reservation: {
-        Args: { p_reservation_id: string }
+        Args: { p_reservation_id: string; p_slots?: number }
         Returns: {
+          court_share_cents: number
           hold_expires_at: string | null
           id: string
           is_organizer: boolean
@@ -7679,7 +7658,9 @@ export type Database = {
           profile_id: string
           reservation_id: string
           service_fee_cents: number
+          slots: number
           status: string
+          total_cents: number
         }
         SetofOptions: {
           from: "*"
@@ -7921,6 +7902,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      recompute_reservation_totals: {
+        Args: { p_reservation_id: string }
+        Returns: undefined
+      }
       redeem_coach_voucher: {
         Args: { p_code: string; p_method?: string }
         Returns: {
@@ -7935,6 +7920,10 @@ export type Database = {
       reject_deleted_users: { Args: never; Returns: undefined }
       reject_facility_manager_application: {
         Args: { p_id: string; p_review_note?: string }
+        Returns: undefined
+      }
+      release_reservation_slots: {
+        Args: { p_profile_id: string; p_reservation_id: string }
         Returns: undefined
       }
       reservation_asset_hourly_rate_cents: {
@@ -7985,6 +7974,21 @@ export type Database = {
           reservation_id: string
           status: Database["public"]["Enums"]["reservation_status"]
           time_range: unknown
+        }[]
+      }
+      reservation_paid_players: {
+        Args: { p_reservation_id: string }
+        Returns: {
+          is_organizer: boolean
+          profile_id: string
+        }[]
+      }
+      reservation_slot_price_cents: {
+        Args: { p_reservation_id: string; p_slots: number }
+        Returns: {
+          court_share_cents: number
+          fee_cents: number
+          total_cents: number
         }[]
       }
       resolve_review_invitation: {

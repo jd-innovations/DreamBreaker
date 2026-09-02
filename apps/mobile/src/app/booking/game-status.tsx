@@ -182,12 +182,12 @@ export default function GameStatusScreen() {
           : `This is inside the facility's ${quote.windowHours}-hour cancellation window, so it is not refundable. You will still be charged.\n\nThis cannot be undone.`;
 
     Alert.alert(
-      'Cancel Reservation',
+      isOrganizer ? 'Cancel Reservation' : 'Leave This Game',
       body,
       [
-        { text: 'Keep Reservation', style: 'cancel' },
+        { text: isOrganizer ? 'Keep Reservation' : 'Stay', style: 'cancel' },
         {
-          text: 'Cancel Reservation',
+          text: isOrganizer ? 'Cancel Reservation' : 'Leave',
           style: 'destructive',
           onPress: async () => {
             setCancelling(true);
@@ -258,6 +258,11 @@ export default function GameStatusScreen() {
   const isActive = status === 'held' || status === 'confirmed';
   const showFindPlayers = isOrganizer && !isBallMachine && needed > 0 && isActive;
   const canCancel = isOrganizer && isActive;
+  // A joiner paid for their own slots, so they need a way to release them and
+  // get their share back. Without this their only exit was leaveReservation(),
+  // which deletes the seat and abandons the money.
+  const isJoinedPlayer = !isOrganizer && roster.some(p => p.profileId === user?.id);
+  const canLeave = isJoinedPlayer && isActive;
   const organizer = roster.find(p => p.isOrganizer);
   const { startsAt, endsAt } = parseTstzrange(reservation.time_range as unknown as string);
   const { date, time } = formatDateTime(startsAt, endsAt);
@@ -381,12 +386,14 @@ export default function GameStatusScreen() {
           </TouchableOpacity>
         )}
 
-        {canCancel && (
+        {(canCancel || canLeave) && (
           <TouchableOpacity style={s.dangerBtn} activeOpacity={0.85} onPress={handleCancel} disabled={cancelling}>
             {cancelling ? <ActivityIndicator size="small" color={L.danger} /> : (
               <>
-                <Ionicons name="close-circle-outline" size={18} color={L.danger} />
-                <Text style={s.dangerBtnText}>Cancel Reservation</Text>
+                <Ionicons name={canCancel ? 'close-circle-outline' : 'exit-outline'} size={18} color={L.danger} />
+                <Text style={s.dangerBtnText}>
+                  {canCancel ? 'Cancel Reservation' : 'Leave & Free My Slots'}
+                </Text>
               </>
             )}
           </TouchableOpacity>
