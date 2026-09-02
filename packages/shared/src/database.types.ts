@@ -5119,27 +5119,46 @@ export type Database = {
       }
       reservation_players: {
         Row: {
+          hold_expires_at: string | null
           id: string
           is_organizer: boolean
           joined_at: string
+          payment_id: string | null
           profile_id: string
           reservation_id: string
+          service_fee_cents: number
+          status: string
         }
         Insert: {
+          hold_expires_at?: string | null
           id?: string
           is_organizer?: boolean
           joined_at?: string
+          payment_id?: string | null
           profile_id: string
           reservation_id: string
+          service_fee_cents?: number
+          status?: string
         }
         Update: {
+          hold_expires_at?: string | null
           id?: string
           is_organizer?: boolean
           joined_at?: string
+          payment_id?: string | null
           profile_id?: string
           reservation_id?: string
+          service_fee_cents?: number
+          status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reservation_players_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reservation_players_profile_id_fkey"
             columns: ["profile_id"]
@@ -6629,11 +6648,15 @@ export type Database = {
       accept_reservation_invite: {
         Args: { p_invite_id: string }
         Returns: {
+          hold_expires_at: string | null
           id: string
           is_organizer: boolean
           joined_at: string
+          payment_id: string | null
           profile_id: string
           reservation_id: string
+          service_fee_cents: number
+          status: string
         }
         SetofOptions: {
           from: "*"
@@ -6977,6 +7000,26 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "reservations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      confirm_reservation_player: {
+        Args: { p_payment_id?: string; p_reservation_id: string }
+        Returns: {
+          hold_expires_at: string | null
+          id: string
+          is_organizer: boolean
+          joined_at: string
+          payment_id: string | null
+          profile_id: string
+          reservation_id: string
+          service_fee_cents: number
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reservation_players"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -7628,11 +7671,15 @@ export type Database = {
       join_reservation: {
         Args: { p_reservation_id: string }
         Returns: {
+          hold_expires_at: string | null
           id: string
           is_organizer: boolean
           joined_at: string
+          payment_id: string | null
           profile_id: string
           reservation_id: string
+          service_fee_cents: number
+          status: string
         }
         SetofOptions: {
           from: "*"

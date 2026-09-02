@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useJoinFeePayment, joinFeeErrorMessage } from '@/lib/payments/joinFeePayment';
 import { colors, spacing, radius } from '@/theme';
 import { goBack } from '@/lib/navigation';
 import { StatusChip, type StatusVariant } from '@/components';
@@ -222,6 +223,7 @@ export default function ChooseTimeScreen() {
   const [hours, setHours] = useState<number[]>([]);
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [durationHours, setDurationHours] = useState(1);
+  const { payJoinFee } = useJoinFeePayment();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionAssetId, setActionAssetId] = useState<string | null>(null);
@@ -329,7 +331,28 @@ export default function ChooseTimeScreen() {
           // Existing joinable court game -- join only seats this one
           // authenticated user; the rest of their group is invited in the
           // (not-yet-built) Find Players step.
+          // join_reservation HOLDS the seat and records the fee owed; the
+          // charge follows. Holding first is what stops two people paying for
+          // the last seat.
           await joinReservation(row.reservationId);
+
+          const outcome = await payJoinFee(row.reservationId, `${Date.now()}`);
+          if (outcome.status === 'canceled') {
+            // The held seat is left to the sweeper rather than deleted here —
+            // they may simply retry, and the hold is what keeps it theirs.
+            Alert.alert('Not joined', 'Your seat is held for 10 minutes if you want to try again.');
+            return;
+          }
+          if (outcome.status === 'failed' || outcome.status === 'error') {
+            Alert.alert(
+              'Could not join',
+              outcome.status === 'failed'
+                ? outcome.message
+                : joinFeeErrorMessage(outcome.code),
+            );
+            return;
+          }
+
           const discount = bestFlashDealPercent(deals, asset.kind, asset.id, startsAt);
           // Joining inherits the existing game's length — the duration picker
           // describes a NEW booking and must not reprice someone else's.
