@@ -98,12 +98,24 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "hold_expired" }), { status: 409, headers: CORS });
   }
 
-  // buyer_total_cents = court price + convenience fee. Charging
-  // final_price_cents here would record a fee we never actually collect.
+  // The BOOKER'S OWN SEAT, not the reservation totals.
   //
-  // Falls back to the court price for reservations created before the fee
-  // existed, whose buyer_total_cents is null.
-  const amountCents = reservation.buyer_total_cents ?? reservation.final_price_cents ?? 0;
+  // Under per-slot pricing the reservation-level figures are a running sum over
+  // CONFIRMED players, and the booker is held until they pay — so at this exact
+  // moment they are all zero. Reading them here charged nothing and bailed with
+  // no_payment_required.
+  const { data: seat } = await service
+    .from("reservation_players")
+    .select("slots, court_share_cents, service_fee_cents, total_cents")
+    .eq("reservation_id", reservationId)
+    .eq("profile_id", user.id)
+    .maybeSingle();
+
+  // Fall back to the reservation for rows created before per-slot pricing,
+  // whose seat carries no amounts.
+  const amountCents = (seat?.total_cents ?? 0) > 0
+    ? seat!.total_cents
+    : (reservation.buyer_total_cents ?? reservation.final_price_cents ?? 0);
 
   if (amountCents <= 0) {
     // Free reservation (e.g. a facility with no rate set) — nothing to pay.
@@ -134,8 +146,9 @@ Deno.serve(async (req: Request) => {
         facilityNetCents: String(reservation.facility_net_cents ?? ""),
         commissionPct: String(reservation.commission_pct ?? ""),
         // Platform revenue, outside the facility split.
-        convenienceFeeCents: String(reservation.buyer_service_fee_cents ?? 0),
-        courtPriceCents: String(reservation.final_price_cents ?? ""),
+        convenienceFeeCents: String(seat?.service_fee_cents ?? reservation.buyer_service_fee_cents ?? 0),
+        courtShareCents: String(seat?.court_share_cents ?? reservation.final_price_cents ?? ""),
+        slots: String(seat?.slots ?? 1),
       },
     });
 
