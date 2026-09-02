@@ -275,7 +275,17 @@ export default function ReviewScreen() {
   // scope regardless of the paid-booking flag. Server-side, whether a charge is
   // required is still decided by create-booking-payment-intent — this only
   // picks which affordance to render.
-  const requiresPayment = reservation.final_price_cents > 0;
+  // What THIS booker owes, from their own seat.
+  //
+  // This used to read reservation.final_price_cents, which under per-slot
+  // pricing is a running sum over CONFIRMED players — zero until somebody pays.
+  // So it concluded no payment was required and offered the free-confirm path:
+  // a court booked for nothing.
+  //
+  // While the seat is still loading we do NOT know, and the safe unknown is
+  // "payment required". Defaulting the other way gives away a booking.
+  const seatLoaded = seat !== null;
+  const requiresPayment = !seatLoaded || (seat?.totalCents ?? 0) > 0;
   const paidBookingEnabled = isFeatureEnabled('paidBooking');
 
   return (
@@ -402,8 +412,13 @@ export default function ReviewScreen() {
             )}
           </TouchableOpacity>
         ) : !requiresPayment ? (
-          <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={handleConfirmWithoutPayment} disabled={confirming}>
-            {confirming ? <ActivityIndicator size="small" color={L.white} /> : (
+          <TouchableOpacity
+            style={s.primaryBtn}
+            activeOpacity={0.88}
+            onPress={handleConfirmWithoutPayment}
+            disabled={confirming || !seatLoaded}
+          >
+            {confirming || !seatLoaded ? <ActivityIndicator size="small" color={L.white} /> : (
               <Text style={s.primaryBtnText}>Confirm Booking</Text>
             )}
           </TouchableOpacity>
