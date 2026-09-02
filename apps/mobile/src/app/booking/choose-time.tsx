@@ -352,9 +352,13 @@ export default function ChooseTimeScreen() {
             assetId: asset.id,
             startsAt, endsAt,
             gameFormat: asset.kind === 'court' ? search.gameFormat : undefined,
-            // The group size already chosen during search, shown in this
-            // screen's own header as "Doubles (N players)".
-            players: search.playersInGroup,
+            // The organizer pays the convenience fee for THEMSELVES only.
+            // Everyone else pays their own when they join.
+            //
+            // Deliberately not search.playersInGroup: singles/doubles is a game
+            // FORMAT, and the group size chosen during search is who they hope
+            // to play with, not who has paid.
+            players: 1,
           });
           setBookingSelection({
             assetType: asset.kind, assetId: asset.id, assetName: asset.name, startsAt, endsAt,
