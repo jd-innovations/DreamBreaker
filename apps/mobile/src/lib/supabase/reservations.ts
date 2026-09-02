@@ -37,11 +37,12 @@ export type CreateReservationInput = {
   /** Defaults to the server-side RPC default (10 minutes) when omitted. */
   holdMinutes?: number;
   /**
-   * How many people the court is being booked for. Drives the per-player
-   * convenience fee. Clamped server-side to the court's capacity, so it cannot
-   * be used to inflate or dodge the fee.
+   * How many slots the booker is taking for themselves and anyone they are
+   * booking for. Doubles has 4, singles 2. Each slot costs
+   * (hours x base rate) + the convenience fee, and unclaimed slots stay open
+   * for others to join. Clamped server-side to the game's capacity.
    */
-  players?: number;
+  slots?: number;
 };
 
 export type ReservationOccupancy = {
@@ -103,17 +104,23 @@ export async function createReservation(input: CreateReservationInput): Promise<
     p_ends_at:      new Date(input.endsAt).toISOString(),
     ...(input.gameFormat != null ? { p_game_format: input.gameFormat } : {}),
     ...(input.holdMinutes != null ? { p_hold_minutes: input.holdMinutes } : {}),
-    // Group size drives the per-player convenience fee. The server clamps it
-    // to the court's capacity, so this is a hint rather than a trusted input.
-    ...(input.players != null ? { p_players: input.players } : {}),
+    // Slots taken by the booker. The server prices them and clamps to
+    // capacity, so this is a request rather than a trusted amount.
+    ...(input.slots != null ? { p_slots: input.slots } : {}),
   });
 
   if (error) throw error;
   return data as Reservation;
 }
 
-export async function joinReservation(reservationId: string): Promise<ReservationPlayer> {
-  const { data, error } = await supabase.rpc('join_reservation', { p_reservation_id: reservationId });
+export async function joinReservation(
+  reservationId: string,
+  slots = 1,
+): Promise<ReservationPlayer> {
+  const { data, error } = await supabase.rpc('join_reservation', {
+    p_reservation_id: reservationId,
+    p_slots: slots,
+  });
   if (error) throw error;
   return data as ReservationPlayer;
 }

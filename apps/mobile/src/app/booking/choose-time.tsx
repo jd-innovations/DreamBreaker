@@ -223,6 +223,9 @@ export default function ChooseTimeScreen() {
   const [hours, setHours] = useState<number[]>([]);
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [durationHours, setDurationHours] = useState(1);
+  // Slots the booker is taking for themselves (and anyone they are booking
+  // for). The rest of the game stays open.
+  const [slotCount, setSlotCount] = useState(1);
   const { payJoinFee } = useJoinFeePayment();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -334,7 +337,7 @@ export default function ChooseTimeScreen() {
           // join_reservation HOLDS the seat and records the fee owed; the
           // charge follows. Holding first is what stops two people paying for
           // the last seat.
-          await joinReservation(row.reservationId);
+          await joinReservation(row.reservationId, slotCount);
 
           const outcome = await payJoinFee(row.reservationId, `${Date.now()}`);
           if (outcome.status === 'canceled') {
@@ -375,13 +378,9 @@ export default function ChooseTimeScreen() {
             assetId: asset.id,
             startsAt, endsAt,
             gameFormat: asset.kind === 'court' ? search.gameFormat : undefined,
-            // The organizer pays the convenience fee for THEMSELVES only.
-            // Everyone else pays their own when they join.
-            //
-            // Deliberately not search.playersInGroup: singles/doubles is a game
-            // FORMAT, and the group size chosen during search is who they hope
-            // to play with, not who has paid.
-            players: 1,
+            // Slots this booker is taking. Everyone reserves individually;
+            // whatever they leave stays open for others to join and pay for.
+            slots: slotCount,
           });
           setBookingSelection({
             assetType: asset.kind, assetId: asset.id, assetName: asset.name, startsAt, endsAt,
@@ -533,6 +532,38 @@ export default function ChooseTimeScreen() {
             </View>
           )}
 
+          {/* How many slots you are taking. Whatever you leave stays open for
+              other players to join and pay for themselves. */}
+          {selectedHour != null && hours.length > 0 && (
+            <View style={s.durationRow}>
+              <Text style={s.durationLabel}>Slots</Text>
+              {[1, 2, 3, 4].map(n => {
+                const capacity = search.gameFormat === 'singles' ? 2 : 4;
+                const disabled = n > capacity;
+                return (
+                  <TouchableOpacity
+                    key={n}
+                    style={[
+                      s.durationChip,
+                      slotCount === n && s.durationChipActive,
+                      disabled && s.durationChipDisabled,
+                    ]}
+                    disabled={disabled}
+                    activeOpacity={0.85}
+                    onPress={() => setSlotCount(n)}
+                  >
+                    <Text
+                      style={[s.durationChipText, slotCount === n && s.durationChipTextActive]}
+                      numberOfLines={1}
+                    >
+                      {n}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
           <View style={s.tabRow}>
             <TouchableOpacity style={[s.tab, inventoryTab === 'court' && s.tabActive]} activeOpacity={0.85} onPress={() => setInventoryTab('court')}>
               <Text style={[s.tabText, inventoryTab === 'court' && s.tabTextActive]}>Courts</Text>
@@ -554,8 +585,12 @@ export default function ChooseTimeScreen() {
                   const slot = findSlotAt(availability[asset.id] ?? [], dateStr, selectedHour, durationHours);
                   const row = computeRowState(asset.kind, slot, search.playersInGroup, newGameMax);
                   const discount = bestFlashDealPercent(deals, asset.kind, asset.id, hourRange(dateStr, selectedHour).startsAt);
-                  const finalPrice = asset.hourlyRateCents != null && discount != null
-                    ? Math.round(asset.hourlyRateCents * (100 - discount) / 100)
+                  // What THIS booker pays: their slots x hours x the per-slot
+                  // rate. Showing the whole-court price would quote a number
+                  // nobody is charged.
+                  const finalPrice = asset.hourlyRateCents != null
+                    ? Math.round(asset.hourlyRateCents * durationHours * slotCount
+                                 * (100 - (discount ?? 0)) / 100)
                     : asset.hourlyRateCents;
                   const busy = actionAssetId === asset.id;
 
