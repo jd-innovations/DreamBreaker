@@ -101,9 +101,14 @@ function formatDateHeader(dateStr: string): string {
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-function hourRange(dateStr: string, hour: number): { startsAt: string; endsAt: string } {
+// Spec: default 1 hour, maximum 4 (BOOKING_ENGINE_V1_SPEC.md, Reservation
+// Rules). create_reservation enforces the same ceiling server-side.
+const MAX_BOOKING_HOURS = 4;
+const DURATION_OPTIONS = [1, 2, 3, 4] as const;
+
+function hourRange(dateStr: string, hour: number, hours = 1): { startsAt: string; endsAt: string } {
   const start = new Date(`${dateStr}T${String(hour).padStart(2, '0')}:00:00`);
-  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
   return { startsAt: start.toISOString(), endsAt: end.toISOString() };
 }
 
@@ -124,11 +129,35 @@ function bestFlashDealPercent(deals: FlashDeal[], kind: AssetKind, assetId: stri
   return best;
 }
 
-function findSlotAt(slots: AssetAvailabilitySlot[], dateStr: string, hour: number): AssetAvailabilitySlot | null {
-  const { startsAt, endsAt } = hourRange(dateStr, hour);
-  const hourStart = new Date(startsAt).getTime();
-  const hourEnd = new Date(endsAt).getTime();
-  return slots.find(s => new Date(s.startsAt).getTime() < hourEnd && new Date(s.endsAt).getTime() > hourStart) ?? null;
+function findSlotAt(
+  slots: AssetAvailabilitySlot[], dateStr: string, hour: number, hours = 1,
+): AssetAvailabilitySlot | null {
+  const { startsAt, endsAt } = hourRange(dateStr, hour, hours);
+  const spanStart = new Date(startsAt).getTime();
+  const spanEnd = new Date(endsAt).getTime();
+  // Any overlap anywhere in the span. A 3-hour booking is blocked by something
+  // sitting in its third hour just as surely as in its first — the server's
+  // exclusion constraint would reject it, and finding that out at the end of
+  // the flow is the worst place to learn it.
+  return slots.find(s =>
+    new Date(s.startsAt).getTime() < spanEnd && new Date(s.endsAt).getTime() > spanStart) ?? null;
+}
+
+/**
+ * The longest booking that fits from this hour: stops at the first hour that
+ * is occupied, at the facility's closing hour, or at the 4-hour ceiling.
+ */
+function maxHoursFrom(
+  slots: AssetAvailabilitySlot[], dateStr: string, hour: number, openHours: number[],
+): number {
+  let n = 0;
+  for (let h = 1; h <= MAX_BOOKING_HOURS; h++) {
+    const covered = hour + h - 1;
+    if (!openHours.includes(covered)) break;
+    if (findSlotAt(slots, dateStr, covered, 1)) break;
+    n = h;
+  }
+  return n;
 }
 
 function computeRowState(
@@ -192,6 +221,7 @@ export default function ChooseTimeScreen() {
   // facility that actually opens at 6 AM.
   const [hours, setHours] = useState<number[]>([]);
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
+  const [durationHours, setDurationHours] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionAssetId, setActionAssetId] = useState<string | null>(null);
@@ -257,6 +287,7 @@ export default function ChooseTimeScreen() {
     if (selectedHour == null && hours.length > 0) setSelectedHour(hours[0]);
   }, [hours, selectedHour]);
 
+
   const primaryAssets: AssetInfo[] = useMemo(() => (
     inventoryTab === 'court'
       ? courts.map(c => ({ id: c.id, kind: 'court' as const, name: c.name, subtitle: c.indoor_outdoor === 'indoor' ? 'Indoor' : 'Outdoor', hourlyRateCents: c.hourly_rate_cents }))
@@ -269,12 +300,30 @@ export default function ChooseTimeScreen() {
       : courts.map(c => ({ id: c.id, kind: 'court' as const, name: c.name, subtitle: c.indoor_outdoor === 'indoor' ? 'Indoor' : 'Outdoor', hourlyRateCents: c.hourly_rate_cents }))
   ), [inventoryTab, courts, ballMachines]);
 
-  async function handleBook(asset: AssetInfo, row: RowState) {
+  // Keep the duration honest when the hour changes. A 4-hour choice carried
+  // over to an hour where only 1 fits would be rejected by the server's
+  // exclusion constraint at the very end of the flow; clamping it here means
+  // the picker never shows a selection that cannot be booked.
+  useEffect(() => {
+    if (selectedHour == null) return;
+    const best = Math.max(
+      1,
+      ...[...primaryAssets, ...otherAssets].map(a =>
+        maxHoursFrom(availability[a.id] ?? [], dateStr, selectedHour, hours)),
+    );
+    setDurationHours(d => (d > best ? best : d));
+  }, [selectedHour, availability, dateStr, hours, primaryAssets, otherAssets]);
+
+  async function handleBook(asset: AssetInfo, row: RowState, slot: AssetAvailabilitySlot | null) {
     if (selectedHour == null || actionAssetId != null) return;
 
     const doIt = async () => {
       setActionAssetId(asset.id);
-      const { startsAt, endsAt } = hourRange(dateStr, selectedHour);
+      // A join takes the existing reservation's window; a new booking takes the
+      // picked duration.
+      const { startsAt, endsAt } = row.reservationId && slot
+        ? { startsAt: slot.startsAt, endsAt: slot.endsAt }
+        : hourRange(dateStr, selectedHour, durationHours);
       try {
         if (row.reservationId) {
           // Existing joinable court game -- join only seats this one
@@ -282,8 +331,13 @@ export default function ChooseTimeScreen() {
           // (not-yet-built) Find Players step.
           await joinReservation(row.reservationId);
           const discount = bestFlashDealPercent(deals, asset.kind, asset.id, startsAt);
+          // Joining inherits the existing game's length — the duration picker
+          // describes a NEW booking and must not reprice someone else's.
+          const joinHours = slot
+            ? (new Date(slot.endsAt).getTime() - new Date(slot.startsAt).getTime()) / 3_600_000
+            : 1;
           const finalPriceCents = asset.hourlyRateCents != null
-            ? Math.round(asset.hourlyRateCents * (100 - (discount ?? 0)) / 100)
+            ? Math.round(asset.hourlyRateCents * joinHours * (100 - (discount ?? 0)) / 100)
             : null;
           setBookingSelection({
             assetType: asset.kind, assetId: asset.id, assetName: asset.name, startsAt, endsAt,
@@ -414,6 +468,41 @@ export default function ChooseTimeScreen() {
             ))}
           </ScrollView>
 
+          {/* Duration. The server accepts 1-4 hours; an option is offered only
+              when every hour it covers is open and unbooked on at least one
+              asset — a duration that could never be booked anywhere is worse
+              than no choice at all. */}
+          {selectedHour != null && hours.length > 0 && (
+            <View style={s.durationRow}>
+              <Text style={s.durationLabel}>For</Text>
+              {DURATION_OPTIONS.map(d => {
+                const fitsSomewhere = [...primaryAssets, ...otherAssets].some(a =>
+                  maxHoursFrom(availability[a.id] ?? [], dateStr, selectedHour, hours) >= d);
+                const disabled = !fitsSomewhere;
+                return (
+                  <TouchableOpacity
+                    key={d}
+                    style={[
+                      s.durationChip,
+                      durationHours === d && s.durationChipActive,
+                      disabled && s.durationChipDisabled,
+                    ]}
+                    disabled={disabled}
+                    activeOpacity={0.85}
+                    onPress={() => setDurationHours(d)}
+                  >
+                    <Text
+                      style={[s.durationChipText, durationHours === d && s.durationChipTextActive]}
+                      numberOfLines={1}
+                    >
+                      {d}h
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
           <View style={s.tabRow}>
             <TouchableOpacity style={[s.tab, inventoryTab === 'court' && s.tabActive]} activeOpacity={0.85} onPress={() => setInventoryTab('court')}>
               <Text style={[s.tabText, inventoryTab === 'court' && s.tabTextActive]}>Courts</Text>
@@ -432,7 +521,7 @@ export default function ChooseTimeScreen() {
                   </Text>
                 )}
                 {primaryAssets.map(asset => {
-                  const slot = findSlotAt(availability[asset.id] ?? [], dateStr, selectedHour);
+                  const slot = findSlotAt(availability[asset.id] ?? [], dateStr, selectedHour, durationHours);
                   const row = computeRowState(asset.kind, slot, search.playersInGroup, newGameMax);
                   const discount = bestFlashDealPercent(deals, asset.kind, asset.id, hourRange(dateStr, selectedHour).startsAt);
                   const finalPrice = asset.hourlyRateCents != null && discount != null
@@ -446,7 +535,7 @@ export default function ChooseTimeScreen() {
                       style={s.row}
                       activeOpacity={row.available ? 0.85 : 1}
                       disabled={!row.available || busy}
-                      onPress={() => handleBook(asset, row)}
+                      onPress={() => handleBook(asset, row, slot)}
                     >
                       <View style={{ flex: 1 }}>
                         <Text style={s.rowName}>{asset.name}</Text>
@@ -480,7 +569,7 @@ export default function ChooseTimeScreen() {
                   <>
                     <Text style={s.sectionTitle}>Also Available at This Time</Text>
                     {otherAssets.map(asset => {
-                      const slot = findSlotAt(availability[asset.id] ?? [], dateStr, selectedHour);
+                      const slot = findSlotAt(availability[asset.id] ?? [], dateStr, selectedHour, durationHours);
                       const row = computeRowState(asset.kind, slot, search.playersInGroup, newGameMax);
                       if (!row.available) return null; // "also available" -- only show open alternatives
                       const discount = bestFlashDealPercent(deals, asset.kind, asset.id, hourRange(dateStr, selectedHour).startsAt);
@@ -495,7 +584,7 @@ export default function ChooseTimeScreen() {
                           style={[s.row, s.rowMuted]}
                           activeOpacity={0.85}
                           disabled={busy}
-                          onPress={() => { setInventoryTab(asset.kind); handleBook(asset, row); }}
+                          onPress={() => { setInventoryTab(asset.kind); handleBook(asset, row, slot); }}
                         >
                           <View style={{ flex: 1 }}>
                             <Text style={s.rowName}>{asset.name}</Text>
@@ -544,6 +633,21 @@ const s = StyleSheet.create({
   },
   hourChipActive: { borderColor: L.gold, backgroundColor: L.goldBg },
   hourChipText: { color: L.textSub, fontSize: 13, fontWeight: '700' },
+  durationRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.screenH, paddingVertical: spacing.sm,
+    backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
+  },
+  durationLabel: { color: L.textSub, fontSize: 13, fontWeight: '700', marginRight: spacing.xs },
+  durationChip: {
+    flexShrink: 0, minWidth: 48, alignItems: 'center',
+    borderWidth: 1.5, borderColor: L.border, borderRadius: radius.chip,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  durationChipActive: { borderColor: L.gold, backgroundColor: L.goldBg },
+  durationChipDisabled: { opacity: 0.35 },
+  durationChipText: { color: L.textSub, fontSize: 13, fontWeight: '700' },
+  durationChipTextActive: { color: L.navy },
   hourChipTextActive: { color: L.navy },
   closedText: { color: L.textSub, fontSize: 13, fontWeight: '600', paddingVertical: 8 },
 
