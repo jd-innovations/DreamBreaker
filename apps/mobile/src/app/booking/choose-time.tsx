@@ -15,6 +15,7 @@ import { fetchOperatingHours } from '@/lib/supabase/operatingHours';
 import {
   fetchAssetAvailability,
   createReservation,
+  fetchMyReservationSeat,
   joinReservation,
   projectedOccupancy,
   occupancyStatusLabel,
@@ -381,9 +382,17 @@ export default function ChooseTimeScreen() {
           const joinHours = slot
             ? (new Date(slot.endsAt).getTime() - new Date(slot.startsAt).getTime()) / 3_600_000
             : 1;
-          const finalPriceCents = asset.hourlyRateCents != null
-            ? Math.round(asset.hourlyRateCents * joinHours * (100 - (discount ?? 0)) / 100)
-            : null;
+          // The seat, not the asset's rate: what this joiner owes is their
+          // share plus their own fee, which the server has already written
+          // onto their reservation_players row. Multiplying the whole-court
+          // rate by the hours quoted the entire court to one player.
+          const joinSeat = await fetchMyReservationSeat(row.reservationId).catch(() => null);
+          const finalPriceCents = joinSeat?.totalCents
+            ?? (asset.hourlyRateCents != null
+              ? Math.round((asset.hourlyRateCents / assetCapacity(asset.kind, search.gameFormat))
+                           * joinHours * assetSlots(asset.kind, slotCount)
+                           * (100 - (discount ?? 0)) / 100)
+              : null);
           setBookingSelection({
             assetType: asset.kind, assetId: asset.id, assetName: asset.name, startsAt, endsAt,
             basePriceCents: asset.hourlyRateCents, flashDealDiscountPercent: discount, finalPriceCents,
@@ -403,16 +412,22 @@ export default function ChooseTimeScreen() {
             // search asked for.
             slots: assetSlots(asset.kind, slotCount),
           });
+          // reservation.final_price_cents accrues from CONFIRMED seats, and the
+          // booker is held until they pay — so it is 0 at exactly this moment
+          // and "$0.00" on the Reservation Held card was never true. Their own
+          // seat carries what they owe.
+          const newSeat = await fetchMyReservationSeat(reservation.id).catch(() => null);
+          const heldTotalCents = newSeat?.totalCents ?? null;
           setBookingSelection({
             assetType: asset.kind, assetId: asset.id, assetName: asset.name, startsAt, endsAt,
             basePriceCents: reservation.base_price_cents,
             flashDealDiscountPercent: reservation.flash_deal_discount_percent,
-            finalPriceCents: reservation.final_price_cents,
+            finalPriceCents: heldTotalCents,
           });
           setBookingReservationId(reservation.id);
           setSuccess({
             action: 'created', reservationId: reservation.id, assetName: asset.name, startsAt, endsAt,
-            finalPriceCents: reservation.final_price_cents, holdExpiresAt: reservation.hold_expires_at,
+            finalPriceCents: heldTotalCents, holdExpiresAt: reservation.hold_expires_at,
           });
         }
       } catch (e) {
@@ -469,7 +484,12 @@ export default function ChooseTimeScreen() {
 
       <View style={s.contextBar}>
         <Text style={s.contextText} numberOfLines={1}>
-          {facility.facilityName ?? 'Facility'}  ·  {formatDateHeader(dateStr)}  ·  {search.gameFormat === 'doubles' ? 'Doubles' : 'Singles'} ({search.playersInGroup} {search.playersInGroup === 1 ? 'player' : 'players'})
+          {facility.facilityName ?? 'Facility'}  ·  {formatDateHeader(dateStr)}
+          {/* A machine has no format and no group — saying "Doubles (3 players)"
+              above a ball machine describes a game that cannot happen on it. */}
+          {inventoryTab === 'ball_machine'
+            ? '  ·  Ball Machine'
+            : `  ·  ${search.gameFormat === 'doubles' ? 'Doubles' : 'Singles'} (${search.playersInGroup} ${search.playersInGroup === 1 ? 'player' : 'players'})`}
         </Text>
       </View>
 
