@@ -11,6 +11,8 @@ import { StatusChip, AddToCalendarButton, AppIcon, type StatusVariant, type AppI
 import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilities';
 import {
   fetchReservationById, fetchReservationPlayersWithProfiles, occupiedSlots, playersNeeded, parseTstzrange,
+  fetchMyReservationSeat,
+  type MyReservationSeat,
   type Reservation,
 } from '@/lib/supabase/reservations';
 import {
@@ -53,6 +55,7 @@ export default function ConfirmationScreen() {
   const [currentPlayers, setCurrentPlayers] = useState(0);
   const [facility, setFacility] = useState<FacilityDetail | null>(null);
   const [payment, setPayment] = useState<ReservationPaymentStatus | null>(null);
+  const [seat, setSeat] = useState<MyReservationSeat | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,11 +67,12 @@ export default function ConfirmationScreen() {
       setLoading(true);
       setError(null);
       try {
-        const [res, roster, fac, pay] = await Promise.all([
+        const [res, roster, fac, pay, mySeat] = await Promise.all([
           fetchReservationById(reservationId),
           fetchReservationPlayersWithProfiles(reservationId),
           facilityCtx.facilityId ? fetchFacilityById(facilityCtx.facilityId) : Promise.resolve(null),
           fetchReservationPayment(reservationId),
+          fetchMyReservationSeat(reservationId),
         ]);
         if (cancelled) return;
         if (!res) { setError('This reservation no longer exists.'); return; }
@@ -76,6 +80,7 @@ export default function ConfirmationScreen() {
         setCurrentPlayers(occupiedSlots(roster));
         setFacility(fac);
         setPayment(pay);
+        setSeat(mySeat);
       } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load your reservation.');
       } finally {
@@ -125,6 +130,16 @@ export default function ConfirmationScreen() {
   const max = reservation.max_players;
   const needed = playersNeeded(currentPlayers, max);
   const hasDeal = reservation.flash_deal_discount_percent != null;
+
+  // What THIS person owes, from their own seat -- never the reservation's
+  // totals. Those are a sum across every confirmed seat, so once other players
+  // join and pay, a reservation-level figure would report the group's money
+  // as the organizer's. Booking three slots makes three slots your bill; it
+  // does not make everyone else's share yours.
+  //
+  // Falls back to the payment actually taken, which is the same number by
+  // construction and survives a seat row that has not loaded.
+  const amountPaidCents = seat?.totalCents ?? payment?.amountCents ?? 0;
   const startsAt = selection.startsAt ?? reservation.created_at;
   const endsAt = selection.endsAt ?? reservation.created_at;
   const { date, time } = formatDateTimeRange(startsAt, endsAt);
@@ -194,8 +209,8 @@ export default function ConfirmationScreen() {
 
         <View style={s.card}>
           <View style={s.priceRow}>
-            <Text style={s.priceLabel}>Amount</Text>
-            <Text style={s.priceValue}>{formatCents(reservation.buyer_total_cents ?? reservation.final_price_cents)}</Text>
+            <Text style={s.priceLabel}>You paid</Text>
+            <Text style={s.priceValue}>{formatCents(amountPaidCents)}</Text>
           </View>
           <View style={{ marginTop: 8, alignSelf: 'flex-start' }}>
             <StatusChip
