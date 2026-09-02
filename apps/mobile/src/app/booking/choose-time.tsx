@@ -404,7 +404,12 @@ export default function ChooseTimeScreen() {
                 activeOpacity={0.85}
                 onPress={() => setSelectedHour(h)}
               >
-                <Text style={[s.hourChipText, selectedHour === h && s.hourChipTextActive]}>{formatHourLabel(h)}</Text>
+                <Text
+                  style={[s.hourChipText, selectedHour === h && s.hourChipTextActive]}
+                  numberOfLines={1}
+                >
+                  {formatHourLabel(h)}
+                </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -526,8 +531,17 @@ const s = StyleSheet.create({
   contextBar: { paddingHorizontal: spacing.screenH, paddingBottom: spacing.sm, backgroundColor: L.bg },
   contextText: { color: L.textSub, fontSize: 12, fontWeight: '600' },
 
-  hourRow: { paddingVertical: spacing.sm, backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border },
-  hourChip: { borderWidth: 1.5, borderColor: L.border, borderRadius: radius.chip, paddingHorizontal: 14, paddingVertical: 8 },
+  // flexGrow/flexShrink 0: a horizontal ScrollView between flex siblings gets
+  // squeezed vertically, which clips the chips rather than scrolling them.
+  hourRow: {
+    flexGrow: 0, flexShrink: 0,
+    paddingVertical: spacing.sm, backgroundColor: L.bg,
+    borderBottomWidth: 1, borderBottomColor: L.border,
+  },
+  hourChip: {
+    flexShrink: 0, borderWidth: 1.5, borderColor: L.border, borderRadius: radius.chip,
+    paddingHorizontal: 14, paddingVertical: 8, minWidth: 64, alignItems: 'center',
+  },
   hourChipActive: { borderColor: L.gold, backgroundColor: L.goldBg },
   hourChipText: { color: L.textSub, fontSize: 13, fontWeight: '700' },
   hourChipTextActive: { color: L.navy },

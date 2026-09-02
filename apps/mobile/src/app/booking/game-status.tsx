@@ -72,6 +72,26 @@ export default function GameStatusScreen() {
   const [payment, setPayment] = useState<ReservationPaymentStatus | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
+  // Phase 5 check-in code. Fetched rather than read from the reservation
+  // payload so it appears for bookings made before check-in existed.
+  //
+  // MUST live here, with the other hooks. An earlier revision declared this
+  // state and effect further down, next to the JSX that uses them — which is
+  // after `if (loading) return` and `if (error) return`. The first render bails
+  // out early and skips them, the next render runs them, React sees more hooks
+  // than last time, and the screen crashes on open. Rules of Hooks: no hook
+  // after a conditional return, however local the state feels.
+  const [checkInCode, setCheckInCode] = useState<string | null>(null);
+  useEffect(() => {
+    // reservation is null while loading, so this derives its own status rather
+    // than depending on the `status` const computed after the early returns.
+    const resStatus = occupancy?.status ?? reservation?.status;
+    if (resStatus !== 'confirmed' || !reservationId) { setCheckInCode(null); return; }
+    let cancelled = false;
+    void fetchCheckInCode(reservationId).then(c => { if (!cancelled) setCheckInCode(c); });
+    return () => { cancelled = true; };
+  }, [occupancy?.status, reservation?.status, reservationId]);
+
   // Facility + asset details: authoritative from the reservation row itself
   // (not bookingStore) so Game Status works as a standalone destination --
   // from My Bookings, from Confirmation, or a future deep link -- without
@@ -236,17 +256,6 @@ export default function GameStatusScreen() {
   const status = occupancy?.status ?? reservation.status;
   const isOrganizer = user?.id === reservation.organizer_id;
   const isActive = status === 'held' || status === 'confirmed';
-
-  // Phase 5. Fetched rather than taken from the reservation payload so the code
-  // appears for bookings made before check-in existed, and only once confirmed
-  // — an unpaid hold has nothing to check in to.
-  const [checkInCode, setCheckInCode] = useState<string | null>(null);
-  useEffect(() => {
-    if (status !== 'confirmed' || !reservationId) { setCheckInCode(null); return; }
-    let cancelled = false;
-    void fetchCheckInCode(reservationId).then(c => { if (!cancelled) setCheckInCode(c); });
-    return () => { cancelled = true; };
-  }, [status, reservationId]);
   const showFindPlayers = isOrganizer && !isBallMachine && needed > 0 && isActive;
   const canCancel = isOrganizer && isActive;
   const organizer = roster.find(p => p.isOrganizer);
