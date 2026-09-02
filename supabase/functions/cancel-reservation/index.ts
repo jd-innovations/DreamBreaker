@@ -2,13 +2,18 @@
 // facility's cancellation policy owes. Facility Marketplace Phase 8, reworked
 // for per-slot pricing.
 //
-// Under per-slot pricing a booking has as many payments as it has payers, so
-// there are two shapes:
+// Under per-slot pricing everyone paid for their own slots, so everyone leaves
+// the same way: their slots go back up for grabs and they are refunded their
+// own share.
 //
-//   organizer cancels -> the reservation is cancelled and EVERY paid player is
-//                        refunded their own share
-//   a joiner leaves   -> only their slots are released and only they are
-//                        refunded; the booking carries on
+// There is deliberately NO "cancel the booking" path for players. "Organizer"
+// is only a label for whoever reserved first — they have no authority over
+// anyone else, and cannot cancel a game other people have paid to be in. The
+// reservation ends when the LAST slot is released, because a court held by
+// nobody should be free for somebody.
+//
+// cancel_reservation() still exists for facility staff. That is a facility
+// action, not a player one.
 //
 // Ordering per player is the same discipline as before, and is the whole
 // design:
@@ -182,77 +187,38 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "reservation_not_found" }), { status: 404, headers: CORS });
   }
 
-  const isOrganizer = reservation.organizer_id === user.id;
+  // Everyone takes the same path. No branch on who reserved first.
+  const { data: seat } = await service
+    .from("reservation_players")
+    .select("profile_id")
+    .eq("reservation_id", reservationId)
+    .eq("profile_id", user.id)
+    .maybeSingle();
 
-  // ── A joiner giving up their slots ──────────────────────────────────────
-  if (!isOrganizer) {
-    const { data: seat } = await service
-      .from("reservation_players")
-      .select("profile_id")
-      .eq("reservation_id", reservationId)
-      .eq("profile_id", user.id)
-      .maybeSingle();
-
-    if (!seat) {
-      return new Response(JSON.stringify({ error: "not_a_player" }), { status: 403, headers: CORS });
-    }
-
-    const result = await refundPlayer(service, reservationId, user.id, user.id);
-
-    // Released after the refund is recorded: deleting first would lose the
-    // court share the refund is calculated from.
-    await service.rpc("release_reservation_slots", {
-      p_reservation_id: reservationId,
-      p_profile_id: user.id,
-    });
-
-    return new Response(JSON.stringify({
-      ok: true,
-      cancelled: false,
-      left: true,
-      refunded: result.refundedCents > 0,
-      refundedCents: result.refundedCents,
-      refundPending: result.pending,
-      reason: result.reason,
-    }), { headers: CORS });
+  if (!seat) {
+    return new Response(JSON.stringify({ error: "not_a_player" }), { status: 403, headers: CORS });
   }
 
-  // ── The organizer cancelling the whole booking ──────────────────────────
-  const { data: playersRaw } = await service.rpc("reservation_paid_players", {
+  const result = await refundPlayer(service, reservationId, user.id, user.id);
+
+  // Released AFTER the refund is recorded: deleting first would lose the court
+  // share the refund is calculated from.
+  const { data: releaseRaw } = await service.rpc("release_reservation_slots", {
     p_reservation_id: reservationId,
+    p_profile_id: user.id,
   });
-  const players = (playersRaw ?? []) as { profile_id: string }[];
-
-  // Refund intents are recorded before the cancellation, same reasoning as the
-  // single-payer version: evidence before action.
-  const results: PerPlayerResult[] = [];
-  for (const p of players) {
-    results.push(await refundPlayer(service, reservationId, p.profile_id, user.id));
-  }
-
-  const { error: cancelError } = await userClient
-    .rpc("cancel_reservation", { p_reservation_id: reservationId });
-
-  if (cancelError) {
-    const msg = cancelError.message ?? "";
-    const status = msg.includes("not_authorized") ? 403
-      : msg.includes("already_terminal") ? 409
-      : msg.includes("reservation_not_found") ? 404 : 400;
-    return new Response(JSON.stringify({ error: msg || "cancel_failed", refunds: results }), {
-      status, headers: CORS,
-    });
-  }
-
-  const totalRefunded = results.reduce((n, r) => n + r.refundedCents, 0);
+  const release = (Array.isArray(releaseRaw) ? releaseRaw[0] : releaseRaw) as
+    { released: boolean; players_left: number; reservation_cancelled: boolean } | undefined;
 
   return new Response(JSON.stringify({
     ok: true,
-    cancelled: true,
-    left: false,
-    refunded: totalRefunded > 0,
-    refundedCents: totalRefunded,
-    playersRefunded: results.filter(r => r.refundedCents > 0).length,
-    refundPending: results.some(r => r.pending),
-    reason: results.length === 1 ? results[0].reason : null,
+    left: true,
+    // True only when that was the last slot and the court was freed.
+    cancelled: Boolean(release?.reservation_cancelled),
+    playersLeft: release?.players_left ?? 0,
+    refunded: result.refundedCents > 0,
+    refundedCents: result.refundedCents,
+    refundPending: result.pending,
+    reason: result.reason,
   }), { headers: CORS });
 });

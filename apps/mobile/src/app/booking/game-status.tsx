@@ -182,12 +182,12 @@ export default function GameStatusScreen() {
           : `This is inside the facility's ${quote.windowHours}-hour cancellation window, so it is not refundable. You will still be charged.\n\nThis cannot be undone.`;
 
     Alert.alert(
-      isOrganizer ? 'Cancel Reservation' : 'Leave This Game',
+      'Leave This Game',
       body,
       [
-        { text: isOrganizer ? 'Keep Reservation' : 'Stay', style: 'cancel' },
+        { text: 'Stay', style: 'cancel' },
         {
-          text: isOrganizer ? 'Cancel Reservation' : 'Leave',
+          text: 'Leave',
           style: 'destructive',
           onPress: async () => {
             setCancelling(true);
@@ -257,12 +257,10 @@ export default function GameStatusScreen() {
   const isOrganizer = user?.id === reservation.organizer_id;
   const isActive = status === 'held' || status === 'confirmed';
   const showFindPlayers = isOrganizer && !isBallMachine && needed > 0 && isActive;
-  const canCancel = isOrganizer && isActive;
-  // A joiner paid for their own slots, so they need a way to release them and
-  // get their share back. Without this their only exit was leaveReservation(),
-  // which deletes the seat and abandons the money.
-  const isJoinedPlayer = !isOrganizer && roster.some(p => p.profileId === user?.id);
-  const canLeave = isJoinedPlayer && isActive;
+  // Every player leaves the same way, including whoever booked first.
+  // "Organizer" is a label, not a role — they have no authority over a game
+  // other people have paid to be in, and there is no cancel-the-booking action.
+  const canLeave = isActive && roster.some(p => p.profileId === user?.id);
   const organizer = roster.find(p => p.isOrganizer);
   const { startsAt, endsAt } = parseTstzrange(reservation.time_range as unknown as string);
   const { date, time } = formatDateTime(startsAt, endsAt);
@@ -386,14 +384,12 @@ export default function GameStatusScreen() {
           </TouchableOpacity>
         )}
 
-        {(canCancel || canLeave) && (
+        {canLeave && (
           <TouchableOpacity style={s.dangerBtn} activeOpacity={0.85} onPress={handleCancel} disabled={cancelling}>
             {cancelling ? <ActivityIndicator size="small" color={L.danger} /> : (
               <>
-                <Ionicons name={canCancel ? 'close-circle-outline' : 'exit-outline'} size={18} color={L.danger} />
-                <Text style={s.dangerBtnText}>
-                  {canCancel ? 'Cancel Reservation' : 'Leave & Free My Slots'}
-                </Text>
+                <Ionicons name="exit-outline" size={18} color={L.danger} />
+                <Text style={s.dangerBtnText}>Leave &amp; Free My Slots</Text>
               </>
             )}
           </TouchableOpacity>

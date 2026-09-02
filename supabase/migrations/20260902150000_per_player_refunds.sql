@@ -119,23 +119,53 @@ $fn$;
 
 grant execute on function public.reservation_paid_players(uuid) to service_role;
 
--- A joiner giving up their slots. Deleting the row frees the slots, and the
--- totals trigger drops their share from what the facility is owed.
+-- Any player giving up their slots — including whoever booked first.
+--
+-- "Organizer" is only a label for who reserved first. They have no authority
+-- over a game other people have paid to be in, and there is no
+-- cancel-the-booking action for players at all. The reservation ends when the
+-- LAST slot is released, because a court held by nobody should be free for
+-- somebody.
+--
+-- Deleting the row frees the slots, and the totals trigger drops their share
+-- from what the facility is owed.
 create or replace function public.release_reservation_slots(
   p_reservation_id uuid,
   p_profile_id uuid
 )
-returns void
+returns table (released boolean, players_left integer, reservation_cancelled boolean)
 language plpgsql
 volatile
 security definer
 set search_path = public
 as $fn$
+declare
+  v_deleted integer;
+  v_left    integer;
+  v_cancel  boolean := false;
 begin
   delete from public.reservation_players
    where reservation_id = p_reservation_id
-     and profile_id = p_profile_id
-     and is_organizer = false;
+     and profile_id = p_profile_id;
+
+  get diagnostics v_deleted = ROW_COUNT;
+
+  select count(*) into v_left
+    from public.reservation_players
+   where reservation_id = p_reservation_id;
+
+  if v_left = 0 then
+    update public.reservations
+       set status = 'cancelled', cancelled_at = now(), updated_at = now()
+     where id = p_reservation_id
+       and status in ('held', 'confirmed');
+    v_cancel := true;
+  end if;
+
+  released := v_deleted > 0;
+  players_left := v_left;
+  reservation_cancelled := v_cancel;
+  return next;
 end;
 $fn$;
 
