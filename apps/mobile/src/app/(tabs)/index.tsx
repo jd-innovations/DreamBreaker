@@ -9,6 +9,10 @@ import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+// NOTE: this screen is only PARTIALLY migrated — see the deliberate exception
+// recorded under rule 12. Only `sectionLabelSmall` uses these tokens so far.
+import { text } from '@shared/tokens';
 import { AppHeader, APP_HEADER_HEIGHT, AppIcon, GlassQuickAction, ProfileCompletionRing, FindGamesFilterModal, FIND_GAMES_DISTANCE_STEPS, FIND_GAMES_SKILL_RANGES, ShimmerOverlay, type AppIconName } from '@/components';
 import { DraggableQuickActions } from '@/components/DraggableQuickActions';
 import { useSession } from '@/hooks/useSession';
@@ -1098,8 +1102,17 @@ const s = StyleSheet.create({
   scroll: { paddingTop: 0 },
 
   // Quick Actions
+  //
+  // The one place the standard deliberately overrides the screen it was
+  // measured from. "QUICK ACTIONS" here was the source for `sectionLabel`, but
+  // decision 6 chose facility detail's 13/800 ls0.8 navy over this 11/700
+  // ls1.2 muted. So this label grows and darkens, and the reference moves to
+  // match the standard rather than the other way round.
   sectionLabelSmall: {
-    color: L.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1.2,
+    color: L.navy,
+    fontSize: text.sectionLabel.size,
+    fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing,
     marginHorizontal: 16, marginTop: 24, marginBottom: 14,
   },
   quickRow: {

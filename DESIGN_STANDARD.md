@@ -197,6 +197,16 @@ decision.** No partial migrations. A half-mapped screen looks migrated and is
 not, which is worse than either extreme. If a screen cannot be finished, propose
 the missing roles and leave the screen alone until they are decided.
 
+*One deliberate exception, recorded rather than hidden (2026-09-03):*
+`(tabs)/index.tsx` — Home — has **only its `sectionLabelSmall` migrated**. Home
+is the screen the standard was measured from, and decision 6 is the single
+place the standard overrides it, so that one label was changed on its own to
+make the consequence visible before committing the whole screen. The file
+carries a note at its import saying so. Home is **not** migrated; it still has
+31 unmapped text styles and 23 radii, and finishing it is a separate job. An
+exception that is written down is a decision; an exception that is not is the
+half-migrated screen rule 12 exists to prevent.
+
 **13. Three title/value roles added for `(tabs)`.** `pageTitle` 28/900,
 `modalTitle` 20/900, `statValueSm` 20/900.
 
@@ -411,7 +421,7 @@ exemptions declared in the mapping — rule 12, enforced rather than remembered.
 
 <!-- BEGIN GENERATED: migration-log — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-21 files migrated, listed from the tree with the sha of the commit
+22 files migrated, listed from the tree with the sha of the commit
 that last touched each.
 
 | File | Last commit |
@@ -420,6 +430,7 @@ that last touched each.
 | `app/(tabs)/chat.tsx` | `fb47edb` |
 | `app/(tabs)/finder.tsx` | `05efd8b` |
 | `app/(tabs)/games.tsx` | `34a8eeb` |
+| `app/(tabs)/index.tsx` | `1961ff8` |
 | `app/(tabs)/marketplace.tsx` | `fb47edb` |
 | `app/(tabs)/nearby.tsx` | `e7927f3` |
 | `app/(tabs)/partner.tsx` | `fb47edb` |
@@ -454,8 +465,8 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 
 | | Occurrences | Files |
 | --- | ---: | ---: |
-| Files importing `@shared/tokens` (migrated) | — | **21 of 218** (10%) |
-| Raw `fontSize: N` remaining | 2283 | 199 |
+| Files importing `@shared/tokens` (migrated) | — | **22 of 218** (10%) |
+| Raw `fontSize: N` remaining | 2282 | 199 |
 | `borderRadius: radius.*` from `@/theme` remaining | 466 | 115 |
 | `borderRadius: 30` → `shape.cta` | 14 | 11 |
 | `borderRadius: 999` → `shape.cta` | 18 | 10 |
