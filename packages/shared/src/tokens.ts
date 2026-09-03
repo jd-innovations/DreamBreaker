@@ -220,10 +220,25 @@ export const space = {
  * shrunk it by three points. Both new values are what that screen already used.
  */
 export const text = {
+  /**
+   * The large left-aligned title on a tab root. Distinct from `sectionTitle`
+   * (17/900), which is the small centred title a pushed screen puts beside its
+   * back button — two different jobs that had drifted into seven values
+   * between them across `(tabs)`.
+   */
+  pageTitle:    { size: 28, weight: 900 },
   /** Title over a hero image. Added 2026-09-03 (facility detail). */
   heroTitle:    { size: 26, weight: 800, lineHeight: 30 },
   statNumber:   { size: 26, weight: 900 },
   cardTitle:    { size: 22, weight: 800, lineHeight: 26 },
+  /** The heading of a bottom sheet or modal. */
+  modalTitle:   { size: 20, weight: 900 },
+  /**
+   * A stat value smaller than `statNumber` (26/900) — a profile stat, a rating.
+   * Shares 20/900 with `modalTitle` and stays separate under rule 11: a
+   * heading is not a number.
+   */
+  statValueSm:  { size: 20, weight: 900 },
   sectionTitle: { size: 17, weight: 900 },
   /** Full-width primary buttons, and controls sized like them. */
   actionLarge:  { size: 16, weight: 800 },

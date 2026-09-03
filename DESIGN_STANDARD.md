@@ -23,13 +23,16 @@ exercise rather than a redesign.
 
 <!-- BEGIN GENERATED: type-scale — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-17 roles, generated from `packages/shared/src/tokens.ts`.
+20 roles, generated from `packages/shared/src/tokens.ts`.
 
 | Role | Value |
 | --- | --- |
+| `pageTitle` | 28 / 900 |
 | `heroTitle` | 26 / 800, lh 30 |
 | `statNumber` | 26 / 900 |
 | `cardTitle` | 22 / 800, lh 26 |
+| `modalTitle` | 20 / 900 |
+| `statValueSm` | 20 / 900 |
 | `sectionTitle` | 17 / 900 |
 | `actionLarge` | 16 / 800 |
 | `titleSm` | 16 / 800 |
@@ -45,7 +48,7 @@ exercise rather than a redesign.
 | `caption` | 12 / 500 |
 | `cardLabel` | 11 / 800, ls 0.8, uppercase |
 
-Sizes: **26 · 22 · 17 · 16 · 15 · 14 · 13 · 12 · 11**. Weights: **900 · 800 · 700 · 500**.
+Sizes: **28 · 26 · 22 · 20 · 17 · 16 · 15 · 14 · 13 · 12 · 11**. Weights: **900 · 800 · 700 · 500**.
 
 <!-- END GENERATED: type-scale -->
 
@@ -193,6 +196,36 @@ settles it in favour of job.
 decision.** No partial migrations. A half-mapped screen looks migrated and is
 not, which is worse than either extreme. If a screen cannot be finished, propose
 the missing roles and leave the screen alone until they are decided.
+
+**13. Three title/value roles added for `(tabs)`.** `pageTitle` 28/900,
+`modalTitle` 20/900, `statValueSm` 20/900.
+
+*Why:* the audit of `(tabs)` found **seven treatments for "the title at the top
+of a screen"** — 28, 26, 24, 22, 20, 18 across the tab roots, plus 17 on the
+nine migrated booking screens. There is one legitimate distinction inside that
+range: a pushed screen has a small centred title beside a back button
+(`sectionTitle` 17/900), and a tab root has a large left-aligned one
+(`pageTitle` 28/900). Two jobs, not seven values.
+
+`modalTitle` and `statValueSm` share 20/900 and stay separate under rule 11.
+
+*Consequence, and it is the migration-order trap again:* facility detail's
+sheet title already took `titleSm` 16/800 because `modalTitle` did not exist.
+It moves to `modalTitle` in the same commit that adds these roles, rather than
+being left behind the way Book a Court's toggle was.
+
+*Not mapped:* `finder`'s "PASS" / "CONNECT" swipe overlays are also 28/900 but
+with ls 2, and a full-screen gesture overlay is not a page title. Rule 11 —
+left alone, flagged rather than forced.
+
+**14. Avatar initials are exempt.** Text drawn to fit an avatar circle is sized
+to its container, not from the type scale — the same reasoning that leaves a
+36px circle's `borderRadius: 18` alone. Four instances so far: `booking/players`
+(13), `booking/game-status` (12), `(tabs)/chat` (18), `(tabs)/profile` (18).
+
+This began as a per-screen note and is written down now because it recurred
+four times, which is the point at which a judgement call should become a rule
+or be abandoned.
 
 ---
 

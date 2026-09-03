@@ -1176,7 +1176,9 @@ const es = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 10, paddingBottom: 28, gap: 10,
   },
   handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: L.border, marginBottom: 6 },
-  title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  // modalTitle, added 2026-09-03. This took titleSm only because modalTitle
+  // did not exist yet when the screen was migrated (decision 13).
+  title: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900' },
   sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19 },
   input: {
     minHeight: 110, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
