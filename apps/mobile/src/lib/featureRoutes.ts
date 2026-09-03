@@ -8,6 +8,7 @@ const GATED_ROUTE_PREFIXES: { prefix: string; feature: FeatureKey }[] = [
   { prefix: '/design-lab', feature: 'devTools' },
   { prefix: '/dev-qr-scan', feature: 'devTools' },
   { prefix: '/dev-diagnostics', feature: 'devTools' },
+  { prefix: '/dev-theme', feature: 'devTools' },
   { prefix: '/onboarding-preview', feature: 'devTools' },
   { prefix: '/coach', feature: 'coachMarketplace' },
   { prefix: '/lessons', feature: 'lessonMarketplace' },

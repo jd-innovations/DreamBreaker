@@ -105,7 +105,7 @@ export const FEATURE_VISIBILITY: Record<FeatureKey, FeatureVisibility> = {
   // PAR value is computed client-side; the screen renders what the server
   // already stores.
   myStats: 'included',
-  // design-lab, dev-qr-scan, onboarding-preview.
+  // design-lab, dev-qr-scan, dev-theme, onboarding-preview.
   devTools: 'internal-only',
 };
 

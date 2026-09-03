@@ -1,7 +1,7 @@
 import React, {
   createContext, useCallback, useContext, useEffect, useMemo, useState,
 } from 'react';
-import { StyleSheet, useColorScheme } from 'react-native';
+import { useColorScheme } from 'react-native';
 import { getPref, setPref } from '@/lib/localPrefs';
 import { themes, type ThemeName, type ThemeRoles } from './roles';
 
@@ -129,9 +129,15 @@ export function useThemeRoles(): ThemeRoles {
  *
  * Define the factory at MODULE scope, not inline in the component:
  *
- *   const styles = (t: ThemeRoles) => ({ card: { backgroundColor: t.surface } });
+ *   const styles = (t: ThemeRoles) => StyleSheet.create({
+ *     card: { backgroundColor: t.surface },
+ *   });
  *   ...
  *   const s = useThemedStyles(styles);
+ *
+ * The factory calls StyleSheet.create itself rather than having this hook do
+ * it, so the literal types survive — a bare object literal widens fontWeight
+ * to `string` and stops satisfying TextStyle.
  *
  * An inline arrow is a new function identity every render, which defeats the
  * memo and rebuilds the sheet each time. It still renders correctly, just
@@ -141,9 +147,7 @@ export function useThemeRoles(): ThemeRoles {
  * sheets should stay at module scope; that carve-out is what keeps the
  * migration bounded.
  */
-export function useThemedStyles<T extends StyleSheet.NamedStyles<T>>(
-  factory: (roles: ThemeRoles) => T,
-): T {
+export function useThemedStyles<T>(factory: (roles: ThemeRoles) => T): T {
   const { roles } = useTheme();
-  return useMemo(() => StyleSheet.create(factory(roles)), [roles, factory]);
+  return useMemo(() => factory(roles), [roles, factory]);
 }

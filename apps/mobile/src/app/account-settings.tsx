@@ -82,6 +82,12 @@ const DEV_TOOLS = [
     sub: 'Crash reporting checks and the scrubber probe.',
   },
   {
+    route: '/dev-theme',
+    icon: 'contrast-outline',
+    label: 'Theme',
+    sub: 'Switch light / dark / system and inspect the resolved role ramp.',
+  },
+  {
     route: '/design-lab',
     icon: 'color-palette-outline',
     label: 'Design Lab',
