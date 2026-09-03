@@ -4,7 +4,9 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { PickleballIcon } from '@/components';
 import {
@@ -247,10 +249,10 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.screenH, paddingVertical: spacing.screenV, backgroundColor: L.bg,
   },
   iconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  title:   { color: L.navy, fontSize: 17, fontWeight: '900' },
+  title:   { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
 
   contextBar: { paddingHorizontal: spacing.screenH, paddingBottom: spacing.sm, backgroundColor: L.bg },
-  contextText: { color: L.textSub, fontSize: 12, fontWeight: '600' },
+  contextText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   actionRow: {
     flexDirection: 'row', gap: spacing.sm,
@@ -259,16 +261,16 @@ const s = StyleSheet.create({
   },
   actionBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.chip,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.pill,
     paddingHorizontal: 14, paddingVertical: 8,
   },
-  actionBtnText: { color: L.navy, fontSize: 13, fontWeight: '700' },
+  actionBtnText: { color: L.navy, fontSize: text.controlLabel.size, fontWeight: '700' },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 32 },
-  emptyText: { color: L.textSub, fontSize: 14, fontWeight: '500', textAlign: 'center' },
+  emptyText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center' },
 
   card: {
-    backgroundColor: L.bg, borderRadius: radius.card, overflow: 'hidden',
+    backgroundColor: L.bg, borderRadius: shape.card, overflow: 'hidden',
     marginHorizontal: spacing.screenH, marginTop: spacing.lg,
     borderWidth: 1, borderColor: L.border,
   },
@@ -277,18 +279,18 @@ const s = StyleSheet.create({
     backgroundColor: L.goldBg, borderBottomWidth: 1, borderBottomColor: L.goldBorder,
     paddingHorizontal: spacing.md, paddingVertical: 6,
   },
-  dealBarText: { color: L.navy, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  dealBarText: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: 0.5 },
 
   cardPhoto:         { width: '100%', height: 140 },
   cardPhotoFallback: { backgroundColor: L.navy, alignItems: 'center', justifyContent: 'center' },
 
   cardBody: { padding: spacing.lg, gap: 4 },
-  cardName: { color: L.navy, fontSize: 16, fontWeight: '800' },
+  cardName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   cardMetaRow:  { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
-  cardMetaText: { color: L.textSub, fontSize: 12, fontWeight: '600' },
-  cardDot:      { color: L.border, fontSize: 12 },
+  cardMetaText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  cardDot:      { color: L.border, fontSize: text.caption.size },
 
-  cardInventory: { color: L.textSub, fontSize: 12, fontWeight: '600', marginTop: 2 },
-  cardPrice:     { color: L.navy, fontSize: 13, fontWeight: '800', marginTop: 4 },
+  cardInventory: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+  cardPrice:     { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800', marginTop: 4 },
 });
