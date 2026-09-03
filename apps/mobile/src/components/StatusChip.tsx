@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text as type } from '@shared/tokens';
 
 export type StatusVariant = 'gold' | 'green' | 'gray' | 'navy' | 'red';
 
@@ -37,10 +39,13 @@ export function StatusChip({
 const s = StyleSheet.create({
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    borderWidth: 1, borderRadius: radius.chip,
+    // shape.pill is 20, the same value radius.chip held — no visual change.
+    borderWidth: 1, borderRadius: shape.pill,
     paddingHorizontal: 9, paddingVertical: 4, alignSelf: 'flex-start',
   },
-  text: { fontSize: 11, fontWeight: '700' },
+  // cardLabel is 11/800. This was 11/700, so the label gets slightly bolder —
+  // the entire visible effect of migrating this component, across 33 screens.
+  text: { fontSize: type.cardLabel.size, fontWeight: '800' },
 });
 
 export default StatusChip;
