@@ -35,7 +35,7 @@ exercise rather than a redesign.
 | `statValueSm` | 20 / 900 |
 | `sectionTitle` | 17 / 900 |
 | `actionLarge` | 16 / 800 |
-| `titleSm` | 16 / 800 |
+| `titleSm` | 17 / 800 |
 | `body` | 15 / 500 |
 | `rowTitle` | 14 / 700 |
 | `rowValue` | 14 / 800 |
@@ -217,6 +217,30 @@ being left behind the way Book a Court's toggle was.
 *Not mapped:* `finder`'s "PASS" / "CONNECT" swipe overlays are also 28/900 but
 with ls 2, and a full-screen gesture overlay is not a page title. Rule 11 —
 left alone, flagged rather than forced.
+
+**15. `titleSm` is 17/800, not 16/800.** Corrected after measuring the whole
+app rather than a sample.
+
+`node scripts/measure-styles.mjs` counted every literal type value in
+`apps/mobile/src`: **2,350 values across 198 distinct size/weight
+combinations**. In the `title / name` job, **`17/800` has 45 uses — the single
+most common title in the app** — against 16 for `16/800`. This role was set to
+16 from the three reference screens, before that measurement existed.
+
+*Consequence:* the 16 styles already on `titleSm` grow by one point. In
+exchange, the 45 places the app already titles things at 17/800 migrate as a
+no-op instead of shrinking.
+
+*Side effect worth having:* `titleSm` and `actionLarge` no longer share 16/800.
+They were kept apart by rule 11 alone; now they differ in value too.
+
+*The wider point, which is why this decision exists at all:* the vocabulary was
+derived from three screens and then patched five times as each newly migrated
+screen exposed a gap. Three screens correctly answer what good looks like. They
+cannot answer how many roles an app of 218 files needs, and treating them as if
+they could cost a day of rework. The measurement should have come first.
+Coverage turned out to be roughly right — about 18 distinct jobs against 20
+roles — and this was the one value clearly chosen from too small a sample.
 
 **14. Avatar initials are exempt.** Text drawn to fit an avatar circle is sized
 to its container, not from the type scale — the same reasoning that leaves a

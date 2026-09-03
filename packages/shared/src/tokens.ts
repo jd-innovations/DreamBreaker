@@ -244,10 +244,14 @@ export const text = {
   actionLarge:  { size: 16, weight: 800 },
   /**
    * Small titles: a header inside a card, a bottom-sheet title, a venue name.
-   * Same numbers as `actionLarge` and deliberately a separate role — rule 11:
-   * a card header is not a button, and coincidental equality is not a match.
+   *
+   * 17, not 16. Decision 15 (2026-09-03): measuring all 2,350 literal type
+   * values found 17/800 is the single most common title in the app — 45 uses
+   * — while 16/800 has 16. This role was set to 16 from a three-screen sample
+   * before that measurement existed. At 17 the largest cluster of titles in
+   * the app migrates as a no-op.
    */
-  titleSm:      { size: 16, weight: 800 },
+  titleSm:      { size: 17, weight: 800 },
   body:         { size: 15, weight: 500 },
   /** Primary label in a list row: a court name, an info row's first line. */
   rowTitle:     { size: 14, weight: 700 },
