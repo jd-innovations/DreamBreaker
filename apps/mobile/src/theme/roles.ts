@@ -95,12 +95,19 @@ export const darkRoles: ThemeRoles = {
   surface: '#0F1628',
   surfaceElevated: '#131D35',
 
-  border: '#1C2B4A',
+  // Lifted from the old dark palette's #1C2B4A (1.41:1 against the ground).
+  // Cards were dissolving into the page on the phase 2 pilot; this carries the
+  // card edge at 1.61:1 without lifting every surface.
+  border: '#243459',
   borderSubtle: '#152039',
 
   textPrimary: '#F0F4FF',
   textSecondary: '#7A92C4',
-  textMuted: '#3D506E',
+  // Was #3D506E, inherited from the old dark palette — 2.21:1 on surface, well
+  // under the 4.5:1 WCAG floor, and unreadable for listing metadata on the
+  // phase 2 pilot. #6B80A6 is 4.52:1: the least change that passes, so muted
+  // text still reads as muted.
+  textMuted: '#6B80A6',
   textInverse: '#0A1228',
 
   // Decision 1 (2026-09-02): gold, not navy. Navy #0A1228 sits at ~1.6:1
