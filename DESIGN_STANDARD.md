@@ -411,9 +411,9 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 
 | | Occurrences | Files |
 | --- | ---: | ---: |
-| Files importing `@shared/tokens` (migrated) | — | **17 of 218** (8%) |
-| Raw `fontSize: N` remaining | 2394 | 200 |
-| `borderRadius: radius.*` from `@/theme` remaining | 474 | 117 |
+| Files importing `@shared/tokens` (migrated) | — | **18 of 218** (8%) |
+| Raw `fontSize: N` remaining | 2372 | 199 |
+| `borderRadius: radius.*` from `@/theme` remaining | 468 | 116 |
 | `borderRadius: 30` → `shape.cta` | 14 | 11 |
 | `borderRadius: 999` → `shape.cta` | 18 | 10 |
 
