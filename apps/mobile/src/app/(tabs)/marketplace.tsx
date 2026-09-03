@@ -227,10 +227,21 @@ export default function MarketplaceScreen() {
   );
 
   const [rawListings, setRawListings] = useState<MarketplaceListingCard[]>([]);
+  // `loading` covers the first load only. Later queries set `refetching` and
+  // leave the current grid on screen.
   const [loading, setLoading] = useState(true);
+  const [refetching, setRefetching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+  // Every keystroke used to reach `load` directly — one full round trip per
+  // character typed. Debounce before the query sees it.
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const { lat: myLat, lng: myLng } = useCurrentLocation();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const [filterOpen, setFilterOpen] = useState(false);
   const filterY = useRef(new Animated.Value(FILTER_HEIGHT)).current;
@@ -252,26 +263,37 @@ export default function MarketplaceScreen() {
 
   const priceBucket = PRICE_BUCKETS.find((p) => p.label === priceLabel);
 
+  // Results now stay on screen while a new query is in flight, so a slow
+  // earlier request must not overwrite a faster later one.
+  const requestSeq = useRef(0);
+
   const load = useCallback(async () => {
+    const seq = ++requestSeq.current;
+    setRefetching(true);
     try {
       const rows = await fetchListings({
-        query: search || undefined,
+        query: debouncedSearch || undefined,
         brand: brand ?? undefined,
         condition: condition ?? undefined,
         minPriceCents: priceBucket?.min,
         maxPriceCents: priceBucket?.max,
         sort,
       });
+      if (seq !== requestSeq.current) return; // superseded
       setRawListings(rows);
     } catch (err) {
       console.error('[Marketplace] fetchListings failed:', err);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      // A superseded request leaves the flags to the request that replaced it.
+      if (seq === requestSeq.current) {
+        setLoading(false);
+        setRefetching(false);
+        setRefreshing(false);
+      }
     }
-  }, [search, brand, condition, priceBucket?.min, priceBucket?.max, sort]);
+  }, [debouncedSearch, brand, condition, priceBucket?.min, priceBucket?.max, sort]);
 
-  useEffect(() => { setLoading(true); void load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const onRefresh = useCallback(() => { setRefreshing(true); void load(); }, [load]);
 
@@ -306,7 +328,11 @@ export default function MarketplaceScreen() {
 
         <View style={s.searchRow}>
           <View style={s.searchBox}>
-            <Ionicons name="search" size={16} color={L.textMuted} />
+            {refetching && !loading ? (
+              <ActivityIndicator size="small" color={L.textMuted} style={s.searchSpinner} />
+            ) : (
+              <Ionicons name="search" size={16} color={L.textMuted} />
+            )}
             <TextInput
               style={s.searchInput}
               placeholder="Search brand or model"
@@ -369,6 +395,8 @@ const s = StyleSheet.create({
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingBottom: 14 },
   searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: L.bg, borderRadius: 14, borderWidth: 1, borderColor: L.border, paddingHorizontal: 12, height: 42 },
   searchInput: { flex: 1, fontSize: 14, color: L.text },
+  // Matches the search icon's footprint so swapping the two doesn't shift the input.
+  searchSpinner: { width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
   filterBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, alignItems: 'center', justifyContent: 'center' },
   filterBadge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: L.gold, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   filterBadgeText: { color: L.navy, fontSize: 10, fontWeight: '800' },

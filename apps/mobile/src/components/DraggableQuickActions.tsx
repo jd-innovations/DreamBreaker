@@ -41,12 +41,18 @@ function DraggableCell<T extends DraggableItem>({
       runOnJS(onDragEnd)();
     });
 
+  // Must stay above the pan's 250ms long-press threshold. At 200ms a press
+  // released between 200ms and 250ms failed the tap without the pan ever
+  // activating, so the tile animated on press-in, sprang back, and did
+  // nothing — the press looked like it landed. Anything past 250ms is
+  // preempted by the pan, so the exact ceiling here only needs headroom.
   const tap = Gesture.Tap()
-    .maxDuration(200)
+    .maxDuration(500)
     .onEnd(() => runOnJS(onPress)(item));
 
-  // Race: a quick release resolves as a tap; holding past the tap window
-  // (and the long-press threshold) lets the pan gesture take over as a drag.
+  // Race: a quick release resolves as a tap; holding past the long-press
+  // threshold lets the pan gesture take over as a drag before the tap
+  // window closes.
   const composed = Gesture.Race(tap, pan);
 
   const style = useAnimatedStyle(() => ({
