@@ -421,7 +421,7 @@ exemptions declared in the mapping — rule 12, enforced rather than remembered.
 
 <!-- BEGIN GENERATED: migration-log — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-22 files migrated, listed from the tree with the sha of the commit
+27 files migrated, listed from the tree with the sha of the commit
 that last touched each.
 
 | File | Last commit |
@@ -430,7 +430,7 @@ that last touched each.
 | `app/(tabs)/chat.tsx` | `fb47edb` |
 | `app/(tabs)/finder.tsx` | `05efd8b` |
 | `app/(tabs)/games.tsx` | `34a8eeb` |
-| `app/(tabs)/index.tsx` | `1961ff8` |
+| `app/(tabs)/index.tsx` | `2d52fa5` |
 | `app/(tabs)/marketplace.tsx` | `fb47edb` |
 | `app/(tabs)/nearby.tsx` | `e7927f3` |
 | `app/(tabs)/partner.tsx` | `fb47edb` |
@@ -445,6 +445,11 @@ that last touched each.
 | `app/booking/results.tsx` | `54ff028` |
 | `app/booking/review.tsx` | `abb9086` |
 | `app/facility/[id].tsx` | `22a4dd3` |
+| `app/tournament/[id]/check-in-qr.tsx` | `41b6a99` |
+| `app/tournament/[id]/check-in-scan.tsx` | `41b6a99` |
+| `app/tournament/[id]/hold-confirm.tsx` | `41b6a99` |
+| `app/tournament/[id]/hold-success.tsx` | `41b6a99` |
+| `app/tournament/[id]/registration-success.tsx` | `41b6a99` |
 | `components/PrimaryButton.tsx` | `f4469e9` |
 | `components/SecondaryButton.tsx` | `f4469e9` |
 | `components/StatusChip.tsx` | `b0fd68d` |
@@ -465,9 +470,9 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 
 | | Occurrences | Files |
 | --- | ---: | ---: |
-| Files importing `@shared/tokens` (migrated) | — | **22 of 218** (10%) |
-| Raw `fontSize: N` remaining | 2282 | 199 |
-| `borderRadius: radius.*` from `@/theme` remaining | 466 | 115 |
+| Files importing `@shared/tokens` (migrated) | — | **27 of 218** (12%) |
+| Raw `fontSize: N` remaining | 2243 | 194 |
+| `borderRadius: radius.*` from `@/theme` remaining | 457 | 111 |
 | `borderRadius: 30` → `shape.cta` | 14 | 11 |
 | `borderRadius: 999` → `shape.cta` | 18 | 10 |
 
