@@ -45,7 +45,12 @@ const ROLE_WEIGHT = {
 // rather than in pieces.
 const ROLE_LETTERSPACING = new Set(["sectionLabel", "cardLabel"]);
 
-const BLOCK = /([A-Za-z_]\w*)\s*:\s*\{([^{}]*)\}/g;
+// One level of nesting, because RN styles routinely hold `shadowOffset: {...}`.
+// A flat `[^{}]*` stops at the inner brace, so those styles were invisible to
+// an earlier version of this tool — `bs.card` on nearby.tsx and two others were
+// silently skipped, and the rule-12 check does not cover raw borderRadius, so
+// nothing complained.
+const BLOCK = /([A-Za-z_]\w*)\s*:\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
 const SHEET = /const (\w+)\s*(?::[^=]*)?=\s*(?:\([^)]*\)\s*=>\s*)?StyleSheet\.create/g;
 
 function sheetsOf(src) {
@@ -149,16 +154,28 @@ src = src.replace(BLOCK, (whole, name, props, offset) => {
     const size = `fontSize: text.${role}.size`;
     const weight = `fontWeight: '${ROLE_WEIGHT[role]}'`;
 
-    if (/fontSize:\s*\d+/.test(out)) out = out.replace(/fontSize:\s*\d+/, size);
-    else out = ` ${size},${out}`;                 // size came from the spread
+    if (/fontSize:\s*\d+/.test(out)) {
+      out = out.replace(/fontSize:\s*\d+/, size);
+    } else if (/fontSize:\s*text\.\w+\.size/.test(out)) {
+      // Already migrated. Re-point it rather than inject a second fontSize —
+      // running twice used to produce duplicate keys and a TS1117 error.
+      out = out.replace(/fontSize:\s*text\.\w+\.size/, size);
+    } else {
+      out = ` ${size},${out}`;                    // size came from the spread
+    }
 
     if (/fontWeight:\s*'\d+'/.test(out)) out = out.replace(/fontWeight:\s*'\d+'/, weight);
     else out = out.replace(size, `${size}, ${weight}`);
 
     if (ROLE_LETTERSPACING.has(role)) {
       const ls = `letterSpacing: text.${role}.letterSpacing`;
-      if (/letterSpacing:\s*-?[\d.]+/.test(out)) out = out.replace(/letterSpacing:\s*-?[\d.]+/, ls);
-      else out = out.replace(weight, `${weight}, ${ls}`);
+      if (/letterSpacing:\s*-?[\d.]+/.test(out)) {
+        out = out.replace(/letterSpacing:\s*-?[\d.]+/, ls);
+      } else if (/letterSpacing:\s*text\.\w+\.letterSpacing/.test(out)) {
+        out = out.replace(/letterSpacing:\s*text\.\w+\.letterSpacing/, ls);
+      } else {
+        out = out.replace(weight, `${weight}, ${ls}`);
+      }
     }
   }
 
@@ -213,3 +230,13 @@ if (src.includes("typography.")) {
 
 writeFileSync(file, src, "utf8");
 console.log(`[migrate-styles] ${file} — ${seen.size} keys mapped, ${left.length} exempt`);
+
+// Raw radii are legitimate for icon circles (half their own size), dots and
+// handles, so this is a report rather than a failure. It exists because a
+// silently-skipped radius has no other way of being noticed: the rule-12 check
+// covers fontSize only.
+const rawRadii = [...src.matchAll(/([A-Za-z_]\w*)\s*:\s*\{(?:[^{}]|\{[^{}]*\})*?borderRadius:\s*(\d+)/g)]
+  .map((m) => `${m[1]}:${m[2]}`);
+if (rawRadii.length) {
+  console.log(`  raw radii left (check each is geometry, not a shape role): ${rawRadii.join(", ")}`);
+}

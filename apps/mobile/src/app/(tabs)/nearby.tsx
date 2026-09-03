@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import {
   fetchFacilities,
   facilityAccessType,
@@ -203,7 +205,7 @@ function PinPhoto({
 }
 
 const ph = StyleSheet.create({
-  wrap:     { backgroundColor: L.navy, alignItems: 'center', justifyContent: 'center' },
+  wrap: { backgroundColor: L.navy, alignItems: 'center', justifyContent: 'center' },
   initials: { color: L.gold, fontSize: 13, fontWeight: '900', letterSpacing: 0.5 },
 });
 
@@ -211,9 +213,9 @@ const ph = StyleSheet.create({
 // ─── Facility bottom sheet ──────────────────────────────────────────────────────
 
 const ACCESS_BADGE: Record<string, { label: string; bg: string; color: string }> = {
-  public:     { label: 'PUBLIC',     bg: '#DCFCE7', color: '#16A34A' },
+  public: { label: 'PUBLIC',     bg: '#DCFCE7', color: '#16A34A' },
   membership: { label: 'MEMBERSHIP', bg: '#FEF9C3', color: '#CA8A04' },
-  private:    { label: 'PRIVATE',    bg: '#FEE2E2', color: '#DC2626' },
+  private: { label: 'PRIVATE',    bg: '#FEE2E2', color: '#DC2626' },
 };
 
 function FacilityBottomSheet({
@@ -329,12 +331,12 @@ function FacilityBottomSheet({
 }
 
 const fbs = StyleSheet.create({
-  badge: { flexDirection: 'row', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 3 },
+  badge: { flexDirection: 'row', borderRadius: shape.pill, paddingHorizontal: 9, paddingVertical: 3 },
   badgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
-  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#DBEAFE', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
+  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#DBEAFE', borderRadius: shape.pill, paddingHorizontal: 8, paddingVertical: 3 },
   verifiedText: { fontSize: 9, fontWeight: '800', color: '#2563EB', letterSpacing: 0.4 },
   amenitiesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
-  amenityChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: L.border, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  amenityChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: L.border, borderRadius: shape.pill, paddingHorizontal: 8, paddingVertical: 4 },
   amenityInactive: { opacity: 0.35 },
   amenityLabel: { fontSize: 10, fontWeight: '600', color: L.navy },
 });
@@ -454,7 +456,7 @@ const bs = StyleSheet.create({
   },
   card: {
     backgroundColor: L.white,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     flexDirection: 'row',
     overflow: 'hidden',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
@@ -464,31 +466,31 @@ const bs = StyleSheet.create({
   photo: { width: 110, height: 140 },
   content: { flex: 1, padding: 12, gap: 6 },
 
-  topRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  catRow:   { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  catRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   catLabel: { color: L.gold, fontSize: 10, fontWeight: '800', letterSpacing: 0.6 },
 
-  title:    { color: L.navy, fontSize: 15, fontWeight: '900', lineHeight: 20, marginTop: 2 },
+  title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', lineHeight: 20, marginTop: 2 },
 
-  metaRow:  { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  metaText: { color: L.textMuted, fontSize: 11, fontWeight: '500' },
-  metaDot:  { width: 3, height: 3, borderRadius: 1.5, backgroundColor: L.border },
+  metaText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  metaDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: L.border },
 
-  detailRow:  { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   skillPill: {
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: 20,
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.pill,
     paddingHorizontal: 9, paddingVertical: 3,
   },
-  skillText:   { color: L.gold, fontSize: 11, fontWeight: '700' },
-  playersRow:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  playersText: { color: L.textSub, fontSize: 11, fontWeight: '600' },
+  skillText: { color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  playersRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  playersText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   cta: {
-    backgroundColor: L.navy, borderRadius: 10,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingVertical: 10, alignItems: 'center', marginTop: 4,
   },
-  ctaText: { color: L.white, fontSize: 13, fontWeight: '800' },
+  ctaText: { color: L.white, fontSize: text.action.size, fontWeight: '800' },
 });
 
 // ─── List card ──────────────────────────────────────────────────────────────────
@@ -545,24 +547,24 @@ function ListCard({ pin }: { pin: ExplorePin }) {
 const lc = StyleSheet.create({
   card: {
     flexDirection: 'row', backgroundColor: L.white,
-    borderRadius: radius.card, borderWidth: 1, borderColor: L.border,
+    borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
     overflow: 'hidden', marginBottom: 12,
   },
-  photo:   { width: 100, height: 120 },
+  photo: { width: 100, height: 120 },
   content: { flex: 1, padding: 12, gap: 5 },
-  catRow:  { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  catLabel:{ color: L.gold, fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
-  title:   { color: L.navy, fontSize: 15, fontWeight: '800' },
+  catRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  catLabel: { color: L.gold, fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   metaRow: { gap: 4 },
-  metaItem:{ flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText:{ color: L.textMuted, fontSize: 11, fontWeight: '500' },
-  bottomRow:{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 2 },
-  skillPill:{
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: 20,
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  bottomRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 2 },
+  skillPill: {
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.pill,
     paddingHorizontal: 8, paddingVertical: 2,
   },
-  skillText:{ color: L.gold, fontSize: 10, fontWeight: '700' },
-  sub:      { color: L.textSub, fontSize: 11, fontWeight: '600' },
+  skillText: { color: L.gold, fontSize: 10, fontWeight: '700' },
+  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 });
 
 // ─── Screen ─────────────────────────────────────────────────────────────────────
@@ -1114,33 +1116,33 @@ const fm = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: 20,
   },
-  title: { color: L.navy, fontSize: 17, fontWeight: '900' },
+  title: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900' },
   sectionLabel: {
-    color: L.navy, fontSize: 12, fontWeight: '800',
-    letterSpacing: 0.5, marginBottom: 10, marginTop: 4,
+    color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing, marginBottom: 10, marginTop: 4,
   },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 },
   chip: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: 20, borderWidth: 1.5, borderColor: L.border,
+    borderRadius: shape.pill, borderWidth: 1.5, borderColor: L.border,
     paddingHorizontal: 14, paddingVertical: 9, backgroundColor: L.page,
   },
   chipActive: { backgroundColor: L.navy, borderColor: L.navy },
-  chipText: { color: L.textSub, fontSize: 13, fontWeight: '600' },
+  chipText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   chipTextActive: { color: '#FFFFFF' },
-  hint: { color: L.textSub, fontSize: 11, marginBottom: 20 },
+  hint: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 20 },
   toggleRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 12, marginBottom: 20,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border,
   },
-  toggleLabel: { color: L.navy, fontSize: 14, fontWeight: '700' },
-  toggleSub: { color: L.textSub, fontSize: 12, marginTop: 2 },
+  toggleLabel: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  toggleSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
   applyBtn: {
-    backgroundColor: L.gold, borderRadius: 14,
+    backgroundColor: L.gold, borderRadius: shape.cta,
     paddingVertical: 15, alignItems: 'center',
   },
-  applyBtnText: { color: L.navy, fontSize: 15, fontWeight: '800' },
+  applyBtnText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
 });
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.bg },
@@ -1151,9 +1153,9 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.screenH, paddingBottom: 14,
     backgroundColor: L.bg,
   },
-  headerLeft:    { flex: 1 },
-  title:         { color: L.navy, fontSize: 28, fontWeight: '900', lineHeight: 32 },
-  titleStar:     { fontSize: 22 },
+  headerLeft: { flex: 1 },
+  title: { color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900', lineHeight: 32 },
+  titleStar: { fontSize: 22 },
   headerActions: { flexDirection: 'row', gap: 8, paddingTop: 4 },
   headerBtn: {
     alignItems: 'center', justifyContent: 'center',
@@ -1178,11 +1180,11 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: L.bg,
     borderWidth: 1.5, borderColor: L.border,
-    borderRadius: 14, paddingHorizontal: 14, height: 48,
+    borderRadius: shape.cta, paddingHorizontal: 14, height: 48,
   },
-  searchInput: { flex: 1, color: L.text, fontSize: 14, fontWeight: '400' },
+  searchInput: { flex: 1, color: L.text, fontSize: text.body.size, fontWeight: '500' },
   locationStatus: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, paddingHorizontal: 4 },
-  locationStatusText: { color: L.textMuted, fontSize: 11, fontWeight: '600' },
+  locationStatusText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Category tabs
   tabsWrap: {
@@ -1194,11 +1196,11 @@ const s = StyleSheet.create({
   tab: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 14, paddingVertical: 10,
-    borderRadius: 24, borderWidth: 1.5, borderColor: L.border,
+    borderRadius: shape.pill, borderWidth: 1.5, borderColor: L.border,
     backgroundColor: L.bg,
   },
-  tabActive:      { backgroundColor: L.navy, borderColor: L.navy },
-  tabLabel:       { color: L.navy, fontSize: 13, fontWeight: '700' },
+  tabActive: { backgroundColor: L.navy, borderColor: L.navy },
+  tabLabel: { color: L.navy, fontSize: text.controlLabel.size, fontWeight: '700' },
   tabLabelActive: { color: L.white },
 
   // Content area
@@ -1208,12 +1210,12 @@ const s = StyleSheet.create({
   searchAreaBtn: {
     position: 'absolute', alignSelf: 'center', zIndex: 5,
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: L.navy, borderRadius: 20,
+    backgroundColor: L.navy, borderRadius: shape.pill,
     paddingHorizontal: 14, paddingVertical: 9,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2, shadowRadius: 6, elevation: 5,
   },
-  searchAreaBtnText: { color: L.white, fontSize: 13, fontWeight: '700' },
+  searchAreaBtnText: { color: L.white, fontSize: text.action.size, fontWeight: '800' },
 
   // List
   listContent: { padding: spacing.screenH },
@@ -1227,7 +1229,7 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     paddingVertical: 60, gap: 12,
   },
-  emptyText: { color: L.textMuted, fontSize: 15, fontWeight: '500' },
+  emptyText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Access filter (courts tab)
   accessFilterWrap: {
@@ -1241,17 +1243,17 @@ const s = StyleSheet.create({
   accessFilterRow: { paddingHorizontal: spacing.screenH, gap: 8 },
   accessChip: {
     paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1.5, borderColor: L.border,
+    borderRadius: shape.pill, borderWidth: 1.5, borderColor: L.border,
     backgroundColor: L.bg,
   },
   accessChipActive: { backgroundColor: L.gold, borderColor: L.gold },
-  accessChipLabel: { color: L.navy, fontSize: 12, fontWeight: '700' },
+  accessChipLabel: { color: L.navy, fontSize: text.controlLabel.size, fontWeight: '700' },
   accessChipLabelActive: { color: L.white },
 
   // Loading overlay on map
   loadingOverlay: {
     position: 'absolute', alignSelf: 'center',
-    backgroundColor: L.white, borderRadius: 20, padding: 10,
+    backgroundColor: L.white, borderRadius: shape.pill, padding: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12, shadowRadius: 6, elevation: 4,
   },
