@@ -21,7 +21,7 @@
 
 import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { execFileSync } from "node:child_process";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -136,10 +136,39 @@ function progress() {
   ].join("\n");
 }
 
+function migrationLog() {
+  // Derived from the tree and from git, not written by hand. The hand-written
+  // version drifted: on 2026-09-03 it held 13 entries while 18 files were
+  // migrated, because "record it in the log" is step 7 of a procedure and
+  // steps at the end get skipped.
+  const rows = files
+    .filter((f) => /from ['"]@shared\/tokens['"]/.test(f.body))
+    .map((f) => {
+      const rel = relative(MOBILE_SRC, f.p).split("\\").join("/");
+      let sha = "—";
+      try {
+        sha = execFileSync("git", ["log", "-1", "--format=%h", "--", f.p], {
+          cwd: ROOT, encoding: "utf8",
+        }).trim() || "—";
+      } catch { /* a file not yet committed has no sha */ }
+      return `| \`${rel}\` | \`${sha}\` |`;
+    })
+    .sort();
+  return [
+    `${rows.length} files migrated, listed from the tree with the sha of the commit`,
+    "that last touched each.",
+    "",
+    "| File | Last commit |",
+    "| --- | --- |",
+    ...rows,
+  ].join("\n");
+}
+
 const BLOCKS = {
   "type-scale": typeTable,
   "scales": scaleTables,
   "progress": progress,
+  "migration-log": migrationLog,
 };
 
 // ── splice ──────────────────────────────────────────────────────────────────

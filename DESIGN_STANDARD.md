@@ -381,21 +381,33 @@ One screen per commit, so any screen can be reverted alone.
 
 ## Migration log
 
-| Screen | Commit | Notes |
-| --- | --- | --- |
-| `app/booking/index.tsx` — Book a Court | `1c0aed1` | First. Five radii 14 → 10. Added `fieldLabel`, `actionLarge`. Control labels 14/700 → `body` 15/500. Confirmed on device. |
-| `app/facility/[id].tsx` — Facility detail (shape) | `9434505` | Five full-width CTAs 30 → 10, the first dramatic look at decision 1. Confirmed on device. |
-| `app/facility/[id].tsx` — Facility detail (type) | `3e5f774` | First attempt shipped half-mapped and was reverted (`18592ef`) — it exposed the rule-11 hole. Redone complete under option A. |
-| `components/PrimaryButton.tsx` — shared, 31 screens | `f4469e9` | radius 14 → `shape.cta` 10; label 16/700 → `actionLarge` 16/800. |
-| `components/SecondaryButton.tsx` — shared, 16 screens | `f4469e9` | Same two changes. |
-| `components/StatusChip.tsx` — shared, 33 screens | `b0fd68d` | Two values. Radius identical; label 11/700 → `cardLabel` 11/800 is the whole visible effect. |
-| `app/booking/choose-time.tsx` — Choose Time | `22414dd` | First screen needing **no new roles** — all 22 text styles mapped to the existing set. Three radii 14 → 10. Price 15/800 → `rowValue` 14/800, matching facility detail. |
-| `app/booking/results.tsx` — Results | `208553f` | 13 styles, all mapped. |
-| `app/booking/players.tsx` — Players | `f1c1ebd` | 24 mapped, 1 exempt (avatar initials, sized to their container). |
-| `app/booking/review.tsx` — Review | `abb9086` | 26 styles, all mapped. Price total and its label both → `titleSm`. |
-| `app/booking/confirmation.tsx` — Confirmation | `13c2178` | 16 styles, all mapped. Success headline 20/900 → `titleSm`. |
-| `app/booking/my-bookings.tsx` — My Bookings | `96f8293` | 11 mapped, 1 exempt (10/600, below floor). |
-| `app/booking/game-status.tsx` — Game Status | `82fe302` | 23 mapped, 1 exempt (avatar initials). Check-in code → `statNumber`. |
+<!-- BEGIN GENERATED: migration-log — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
+
+18 files migrated, listed from the tree with the sha of the commit
+that last touched each.
+
+| File | Last commit |
+| --- | --- |
+| `app/(tabs)/_layout.tsx` | `fb47edb` |
+| `app/(tabs)/chat.tsx` | `fb47edb` |
+| `app/(tabs)/marketplace.tsx` | `fb47edb` |
+| `app/(tabs)/partner.tsx` | `fb47edb` |
+| `app/(tabs)/stats.tsx` | `3b41acb` |
+| `app/(tabs)/tournaments.tsx` | `fb47edb` |
+| `app/booking/choose-time.tsx` | `22414dd` |
+| `app/booking/confirmation.tsx` | `13c2178` |
+| `app/booking/game-status.tsx` | `ae4b5b3` |
+| `app/booking/index.tsx` | `656488b` |
+| `app/booking/my-bookings.tsx` | `96f8293` |
+| `app/booking/players.tsx` | `f1c1ebd` |
+| `app/booking/results.tsx` | `54ff028` |
+| `app/booking/review.tsx` | `abb9086` |
+| `app/facility/[id].tsx` | `22a4dd3` |
+| `components/PrimaryButton.tsx` | `f4469e9` |
+| `components/SecondaryButton.tsx` | `f4469e9` |
+| `components/StatusChip.tsx` | `b0fd68d` |
+
+<!-- END GENERATED: migration-log -->
 
 **The court booking flow is complete** — 9 screens plus `StatusChip`. 5 styles
 remain unmapped across the whole flow, every one of them an explicit exemption:
