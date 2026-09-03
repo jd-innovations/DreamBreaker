@@ -11,7 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, displayText } from '@/theme';
 // Shapes come from the shared token source. `radius` is aliased because
 // @/theme exports its own with different values. See DESIGN_STANDARD.md.
-import { radius as shape, text } from '@shared/tokens';
+import { radius as shape } from '@shared/tokens';
 import { DEFAULT_FACILITY_COVER } from '@/lib/facilityCover';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
@@ -207,10 +207,10 @@ function InventoryCard({
 const ic = StyleSheet.create({
   card:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border },
   name:     { color: L.text, fontSize: 14, fontWeight: '700' },
-  subtitle: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+  subtitle: { color: L.textMuted, fontSize: 12, fontWeight: '500', marginTop: 2 },
   price:        { color: L.navy, fontSize: 14, fontWeight: '800' },
-  priceStrike:  { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textDecorationLine: 'line-through' },
-  priceUnavailable: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  priceStrike:  { color: L.textMuted, fontSize: 12, fontWeight: '600', textDecorationLine: 'line-through' },
+  priceUnavailable: { color: L.textMuted, fontSize: 11, fontWeight: '500' },
 });
 
 // ─── Hero photo backdrop ──────────────────────────────────────────────────────
@@ -251,7 +251,7 @@ const a = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 7,
   },
   chipInactive: { opacity: 0.4 },
-  label:        { color: L.text, fontSize: text.caption.size, fontWeight: '500' },
+  label:        { color: L.text, fontSize: 12, fontWeight: '600' },
   labelInactive:{ color: L.textMuted },
 });
 
@@ -331,14 +331,14 @@ const ms = StyleSheet.create({
     backgroundColor: L.page, marginBottom: spacing.md,
   },
   mapUnavailable: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  mapUnavailableText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  mapUnavailableText: { color: L.textMuted, fontSize: 13, fontWeight: '500' },
   name:    { color: L.navy, fontSize: 15, fontWeight: '800', marginBottom: 2 },
-  address: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18, marginBottom: spacing.md },
+  address: { color: L.textMuted, fontSize: 13, fontWeight: '500', lineHeight: 18, marginBottom: spacing.md },
   directionsBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 14,
   },
-  directionsText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
+  directionsText: { color: L.white, fontSize: 15, fontWeight: '800' },
 });
 
 // ─── Play event card ──────────────────────────────────────────────────────────
@@ -374,10 +374,10 @@ const ec = StyleSheet.create({
   typePill:  { alignSelf: 'flex-start', borderRadius: shape.badge, paddingHorizontal: 7, paddingVertical: 2, marginBottom: 2 },
   typeText:  { color: L.gold, fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
   name:      { ...displayText(17, { color: L.navy }) },
-  date:      { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  date:      { color: L.textMuted, fontSize: 11, fontWeight: '500' },
   right:     { alignItems: 'flex-end', gap: 3 },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
-  statusText:{ fontSize: text.cardLabel.size, fontWeight: '800' },
+  statusText:{ fontSize: 11, fontWeight: '700' },
 });
 
 // ─── Tournament card ──────────────────────────────────────────────────────────
@@ -411,8 +411,8 @@ const tc = StyleSheet.create({
   card:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border, gap: 12 },
   left:       { flex: 1, gap: 3 },
   name:       { ...displayText(17, { color: L.navy }) },
-  date:       { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
-  loc:        { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  date:       { color: L.textMuted, fontSize: 11, fontWeight: '500' },
+  loc:        { color: L.textMuted, fontSize: 11, fontWeight: '400' },
   right:      { alignItems: 'flex-end', gap: 6 },
   statusPill: { borderRadius: shape.pill, paddingHorizontal: 9, paddingVertical: 3 },
   statusText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
@@ -430,7 +430,7 @@ function SectionHeader({ title, loading }: { title: string; loading?: boolean })
 }
 const sh = StyleSheet.create({
   row:   { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  title: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase' },
+  title: { color: L.navy, fontSize: 13, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' },
 });
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -1081,31 +1081,31 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   heroContent: { position: 'absolute', bottom: 0, left: spacing.screenH, right: spacing.screenH, paddingBottom: spacing.lg },
-  heroTitle:   { color: L.white, fontSize: text.heroTitle.size, fontWeight: '800', lineHeight: text.heroTitle.lineHeight, marginBottom: 6 },
+  heroTitle:   { color: L.white, fontSize: 26, fontWeight: '800', lineHeight: 30, marginBottom: 6 },
   heroMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
-  heroMetaText:{ color: 'rgba(255,255,255,0.88)', fontSize: text.caption.size, fontWeight: '500' },
-  heroFacts:   { color: 'rgba(255,255,255,0.75)', fontSize: text.caption.size, fontWeight: '500' },
+  heroMetaText:{ color: 'rgba(255,255,255,0.88)', fontSize: 13, fontWeight: '500' },
+  heroFacts:   { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '500' },
   mapPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 4,
     backgroundColor: L.white, borderRadius: shape.pill, paddingHorizontal: 8, paddingVertical: 3,
   },
-  mapPillText: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800' },
+  mapPillText: { color: L.navy, fontSize: 11, fontWeight: '800' },
 
   body:      { padding: spacing.screenH },
   badgeRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   badge:     { borderRadius: shape.pill, paddingHorizontal: 10, paddingVertical: 4 },
-  badgeText: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: 0.4 },
+  badgeText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.4 },
   verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#DBEAFE', borderRadius: shape.pill, paddingHorizontal: 9, paddingVertical: 4 },
   verifiedText:  { fontSize: 10, fontWeight: '800', color: '#2563EB', letterSpacing: 0.3 },
 
   weatherStrip: { marginTop: 4, marginBottom: 18 },
 
   section:      { marginTop: 20 },
-  sectionTitle: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginBottom: 10, textTransform: 'uppercase' },
+  sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '800', letterSpacing: 0.8, marginBottom: 10, textTransform: 'uppercase' },
 
-  infoText: { color: L.text,    fontSize: text.body.size, fontWeight: '500' },
-  infoSub:  { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
-  description: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', lineHeight: 21, marginTop: 14 },
+  infoText: { color: L.text,    fontSize: 14, fontWeight: '600' },
+  infoSub:  { color: L.textMuted, fontSize: 12, fontWeight: '500', marginTop: 1 },
+  description: { color: L.textSub, fontSize: 14, fontWeight: '400', lineHeight: 21, marginTop: 14 },
 
   detailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 6 },
   contactRow:  { flexDirection: 'row', gap: 8, marginTop: 10 },
@@ -1114,12 +1114,12 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: L.border, borderRadius: shape.pill,
     paddingHorizontal: 12, paddingVertical: 7,
   },
-  contactChipText: { color: L.navy, fontSize: text.caption.size, fontWeight: '500' },
+  contactChipText: { color: L.navy, fontSize: 12, fontWeight: '700' },
 
   amenityWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
 
   emptyState: { alignItems: 'center', paddingVertical: 20, gap: 8 },
-  emptyText:  { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  emptyText:  { color: L.textMuted, fontSize: 13, fontWeight: '500' },
 
   dateNavRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   dateNavBtn: {
@@ -1128,7 +1128,7 @@ const s = StyleSheet.create({
   },
   dateNavBtnDisabled: { opacity: 0.4 },
   dateNavLabel: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dateNavText:  { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
+  dateNavText:  { color: L.navy, fontSize: 15, fontWeight: '800' },
 
   filterRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   filterChip: {
@@ -1137,7 +1137,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 7,
   },
   filterChipActive:     { borderColor: L.gold, backgroundColor: L.goldBg },
-  filterChipText:       { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  filterChipText:       { color: L.textMuted, fontSize: 12, fontWeight: '700' },
   filterChipTextActive: { color: L.navy },
 
   invTabRow:  { flexDirection: 'row', gap: spacing.sm, marginBottom: 8 },
@@ -1158,15 +1158,15 @@ const s = StyleSheet.create({
 
   ctaStack:        { marginTop: 28, gap: 10 },
   ctaPrimary:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 14 },
-  ctaPrimaryText:  { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
+  ctaPrimaryText:  { color: L.white, fontSize: 15, fontWeight: '800' },
   ctaSecondary:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: L.gold + '22', borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta, paddingVertical: 13 },
-  ctaSecondaryText:{ color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
+  ctaSecondaryText:{ color: L.navy, fontSize: 15, fontWeight: '800' },
   ctaGhost:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta, paddingVertical: 13 },
-  ctaGhostText:    { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
+  ctaGhostText:    { color: L.navy, fontSize: 14, fontWeight: '700' },
 
-  errorText:    { color: L.textMuted, fontSize: text.body.size, fontWeight: '500', textAlign: 'center', paddingHorizontal: 32 },
+  errorText:    { color: L.textMuted, fontSize: 15, fontWeight: '500', textAlign: 'center', paddingHorizontal: 32 },
   errorBackBtn: { marginTop: 8, backgroundColor: L.navy, borderRadius: shape.cta, paddingHorizontal: 24, paddingVertical: 12 },
-  errorBackText:{ color: L.white, fontSize: text.action.size, fontWeight: '800' },
+  errorBackText:{ color: L.white, fontSize: 14, fontWeight: '700' },
 });
 
 const es = StyleSheet.create({
@@ -1177,18 +1177,18 @@ const es = StyleSheet.create({
   },
   handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: L.border, marginBottom: 6 },
   title: { color: L.navy, fontSize: 18, fontWeight: '900' },
-  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19 },
+  sub: { color: L.textSub, fontSize: 13, lineHeight: 19 },
   input: {
     minHeight: 110, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
-    padding: 12, color: L.navy, fontSize: text.body.size, lineHeight: 20, backgroundColor: L.page,
+    padding: 12, color: L.navy, fontSize: 14, lineHeight: 20, backgroundColor: L.page,
   },
-  disclosure: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', lineHeight: 16 },
+  disclosure: { color: L.textMuted, fontSize: 11, lineHeight: 16 },
   submit: {
     backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 14,
     alignItems: 'center', justifyContent: 'center', marginTop: 2,
   },
   submitDisabled: { opacity: 0.45 },
-  submitText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
+  submitText: { color: L.white, fontSize: 15, fontWeight: '800' },
   cancel: { alignItems: 'center', paddingVertical: 10 },
-  cancelText: { color: L.textSub, fontSize: text.action.size, fontWeight: '800' },
+  cancelText: { color: L.textSub, fontSize: 14, fontWeight: '700' },
 });
