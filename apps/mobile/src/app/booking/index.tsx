@@ -298,7 +298,7 @@ const s = StyleSheet.create({
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder,
     borderRadius: shape.card, padding: spacing.md, marginTop: spacing.lg,
   },
-  helperText: { color: L.navy, fontSize: text.action.size, fontWeight: '600', lineHeight: 18 },
+  helperText: { color: L.navy, fontSize: text.action.size, fontWeight: '800', lineHeight: 18 },
 
   primaryBtn: {
     backgroundColor: L.navy, borderRadius: shape.cta,

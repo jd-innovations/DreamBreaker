@@ -154,7 +154,27 @@ the missing roles and leave the screen alone until they are decided.
 
 ---
 
-## Proposed roles — NOT DECIDED
+## Role additions — DECIDED 2026-09-03 (option A)
+
+Five roles added to close the nine unmapped styles on facility detail. Values
+measured from that screen. `titleSm` and `actionLarge` share 16/800
+deliberately: rule 11 keeps them separate because a card header is not a button.
+
+| Role | Value | Job |
+| --- | --- | --- |
+| `titleSm` | 16 / 800 | card headers, sheet titles, venue names |
+| `rowTitle` | 14 / 700 | primary label in a list or info row |
+| `rowValue` | 14 / 800 | the value a row carries — a price |
+| `controlLabel` | 13 / 700 | tabs, filter chips, contact chips |
+| `chipValue` | 12 / 800 | a time, count or flag inside a chip |
+
+Option B (admit all nine measured values) was rejected: it changes nothing
+visually but takes the scale from 12 roles to 21, which describes the app
+rather than standardising it.
+
+The original proposal, kept for the reasoning:
+
+## Proposed roles — superseded by the decision above
 
 Facility detail has nine styles with no matching role. All values below are
 measured from that screen; none is invented. Two ways to close them:
@@ -180,7 +200,8 @@ admitting 14 for list rows specifically. That is deliberate — the cluster
 question was about body text and CTA labels, which did map; list row titles and
 values were flagged as needing a call at the time.
 
-Until this is decided, facility detail stays on Commit A (radius) only.
+Facility detail is now fully migrated under option A: 45 styles mapped, 3
+exempt below the 11pt floor, none left to interpretation.
 
 ---
 
@@ -264,6 +285,8 @@ One screen per commit, so any screen can be reverted alone.
 | Screen | Commit | Notes |
 | --- | --- | --- |
 | `app/booking/index.tsx` — Book a Court | `1c0aed1` | First. Five radii 14 → 10. Added `fieldLabel`, `actionLarge`. Control labels 14/700 → `body` 15/500. Confirmed on device. |
+| `app/facility/[id].tsx` — Facility detail (shape) | `9434505` | Five full-width CTAs 30 → 10, the first dramatic look at decision 1. Confirmed on device. |
+| `app/facility/[id].tsx` — Facility detail (type) | see log | First attempt shipped half-mapped and was reverted (`18592ef`) — it exposed the rule-11 hole. Redone complete under option A. |
 
 ## Known outstanding
 
