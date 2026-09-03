@@ -290,6 +290,10 @@ One screen per commit, so any screen can be reverted alone.
 | `components/StatusChip.tsx` — shared, 33 screens | `b0fd68d` | Two values. Radius identical; label 11/700 → `cardLabel` 11/800 is the whole visible effect. |
 | `app/booking/choose-time.tsx` — Choose Time | `22414dd` | First screen needing **no new roles** — all 22 text styles mapped to the existing set. Three radii 14 → 10. Price 15/800 → `rowValue` 14/800, matching facility detail. |
 
+| `app/booking/results.tsx` — Results | `208553f` | 13 styles, all mapped. |
+| `app/booking/players.tsx` — Players | `f1c1ebd` | 24 mapped, 1 exempt (avatar initials, sized to their container). |
+| `app/booking/review.tsx` — Review | `abb9086` | 26 styles, all mapped. Price total and its label both → `titleSm`. |
+
 ## Known outstanding
 
 Counts measured 2026-09-03 across `apps/mobile/src/**/*.tsx`. Occurrences and
