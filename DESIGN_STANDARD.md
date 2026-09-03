@@ -92,21 +92,115 @@ labels, is not a distinct role and becomes 12/500.
 **3. Meta rows become navy.** `cl.metaText` and `card.metaText` both use
 `#000000`. Pure black is off-palette; the reference's one impurity.
 
+**4. CTA radius 10 applies at every width.** Confirmed on device after the Book
+a Court migration. A full-bleed button at radius 10 reads squarer than a
+card-width button at the same radius, and that was accepted deliberately —
+there is **no** separate `ctaWide` role. One CTA shape, all widths.
+
+**5. Scales are stored as px numbers.** `packages/shared/src/tokens.ts` holds
+them as plain numbers; web formats to rem at generation (`--radius` emits
+`radius.base / 16` + `rem`), React Native consumes them directly. Verified with
+`node scripts/gen-tokens.mjs --check`, which passes, so web CSS is unchanged.
+
 ---
 
 ## Where the tokens live
 
 `packages/shared/src/tokens.ts` — the canonical values for both platforms
-(Workstream B3 of `WEB_MOBILE_ALIGNMENT_PLAN.md`). It already carries `radius`
-and `fontStacks`; the type and spacing scales join them there so web inherits
-the same system instead of a mobile-only copy being built a second time.
+(Workstream B3 of `WEB_MOBILE_ALIGNMENT_PLAN.md`). Mobile reads it through the
+existing `@shared/*` alias, which resolves in both `tsconfig.json` and
+`metro.config.js`.
 
-**Open question before the tokens are added:** `radius` in that file is stored
-as CSS strings (`"calc(0.75rem - 4px)"`), which React Native cannot consume. The
-file's own principle is that the canonical form should match the consumed form
-so the generator is a formatter rather than a converter. For numeric scales that
-points to storing plain numbers and letting the web side format to rem — but
-this changes an existing export and needs deciding, not assuming.
+Import in a mobile screen as:
+
+```ts
+import { text, radius as shape, space } from '@shared/tokens';
+```
+
+`radius` is aliased because mobile's own `@/theme` also exports a `radius`, with
+different values. Until that is reconciled, alias at the import to keep which
+one you mean unambiguous.
+
+---
+
+## The rule: nothing is invented
+
+Every value in this document traces to one of two things:
+
+1. **A measurement** from the reference screens, with the source style named.
+2. **A dated decision** in the list above.
+
+Nothing else is admissible. In particular:
+
+**Do not map by value. Map by job.** A global substitution of "every 14 becomes
+15" would be invention — 14pt appears 441 times across the app doing different
+jobs, and only the ones doing the same job as a named role should take that
+role. Read what the style is *for*, then pick the role whose job matches.
+
+**When no role matches, stop.** Do not pick the nearest number. Measure what the
+screen actually uses, propose it as a new role, and get a decision. This is
+exactly how `fieldLabel` and `actionLarge` were added: Book a Court needed form
+labels and a full-width button, the original nine roles came from card screens
+that have neither, and applying `action` (13/800) to a primary submit button
+would have shrunk it by three points. The screen was right and the scale was
+incomplete — which is the expected direction.
+
+**Expect form screens to keep finding gaps.** The reference is three
+browse/card screens. Forms, settings, empty states, modals and flows will
+surface roles those screens do not contain.
+
+---
+
+## Migrating a screen
+
+One screen per commit, so any screen can be reverted alone.
+
+1. **Read the screen's stylesheets.** List every `fontSize` / `fontWeight` /
+   `letterSpacing`, every `borderRadius`, and every spacing literal.
+2. **Name the job of each one** — is this a section title, a field label, an
+   in-card CTA, a caption? The job decides the role, not the current number.
+3. **Map to roles.** Where a role matches, use it. Where none does, stop and
+   propose (see above).
+4. **Import from `@shared/tokens`.** Do not copy values into the screen.
+5. **Verify before publishing:**
+   - `npx tsc --noEmit -p tsconfig.json` and `npx eslint <file>` in `apps/mobile`
+   - `node scripts/gen-tokens.mjs --check` if the shared tokens changed
+   - `npx expo-updates fingerprint:generate --platform ios` must still start
+     `9e5109d0`, or the OTA reaches no installed build
+6. **Publish and look at it.** `node ./scripts/publish-update.js preview
+   --message "..." --non-interactive`, then close and reopen the app twice.
+   Screenshot before and after.
+7. **Record it in the log below.**
+
+## Migration log
+
+| Screen | Commit | Notes |
+| --- | --- | --- |
+| `app/booking/index.tsx` — Book a Court | `1c0aed1` | First. Five radii 14 → 10. Added `fieldLabel`, `actionLarge`. Control labels 14/700 → `body` 15/500. Confirmed on device. |
+
+## Known outstanding
+
+Counts measured 2026-09-03 across `apps/mobile/src/**/*.tsx`. Occurrences and
+files are given separately because they are not the same number and the
+distinction changes how big a job each one is.
+
+| Work | Occurrences | Files |
+| --- | ---: | ---: |
+| `radius.button` (14) → `shape.cta` (10) | 88 | 50 |
+| `borderRadius: 30` → `shape.cta` | 19 | 12 |
+| `borderRadius: 999` → `shape.cta` | 18 | 10 |
+| Screens rendering `<PrimaryButton>` | — | 31 |
+| Screens rendering `<SecondaryButton>` | — | 16 |
+
+- **`PrimaryButton` / `SecondaryButton` are the highest-leverage change and the
+  riskiest.** Both use `radius.button` (14). They are shared, so editing them
+  restyles 31 and 16 screens in one commit. Do it deliberately and on its own,
+  never as a side effect of migrating a screen.
+- The `30` and `999` spellings are the same intended shape written two ways.
+  Together they are 37 occurrences across 22 files, and under decision 1 all
+  become 10. This is the largest **visible** change remaining.
+- Mobile's `@/theme` still exports its own `radius` and `spacing`, parallel to
+  the shared scales. Reconciling them is tracked in `THEMING_PLAN.md`.
 
 ---
 
