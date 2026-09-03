@@ -1,5 +1,10 @@
 # Design Tokens 2 — a proposal
 
+> **Superseded in part (2026-09-03).** The typography, spacing and radius
+> proposals below are replaced by [`DESIGN_STANDARD.md`](DESIGN_STANDARD.md),
+> which derives the scale from three screens chosen as correct rather than from
+> usage counts. The colour measurements here still stand.
+
 Status: **draft, nothing decided.** Two questions at the bottom are yours to
 answer before any migration starts.
 

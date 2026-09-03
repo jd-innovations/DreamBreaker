@@ -169,15 +169,59 @@ export type ColorSchemeName = keyof typeof colorSchemes;
 
 // ─── Scale tokens ────────────────────────────────────────────────────────────
 //
-// Taken from mobile, which had real scales already. Web currently derives its
-// radii from a single --radius; those derivations are preserved exactly.
+// Stored as plain PX NUMBERS. Web formats to rem at generation; React Native
+// consumes them directly. This follows the same principle as the colours above
+// — one canonical form, converted at the edge — except the direction is
+// reversed: colours are stored web-shaped because CSS is the pickier consumer,
+// while scales are stored number-shaped because React Native cannot parse
+// `calc()` or `rem` at all.
+//
+// The values come from DESIGN_STANDARD.md, extracted from three screens chosen
+// as the reference on 2026-09-03. They are not proposals; they are what those
+// screens already render.
+//
+// The previous `radius.sm/md/lg` held CSS `calc()` strings that nothing read —
+// web derives its own from `--radius` in globals.css, outside the generated
+// block, and the generator only ever consumed `.base`.
 
 export const radius = {
-  base: "0.75rem",
-  sm: "calc(0.75rem - 4px)",
-  md: "calc(0.75rem - 2px)",
-  lg: "0.75rem",
+  badge: 6,
+  /** Every CTA. Decision 2026-09-03: the reference uses 10, not button's 14 or the 30 that 19 screens hardcode. */
+  cta: 10,
+  panel: 12,
+  card: 16,
+  /** Chips, status badges, filter pills. */
+  pill: 20,
+  /** Web's `--radius` root, emitted as rem. Same 12px as `panel`. */
+  base: 12,
 } as const;
+
+export const space = {
+  gapTight: 8,
+  gap: 12,
+  /** Below a section header. The one value off the 4pt grid, and deliberate. */
+  sectionBottom: 14,
+  /** Screen gutter, and card padding — the reference uses one value for both. */
+  gutter: 16,
+  sectionTop: 24,
+} as const;
+
+/** Named by job, not by size — `size` is px, `letterSpacing` px. */
+export const type = {
+  statNumber:   { size: 26, weight: 900 },
+  cardTitle:    { size: 22, weight: 800, lineHeight: 26 },
+  sectionTitle: { size: 17, weight: 900 },
+  body:         { size: 15, weight: 500 },
+  action:       { size: 13, weight: 800 },
+  link:         { size: 13, weight: 700 },
+  caption:      { size: 12, weight: 500 },
+  cardLabel:    { size: 11, weight: 800, letterSpacing: 0.8, uppercase: true },
+  sectionLabel: { size: 11, weight: 700, letterSpacing: 1.2, uppercase: true },
+} as const;
+
+export type RadiusToken = keyof typeof radius;
+export type SpaceToken = keyof typeof space;
+export type TypeToken = keyof typeof type;
 
 export const fontStacks = {
   sans: "var(--font-manrope), system-ui, sans-serif",

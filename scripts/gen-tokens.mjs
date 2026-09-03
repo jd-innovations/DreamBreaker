@@ -55,7 +55,9 @@ function block() {
   for (const role of t.COLOR_ROLE_ORDER) {
     lines.push(`${pad(t.CSS_VAR_NAMES[role])}${t.toCssTriplet(t.light[role])};`);
   }
-  lines.push(`${pad("--radius")}${t.radius.base};`);
+  // radius.base is px now; web wants rem. 12 -> "0.75rem", the same string this
+  // emitted when the token held it literally.
+  lines.push(`${pad("--radius")}${t.radius.base / 16}rem;`);
   lines.push("}");
   lines.push("");
   lines.push(".dark {");
