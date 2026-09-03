@@ -5,7 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// The design standard, straight from the shared token source both platforms
+// read. See DESIGN_STANDARD.md — `shape.cta` (10) replaces the old
+// `radius.button` (14) here.
+import { text, radius as shape } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { AppIcon } from '@/components';
 import { useCurrentLocation } from '@/lib/location';
@@ -237,59 +241,68 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.screenH, paddingVertical: spacing.screenV,
   },
   iconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  title:   { color: L.navy, fontSize: 17, fontWeight: '900' },
+  title:   { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
 
   body: { paddingHorizontal: spacing.screenH, paddingBottom: 24 },
 
-  label: { color: L.navy, fontSize: 13, fontWeight: '800', marginTop: spacing.xl, marginBottom: spacing.sm },
+  label: {
+    color: L.navy, fontSize: text.fieldLabel.size, fontWeight: '800',
+    marginTop: spacing.xl, marginBottom: spacing.sm,
+  },
 
   segmentRow: { flexDirection: 'row', gap: spacing.sm },
   segment: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 1.5, borderColor: L.border, borderRadius: radius.button,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
     paddingVertical: 12,
   },
   segmentActive:    { borderColor: L.gold, backgroundColor: L.goldBg },
-  segmentText:      { color: L.textSub, fontSize: 14, fontWeight: '700' },
-  segmentTextActive:{ color: L.navy },
+  // Was 14/700 — 14 is not in the scale. `body` is the nearest value up, so the
+  // control does not shrink.
+  segmentText:      { color: L.textSub, fontSize: text.body.size, fontWeight: '500' },
+  segmentTextActive:{ color: L.navy, fontWeight: '700' },
 
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.button,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
     paddingHorizontal: 14, paddingVertical: 12, backgroundColor: L.page,
   },
-  searchInput: { flex: 1, color: L.text, fontSize: 15 },
+  searchInput: { flex: 1, color: L.text, fontSize: text.body.size },
 
   locationChip: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm, paddingVertical: 4 },
-  locationChipText: { color: L.textSub, fontSize: 12, fontWeight: '600' },
+  locationChipText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   dateRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.button,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
     paddingHorizontal: 14, paddingVertical: 14, backgroundColor: L.page,
   },
-  dateText: { color: L.text, fontSize: 15, fontWeight: '600' },
+  dateText: { color: L.text, fontSize: text.body.size, fontWeight: '500' },
 
-  captionCenter: { color: L.textSub, fontSize: 11, fontWeight: '500', textAlign: 'center', marginTop: spacing.sm },
+  // Was 11/500. Decision 2026-09-03: the 11/400-500 tier folds into `caption`.
+  captionCenter: {
+    color: L.textSub, fontSize: text.caption.size, fontWeight: '500',
+    textAlign: 'center', marginTop: spacing.sm,
+  },
 
   playersRow: { flexDirection: 'row', gap: spacing.sm },
   playerPill: {
-    width: 52, height: 52, borderRadius: radius.button, borderWidth: 1.5, borderColor: L.border,
+    width: 52, height: 52, borderRadius: shape.cta, borderWidth: 1.5, borderColor: L.border,
     alignItems: 'center', justifyContent: 'center',
   },
   playerPillActive:    { borderColor: L.navy, backgroundColor: L.navy },
-  playerPillText:      { color: L.text, fontSize: 16, fontWeight: '800' },
+  playerPillText:      { color: L.text, fontSize: text.actionLarge.size, fontWeight: '800' },
   playerPillTextActive:{ color: L.white },
 
   helperBanner: {
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder,
-    borderRadius: radius.card, padding: spacing.md, marginTop: spacing.lg,
+    borderRadius: shape.card, padding: spacing.md, marginTop: spacing.lg,
   },
-  helperText: { color: L.navy, fontSize: 13, fontWeight: '600', lineHeight: 18 },
+  helperText: { color: L.navy, fontSize: text.action.size, fontWeight: '600', lineHeight: 18 },
 
   primaryBtn: {
-    backgroundColor: L.navy, borderRadius: radius.button,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingVertical: 16, alignItems: 'center', marginTop: spacing.xxl,
   },
-  primaryBtnText: { color: L.white, fontSize: 16, fontWeight: '800' },
+  primaryBtnText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
 });

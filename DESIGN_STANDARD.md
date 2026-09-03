@@ -26,14 +26,26 @@ exercise rather than a redesign.
 | `statNumber` | 26 / 900 | "36", "59" | `s.statCellNum` |
 | `cardTitle` | 22 / 800, lh 26 | "SUNCOAST CLASSIC SRQ" | `cl.name`, `card.title` |
 | `sectionTitle` | 17 / 900 | "Find Games", "Upcoming Tournaments" | `s.sectionTitle` |
+| `actionLarge` | 16 / 800 | "Find Courts", the 1–4 pills | `booking/index.tsx` † |
 | `body` | 15 / 500 | date, venue, location rows | `cl.metaText`, `card.metaText` |
+| `fieldLabel` | 13 / 800 | "Looking For", "Where?", "Date" | `booking/index.tsx` † |
 | `action` | 13 / 800 | "Hold My Spot · $5" | `holdBtnLabel`, `viewTournText` |
 | `link` | 13 / 700 | "View All", "Customize" | `s.viewAllText` |
 | `caption` | 12 / 500 | "Invitations", "Messages" | `s.statCellLabel` |
 | `cardLabel` | 11 / 800, ls 0.8 | "TOURNAMENT", "COMMUNITY PLAY" | `cl.typeText`, `card.typeText` |
 | `sectionLabel` | 11 / 700, ls 1.2 | "QUICK ACTIONS" | `s.sectionLabelSmall` |
 
-Sizes: **26 · 22 · 17 · 15 · 13 · 12 · 11**. Weights: **900 · 800 · 700 · 500**.
+Sizes: **26 · 22 · 17 · 16 · 15 · 13 · 12 · 11**. Weights: **900 · 800 · 700 · 500**.
+
+† **Added 2026-09-03, migrating Book a Court.** The original nine roles came from
+browse/card screens, which have no form controls and no full-width buttons.
+Applying `action` (13/800, measured from in-card CTAs) to a primary submit
+button would have shrunk it by three points. Both values are what that screen
+already used — the scale was incomplete, not the screen.
+
+**Control labels** ("Court", "Ball Machine", "Doubles", "Singles") were 14/700.
+14 is not in the scale, so they take `body` (15/500) — the nearest value up, so
+no control shrinks. The selected one keeps weight 700.
 
 `sectionTitle` at 17/900 is **identical to the existing `typography.sectionTitle`
 token**. The note in `theme/typography.ts` claiming that token "no longer

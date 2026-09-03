@@ -206,12 +206,29 @@ export const space = {
   sectionTop: 24,
 } as const;
 
-/** Named by job, not by size — `size` is px, `letterSpacing` px. */
-export const type = {
+/**
+ * Named by job, not by size — `size` is px, `letterSpacing` px.
+ *
+ * Called `text`, not `type`: `import { type } from "@shared/tokens"` collides
+ * with TypeScript's type-only import syntax and reads as a syntax error waiting
+ * to happen.
+ *
+ * `fieldLabel` and `actionLarge` were added 2026-09-03 when the Book a Court
+ * screen was migrated. The original nine roles came from browse/card screens,
+ * which have no form controls and no full-width buttons — applying `action`
+ * (13/800, measured from in-card CTAs) to a primary submit button would have
+ * shrunk it by three points. Both new values are what that screen already used.
+ */
+export const text = {
   statNumber:   { size: 26, weight: 900 },
   cardTitle:    { size: 22, weight: 800, lineHeight: 26 },
   sectionTitle: { size: 17, weight: 900 },
+  /** Full-width primary buttons, and controls sized like them. */
+  actionLarge:  { size: 16, weight: 800 },
   body:         { size: 15, weight: 500 },
+  /** Form field labels: "Looking For", "Where?", "Date". */
+  fieldLabel:   { size: 13, weight: 800 },
+  /** In-card CTAs. */
   action:       { size: 13, weight: 800 },
   link:         { size: 13, weight: 700 },
   caption:      { size: 12, weight: 500 },
@@ -221,7 +238,7 @@ export const type = {
 
 export type RadiusToken = keyof typeof radius;
 export type SpaceToken = keyof typeof space;
-export type TypeToken = keyof typeof type;
+export type TextToken = keyof typeof text;
 
 export const fontStacks = {
   sans: "var(--font-manrope), system-ui, sans-serif",
