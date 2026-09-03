@@ -4,7 +4,9 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
 import { StatusChip, AddToCalendarButton, AppIcon, type StatusVariant, type AppIconName } from '@/components';
@@ -267,8 +269,8 @@ function Row({ icon, label, value }: { icon: AppIconName; label: string; value: 
 }
 const rw = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
-  label: { color: L.textSub, fontSize: 13, fontWeight: '600', width: 100 },
-  value: { flex: 1, color: L.text, fontSize: 14, fontWeight: '700', textAlign: 'right' },
+  label: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', width: 100 },
+  value: { flex: 1, color: L.text, fontSize: text.rowValue.size, fontWeight: '800', textAlign: 'right' },
 });
 
 const s = StyleSheet.create({
@@ -280,35 +282,35 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.screenH, paddingVertical: spacing.screenV, backgroundColor: L.bg,
   },
   iconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  title:   { color: L.navy, fontSize: 17, fontWeight: '900' },
+  title:   { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
 
   successBanner: { alignItems: 'center', gap: 8, paddingVertical: spacing.xl },
-  successTitle: { color: L.navy, fontSize: 20, fontWeight: '900' },
+  successTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   card: {
-    backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
     padding: spacing.lg, marginTop: spacing.md,
   },
 
   priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  priceLabel: { color: L.navy, fontSize: 15, fontWeight: '800' },
-  priceValue: { color: L.navy, fontSize: 18, fontWeight: '900' },
-  dealSavedText: { color: L.textSub, fontSize: 12, fontWeight: '600', marginTop: 8 },
+  priceLabel: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  priceValue: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  dealSavedText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 8 },
 
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.navy, borderRadius: radius.button, paddingVertical: 15, marginTop: spacing.xl,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 15, marginTop: spacing.xl,
   },
-  primaryBtnText: { color: L.white, fontSize: 15, fontWeight: '800' },
+  primaryBtnText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   secondaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.bg, borderWidth: 1.5, borderColor: L.border, borderRadius: radius.button,
+    backgroundColor: L.bg, borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
     paddingVertical: 14, marginTop: spacing.sm,
   },
-  secondaryBtnText: { color: L.navy, fontSize: 14, fontWeight: '700' },
+  secondaryBtnText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
-  errorText: { color: L.textSub, fontSize: 14, fontWeight: '500', textAlign: 'center' },
-  errorBackBtn: { marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: radius.button, backgroundColor: L.navy },
-  errorBackText: { color: L.white, fontSize: 14, fontWeight: '700' },
+  errorText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center' },
+  errorBackBtn: { marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: shape.cta, backgroundColor: L.navy },
+  errorBackText: { color: L.white, fontSize: text.action.size, fontWeight: '800' },
 });
