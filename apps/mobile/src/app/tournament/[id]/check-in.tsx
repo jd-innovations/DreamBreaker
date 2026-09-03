@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components';
 import { useSession } from '@/hooks/useSession';
 import { requireAuth } from '@/lib/authGuard';
@@ -103,28 +105,28 @@ const cr = StyleSheet.create({
   },
   avatarDone: { backgroundColor: L.success },
   avatarText: { color: L.bg, fontSize: 16, fontWeight: '800' },
-  center:     { flex: 1, minWidth: 0 },
-  name:       { color: L.navy, fontSize: 15, fontWeight: '700', marginBottom: 2 },
-  sub:        { color: L.textSub, fontSize: 12, marginBottom: 1 },
-  partner:    { color: L.textSub, fontSize: 12 },
+  center: { flex: 1, minWidth: 0 },
+  name: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 2 },
+  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 1 },
+  partner: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   doneGroup: { alignItems: 'flex-end', gap: 6 },
   donePill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: L.successBg, borderRadius: 20,
+    backgroundColor: L.successBg, borderRadius: shape.pill,
     paddingHorizontal: 10, paddingVertical: 6,
   },
-  doneText: { color: L.success, fontSize: 12, fontWeight: '700' },
+  doneText: { color: L.success, fontSize: text.chipValue.size, fontWeight: '800' },
   undoBtn: {
-    borderWidth: 1, borderColor: colors.goldBorder, borderRadius: 8,
+    borderWidth: 1, borderColor: colors.goldBorder, borderRadius: shape.cta,
     paddingHorizontal: 10, paddingVertical: 5,
     backgroundColor: colors.goldLight,
   },
-  undoBtnText: { color: colors.gold, fontSize: 11, fontWeight: '700' },
+  undoBtnText: { color: colors.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   checkBtn: {
-    backgroundColor: L.navy, borderRadius: 10,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingHorizontal: 14, paddingVertical: 10,
   },
-  checkBtnText: { color: L.bg, fontSize: 13, fontWeight: '700' },
+  checkBtnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 });
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -276,14 +278,14 @@ const s = StyleSheet.create({
     backgroundColor: L.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:    { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headerTitle:{ color: L.navy, fontSize: 16, fontWeight: '800' },
-  headerSub:  { color: L.textSub, fontSize: 11, fontWeight: '600', marginTop: 1 },
+  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  headerSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
   progressPill: {
-    backgroundColor: L.navy, borderRadius: 14,
+    backgroundColor: L.navy, borderRadius: shape.pill,
     paddingHorizontal: 10, paddingVertical: 5,
   },
-  progressText: { color: L.bg, fontSize: 13, fontWeight: '800' },
+  progressText: { color: L.bg, fontSize: text.chipValue.size, fontWeight: '800' },
 
   progressBarBg: {
     height: 4, backgroundColor: L.border,
@@ -295,9 +297,9 @@ const s = StyleSheet.create({
   scanBar: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4, backgroundColor: L.bg },
   scanBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.navy, borderRadius: 12, paddingVertical: 13,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 13,
   },
-  scanBtnText: { color: L.bg, fontSize: 14, fontWeight: '800' },
+  scanBtnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 
   filterRow: {
     flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 8, gap: 8,
@@ -305,16 +307,16 @@ const s = StyleSheet.create({
   },
   filterBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 7,
-    borderRadius: 10, borderWidth: 1, borderColor: L.border,
+    borderRadius: shape.cta, borderWidth: 1, borderColor: L.border,
   },
   filterBtnActive: { backgroundColor: L.navy, borderColor: L.navy },
-  filterLabel:     { color: L.textSub, fontSize: 13, fontWeight: '600' },
-  filterLabelActive:{ color: L.bg },
+  filterLabel: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
+  filterLabelActive: { color: L.bg },
 
   empty: {
     flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 40,
   },
-  emptyTitle: { color: L.navy, fontSize: 18, fontWeight: '800', textAlign: 'center' },
+  emptyTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', textAlign: 'center' },
 });
 
 // Director-only route. The screen body above is mounted only after

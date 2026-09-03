@@ -8,7 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { fetchTournamentById, updateTournamentDetails } from '@/lib/supabase/tournaments';
 import { useProfile } from '@/hooks/useProfile';
 import type { Tournament } from '@/lib/tournamentTypes';
@@ -194,21 +196,21 @@ function DateField({
 }
 
 const f = StyleSheet.create({
-  wrap:      { marginBottom: 18 },
-  label:     { color: L.navy, fontSize: 13, fontWeight: '700', marginBottom: 4 },
-  hint:      { color: L.textSub, fontSize: 11, marginBottom: 6 },
+  wrap: { marginBottom: 18 },
+  label: { color: L.navy, fontSize: text.fieldLabel.size, fontWeight: '800', marginBottom: 4 },
+  hint: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 6 },
   input: {
     backgroundColor: L.bg, borderWidth: 1.5, borderColor: L.border,
-    borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 13,
-    fontSize: 15, color: L.text,
+    borderRadius: shape.cta, paddingHorizontal: 14, paddingVertical: 13,
+    fontSize: text.body.size, fontWeight: '500', color: L.text,
   },
   inputError: { borderColor: L.danger },
-  errorRow:   { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 },
-  errorText:  { color: L.danger, fontSize: 11, fontWeight: '600' },
+  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 },
+  errorText: { color: L.danger, fontSize: text.caption.size, fontWeight: '500' },
 
-  dateInput:          { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dateValue:           { fontSize: 15, color: L.text },
-  dateValuePlaceholder:{ fontSize: 15, color: L.textSub },
+  dateInput: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dateValue: { fontSize: text.body.size, fontWeight: '500', color: L.text },
+  dateValuePlaceholder: { fontSize: text.body.size, fontWeight: '500', color: L.textSub },
 });
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -534,14 +536,14 @@ const s = StyleSheet.create({
     backgroundColor: L.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
-  headerSub:   { color: L.textSub, fontSize: 12, marginTop: 1 },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  headerSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
 
   scroll: { paddingHorizontal: 20, paddingTop: 24 },
 
   sectionTitle: {
-    color: L.textSub, fontSize: 11, fontWeight: '900', letterSpacing: 0.8,
+    color: L.textSub, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing,
     marginBottom: 14, marginTop: 4,
   },
 
@@ -552,9 +554,9 @@ const s = StyleSheet.create({
   },
   saveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: L.success, borderRadius: radius.button, paddingVertical: 14,
+    backgroundColor: L.success, borderRadius: shape.cta, paddingVertical: 14,
   },
-  saveBtnText: { color: L.bg, fontSize: 15, fontWeight: '800' },
+  saveBtnText: { color: L.bg, fontSize: text.actionLarge.size, fontWeight: '800' },
   btnDisabled: { opacity: 0.5 },
 
   pickerSheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' },
@@ -567,8 +569,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  pickerCancel: { color: L.textSub, fontSize: 16, fontWeight: '600' },
-  pickerDone:   { color: L.gold, fontSize: 16, fontWeight: '700' },
+  pickerCancel: { color: L.textSub, fontSize: text.action.size, fontWeight: '800' },
+  pickerDone: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
 });
 
 // Director-only route. The screen body above is mounted only after

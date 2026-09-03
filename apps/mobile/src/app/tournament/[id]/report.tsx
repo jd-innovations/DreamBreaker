@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components';
 import { statusLabel, statusVariant } from '@/lib/directorRegistrationAdapter';
 import { DirectorOnly } from '@/components/DirectorOnly';
@@ -56,10 +58,10 @@ function MetricCard({ label, value, warn }: { label: string; value: string; warn
 const mc = StyleSheet.create({
   card: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderRadius: radius.card,
+    borderWidth: 1, borderRadius: shape.card,
     paddingVertical: 12, paddingHorizontal: 4, gap: 3, minHeight: 70,
   },
-  value: { fontSize: 20, fontWeight: '900' },
+  value: { fontSize: text.statValueSm.size, fontWeight: '900' },
   label: { color: L.textSub, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, textAlign: 'center' },
 });
 
@@ -75,8 +77,8 @@ function SectionHeader({ title, icon }: { title: string; icon: keyof typeof Ioni
 }
 
 const sh = StyleSheet.create({
-  row:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
-  text: { color: L.navy, fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+  text: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, textTransform: 'uppercase' },
 });
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -217,24 +219,24 @@ function TournamentReportScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
 
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: 16, paddingVertical: 12, backgroundColor: L.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 16, fontWeight: '800' },
-  headerSub:   { color: L.textSub, fontSize: 11 },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  headerSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   exportBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: L.navy, borderRadius: radius.button,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingHorizontal: 14, paddingVertical: 9,
   },
-  exportBtnText: { color: L.bg, fontSize: 12, fontWeight: '800' },
+  exportBtnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 
-  scroll:  { paddingHorizontal: 16, paddingTop: 16 },
+  scroll: { paddingHorizontal: 16, paddingTop: 16 },
   section: { marginBottom: 20 },
 
   metricRow: { flexDirection: 'row', gap: 8 },
@@ -243,23 +245,23 @@ const s = StyleSheet.create({
   divRow: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8,
+    borderRadius: shape.card, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8,
   },
-  divName:  { color: L.navy, fontSize: 13, fontWeight: '700' },
-  divSub:   { color: L.textSub, fontSize: 11 },
-  divCount: { color: L.navy, fontSize: 13, fontWeight: '800' },
+  divName: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  divSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  divCount: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
   divLabel: { color: L.textSub, fontSize: 10, marginLeft: 3, marginRight: 2 },
 
   rosterRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8,
+    borderRadius: shape.card, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8,
   },
-  rosterName:   { color: L.navy, fontSize: 13, fontWeight: '700' },
-  rosterSub:    { color: L.textSub, fontSize: 11 },
-  rosterAmount: { color: L.navy, fontSize: 12, fontWeight: '700' },
+  rosterName: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  rosterSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  rosterAmount: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
 
-  emptyText: { color: L.textSub, fontSize: 13, textAlign: 'center', paddingVertical: 20 },
+  emptyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', paddingVertical: 20 },
 });
 
 // Director-only route. The screen body above is mounted only after

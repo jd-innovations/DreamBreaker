@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components';
 import { useSession } from '@/hooks/useSession';
 import { requireAuth } from '@/lib/authGuard';
@@ -177,55 +179,55 @@ function DivisionBracketCard({
 const dbc = StyleSheet.create({
   card: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, padding: 16, marginBottom: 12,
+    borderRadius: shape.card, padding: 16, marginBottom: 12,
   },
   header: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14 },
-  name:   { color: L.navy, fontSize: 16, fontWeight: '800', marginBottom: 6 },
+  name: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', marginBottom: 6 },
   levelRow: { flexDirection: 'row' },
   levelBadge: {
-    borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2,
+    borderRadius: shape.badge, paddingHorizontal: 8, paddingVertical: 2,
     borderWidth: 1, borderColor: L.border, backgroundColor: L.page,
   },
   levelBadgeNavy: { backgroundColor: L.navy, borderColor: L.navy },
-  levelText:      { color: L.textSub, fontSize: 11, fontWeight: '800' },
-  levelTextNavy:  { color: L.bg },
+  levelText: { color: L.textSub, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  levelTextNavy: { color: L.bg },
 
-  stats:   { flexDirection: 'row', marginBottom: 12 },
-  stat:    { flex: 1, alignItems: 'center', gap: 3 },
+  stats: { flexDirection: 'row', marginBottom: 12 },
+  stat: { flex: 1, alignItems: 'center', gap: 3 },
   statDiv: { width: StyleSheet.hairlineWidth, backgroundColor: L.border },
-  statNum: { color: L.navy, fontSize: 16, fontWeight: '900' },
+  statNum: { color: L.navy, fontSize: text.statValueSm.size, fontWeight: '900' },
   statLabel: { color: L.textSub, fontSize: 9, fontWeight: '700', letterSpacing: 0.4 },
 
   warningRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: L.goldBg, borderRadius: 8,
+    backgroundColor: L.goldBg, borderRadius: shape.panel,
     paddingHorizontal: 10, paddingVertical: 7, marginBottom: 12,
     borderWidth: 1, borderColor: L.goldBorder,
   },
-  warningText: { color: L.gold, fontSize: 12, fontWeight: '600', flex: 1 },
+  warningText: { color: L.gold, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
 
   actions: { flexDirection: 'row', gap: 8 },
 
   generateBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    backgroundColor: L.navy, borderRadius: 10, paddingVertical: 12,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 12,
   },
-  generateBtnText: { color: L.bg, fontSize: 14, fontWeight: '700' },
+  generateBtnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 
   viewBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    backgroundColor: L.navy, borderRadius: 10, paddingVertical: 12,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 12,
   },
-  viewBtnText: { color: L.bg, fontSize: 14, fontWeight: '700' },
+  viewBtnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 
   regenBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    borderWidth: 1, borderColor: L.border, borderRadius: 10,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
     paddingVertical: 12, paddingHorizontal: 16,
   },
-  regenBtnText: { color: L.navy, fontSize: 14, fontWeight: '700' },
+  regenBtnText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
-  btnDisabled:     { backgroundColor: L.page, borderWidth: 1, borderColor: L.border },
+  btnDisabled: { backgroundColor: L.page, borderWidth: 1, borderColor: L.border },
   btnTextDisabled: { color: L.textSub },
 });
 
@@ -403,8 +405,8 @@ function BracketsScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:  { flex: 1, backgroundColor: L.page },
-  scroll:{ padding: 16, gap: 4 },
+  root: { flex: 1, backgroundColor: L.page },
+  scroll: { padding: 16, gap: 4 },
 
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
@@ -413,28 +415,28 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title:   { color: L.navy, fontSize: 17, fontWeight: '800' },
-  sub:     { color: L.textSub, fontSize: 12, fontWeight: '500', marginTop: 1 },
+  title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
 
   summaryCard: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, padding: 16, marginBottom: 16,
+    borderRadius: shape.card, padding: 16, marginBottom: 16,
   },
   summaryTournament: {
-    color: L.navy, fontSize: 15, fontWeight: '800', marginBottom: 14,
+    color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', marginBottom: 14,
   },
-  summaryRow:  { flexDirection: 'row' },
+  summaryRow: { flexDirection: 'row' },
   summaryItem: { flex: 1, alignItems: 'center', gap: 4 },
-  summaryDiv:  { width: StyleSheet.hairlineWidth, backgroundColor: L.border },
-  summaryNum:  { color: L.navy, fontSize: 20, fontWeight: '900' },
-  summaryLabel:{ color: L.textSub, fontSize: 9, fontWeight: '700', letterSpacing: 0.4 },
+  summaryDiv: { width: StyleSheet.hairlineWidth, backgroundColor: L.border },
+  summaryNum: { color: L.navy, fontSize: text.statValueSm.size, fontWeight: '900' },
+  summaryLabel: { color: L.textSub, fontSize: 9, fontWeight: '700', letterSpacing: 0.4 },
 
   empty: {
     alignItems: 'center', justifyContent: 'center',
     paddingVertical: 64, gap: 10,
   },
-  emptyTitle: { color: L.navy, fontSize: 16, fontWeight: '700' },
-  emptySub:   { color: L.textSub, fontSize: 13, textAlign: 'center', paddingHorizontal: 24 },
+  emptyTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  emptySub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', paddingHorizontal: 24 },
 });
 
 // Director-only route. The screen body above is mounted only after
