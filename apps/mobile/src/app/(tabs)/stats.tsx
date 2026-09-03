@@ -16,7 +16,9 @@ import {
 } from '@/lib/supabase/personalSessions';
 import { explainParEvent, explainParProcessing, formatParChange } from '@/lib/supabase/par';
 import { onProfileUpdated } from '@/lib/profileEvents';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 type TabKey = 'stats' | 'matches';
 
@@ -555,14 +557,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 14,
+    borderRadius: shape.cta,
     paddingVertical: 10,
   },
   tabActive: { backgroundColor: colors.navy },
   tabText: {
-    ...typography.cardTitle,
     color: colors.textSub,
-    fontSize: 14,
+    fontSize: text.controlLabel.size, fontWeight: '700',
   },
   tabTextActive: { color: colors.white },
   topTabsWrap: {
@@ -582,7 +583,7 @@ const states = StyleSheet.create({
   card: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 22,
+    borderRadius: shape.card,
     borderWidth: 1,
     borderColor: colors.playerCardBorder,
     backgroundColor: colors.playerCardBg,
@@ -598,28 +599,25 @@ const states = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(201,168,76,0.12)',
   },
-  title: {
-    ...typography.sectionTitle,
+  title: { fontSize: text.modalTitle.size, fontWeight: '900',
     color: colors.playerText,
     textAlign: 'center',
   },
-  sub: {
-    ...typography.body,
+  sub: { fontSize: text.body.size, fontWeight: '500',
     color: colors.playerTextSub,
     textAlign: 'center',
     lineHeight: 21,
   },
   retryButton: {
-    borderRadius: radius.button,
+    borderRadius: shape.cta,
     backgroundColor: colors.gold,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     marginTop: spacing.sm,
   },
   retryText: {
-    ...typography.cardTitle,
     color: colors.navy,
-    fontSize: 14,
+    fontSize: text.action.size, fontWeight: '800',
   },
 });
 
@@ -630,8 +628,8 @@ const mm = StyleSheet.create({
     gap: 12,
     padding: 24,
   },
-  title: { fontSize: 22, fontWeight: '900', color: colors.text },
-  sub: { fontSize: 14, color: colors.textSub, textAlign: 'center', lineHeight: 20 },
+  title: { fontSize: text.modalTitle.size, fontWeight: '900', color: colors.text },
+  sub: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, textAlign: 'center', lineHeight: 20 },
   filters: {
     marginTop: spacing.lg,
     gap: spacing.sm,
@@ -642,7 +640,7 @@ const mm = StyleSheet.create({
     gap: 8,
   },
   filterChip: {
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.bg,
@@ -654,10 +652,9 @@ const mm = StyleSheet.create({
     borderColor: colors.navy,
   },
   filterChipText: {
-    ...typography.metadata,
     color: colors.textSub,
-    fontWeight: '600',
-    fontSize: 12,
+    fontWeight: '700',
+    fontSize: text.controlLabel.size,
   },
   filterChipTextActive: {
     color: colors.white,
@@ -669,7 +666,7 @@ const mm = StyleSheet.create({
   row: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     backgroundColor: colors.bg,
     padding: spacing.md,
     gap: 6,
@@ -685,12 +682,11 @@ const mm = StyleSheet.create({
     gap: 10,
   },
   rowDate: {
-    ...typography.cardTitle,
     color: colors.text,
-    fontSize: 15,
+    fontSize: text.rowTitle.size, fontWeight: '700',
   },
   statusChip: {
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     backgroundColor: colors.page,
@@ -699,10 +695,9 @@ const mm = StyleSheet.create({
     backgroundColor: colors.goldBg,
   },
   statusChipText: {
-    ...typography.metadata,
     color: colors.textSub,
-    fontWeight: '700',
-    fontSize: 11,
+    fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing,
+    fontSize: text.cardLabel.size,
   },
   statusChipTextCompleted: {
     color: colors.gold,
@@ -713,9 +708,8 @@ const mm = StyleSheet.create({
     gap: 5,
   },
   rowLocationText: {
-    ...typography.body,
     color: colors.textSub,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
     flex: 1,
   },
   rowMetaRow: {
@@ -724,9 +718,8 @@ const mm = StyleSheet.create({
     gap: 6,
   },
   rowMeta: {
-    ...typography.metadata,
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: text.caption.size, fontWeight: '500',
   },
   rowMetaDot: {
     width: 3,
@@ -741,9 +734,8 @@ const mm = StyleSheet.create({
     marginTop: 3,
   },
   parText: {
-    ...typography.metadata,
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: text.caption.size, fontWeight: '500',
     flex: 1,
     lineHeight: 16,
   },
@@ -765,9 +757,8 @@ const dm = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   headerTitle: {
-    ...typography.sectionTitle,
     color: colors.navy,
-    fontSize: 17,
+    fontSize: text.sectionTitle.size, fontWeight: '900',
   },
   headerActions: {
     flexDirection: 'row',
@@ -781,14 +772,12 @@ const dm = StyleSheet.create({
     paddingBottom: spacing.xxxl,
   },
   title: {
-    ...typography.sectionTitle,
     color: colors.navy,
-    fontSize: 20,
+    fontSize: text.modalTitle.size, fontWeight: '900',
   },
   subtitle: {
-    ...typography.body,
     color: colors.textSub,
-    fontSize: 14,
+    fontSize: text.caption.size, fontWeight: '500',
     marginTop: 2,
     marginBottom: spacing.md,
   },
@@ -799,19 +788,17 @@ const dm = StyleSheet.create({
     marginBottom: 6,
   },
   metaText: {
-    ...typography.body,
     color: colors.textSub,
-    fontSize: 14,
+    fontSize: text.caption.size, fontWeight: '500',
   },
   parWrap: {
     marginTop: spacing.sm,
     marginBottom: spacing.lg,
   },
-  sectionLabel: {
-    ...typography.metadata,
+  sectionLabel: { fontSize: text.sectionLabel.size,
     color: colors.textMuted,
     fontWeight: '800',
-    letterSpacing: 0.6,
+    letterSpacing: text.sectionLabel.letterSpacing,
     marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
@@ -826,30 +813,27 @@ const dm = StyleSheet.create({
     gap: 6,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 8,
     backgroundColor: colors.page,
   },
   participantText: {
-    ...typography.cardTitle,
     color: colors.text,
-    fontSize: 13,
+    fontSize: text.controlLabel.size, fontWeight: '700',
   },
   participantSkill: {
-    ...typography.metadata,
     color: colors.textMuted,
-    fontSize: 11,
+    fontSize: text.caption.size, fontWeight: '500',
   },
   emptyGamesText: {
-    ...typography.body,
     color: colors.textMuted,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
   },
   gameCard: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     padding: spacing.md,
     marginBottom: spacing.sm,
     gap: 6,
@@ -860,19 +844,16 @@ const dm = StyleSheet.create({
     justifyContent: 'space-between',
   },
   gameNumber: {
-    ...typography.cardTitle,
     color: colors.text,
-    fontSize: 14,
+    fontSize: text.rowTitle.size, fontWeight: '700',
   },
   gameScore: {
-    ...typography.cardTitle,
     color: colors.gold,
-    fontSize: 16,
+    fontSize: text.rowValue.size, fontWeight: '800',
   },
   gamePending: {
-    ...typography.metadata,
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: text.caption.size, fontWeight: '500',
   },
   gameTeamsRow: {
     flexDirection: 'row',
@@ -880,9 +861,8 @@ const dm = StyleSheet.create({
     gap: 8,
   },
   gameTeamText: {
-    ...typography.body,
     color: colors.textSub,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
     flex: 1,
   },
   gameTeamWinner: {
@@ -890,8 +870,7 @@ const dm = StyleSheet.create({
     fontWeight: '800',
   },
   gameVs: {
-    ...typography.metadata,
     color: colors.textMuted,
-    fontSize: 11,
+    fontSize: text.caption.size, fontWeight: '500',
   },
 });
