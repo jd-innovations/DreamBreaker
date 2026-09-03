@@ -4,7 +4,9 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { StatusChip, type StatusVariant } from '@/components';
 import { fetchCourts, type Court } from '@/lib/supabase/courts';
@@ -682,10 +684,10 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.screenH, paddingVertical: spacing.screenV, backgroundColor: L.bg,
   },
   iconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  title:   { color: L.navy, fontSize: 17, fontWeight: '900' },
+  title:   { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
 
   contextBar: { paddingHorizontal: spacing.screenH, paddingBottom: spacing.sm, backgroundColor: L.bg },
-  contextText: { color: L.textSub, fontSize: 12, fontWeight: '600' },
+  contextText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   // flexGrow/flexShrink 0: a horizontal ScrollView between flex siblings gets
   // squeezed vertically, which clips the chips rather than scrolling them.
@@ -695,64 +697,64 @@ const s = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: L.border,
   },
   hourChip: {
-    flexShrink: 0, borderWidth: 1.5, borderColor: L.border, borderRadius: radius.chip,
+    flexShrink: 0, borderWidth: 1.5, borderColor: L.border, borderRadius: shape.pill,
     paddingHorizontal: 14, paddingVertical: 8, minWidth: 64, alignItems: 'center',
   },
   hourChipActive: { borderColor: L.gold, backgroundColor: L.goldBg },
-  hourChipText: { color: L.textSub, fontSize: 13, fontWeight: '700' },
+  hourChipText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   durationRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.screenH, paddingVertical: spacing.sm,
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
   },
-  durationLabel: { color: L.textSub, fontSize: 13, fontWeight: '700', marginRight: spacing.xs },
+  durationLabel: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700', marginRight: spacing.xs },
   durationChip: {
     flexShrink: 0, minWidth: 48, alignItems: 'center',
-    borderWidth: 1.5, borderColor: L.border, borderRadius: radius.chip,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.pill,
     paddingHorizontal: 12, paddingVertical: 6,
   },
   durationChipActive: { borderColor: L.gold, backgroundColor: L.goldBg },
   durationChipDisabled: { opacity: 0.35 },
-  durationChipText: { color: L.textSub, fontSize: 13, fontWeight: '700' },
+  durationChipText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   durationChipTextActive: { color: L.navy },
   hourChipTextActive: { color: L.navy },
-  closedText: { color: L.textSub, fontSize: 13, fontWeight: '600', paddingVertical: 8 },
+  closedText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', paddingVertical: 8 },
 
   tabRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.screenH, paddingVertical: spacing.sm, backgroundColor: L.bg },
-  tab: { flex: 1, alignItems: 'center', borderWidth: 1.5, borderColor: L.border, borderRadius: radius.button, paddingVertical: 10 },
+  tab: { flex: 1, alignItems: 'center', borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, paddingVertical: 10 },
   tabActive: { borderColor: L.gold, backgroundColor: L.goldBg },
-  tabText: { color: L.textSub, fontSize: 13, fontWeight: '700' },
+  tabText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   tabTextActive: { color: L.navy },
 
-  sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase', marginTop: spacing.xl, marginBottom: spacing.sm },
-  emptyText: { color: L.textSub, fontSize: 13, fontWeight: '500', textAlign: 'center', paddingVertical: 24 },
+  sectionTitle: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase', marginTop: spacing.xl, marginBottom: spacing.sm },
+  emptyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', paddingVertical: 24 },
 
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
     padding: spacing.md, marginTop: spacing.sm,
   },
   rowMuted: { opacity: 0.92 },
-  rowName: { color: L.text, fontSize: 14, fontWeight: '700' },
-  rowSubtitle: { color: L.textSub, fontSize: 12, fontWeight: '500', marginTop: 2 },
-  occupancyText: { color: L.textSub, fontSize: 11, fontWeight: '600' },
+  rowName: { color: L.text, fontSize: text.rowTitle.size, fontWeight: '700' },
+  rowSubtitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+  occupancyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
-  price: { color: L.navy, fontSize: 15, fontWeight: '800' },
-  priceStrike: { color: L.textSub, fontSize: 12, fontWeight: '600', textDecorationLine: 'line-through' },
-  priceUnavailable: { color: L.textSub, fontSize: 11, fontWeight: '500' },
+  price: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
+  priceStrike: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textDecorationLine: 'line-through' },
+  priceUnavailable: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   successCard: {
-    backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
     padding: spacing.xl, alignItems: 'center', gap: 8,
   },
-  successTitle: { color: L.navy, fontSize: 18, fontWeight: '900', marginTop: 4 },
-  successBody: { color: L.text, fontSize: 14, fontWeight: '600', textAlign: 'center' },
-  successHold: { color: colors.danger, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  successTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', marginTop: 4 },
+  successBody: { color: L.text, fontSize: text.body.size, fontWeight: '500', textAlign: 'center' },
+  successHold: { color: colors.danger, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center' },
 
-  primaryBtn: { backgroundColor: L.navy, borderRadius: radius.button, paddingVertical: 16, paddingHorizontal: 32, alignItems: 'center', marginTop: spacing.lg, alignSelf: 'stretch' },
-  primaryBtnText: { color: L.white, fontSize: 16, fontWeight: '800' },
+  primaryBtn: { backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 16, paddingHorizontal: 32, alignItems: 'center', marginTop: spacing.lg, alignSelf: 'stretch' },
+  primaryBtnText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
 
-  errorText: { color: L.textSub, fontSize: 14, fontWeight: '500', textAlign: 'center' },
-  errorBackBtn: { marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: radius.button, backgroundColor: L.navy },
-  errorBackText: { color: L.white, fontSize: 14, fontWeight: '700' },
+  errorText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center' },
+  errorBackBtn: { marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: shape.cta, backgroundColor: L.navy },
+  errorBackText: { color: L.white, fontSize: text.action.size, fontWeight: '800' },
 });
