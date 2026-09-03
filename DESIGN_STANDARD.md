@@ -21,57 +21,87 @@ exercise rather than a redesign.
 
 ## Type scale
 
-| Role | Value | On screen | Measured from |
-| --- | --- | --- | --- |
-| `statNumber` | 26 / 900 | "36", "59" | `s.statCellNum` |
-| `cardTitle` | 22 / 800, lh 26 | "SUNCOAST CLASSIC SRQ" | `cl.name`, `card.title` |
-| `sectionTitle` | 17 / 900 | "Find Games", "Upcoming Tournaments" | `s.sectionTitle` |
-| `actionLarge` | 16 / 800 | "Find Courts", the 1–4 pills | `booking/index.tsx` † |
-| `body` | 15 / 500 | date, venue, location rows | `cl.metaText`, `card.metaText` |
-| `fieldLabel` | 13 / 800 | "Looking For", "Where?", "Date" | `booking/index.tsx` † |
-| `action` | 13 / 800 | "Hold My Spot · $5" | `holdBtnLabel`, `viewTournText` |
-| `link` | 13 / 700 | "View All", "Customize" | `s.viewAllText` |
-| `caption` | 12 / 500 | "Invitations", "Messages" | `s.statCellLabel` |
-| `cardLabel` | 11 / 800, ls 0.8 | "TOURNAMENT", "COMMUNITY PLAY" | `cl.typeText`, `card.typeText` |
-| `sectionLabel` | 11 / 700, ls 1.2 | "QUICK ACTIONS" | `s.sectionLabelSmall` |
+<!-- BEGIN GENERATED: type-scale — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-Sizes: **26 · 22 · 17 · 16 · 15 · 13 · 12 · 11**. Weights: **900 · 800 · 700 · 500**.
+17 roles, generated from `packages/shared/src/tokens.ts`.
 
-† **Added 2026-09-03, migrating Book a Court.** The original nine roles came from
-browse/card screens, which have no form controls and no full-width buttons.
-Applying `action` (13/800, measured from in-card CTAs) to a primary submit
-button would have shrunk it by three points. Both values are what that screen
-already used — the scale was incomplete, not the screen.
+| Role | Value |
+| --- | --- |
+| `heroTitle` | 26 / 800, lh 30 |
+| `statNumber` | 26 / 900 |
+| `cardTitle` | 22 / 800, lh 26 |
+| `sectionTitle` | 17 / 900 |
+| `actionLarge` | 16 / 800 |
+| `titleSm` | 16 / 800 |
+| `body` | 15 / 500 |
+| `rowTitle` | 14 / 700 |
+| `rowValue` | 14 / 800 |
+| `fieldLabel` | 13 / 800 |
+| `action` | 13 / 800 |
+| `link` | 13 / 700 |
+| `controlLabel` | 13 / 700 |
+| `sectionLabel` | 13 / 800, ls 0.8, uppercase |
+| `chipValue` | 12 / 800 |
+| `caption` | 12 / 500 |
+| `cardLabel` | 11 / 800, ls 0.8, uppercase |
 
-**Control labels** ("Court", "Ball Machine", "Doubles", "Singles") were 14/700.
-14 is not in the scale, so they take `body` (15/500) — the nearest value up, so
-no control shrinks. The selected one keeps weight 700.
+Sizes: **26 · 22 · 17 · 16 · 15 · 14 · 13 · 12 · 11**. Weights: **900 · 800 · 700 · 500**.
+
+<!-- END GENERATED: type-scale -->
+
+Where each role came from is in the decisions below and in each role's comment
+in `tokens.ts`. The first nine were measured from the reference screens;
+`fieldLabel` and `actionLarge` were added migrating Book a Court, and the last
+five under option A migrating facility detail.
+
+**Two roles sit at 13/700 and must not be confused.** `link` is a text link
+("View All", "Customize"). `controlLabel` is a label on a control (a tab, a
+filter chip). Rule 11: same numbers, different jobs, so they are separate roles
+and neither substitutes for the other.
+
+**Segmented format selectors take `body`, not `controlLabel`.** Book a Court's
+"Court / Ball Machine" and "Doubles / Singles" were 14/700; 14 was not in the
+scale at the time and they took `body` 15/500 so nothing shrank, with the
+selected one keeping weight 700 as a state variant. `controlLabel` (13/700)
+came later and covers tabs and chips. If these ever need to agree, that is a
+decision to make, not a thing to quietly change.
 
 `sectionTitle` at 17/900 is **identical to the existing `typography.sectionTitle`
 token**. The note in `theme/typography.ts` claiming that token "no longer
 describes the app" is wrong — it describes the reference screens exactly.
 
-## Spacing
+## Spacing and radius
 
-| Use | Value |
-| --- | --- |
-| Screen gutter | 16 |
-| Card padding | 16 |
-| Tight gap (icon↔label, chips) | 8 |
-| Card gap | 12 |
-| Above a section | 24 |
-| Below a section header | 14 |
+<!-- BEGIN GENERATED: scales — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-## Radius
+**Radius**
 
-| Use | Value |
-| --- | --- |
-| Card | 16 |
-| Stats box / inset panel | 12 |
-| Pill (chips, badges, status) | 20 |
-| **CTA** | **10** |
-| Small badge | 6 |
-| Icon circle | half the size (48 → 24) |
+| Role | px |
+| --- | ---: |
+| `badge` | 6 |
+| `cta` | 10 |
+| `panel` | 12 |
+| `card` | 16 |
+| `pill` | 20 |
+| `base` | 12 |
+
+**Spacing**
+
+| Role | px |
+| --- | ---: |
+| `gapTight` | 8 |
+| `gap` | 12 |
+| `sectionBottom` | 14 |
+| `gutter` | 16 |
+| `sectionTop` | 24 |
+
+Icon circles are half their own size and take no role.
+
+<!-- END GENERATED: scales -->
+
+The spacing roles map to the reference as: screen gutter and card padding
+`gutter`; icon↔label and chip gaps `gapTight`; card gap `gap`; above a section
+`sectionTop`; below a section header `sectionBottom`.
 
 ---
 
@@ -194,7 +224,7 @@ the scale goes from 12 roles to 21, and 14/700, 14/800, 15/800, 16/800, 18/900,
 13/700, 12/800, 11/700 and 11/800 all become permanent. That is close to
 describing the app rather than standardising it.
 
-**Note against decision 4:** the earlier answer on the 14pt cluster was "map
+**Note on the earlier 14pt answer:** the answer given on the 14pt cluster was "map
 each by job" rather than "add a 14pt role". Option A partially reverses that by
 admitting 14 for list rows specifically. That is deliberate — the cluster
 question was about body text and CTA labels, which did map; list row titles and
@@ -286,16 +316,14 @@ One screen per commit, so any screen can be reverted alone.
 | --- | --- | --- |
 | `app/booking/index.tsx` — Book a Court | `1c0aed1` | First. Five radii 14 → 10. Added `fieldLabel`, `actionLarge`. Control labels 14/700 → `body` 15/500. Confirmed on device. |
 | `app/facility/[id].tsx` — Facility detail (shape) | `9434505` | Five full-width CTAs 30 → 10, the first dramatic look at decision 1. Confirmed on device. |
-| `app/facility/[id].tsx` — Facility detail (type) | see log | First attempt shipped half-mapped and was reverted (`18592ef`) — it exposed the rule-11 hole. Redone complete under option A. |
+| `app/facility/[id].tsx` — Facility detail (type) | `3e5f774` | First attempt shipped half-mapped and was reverted (`18592ef`) — it exposed the rule-11 hole. Redone complete under option A. |
 | `components/PrimaryButton.tsx` — shared, 31 screens | `f4469e9` | radius 14 → `shape.cta` 10; label 16/700 → `actionLarge` 16/800. |
 | `components/SecondaryButton.tsx` — shared, 16 screens | `f4469e9` | Same two changes. |
 | `components/StatusChip.tsx` — shared, 33 screens | `b0fd68d` | Two values. Radius identical; label 11/700 → `cardLabel` 11/800 is the whole visible effect. |
 | `app/booking/choose-time.tsx` — Choose Time | `22414dd` | First screen needing **no new roles** — all 22 text styles mapped to the existing set. Three radii 14 → 10. Price 15/800 → `rowValue` 14/800, matching facility detail. |
-
 | `app/booking/results.tsx` — Results | `208553f` | 13 styles, all mapped. |
 | `app/booking/players.tsx` — Players | `f1c1ebd` | 24 mapped, 1 exempt (avatar initials, sized to their container). |
 | `app/booking/review.tsx` — Review | `abb9086` | 26 styles, all mapped. Price total and its label both → `titleSm`. |
-
 | `app/booking/confirmation.tsx` — Confirmation | `13c2178` | 16 styles, all mapped. Success headline 20/900 → `titleSm`. |
 | `app/booking/my-bookings.tsx` — My Bookings | `96f8293` | 11 mapped, 1 exempt (10/600, below floor). |
 | `app/booking/game-status.tsx` — Game Status | `82fe302` | 23 mapped, 1 exempt (avatar initials). Check-in code → `statNumber`. |
@@ -305,29 +333,39 @@ remain unmapped across the whole flow, every one of them an explicit exemption:
 3 below the 11pt floor (decision 10) and 2 avatar initials sized to their
 container.
 
-## Known outstanding
+## Progress
 
-Counts measured 2026-09-03 across `apps/mobile/src/**/*.tsx`. Occurrences and
-files are given separately because they are not the same number and the
-distinction changes how big a job each one is.
+<!-- BEGIN GENERATED: progress — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-| Work | Occurrences | Files |
+Measured from the tree when this was generated — 218 `.tsx` files
+under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
+
+| | Occurrences | Files |
 | --- | ---: | ---: |
-| `radius.button` (14) → `shape.cta` (10) | 88 | 50 |
-| `borderRadius: 30` → `shape.cta` | 19 | 12 |
+| Files importing `@shared/tokens` (migrated) | — | **12 of 218** (6%) |
+| Raw `fontSize: N` remaining | 2451 | 201 |
+| `borderRadius: radius.*` from `@/theme` remaining | 478 | 118 |
+| `borderRadius: 30` → `shape.cta` | 14 | 11 |
 | `borderRadius: 999` → `shape.cta` | 18 | 10 |
-| Screens rendering `<PrimaryButton>` | — | 31 |
-| Screens rendering `<SecondaryButton>` | — | 16 |
 
-- **`PrimaryButton` / `SecondaryButton` are the highest-leverage change and the
-  riskiest.** Both use `radius.button` (14). They are shared, so editing them
-  restyles 31 and 16 screens in one commit. Do it deliberately and on its own,
-  never as a side effect of migrating a screen.
+Raw sizes include the deliberate exemptions (below the 11pt floor, and
+avatar initials sized to their container), so the remaining count will not
+reach zero.
+
+<!-- END GENERATED: progress -->
+
+- **Shared components are done.** `PrimaryButton`, `SecondaryButton` and
+  `StatusChip` are migrated. They were the highest-leverage change: 31, 16 and
+  33 screens respectively, restyled from three small commits.
 - The `30` and `999` spellings are the same intended shape written two ways.
-  Together they are 37 occurrences across 22 files, and under decision 1 all
-  become 10. This is the largest **visible** change remaining.
+  Under decision 1 both become 10. This is the largest **visible** change
+  remaining.
 - Mobile's `@/theme` still exports its own `radius` and `spacing`, parallel to
   the shared scales. Reconciling them is tracked in `THEMING_PLAN.md`.
+- `(tabs)` needs roles the scale does not have: page titles (28), modal and
+  sheet titles (20), screen titles (18) and one header at 24. The reference
+  screens had no page or modal titles, so there is nothing between
+  `sectionTitle` 17 and `cardTitle` 22. Propose that set before migrating them.
 
 ---
 
