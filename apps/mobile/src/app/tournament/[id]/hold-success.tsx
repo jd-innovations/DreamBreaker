@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { PrimaryButton, SecondaryButton } from '@/components';
 import { fetchTournamentById } from '@/lib/supabase/tournaments';
 import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
@@ -186,7 +188,7 @@ export default function HoldSuccessScreen() {
 }
 
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: L.bg },
+  root: { flex: 1, backgroundColor: L.bg },
   scroll: { paddingHorizontal: 24, paddingTop: 40 },
 
   hero: { alignItems: 'center', marginBottom: 32 },
@@ -197,41 +199,41 @@ const s = StyleSheet.create({
     shadowColor: L.gold, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25, shadowRadius: 16, elevation: 8,
   },
-  title:        { color: L.navy, fontSize: 30, fontWeight: '900', letterSpacing: 0.2, marginBottom: 10 },
-  subtitle:     { color: L.textSub, fontSize: 16, textAlign: 'center', lineHeight: 24, marginBottom: 14 },
+  title: { color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900', letterSpacing: 0.2, marginBottom: 10 },
+  subtitle: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center', lineHeight: 24, marginBottom: 14 },
   subtitleBold: { color: L.navy, fontWeight: '800' },
   depositPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: L.successBg, borderRadius: 20,
+    backgroundColor: L.successBg, borderRadius: shape.pill,
     paddingHorizontal: 12, paddingVertical: 6,
   },
-  depositText: { color: L.success, fontSize: 13, fontWeight: '700' },
+  depositText: { color: L.success, fontSize: text.chipValue.size, fontWeight: '800' },
 
   card: {
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.card,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.card,
     backgroundColor: L.bg, marginBottom: 16, overflow: 'hidden',
   },
-  cardTitle: { color: L.navy, fontSize: 16, fontWeight: '800', paddingHorizontal: 16, paddingVertical: 14 },
-  divider:   { height: StyleSheet.hairlineWidth, backgroundColor: L.border },
+  cardTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', paddingHorizontal: 16, paddingVertical: 14 },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: L.border },
   summaryRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     paddingHorizontal: 16, paddingVertical: 13,
   },
-  summaryLabel: { color: L.textSub, fontSize: 11, fontWeight: '600', marginBottom: 2 },
-  summaryValue: { color: L.navy,    fontSize: 14, fontWeight: '700' },
+  summaryLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 2 },
+  summaryValue: { color: L.navy,    fontSize: text.rowValue.size, fontWeight: '800' },
 
   reminder: {
     flexDirection: 'row', gap: 10, alignItems: 'flex-start',
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: '#E8C97A',
-    borderRadius: radius.card, padding: 14, marginBottom: 16,
+    borderRadius: shape.card, padding: 14, marginBottom: 16,
   },
-  reminderText: { color: L.text, fontSize: 13, lineHeight: 19, flex: 1 },
+  reminderText: { color: L.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19, flex: 1 },
 
   completeBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: L.bg, borderWidth: 1.5, borderColor: L.gold,
-    borderRadius: radius.card, padding: 14, marginBottom: 4,
+    borderRadius: shape.cta, padding: 14, marginBottom: 4,
   },
-  completeBtnLabel: { color: L.navy, fontSize: 14, fontWeight: '800' },
-  completeBtnSub:   { color: L.textSub, fontSize: 12, marginTop: 1 },
+  completeBtnLabel: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
+  completeBtnSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
 });

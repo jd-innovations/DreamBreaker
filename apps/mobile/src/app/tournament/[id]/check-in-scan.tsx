@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams } from 'expo-router';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { haptics } from '@/lib/haptics';
 import { classifyQrPayload } from '@/lib/qrPayload';
@@ -178,8 +180,8 @@ const s = StyleSheet.create({
     alignItems: 'center', paddingTop: 120,
   },
   checkingText: {
-    color: '#FFFFFF', fontSize: 14, fontWeight: '700',
-    backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20,
+    color: '#FFFFFF', fontSize: text.rowTitle.size, fontWeight: '700',
+    backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: shape.pill,
     paddingHorizontal: 16, paddingVertical: 8, overflow: 'hidden',
   },
 
@@ -187,16 +189,16 @@ const s = StyleSheet.create({
     width: 84, height: 84, borderRadius: 42,
     alignItems: 'center', justifyContent: 'center', marginBottom: 20,
   },
-  resultTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '800', marginBottom: 10, textAlign: 'center' },
-  resultBody: { color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 20, textAlign: 'center', marginBottom: 28 },
+  resultTitle: { color: '#FFFFFF', fontSize: text.modalTitle.size, fontWeight: '900', marginBottom: 10, textAlign: 'center' },
+  resultBody: { color: 'rgba(255,255,255,0.75)', fontSize: text.caption.size, fontWeight: '500', lineHeight: 20, textAlign: 'center', marginBottom: 28 },
 
   primaryBtn: {
-    backgroundColor: colors.gold, borderRadius: 14,
+    backgroundColor: colors.gold, borderRadius: shape.cta,
     paddingVertical: 14, paddingHorizontal: 32, marginBottom: 12, minWidth: 220, alignItems: 'center',
   },
-  primaryBtnText: { color: colors.navy, fontSize: 15, fontWeight: '800' },
+  primaryBtnText: { color: colors.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
   secondaryBtn: { paddingVertical: 8, paddingHorizontal: 16 },
-  secondaryBtnText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600' },
+  secondaryBtnText: { color: 'rgba(255,255,255,0.7)', fontSize: text.action.size, fontWeight: '800' },
 });
 
 // Director-only route. The screen body above is mounted only after

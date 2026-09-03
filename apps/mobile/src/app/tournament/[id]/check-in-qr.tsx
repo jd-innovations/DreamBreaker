@@ -5,7 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import QRCode from 'react-native-qrcode-svg';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { buildScanTokenUrl } from '@/lib/qrPayload';
 import { fetchRegistrationById } from '@/lib/supabase/registrations';
@@ -108,35 +110,35 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, backgroundColor: L.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 32 },
-  emptyText: { color: L.textSub, fontSize: 14, textAlign: 'center' },
+  emptyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center' },
 
   content: { flex: 1, padding: 20, justifyContent: 'center' },
   card: {
-    backgroundColor: L.bg, borderRadius: radius.card,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     paddingVertical: 28, paddingHorizontal: 24,
     alignItems: 'center', gap: 6,
   },
-  tournamentName: { color: L.navy, fontSize: 19, fontWeight: '800', textAlign: 'center' },
-  divisionLine:   { color: L.textSub, fontSize: 13, fontWeight: '500', marginBottom: 8 },
+  tournamentName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', textAlign: 'center' },
+  divisionLine: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 8 },
 
   checkedInPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: L.successBg, borderRadius: 20,
+    backgroundColor: L.successBg, borderRadius: shape.pill,
     paddingHorizontal: 10, paddingVertical: 5, marginBottom: 8,
   },
-  checkedInText: { color: L.success, fontSize: 12, fontWeight: '700' },
+  checkedInText: { color: L.success, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 
   qrFrame: {
     padding: 16, backgroundColor: '#FFFFFF',
-    borderWidth: 1, borderColor: L.border, borderRadius: 16,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.card,
     marginVertical: 12,
   },
 
-  playerName:  { color: L.navy, fontSize: 15, fontWeight: '700', marginTop: 4 },
-  instruction: { color: L.textSub, fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 19 },
+  playerName: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', marginTop: 4 },
+  instruction: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', marginTop: 6, lineHeight: 19 },
 });

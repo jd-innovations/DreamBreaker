@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { PrimaryButton, SecondaryButton } from '@/components';
 import { useSession } from '@/hooks/useSession';
 import { requireAuth } from '@/lib/authGuard';
@@ -144,7 +146,7 @@ export default function HoldConfirmScreen() {
 
       router.replace({
         pathname: `/tournament/${tournament.id}/hold-success` as never,
-        params:   { divisionId: division.id },
+        params: { divisionId: division.id },
       } as never);
     });
   }
@@ -248,31 +250,31 @@ export default function HoldConfirmScreen() {
 }
 
 const r = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: L.bg },
+  root: { flex: 1, backgroundColor: L.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
-  scroll:      { paddingHorizontal: 20, paddingTop: 24 },
+  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  scroll: { paddingHorizontal: 20, paddingTop: 24 },
 
-  hero:       { alignItems: 'center', marginBottom: 28 },
+  hero: { alignItems: 'center', marginBottom: 28 },
   iconCircle: {
     width: 80, height: 80, borderRadius: 40,
     backgroundColor: L.goldBg, alignItems: 'center', justifyContent: 'center',
     marginBottom: 16,
   },
-  heroTitle: { color: L.navy, fontSize: 22, fontWeight: '900', marginBottom: 8, textAlign: 'center' },
-  heroSub:   { color: L.textSub, fontSize: 14, lineHeight: 21, textAlign: 'center' },
+  heroTitle: { color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800', marginBottom: 8, textAlign: 'center' },
+  heroSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 21, textAlign: 'center' },
 
   card: {
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.card,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.card,
     backgroundColor: L.bg, marginBottom: 16, overflow: 'hidden',
   },
   cardTitle: {
-    color: L.navy, fontSize: 16, fontWeight: '800',
+    color: L.navy, fontSize: text.titleSm.size, fontWeight: '800',
     paddingHorizontal: 16, paddingVertical: 14,
   },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: L.border },
@@ -280,11 +282,11 @@ const r = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     paddingHorizontal: 16, paddingVertical: 13,
   },
-  infoLabel: { color: L.textSub, fontSize: 11, fontWeight: '600', marginBottom: 2 },
-  infoValue: { color: L.navy,    fontSize: 14, fontWeight: '700' },
+  infoLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 2 },
+  infoValue: { color: L.navy,    fontSize: text.rowValue.size, fontWeight: '800' },
 
   feesCard: {
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.card,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.card,
     backgroundColor: L.bg, marginBottom: 16, overflow: 'hidden', paddingVertical: 4,
   },
   feeRow: {
@@ -294,15 +296,15 @@ const r = StyleSheet.create({
   balanceRow: {
     borderTopWidth: 1, borderTopColor: L.border, backgroundColor: L.goldLight,
   },
-  feeLabel:    { color: L.textSub, fontSize: 14, fontWeight: '500' },
-  feeValue:    { color: L.navy,    fontSize: 14, fontWeight: '700' },
-  balanceLabel:{ color: L.navy,    fontSize: 14, fontWeight: '700' },
-  balanceValue:{ color: L.navy,    fontSize: 16, fontWeight: '900' },
+  feeLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  feeValue: { color: L.navy,    fontSize: text.rowValue.size, fontWeight: '800' },
+  balanceLabel: { color: L.navy,    fontSize: text.rowTitle.size, fontWeight: '700' },
+  balanceValue: { color: L.navy,    fontSize: text.titleSm.size, fontWeight: '800' },
 
   warningCard: {
     flexDirection: 'row', gap: 10, alignItems: 'flex-start',
     backgroundColor: L.goldLight, borderWidth: 1, borderColor: L.goldBorder,
-    borderRadius: radius.card, padding: 14, marginBottom: 24,
+    borderRadius: shape.card, padding: 14, marginBottom: 24,
   },
-  warningText: { color: L.text, fontSize: 13, lineHeight: 19, flex: 1 },
+  warningText: { color: L.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19, flex: 1 },
 });
