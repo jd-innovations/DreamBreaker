@@ -5,7 +5,7 @@ import { useFonts, BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { StripeProvider } from '@stripe/stripe-react-native';
-import { C } from '@/constants/Colors';
+import { ThemeProvider, useTheme } from '@/theme';
 import { SupportProvider } from '@/components/support/SupportProvider';
 import { useSession } from '@/hooks/useSession';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -39,6 +39,7 @@ void initAnalytics();
 
 function RootLayout() {
   const [fontsLoaded] = useFonts({ BebasNeue_400Regular });
+  const { roles, statusBarStyle, ready: themeReady } = useTheme();
   const { user, loading, isAuthenticated } = useSession();
   usePushNotifications(user?.id ?? null);
   useExternalLinks({ authLoading: loading, isAuthenticated });
@@ -62,14 +63,16 @@ function RootLayout() {
     // Fast Refresh can re-run this effect after the native splash screen has
     // already been hidden once, which throws "No native splash screen
     // registered for given view controller" — harmless, so swallow it.
-    if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
-  }, [fontsLoaded]);
+    if (fontsLoaded && themeReady) SplashScreen.hideAsync().catch(() => {});
+  }, [fontsLoaded, themeReady]);
 
-  if (!fontsLoaded) return null;
+  // Also gated on themeReady: painting the system theme and then snapping to
+  // the stored preference a frame later is a visible flash.
+  if (!fontsLoaded || !themeReady) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar style="light" />
+      <StatusBar style={statusBarStyle} />
       <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
       <SupportProvider>
       <Stack
@@ -80,11 +83,14 @@ function RootLayout() {
           // my-tournaments, director, apply-director) fell through to the
           // default native header, producing a duplicate route-name title bar.
           headerShown: false,
-          headerStyle: { backgroundColor: C.bg },
-          headerTintColor: C.gold,
-          headerTitleStyle: { color: C.text, fontWeight: '700' },
+          headerStyle: { backgroundColor: roles.surface },
+          headerTintColor: roles.accent,
+          headerTitleStyle: { color: roles.textPrimary, fontWeight: '700' },
           headerBackButtonDisplayMode: 'minimal',
-          contentStyle: { backgroundColor: C.bg },
+          // Painted behind every push transition. This was the deleted dark
+          // palette's #07091A, i.e. a near-black edge sliding under a light
+          // app on every navigation.
+          contentStyle: { backgroundColor: roles.background },
           animation: 'slide_from_right',
         }}
       >
@@ -268,7 +274,17 @@ function RootLayout() {
   );
 }
 
+// ThemeProvider sits above RootLayout because RootLayout calls useTheme, and
+// inside withCrashReporting because the boundary must wrap everything.
+function Root() {
+  return (
+    <ThemeProvider>
+      <RootLayout />
+    </ThemeProvider>
+  );
+}
+
 // Sentry.wrap adds the error boundary and native crash handlers around the
 // whole tree. It must wrap the ROOT export -- expo-router renders this default
 // export directly, so anything not inside it is outside the boundary.
-export default withCrashReporting(RootLayout);
+export default withCrashReporting(Root);

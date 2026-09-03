@@ -36,7 +36,10 @@ module.exports = {
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'pickleballapp',
-  userInterfaceStyle: 'dark',
+  // 'automatic' hands the choice to the OS; ThemeProvider layers the user's
+  // own light/dark/system preference on top. This said 'dark' while the UI was
+  // light.
+  userInterfaceStyle: 'automatic',
 
   updates: {
     url: 'https://u.expo.dev/04fcdd30-fb9e-47e2-9371-8e4e8b521c17',
