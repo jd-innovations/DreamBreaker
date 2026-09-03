@@ -7,6 +7,8 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { SlideMenuProvider } from '@/components/SlideMenu';
 import { TAB_BAR_HEIGHT, TAB_BAR_MIN_GAP } from '@/constants/tabBar';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 const ACTIVE = colors.navy;
 const MUTED  = colors.textSub;
@@ -124,9 +126,9 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'stretch',
     paddingVertical: 7,
-    borderRadius: 22,
+    borderRadius: shape.pill,
   },
   pillActive: { backgroundColor: colors.page },
-  label: { fontSize: 11, fontWeight: '500', marginTop: 3 },
+  label: { fontSize: text.caption.size, fontWeight: '500', marginTop: 3 },
   labelActive: { fontWeight: '700' },
 });

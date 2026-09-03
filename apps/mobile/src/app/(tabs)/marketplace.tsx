@@ -22,6 +22,7 @@ import {
   listingAgeLabel, type MarketplaceCondition,
 } from '@/lib/marketplace/constants';
 import { colors, useTheme, useThemeRoles, useThemedStyles, type ThemeRoles } from '@/theme';
+import { radius as shape, text } from '@shared/tokens';
 
 const { width: SW } = Dimensions.get('window');
 const CARD_W = (SW - 16 * 2 - 12) / 2;
@@ -63,7 +64,7 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
 const chipStyles = (t: ThemeRoles) => StyleSheet.create({
   chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: t.border, backgroundColor: t.surface, marginRight: 8, marginBottom: 8 },
   chipActive: { backgroundColor: t.primary, borderColor: t.primary },
-  text: { color: t.textPrimary, fontSize: 13, fontWeight: '500' },
+  text: { color: t.textPrimary, fontSize: text.controlLabel.size, fontWeight: '700' },
   textActive: { color: t.onPrimary, fontWeight: '700' },
 });
 
@@ -119,15 +120,15 @@ const cardStyles = (t: ThemeRoles) => StyleSheet.create({
   conditionBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: t.scrimMediaStrong, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
   conditionText: { color: colors.white, fontSize: 10, fontWeight: '700' },
   body: { padding: 10 },
-  title: { color: t.textPrimary, fontSize: 13, fontWeight: '700', marginBottom: 4 },
+  title: { color: t.textPrimary, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 4 },
   brandLine: { color: t.textPrimary, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginBottom: 2 },
-  modelLine: { color: t.textPrimary, fontSize: 13, fontWeight: '700', marginBottom: 4 },
+  modelLine: { color: t.textPrimary, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 4 },
   priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   // Was #16A34A, a near-duplicate of the success token.
-  price: { color: t.success, fontSize: 15, fontWeight: '800' },
-  age: { color: t.textMuted, fontSize: 11 },
+  price: { color: t.success, fontSize: text.rowValue.size, fontWeight: '800' },
+  age: { color: t.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   locRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
-  loc: { color: t.textMuted, fontSize: 11, flexShrink: 1 },
+  loc: { color: t.textMuted, fontSize: text.caption.size, fontWeight: '500', flexShrink: 1 },
 });
 
 // ─── Filter Sheet ─────────────────────────────────────────────────────────────
@@ -207,13 +208,13 @@ const filterSheetStyles = (t: ThemeRoles) => StyleSheet.create({
   handleRow: { alignItems: 'center', paddingTop: 12, paddingBottom: 4 },
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: t.border },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 8 },
-  title: { color: t.textPrimary, fontSize: 18, fontWeight: '800' },
+  title: { color: t.textPrimary, fontSize: text.modalTitle.size, fontWeight: '900' },
   closeBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   scroll: { paddingHorizontal: 20, paddingBottom: 32 },
-  sectionLabel: { color: t.textMuted, fontSize: 11, fontWeight: '800', letterSpacing: 1, marginTop: 20, marginBottom: 10 },
+  sectionLabel: { color: t.textMuted, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, marginTop: 20, marginBottom: 10 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap' },
-  applyBtn: { marginTop: 24, backgroundColor: t.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  applyText: { color: t.onPrimary, fontSize: 16, fontWeight: '800' },
+  applyBtn: { marginTop: 24, backgroundColor: t.primary, borderRadius: shape.cta, paddingVertical: 16, alignItems: 'center' },
+  applyText: { color: t.onPrimary, fontSize: text.actionLarge.size, fontWeight: '800' },
 });
 
 function Scrim({ visible, onPress }: { visible: boolean; onPress: () => void }) {
@@ -410,17 +411,17 @@ const screenStyles = (t: ThemeRoles) => StyleSheet.create({
   // Was #F7F9FC, which was neither the page token nor any other token.
   root: { flex: 1, backgroundColor: t.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12 },
-  headerTitle: { color: t.textPrimary, fontSize: 24, fontWeight: '900' },
+  headerTitle: { color: t.textPrimary, fontSize: text.pageTitle.size, fontWeight: '900' },
   sellBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: t.primary, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
-  sellBtnText: { color: t.onPrimary, fontSize: 13, fontWeight: '700' },
+  sellBtnText: { color: t.onPrimary, fontSize: text.action.size, fontWeight: '800' },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingBottom: 14 },
-  searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: t.surface, borderRadius: 14, borderWidth: 1, borderColor: t.border, paddingHorizontal: 12, height: 42 },
-  searchInput: { flex: 1, fontSize: 14, color: t.textPrimary },
+  searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: t.surface, borderRadius: shape.cta, borderWidth: 1, borderColor: t.border, paddingHorizontal: 12, height: 42 },
+  searchInput: { flex: 1, fontSize: text.body.size, color: t.textPrimary },
   // Matches the search icon's footprint so swapping the two doesn't shift the input.
   searchSpinner: { width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
-  filterBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, alignItems: 'center', justifyContent: 'center' },
+  filterBtn: { width: 42, height: 42, borderRadius: shape.cta, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, alignItems: 'center', justifyContent: 'center' },
   filterBadge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   filterBadgeText: { color: t.onAccent, fontSize: 10, fontWeight: '800' },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  emptyText: { color: t.textMuted, fontSize: 14 },
+  emptyText: { color: t.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 });

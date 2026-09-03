@@ -17,6 +17,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import {
   fetchConversations,
@@ -151,7 +153,7 @@ const st = StyleSheet.create({
     width: 13, height: 13, borderRadius: 6.5,
     backgroundColor: L.online, borderWidth: 2, borderColor: L.bg,
   },
-  label: { color: L.text, fontSize: 11, fontWeight: '500', textAlign: 'center', lineHeight: 14, marginTop: 6 },
+  label: { color: L.text, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 14, marginTop: 6 },
 });
 
 
@@ -176,23 +178,23 @@ const cc = StyleSheet.create({
   content: { flex: 1, gap: 5 },
   row1:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   nameRow: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 },
-  name:    { color: L.text, fontSize: 16, fontWeight: '700' },
-  time:    { color: L.textMuted, fontSize: 12, fontWeight: '400' },
+  name:    { color: L.text, fontSize: text.rowTitle.size, fontWeight: '700' },
+  time:    { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   tagRow:  { alignItems: 'flex-start' },
   tag: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    borderWidth: 1, borderRadius: 20,
+    borderWidth: 1, borderRadius: shape.pill,
     paddingHorizontal: 9, paddingVertical: 3,
   },
-  tagText: { fontSize: 11, fontWeight: '600' },
+  tagText: { fontSize: text.cardLabel.size, fontWeight: '800' },
   row3:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  preview: { color: L.textMuted, fontSize: 13, flex: 1, marginRight: 8 },
+  preview: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', flex: 1, marginRight: 8 },
   badge: {
     minWidth: 24, height: 24, borderRadius: 12,
     backgroundColor: L.gold, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 6, flexShrink: 0,
   },
-  badgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  badgeText: { color: '#FFFFFF', fontSize: text.chipValue.size, fontWeight: '800' },
   swipeAction: {
     width: 76, alignItems: 'center', justifyContent: 'center', height: '100%',
     backgroundColor: L.page, gap: 6,
@@ -204,7 +206,7 @@ const cc = StyleSheet.create({
   swipeActionCircleMute: { backgroundColor: '#E8A33D' },
   swipeActionCircleDelete: { backgroundColor: '#D64545' },
   swipeActionCircleArchive: { backgroundColor: '#A6ADBB' },
-  swipeActionText: { color: L.textMuted, fontSize: 12, fontWeight: '600' },
+  swipeActionText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 });
 
 // ─── Real conversation card ───────────────────────────────────────────────────
@@ -590,11 +592,11 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingLeft: 16, paddingRight: 16, paddingVertical: 12, backgroundColor: L.bg,
   },
-  title:       { flex: 1, color: L.navy, fontSize: 26, fontWeight: '800' },
+  title:       { flex: 1, color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   composeBtn: {
-    width: 40, height: 40, borderRadius: 12,
+    width: 40, height: 40, borderRadius: shape.panel,
     backgroundColor: L.gold, alignItems: 'center', justifyContent: 'center',
   },
 
@@ -602,10 +604,10 @@ const s = StyleSheet.create({
   searchWrap: { paddingHorizontal: 16, paddingBottom: 14, backgroundColor: L.bg },
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#F0F4FA', borderRadius: 14,
+    backgroundColor: '#F0F4FA', borderRadius: shape.cta,
     paddingHorizontal: 14, paddingVertical: 11,
   },
-  searchInput: { flex: 1, color: L.text, fontSize: 15, padding: 0 },
+  searchInput: { flex: 1, color: L.text, fontSize: text.body.size, padding: 0 },
 
   // Stories — flexShrink:0 stops the column from compressing this strip (which clipped the
   // labels); flexGrow:0 makes it hug its content height. No magic pixel height needed.
@@ -627,21 +629,21 @@ const s = StyleSheet.create({
   filterTab: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 18, paddingVertical: 9,
-    borderRadius: 24, borderWidth: 1.5, borderColor: L.border,
+    borderRadius: shape.pill, borderWidth: 1.5, borderColor: L.border,
     backgroundColor: L.bg,
   },
   filterTabActive:      { backgroundColor: L.navy, borderColor: L.navy },
-  filterLabel:          { color: L.textSub, fontSize: 14, fontWeight: '600' },
+  filterLabel:          { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   filterLabelActive:    { color: '#FFFFFF' },
   reqBadge: {
     minWidth: 20, height: 20, borderRadius: 10,
     backgroundColor: L.border, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
   },
   reqBadgeActive:     { backgroundColor: 'rgba(255,255,255,0.2)' },
-  reqBadgeText:       { color: L.navy, fontSize: 11, fontWeight: '800' },
+  reqBadgeText:       { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800' },
   reqBadgeTextActive: { color: '#FFFFFF' },
 
   // Empty
   empty:     { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyText: { color: L.textMuted, fontSize: 15, fontWeight: '500' },
+  emptyText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 });

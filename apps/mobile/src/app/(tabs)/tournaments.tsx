@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, typography, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { StatusChip, FIND_GAMES_SKILL_RANGES, FillBar } from '@/components';
 import { useSlideMenu } from '@/components/SlideMenu';
 import { type Tournament } from '@/lib/tournamentTypes';
@@ -386,7 +388,7 @@ const s2 = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingLeft: 20, paddingRight: 20, paddingBottom: 12, paddingTop: 8,
   },
-  title: { ...typography.pageTitle, color: colors.navy },
+  title: { fontSize: text.sectionTitle.size, fontWeight: '900', color: colors.navy },
   notifBtn: {
     width: 38, height: 38, borderRadius: 19, backgroundColor: colors.bg,
     borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center',
@@ -409,83 +411,83 @@ const s2 = StyleSheet.create({
   modalTitleRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16,
   },
-  modalTitle: { ...typography.pageTitle, color: colors.navy, fontSize: 20 },
-  modalReset: { color: colors.gold, fontSize: 13, fontWeight: '700' },
+  modalTitle: { fontSize: text.modalTitle.size, fontWeight: '900', color: colors.navy },
+  modalReset: { color: colors.gold, fontSize: text.link.size, fontWeight: '700' },
   modalSectionLabel: {
-    color: colors.textSub, fontSize: 11, fontWeight: '800', letterSpacing: 0.6,
+    color: colors.textSub, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: 0.6,
     textTransform: 'uppercase', marginBottom: 10,
   },
   optionsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
   optionChip: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 9, borderRadius: shape.pill,
     backgroundColor: colors.page, borderWidth: 1, borderColor: colors.border,
   },
   optionChipActive: { backgroundColor: colors.goldBg, borderColor: colors.gold },
-  optionChipText: { color: colors.textSub, fontSize: 13, fontWeight: '700' },
+  optionChipText: { color: colors.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   optionChipTextActive: { color: colors.gold },
-  modalHint: { color: colors.textSub, fontSize: 11, marginTop: -12, marginBottom: 20 },
+  modalHint: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: -12, marginBottom: 20 },
   toggleRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 12, marginBottom: 20,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
   },
-  toggleLabel: { color: colors.navy, fontSize: 14, fontWeight: '700' },
-  toggleSub: { color: colors.textSub, fontSize: 12, marginTop: 2 },
+  toggleLabel: { color: colors.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  toggleSub: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
   applyBtn: {
-    backgroundColor: colors.navy, borderRadius: radius.button, paddingVertical: 15,
+    backgroundColor: colors.navy, borderRadius: shape.cta, paddingVertical: 15,
     alignItems: 'center', marginBottom: 8,
   },
-  applyBtnText: { color: colors.white, fontSize: 14, fontWeight: '800', letterSpacing: 0.5 },
+  applyBtnText: { color: colors.white, fontSize: text.action.size, fontWeight: '800', letterSpacing: 0.5 },
   searchRow: {
     flexDirection: 'row', alignItems: 'center', marginHorizontal: 16,
     backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.button, paddingHorizontal: 14, height: 44, marginBottom: 12,
+    borderRadius: shape.cta, paddingHorizontal: 14, height: 44, marginBottom: 12,
   },
-  searchInput: { flex: 1, color: colors.text, fontSize: 14 },
+  searchInput: { flex: 1, color: colors.text, fontSize: text.body.size },
   filterRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 12 },
   chip: {
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 18,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: shape.pill,
     backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border,
   },
   chipActive: { backgroundColor: colors.goldBg, borderColor: colors.gold },
-  chipText: { color: colors.textSub, fontSize: 11, fontWeight: '700' },
+  chipText: { color: colors.textSub, fontSize: text.cardLabel.size, fontWeight: '800' },
   chipTextActive: { color: colors.gold },
   list: { paddingHorizontal: 16, gap: 12 },
   card: {
     backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.card, padding: 16,
+    borderRadius: shape.card, padding: 16,
   },
   chipRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  cardName: { color: colors.text, fontSize: 18, fontWeight: '800', lineHeight: 23, marginBottom: 3 },
+  cardName: { color: colors.text, fontSize: text.cardTitle.size, fontWeight: '800', lineHeight: text.cardTitle.lineHeight, marginBottom: 3 },
   // Carries the 6pt gap the old cardHeader wrapper used to provide.
-  cardSub: { color: colors.textSub, fontSize: 11, fontWeight: '500', marginBottom: 6 },
+  cardSub: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 6 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 12 },
-  metaText: { color: colors.textSub, fontSize: 11, fontWeight: '600' },
+  metaText: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500' },
   dot: { color: colors.textSub },
   divider: { height: 1, backgroundColor: colors.border, marginBottom: 12 },
   feeRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12 },
   feeBlock: {},
   feeLabel: { color: colors.textSub, fontSize: 9, fontWeight: '700', letterSpacing: 1 },
-  feeValue: { color: colors.text, fontSize: 15, fontWeight: '800' },
+  feeValue: { color: colors.text, fontSize: text.rowValue.size, fontWeight: '800' },
   prizeBlock: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: colors.goldBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+    backgroundColor: colors.goldBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: shape.badge,
   },
-  prizeValue: { color: colors.gold, fontSize: 13, fontWeight: '800' },
+  prizeValue: { color: colors.gold, fontSize: text.rowValue.size, fontWeight: '800' },
   fmtChip: {
     paddingHorizontal: 6, paddingVertical: 2,
-    backgroundColor: colors.page, borderRadius: 5, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.page, borderRadius: shape.badge, borderWidth: 1, borderColor: colors.border,
   },
   fmtText: { color: colors.textSub, fontSize: 9, fontWeight: '700' },
   fillRow: { marginBottom: 14 },
   cta: {
-    backgroundColor: colors.navy, borderRadius: radius.button, paddingVertical: 13,
+    backgroundColor: colors.navy, borderRadius: shape.cta, paddingVertical: 13,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
   },
   ctaFull: { backgroundColor: colors.page },
-  ctaText: { color: colors.white, fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  ctaText: { color: colors.white, fontSize: text.action.size, fontWeight: '800', letterSpacing: 1 },
   ctaTextFull: { color: colors.textSub },
   empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyText: { color: colors.textSub, fontSize: 14, fontWeight: '600' },
+  emptyText: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500' },
 });

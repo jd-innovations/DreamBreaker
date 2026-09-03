@@ -8,6 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import { useSlideMenu } from '@/components/SlideMenu';
 import { fetchMyGroups, fetchDiscoverGroups, joinGroup, type Group } from '@/lib/groupService';
@@ -49,19 +51,19 @@ function MyGroupCard({ g }: { g: Group }) {
 
 const gc = StyleSheet.create({
   card: {
-    width: 160, backgroundColor: L.bg, borderRadius: 16,
+    width: 160, backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border, overflow: 'hidden',
     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 }, elevation: 3,
   },
   image: { width: '100%', height: 90 },
   info: { padding: 10, gap: 5 },
-  name: { color: L.navy, fontSize: 13, fontWeight: '800', lineHeight: 17 },
+  name: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', lineHeight: 17 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  meta: { color: L.textSub, fontSize: 11 },
+  meta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   statusChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    alignSelf: 'flex-start', borderRadius: 8,
+    alignSelf: 'flex-start', borderRadius: shape.badge,
     paddingHorizontal: 6, paddingVertical: 3, backgroundColor: L.goldLight,
   },
   statusText: { color: L.gold, fontSize: 10, fontWeight: '700' },
@@ -127,25 +129,25 @@ function DiscoverCard({ g, onJoined }: { g: Group; onJoined: () => void }) {
 
 const dc = StyleSheet.create({
   card: {
-    flexDirection: 'column', backgroundColor: L.bg, borderRadius: 16,
+    flexDirection: 'column', backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border, overflow: 'hidden',
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
   image: { width: '100%', height: 120 },
   body: { padding: 12, gap: 5 },
-  name: { color: L.navy, fontSize: 15, fontWeight: '800' },
+  name: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  meta: { color: L.textSub, fontSize: 12 },
+  meta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: L.textSub },
-  desc: { color: L.textSub, fontSize: 12, lineHeight: 17, marginBottom: 4 },
+  desc: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17, marginBottom: 4 },
   joinBtn: {
-    backgroundColor: L.gold, borderRadius: 20,
+    backgroundColor: L.gold, borderRadius: shape.pill,
     paddingHorizontal: 14, paddingVertical: 10,
     alignSelf: 'stretch', alignItems: 'center',
   },
   joinBtnRequested: { backgroundColor: L.page, borderWidth: 1.5, borderColor: L.border },
-  joinText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  joinText: { color: '#FFFFFF', fontSize: text.action.size, fontWeight: '800' },
   joinTextRequested: { color: L.textSub },
 });
 
@@ -160,7 +162,7 @@ function SectionHeader({ title }: { title: string }) {
 }
 const sh = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  title: { color: L.navy, fontSize: 17, fontWeight: '900' },
+  title: { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
 });
 
 // ─── Main ───────────────────────────────────────────────────────────────────
@@ -272,15 +274,15 @@ const s = StyleSheet.create({
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
   },
   headerText: { flex: 1, marginRight: 12 },
-  pageTitle: { color: L.navy, fontSize: 28, fontWeight: '900', marginBottom: 2 },
-  pageSub: { color: L.textSub, fontSize: 13 },
+  pageTitle: { color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900', marginBottom: 2 },
+  pageSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   createBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: 20,
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.pill,
     paddingHorizontal: 12, paddingVertical: 8, marginTop: 4, flexShrink: 0,
   },
-  createBtnText: { color: L.gold, fontSize: 13, fontWeight: '700' },
+  createBtnText: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
 
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
@@ -290,20 +292,20 @@ const s = StyleSheet.create({
   hScroll: { gap: 12, paddingBottom: 4 },
 
   emptyGroups: {
-    backgroundColor: L.bg, borderRadius: 16,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: 24, alignItems: 'center', gap: 8,
   },
-  emptyGroupsTitle: { color: L.navy, fontSize: 15, fontWeight: '800' },
-  emptyGroupsSub: { color: L.textSub, fontSize: 13, textAlign: 'center', lineHeight: 18 },
+  emptyGroupsTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  emptyGroupsSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 18 },
   emptyCreateBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderWidth: 1.5, borderColor: colors.goldBorder, borderRadius: 20,
+    borderWidth: 1.5, borderColor: colors.goldBorder, borderRadius: shape.pill,
     paddingHorizontal: 14, paddingVertical: 8, marginTop: 4,
   },
-  emptyCreateText: { color: L.gold, fontSize: 13, fontWeight: '700' },
+  emptyCreateText: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
 
-  emptyDiscover: { color: L.textSub, fontSize: 13, textAlign: 'center', paddingVertical: 16 },
+  emptyDiscover: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', paddingVertical: 16 },
 
   discoverList: { gap: 12 },
 });
