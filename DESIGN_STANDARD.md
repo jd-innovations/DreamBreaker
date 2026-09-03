@@ -392,7 +392,7 @@ that last touched each.
 | `app/(tabs)/chat.tsx` | `fb47edb` |
 | `app/(tabs)/marketplace.tsx` | `fb47edb` |
 | `app/(tabs)/partner.tsx` | `fb47edb` |
-| `app/(tabs)/stats.tsx` | `3b41acb` |
+| `app/(tabs)/stats.tsx` | `5bc03cb` |
 | `app/(tabs)/tournaments.tsx` | `fb47edb` |
 | `app/booking/choose-time.tsx` | `22414dd` |
 | `app/booking/confirmation.tsx` | `13c2178` |
