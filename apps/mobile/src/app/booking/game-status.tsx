@@ -417,7 +417,10 @@ const s = StyleSheet.create({
     padding: spacing.lg, marginTop: spacing.md,
   },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  assetName: { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
+  // titleSm, matching my-bookings. This took sectionTitle because it was 17/900
+  // and titleSm was 16/800 at the time; both are 17 now, so the divergence was
+  // in the source rather than on screen.
+  assetName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   facilityName: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 4 },
   subtitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
