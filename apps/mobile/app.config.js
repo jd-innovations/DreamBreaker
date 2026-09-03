@@ -36,10 +36,19 @@ module.exports = {
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'pickleballapp',
-  // 'automatic' hands the choice to the OS; ThemeProvider layers the user's
-  // own light/dark/system preference on top. This said 'dark' while the UI was
-  // light.
-  userInterfaceStyle: 'automatic',
+  // Stays 'dark' on purpose, even though the UI is light and this wants to be
+  // 'automatic'. runtimeVersion policy is 'fingerprint' and app.config.js is a
+  // fingerprint input: flipping this moves the runtime from 9e5109d0 to
+  // c51331ba, so every OTA published afterwards would target a runtime no
+  // installed build has and reach nobody — silently. Same class of failure as
+  // a52c382.
+  //
+  // Deferred to the Phase 3 native release, which is where it belongs: it
+  // ships with THEME_MIGRATION_COMPLETE flipping to true and the user-facing
+  // Appearance setting. Until then it changes nothing that matters — the
+  // theme guard clamps `system` to light anyway, and explicit light/dark is
+  // pure JS. See THEMING_PLAN.md.
+  userInterfaceStyle: 'dark',
 
   updates: {
     url: 'https://u.expo.dev/04fcdd30-fb9e-47e2-9371-8e4e8b521c17',

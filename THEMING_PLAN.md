@@ -213,9 +213,21 @@ but not Phase 2. Decision 6 is needed during Phase 1.
 **Phase 0 — decide.** Answer the six above. No code.
 
 **Phase 1 — infrastructure.** `ThemeProvider`, `useTheme`, `useThemedStyles`;
-preference persisted; `app.config.js` → `userInterfaceStyle: 'automatic'`;
-delete `constants/Colors.ts` once its values are absorbed into the dark ramp.
-Touches no screen.
+preference persisted; delete `constants/Colors.ts` once its values are absorbed
+into the dark ramp. Touches no screen.
+
+> **`userInterfaceStyle` is NOT part of Phase 1.** It wants to be `'automatic'`,
+> but `runtimeVersion` policy is `fingerprint` and `app.config.js` is a
+> fingerprint input — flipping it moves the runtime from `9e5109d0` to
+> `c51331ba`, so every OTA published afterwards targets a runtime no installed
+> build has and reaches nobody, silently. Measured 2026-09-02; same class of
+> failure as a52c382. It ships in the Phase 4 native release instead, alongside
+> the `THEME_MIGRATION_COMPLETE` flip. Nothing is lost by waiting: the guard
+> clamps `system` to light regardless, and explicit light/dark is pure JS.
+>
+> **General rule for this migration: every remaining phase must stay
+> fingerprint-neutral so the work keeps shipping over OTA.** Check with
+> `npx expo-updates fingerprint:generate --platform ios` before publishing.
 
 **Phase 2 — prove it on one screen, end to end.** Both themes, verified by eye,
 before a second screen is touched. If the pattern is wrong, the cost is one
@@ -227,7 +239,9 @@ Migrating a screen to roles *is* the consistency fix for that screen: the
 duplicate greens, the stray blues and the two CTA shapes all have to resolve to a
 named role to survive. There is no separate consistency pass.
 
-**Phase 4 — lock it.** Lint rule banning raw hex in `src/app` and
+**Phase 4 — lock it.** The native release: `userInterfaceStyle: 'automatic'`,
+`THEME_MIGRATION_COMPLETE` → true, and the user-facing Appearance setting, all
+in one build. Plus a lint rule banning raw hex in `src/app` and
 `src/components`. Then rebuild `design-lab.tsx` as a live two-theme reference —
 it has not been touched since 2026-08-20 and 306 commits have landed since, so it
 is currently a snapshot of the app's first ten days, not a spec.
