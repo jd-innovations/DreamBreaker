@@ -4,7 +4,9 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { StatusChip, type StatusVariant } from '@/components';
 import { useSession } from '@/hooks/useSession';
@@ -131,17 +133,17 @@ function BookingCard({ res, onPress }: { res: EnrichedReservation; onPress: () =
 
 const c = StyleSheet.create({
   card: {
-    backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
     padding: spacing.lg, marginTop: spacing.sm,
   },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  assetName: { color: L.navy, fontSize: 15, fontWeight: '800' },
-  facilityName: { color: L.textSub, fontSize: 12, fontWeight: '600', marginTop: 2 },
+  assetName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  facilityName: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
-  metaText: { color: L.textSub, fontSize: 12, fontWeight: '600' },
+  metaText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
-  playersText: { color: L.textSub, fontSize: 11, fontWeight: '600' },
-  amount: { color: L.navy, fontSize: 15, fontWeight: '800' },
+  playersText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  amount: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
   paymentStatusText: { color: L.textSub, fontSize: 10, fontWeight: '600', marginTop: 2 },
 });
 
@@ -241,13 +243,13 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.screenH, paddingVertical: spacing.screenV, backgroundColor: L.bg,
   },
   iconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  title:   { color: L.navy, fontSize: 17, fontWeight: '900' },
+  title:   { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
 
   tabRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.screenH, paddingVertical: spacing.sm, backgroundColor: L.bg },
-  tab: { flex: 1, alignItems: 'center', borderWidth: 1.5, borderColor: L.border, borderRadius: radius.button, paddingVertical: 10 },
+  tab: { flex: 1, alignItems: 'center', borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, paddingVertical: 10 },
   tabActive: { borderColor: L.gold, backgroundColor: L.goldBg },
-  tabText: { color: L.textSub, fontSize: 13, fontWeight: '700' },
+  tabText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   tabTextActive: { color: L.navy },
 
-  emptyText: { color: L.textSub, fontSize: 13, fontWeight: '500', textAlign: 'center', marginTop: 40, lineHeight: 20 },
+  emptyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', marginTop: 40, lineHeight: 20 },
 });
