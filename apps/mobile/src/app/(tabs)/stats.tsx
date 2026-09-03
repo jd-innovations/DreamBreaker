@@ -599,7 +599,7 @@ const states = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(201,168,76,0.12)',
   },
-  title: { fontSize: text.modalTitle.size, fontWeight: '900',
+  title: { fontSize: text.cardTitle.size, fontWeight: '800',
     color: colors.playerText,
     textAlign: 'center',
   },
@@ -628,7 +628,7 @@ const mm = StyleSheet.create({
     gap: 12,
     padding: 24,
   },
-  title: { fontSize: text.modalTitle.size, fontWeight: '900', color: colors.text },
+  title: { fontSize: text.cardTitle.size, fontWeight: '800', color: colors.text },
   sub: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, textAlign: 'center', lineHeight: 20 },
   filters: {
     marginTop: spacing.lg,
