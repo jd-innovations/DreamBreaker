@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs, router, useFocusEffect } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useSlideMenu } from '@/components/SlideMenu';
 import { useCurrentLocation } from '@/lib/location';
 import {
@@ -20,7 +21,7 @@ import {
   MARKETPLACE_BRANDS, CONDITION_OPTIONS, conditionLabel, formatPriceCents,
   listingAgeLabel, type MarketplaceCondition,
 } from '@/lib/marketplace/constants';
-import { colors, useThemeRoles, useThemedStyles, type ThemeRoles } from '@/theme';
+import { colors, useTheme, useThemeRoles, useThemedStyles, type ThemeRoles } from '@/theme';
 
 const { width: SW } = Dimensions.get('window');
 const CARD_W = (SW - 16 * 2 - 12) / 2;
@@ -229,7 +230,7 @@ function Scrim({ visible, onPress }: { visible: boolean; onPress: () => void }) 
 
 export default function MarketplaceScreen() {
   const insets = useSafeAreaInsets();
-  const t = useThemeRoles();
+  const { roles: t, statusBarStyle } = useTheme();
   const s = useThemedStyles(screenStyles);
   const { setTriggerVisible } = useSlideMenu();
 
@@ -326,6 +327,11 @@ export default function MarketplaceScreen() {
 
   return (
     <>
+      {/* This screen set no StatusBar, so it inherited whichever tab sibling
+          was still mounted — Home hardcodes style="dark", which left a dark
+          clock on a near-black page in dark mode. Rule 4: system chrome
+          follows the theme. The other 174 hardcoded calls are Phase 3. */}
+      <StatusBar style={statusBarStyle} />
       <Tabs.Screen options={{ tabBarStyle: filterOpen ? { display: 'none' } : undefined }} />
       <View style={s.root}>
         <View style={[s.header, { paddingTop: insets.top + 8 }]}>
