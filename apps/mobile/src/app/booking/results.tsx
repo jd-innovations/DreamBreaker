@@ -267,7 +267,9 @@ const s = StyleSheet.create({
   actionBtnText: { color: L.navy, fontSize: text.controlLabel.size, fontWeight: '700' },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 32 },
-  emptyText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center' },
+  // caption, matching the empty state on Choose Time, Players, My Bookings and
+  // facility detail. This was 14/500 and took body as the nearest value up.
+  emptyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center' },
 
   card: {
     backgroundColor: L.bg, borderRadius: shape.card, overflow: 'hidden',
