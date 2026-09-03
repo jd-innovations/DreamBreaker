@@ -294,6 +294,15 @@ One screen per commit, so any screen can be reverted alone.
 | `app/booking/players.tsx` — Players | `f1c1ebd` | 24 mapped, 1 exempt (avatar initials, sized to their container). |
 | `app/booking/review.tsx` — Review | `abb9086` | 26 styles, all mapped. Price total and its label both → `titleSm`. |
 
+| `app/booking/confirmation.tsx` — Confirmation | `13c2178` | 16 styles, all mapped. Success headline 20/900 → `titleSm`. |
+| `app/booking/my-bookings.tsx` — My Bookings | `96f8293` | 11 mapped, 1 exempt (10/600, below floor). |
+| `app/booking/game-status.tsx` — Game Status | `82fe302` | 23 mapped, 1 exempt (avatar initials). Check-in code → `statNumber`. |
+
+**The court booking flow is complete** — 9 screens plus `StatusChip`. 5 styles
+remain unmapped across the whole flow, every one of them an explicit exemption:
+3 below the 11pt floor (decision 10) and 2 avatar initials sized to their
+container.
+
 ## Known outstanding
 
 Counts measured 2026-09-03 across `apps/mobile/src/**/*.tsx`. Occurrences and
