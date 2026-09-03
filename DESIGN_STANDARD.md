@@ -287,6 +287,8 @@ One screen per commit, so any screen can be reverted alone.
 | `app/booking/index.tsx` — Book a Court | `1c0aed1` | First. Five radii 14 → 10. Added `fieldLabel`, `actionLarge`. Control labels 14/700 → `body` 15/500. Confirmed on device. |
 | `app/facility/[id].tsx` — Facility detail (shape) | `9434505` | Five full-width CTAs 30 → 10, the first dramatic look at decision 1. Confirmed on device. |
 | `app/facility/[id].tsx` — Facility detail (type) | see log | First attempt shipped half-mapped and was reverted (`18592ef`) — it exposed the rule-11 hole. Redone complete under option A. |
+| `components/PrimaryButton.tsx` — shared, 31 screens | `pending` | radius 14 → `shape.cta` 10; label 16/700 → `actionLarge` 16/800. |
+| `components/SecondaryButton.tsx` — shared, 16 screens | `pending` | Same two changes. |
 | `components/StatusChip.tsx` — shared, 33 screens | `b0fd68d` | Two values. Radius identical; label 11/700 → `cardLabel` 11/800 is the whole visible effect. |
 | `app/booking/choose-time.tsx` — Choose Time | `22414dd` | First screen needing **no new roles** — all 22 text styles mapped to the existing set. Three radii 14 → 10. Price 15/800 → `rowValue` 14/800, matching facility detail. |
 

@@ -3,10 +3,12 @@ import {
   Text, StyleSheet, TouchableOpacity, ViewStyle, TextStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text as type } from '@shared/tokens';
 
 /**
- * SecondaryButton — white background, gold border, navy text, radius 14.
+ * SecondaryButton — white background, gold border, navy text, radius 10 (shape.cta).
  * The single canonical secondary action.
  */
 export function SecondaryButton({
@@ -36,10 +38,10 @@ const s = StyleSheet.create({
   btn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: colors.bg, borderWidth: 1.5, borderColor: colors.gold,
-    borderRadius: radius.button, paddingHorizontal: 24, paddingVertical: 13.5,
+    borderRadius: shape.cta, paddingHorizontal: 24, paddingVertical: 13.5,
   },
   disabled: { opacity: 0.5 },
-  text: { color: colors.navy, fontSize: 16, fontWeight: '700' },
+  text: { color: colors.navy, fontSize: type.actionLarge.size, fontWeight: '800' },
 });
 
 export default SecondaryButton;
