@@ -19,6 +19,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const SHEET_HEIGHT  = 300;
@@ -60,11 +62,11 @@ function TagPill({ icon, label }: { icon: string; label: string }) {
 const tp = StyleSheet.create({
   pill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: shape.pill,
     paddingHorizontal: 10, paddingVertical: 5,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
   },
-  label: { color: '#FFFFFF', fontSize: 11, fontWeight: '600' },
+  label: { color: '#FFFFFF', fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 });
 
 // ─── Action button ────────────────────────────────────────────────────────────
@@ -82,15 +84,15 @@ function ActionBtn({ icon, label, onPress, filled }: {
   );
 }
 const ab = StyleSheet.create({
-  wrap:         { alignItems: 'center', gap: 8 },
+  wrap: { alignItems: 'center', gap: 8 },
   circle: {
     width: 70, height: 70, borderRadius: 35,
     backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E0E8F5',
     alignItems: 'center', justifyContent: 'center',
   },
   circleFilled: { backgroundColor: L.gold, borderColor: L.gold },
-  label:        { color: L.text, fontSize: 14, fontWeight: '600' },
-  labelFilled:  { color: L.gold },
+  label: { color: L.text, fontSize: text.controlLabel.size, fontWeight: '700' },
+  labelFilled: { color: L.gold },
 });
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -383,10 +385,10 @@ export default function PartnerFinderScreen() {
       <>
         <Tabs.Screen options={{ tabBarStyle: { display: 'none' } }} />
         <View style={[s.root, { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }]}>
-          <Text style={{ color: L.gold, fontSize: 18, fontWeight: '700', textAlign: 'center', marginBottom: 8 }}>
+          <Text style={{ color: L.gold, fontSize: text.titleSm.size, fontWeight: '800', textAlign: 'center', marginBottom: 8 }}>
             No partners found
           </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, textAlign: 'center' }}>
+          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: text.caption.size, fontWeight: '500', textAlign: 'center' }}>
             Check back later or update your preferences.
           </Text>
         </View>
@@ -731,11 +733,11 @@ const s = StyleSheet.create({
 
   // Tap zones
   tapZones: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, flexDirection: 'row', zIndex: 4 },
-  tapHalf:  { flex: 1 },
+  tapHalf: { flex: 1 },
 
   // Progress bar
-  progressRow:    { position: 'absolute', left: 16, right: 16, flexDirection: 'row', gap: 4, zIndex: 10 },
-  progressSeg:    { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.28)' },
+  progressRow: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', gap: 4, zIndex: 10 },
+  progressSeg: { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.28)' },
   progressActive: { backgroundColor: L.gold },
 
   // Top controls
@@ -763,10 +765,10 @@ const s = StyleSheet.create({
   swipeBadge: {
     position: 'absolute', top: SH * 0.14, zIndex: 12,
     paddingHorizontal: 18, paddingVertical: 10,
-    borderRadius: 10, borderWidth: 3,
+    borderRadius: shape.cta, borderWidth: 3,
   },
   passBadge:        { left: 24,  borderColor: '#FF4D4D', transform: [{ rotate: '-15deg' }] },
-  passBadgeText:    { color: '#FF4D4D', fontSize: 28, fontWeight: '900', letterSpacing: 2 },
+  passBadgeText: { color: '#FF4D4D', fontSize: 28, fontWeight: '900', letterSpacing: 2 },
   connectBadge:     { right: 24, borderColor: L.online,  transform: [{ rotate: '15deg'  }] },
   connectBadgeText: { color: L.online,  fontSize: 28, fontWeight: '900', letterSpacing: 2 },
 
@@ -785,44 +787,44 @@ const s = StyleSheet.create({
     borderBottomWidth: 0,
   },
 
-  nameRow:    { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
-  playerName: { color: '#FFF', fontSize: 29, fontWeight: '900', letterSpacing: -0.5 },
+  nameRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
+  playerName: { color: '#FFF', fontSize: text.heroTitle.size, fontWeight: '800', letterSpacing: -0.5 },
 
   pulseWrap: { position: 'relative', width: 14, height: 14, marginLeft: 10, marginTop: 11 },
   pulseRing: { position: 'absolute', width: 14, height: 14, borderRadius: 7, backgroundColor: L.online },
-  pulseDot:  { width: 9, height: 9, borderRadius: 4.5, backgroundColor: L.online, margin: 2.5 },
+  pulseDot: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: L.online, margin: 2.5 },
 
-  metaRow:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 5 },
-  metaDot:   { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.35)' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 5 },
+  metaDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.35)' },
   inlineRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
-  duprText:     { color: '#FFF',                      fontSize: 13, fontWeight: '700' },
-  compatText:   { color: L.gold,                      fontSize: 12, fontWeight: '700' },
-  locationText: { color: 'rgba(255,255,255,0.75)',    fontSize: 12, fontWeight: '500' },
-  lookingLabel: { color: 'rgba(255,255,255,0.60)',    fontSize: 12, fontWeight: '400' },
-  lookingValue: { color: '#FFF',                      fontSize: 12, fontWeight: '800' },
-  skillRange:   { color: L.gold,                      fontSize: 12, fontWeight: '600' },
-  tagsRow:      { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginBottom: 10 },
+  duprText: { color: '#FFF',                      fontSize: text.chipValue.size, fontWeight: '800' },
+  compatText: { color: L.gold,                      fontSize: text.chipValue.size, fontWeight: '800' },
+  locationText: { color: 'rgba(255,255,255,0.75)',    fontSize: text.caption.size, fontWeight: '500' },
+  lookingLabel: { color: 'rgba(255,255,255,0.60)',    fontSize: text.caption.size, fontWeight: '500' },
+  lookingValue: { color: '#FFF',                      fontSize: text.chipValue.size, fontWeight: '800' },
+  skillRange: { color: L.gold,                      fontSize: text.chipValue.size, fontWeight: '800' },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginBottom: 10 },
 
-  cardBottom:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  infoBtn:       { padding: 2 },
+  cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  infoBtn: { padding: 2 },
   photoCount: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: shape.cta,
     paddingHorizontal: 9, paddingVertical: 4,
   },
-  photoCountText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
+  photoCountText: { color: '#FFF', fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 
   hintDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.10)', marginBottom: 10 },
 
   // Swipe hint — now inside card
   swipeHintWrap: { alignItems: 'center', gap: 5, paddingTop: 15, paddingBottom: 10 },
-  swipeHandRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  swipeHintText: { color: 'rgba(255,255,255,0.52)', fontSize: 11, fontWeight: '500', letterSpacing: 0.2 },
+  swipeHandRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  swipeHintText: { color: 'rgba(255,255,255,0.52)', fontSize: text.caption.size, fontWeight: '500', letterSpacing: 0.2 },
 
   // ── Shared sheet styles ───────────────────────────────────────────────────
   handleWrap: { alignItems: 'center', paddingVertical: 8 },
-  handle:     { width: 40, height: 4, borderRadius: 2, backgroundColor: '#D0D8E8' },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#D0D8E8' },
 
   // Info sheet
   sheet: {
@@ -836,12 +838,12 @@ const s = StyleSheet.create({
     elevation: 12,
   },
   sheetHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  sheetTitle:    { color: L.navy, fontSize: 20, fontWeight: '900', textAlign: 'center', flex: 1 },
+  sheetTitle: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900', textAlign: 'center', flex: 1 },
   sheetCloseBtn: { position: 'absolute', right: 0, width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  sheetSub:      { color: L.textMuted, fontSize: 14, textAlign: 'center', marginBottom: 20 },
-  actionRow:     { flexDirection: 'row', justifyContent: 'center', gap: 28, marginBottom: 16 },
-  sheetHintRow:  { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 },
-  sheetHintLabel:{ color: L.textMuted, fontSize: 12 },
+  sheetSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', marginBottom: 20 },
+  actionRow: { flexDirection: 'row', justifyContent: 'center', gap: 28, marginBottom: 16 },
+  sheetHintRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 },
+  sheetHintLabel: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // ── Report sheet ──────────────────────────────────────────────────────────
   reportSheet: {
@@ -866,14 +868,14 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: '#FFCCCC',
   },
-  reportTitle: { color: L.navy, fontSize: 18, fontWeight: '900' },
-  reportSub:   { color: L.textMuted, fontSize: 13, marginTop: 1 },
+  reportTitle: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900' },
+  reportSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
 
   reasonList: { gap: 6, marginBottom: 20 },
   reasonRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 11, paddingHorizontal: 14,
-    borderRadius: 12, borderWidth: 1.5, borderColor: L.border,
+    borderRadius: shape.panel, borderWidth: 1.5, borderColor: L.border,
     backgroundColor: '#FAFBFF',
   },
   reasonRowSelected: {
@@ -885,29 +887,29 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   reasonIconSelected: { backgroundColor: L.navy },
-  reasonLabel:        { color: L.text, fontSize: 14, fontWeight: '500', flex: 1 },
-  reasonLabelSelected:{ fontWeight: '700' },
+  reasonLabel: { color: L.text, fontSize: text.body.size, fontWeight: '500', flex: 1 },
+  reasonLabelSelected: { fontWeight: '700' },
 
   reportSubmitBtn: {
-    backgroundColor: L.navy, borderRadius: 14,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingVertical: 15, alignItems: 'center', marginBottom: 10,
   },
   reportSubmitBtnDisabled: { opacity: 0.38 },
-  reportSubmitText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+  reportSubmitText: { color: '#FFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 
   reportCancelWrap: { alignItems: 'center', paddingVertical: 6 },
-  reportCancelText: { color: L.textMuted, fontSize: 14, fontWeight: '500' },
+  reportCancelText: { color: L.textMuted, fontSize: text.action.size, fontWeight: '800' },
 
   // Confirmation
-  reportConfirm:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 20 },
+  reportConfirm: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 20 },
   reportConfirmIcon: { marginBottom: 14 },
-  reportConfirmTitle:{ color: L.navy, fontSize: 22, fontWeight: '900', marginBottom: 8 },
-  reportConfirmSub:  { color: L.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 20, maxWidth: 280, marginBottom: 28 },
+  reportConfirmTitle: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900', marginBottom: 8 },
+  reportConfirmSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 20, maxWidth: 280, marginBottom: 28 },
   reportDoneBtn: {
-    backgroundColor: L.navy, borderRadius: 14,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingVertical: 14, paddingHorizontal: 48,
   },
-  reportDoneBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+  reportDoneBtnText: { color: '#FFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 });
 
 const mm = StyleSheet.create({
@@ -951,18 +953,18 @@ const mm = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 8,
     marginHorizontal: 5,
-    borderRadius: 11,
+    borderRadius: shape.panel,
     height: 50,
   },
   rowFirst: { marginTop: 4 },
 
   iconWrap: {
-    width: 32, height: 32, borderRadius: 9,
+    width: 32, height: 32, borderRadius: shape.cta,
     backgroundColor: '#F3F6FC',
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   },
-  rowLabel:       { color: L.navy, fontSize: 14, fontWeight: '500', letterSpacing: 0 },
+  rowLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', letterSpacing: 0 },
   rowLabelDanger: { color: L.danger },
 
   divider: {
