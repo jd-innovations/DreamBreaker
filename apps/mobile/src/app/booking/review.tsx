@@ -4,7 +4,9 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { StatusChip, AppIcon, type AppIconName } from '@/components';
 import {
@@ -537,8 +539,8 @@ function Row({ icon, label, value }: { icon: AppIconName; label: string; value: 
 }
 const rw = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
-  label: { color: L.textSub, fontSize: 13, fontWeight: '600', width: 100 },
-  value: { flex: 1, color: L.text, fontSize: 14, fontWeight: '700', textAlign: 'right' },
+  label: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', width: 100 },
+  value: { flex: 1, color: L.text, fontSize: text.rowValue.size, fontWeight: '800', textAlign: 'right' },
 });
 
 const s = StyleSheet.create({
@@ -550,49 +552,49 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.screenH, paddingVertical: spacing.screenV, backgroundColor: L.bg,
   },
   iconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  title:   { color: L.navy, fontSize: 17, fontWeight: '900' },
+  title:   { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
 
   card: {
-    backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
     padding: spacing.lg, marginTop: spacing.md,
   },
-  sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: spacing.sm },
-  playersText: { color: L.textSub, fontSize: 12, fontWeight: '600' },
+  sectionTitle: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase', marginBottom: spacing.sm },
+  playersText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 },
   priceRowFinal: { borderTopWidth: 1, borderTopColor: L.border, marginTop: 4, paddingTop: 10 },
-  priceLabel: { color: L.textSub, fontSize: 13, fontWeight: '600' },
-  priceValue: { color: L.text, fontSize: 14, fontWeight: '700' },
-  priceStrike: { color: L.textSub, fontSize: 14, fontWeight: '600', textDecorationLine: 'line-through' },
-  priceDiscount: { color: colors.success, fontSize: 14, fontWeight: '700' },
-  priceFinalLabel: { color: L.navy, fontSize: 15, fontWeight: '800' },
-  priceFinalValue: { color: L.navy, fontSize: 18, fontWeight: '900' },
-  priceNote: { color: L.textSub, fontSize: 11, fontWeight: '500', marginTop: 8 },
+  priceLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  priceValue: { color: L.text, fontSize: text.rowValue.size, fontWeight: '800' },
+  priceStrike: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textDecorationLine: 'line-through' },
+  priceDiscount: { color: colors.success, fontSize: text.rowValue.size, fontWeight: '800' },
+  priceFinalLabel: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  priceFinalValue: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  priceNote: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 8 },
 
   paymentNotice: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: L.page, borderRadius: radius.card, padding: spacing.md, marginTop: spacing.md,
+    backgroundColor: L.page, borderRadius: shape.card, padding: spacing.md, marginTop: spacing.md,
   },
-  paymentNoticeText: { flex: 1, color: L.textSub, fontSize: 12, fontWeight: '500', lineHeight: 17 },
+  paymentNoticeText: { flex: 1, color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17 },
 
   holdBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: L.goldBg, borderRadius: radius.card,
+    backgroundColor: L.goldBg, borderRadius: shape.card,
     paddingHorizontal: spacing.md, paddingVertical: 10, marginTop: spacing.md,
   },
-  holdBannerText: { flex: 1, color: L.text, fontSize: 12, fontWeight: '600' },
+  holdBannerText: { flex: 1, color: L.text, fontSize: text.caption.size, fontWeight: '500' },
 
   paymentErrorCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: colors.dangerBg, borderRadius: radius.card, padding: spacing.md, marginTop: spacing.md,
+    backgroundColor: colors.dangerBg, borderRadius: shape.card, padding: spacing.md, marginTop: spacing.md,
   },
-  paymentErrorText: { flex: 1, color: L.text, fontSize: 12, fontWeight: '500', lineHeight: 17 },
-  paymentFootnote: { color: L.textSub, fontSize: 11, fontWeight: '500', textAlign: 'center', marginTop: spacing.md },
+  paymentErrorText: { flex: 1, color: L.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17 },
+  paymentFootnote: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', marginTop: spacing.md },
 
-  primaryBtn: { backgroundColor: L.navy, borderRadius: radius.button, paddingVertical: 16, alignItems: 'center', marginTop: spacing.xl },
-  primaryBtnText: { color: L.white, fontSize: 15, fontWeight: '800' },
+  primaryBtn: { backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 16, alignItems: 'center', marginTop: spacing.xl },
+  primaryBtnText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
 
-  errorText: { color: L.textSub, fontSize: 14, fontWeight: '500', textAlign: 'center' },
-  errorBackBtn: { marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: radius.button, backgroundColor: L.navy },
-  errorBackText: { color: L.white, fontSize: 14, fontWeight: '700' },
+  errorText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center' },
+  errorBackBtn: { marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: shape.cta, backgroundColor: L.navy },
+  errorBackText: { color: L.white, fontSize: text.action.size, fontWeight: '800' },
 });
