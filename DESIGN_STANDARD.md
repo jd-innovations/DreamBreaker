@@ -136,6 +136,52 @@ with a measurement. The scale floor is 11. Facility detail has a 9pt type label
 and two 10pt status labels; they are left alone rather than forced upward,
 because nothing in the reference screens measures them.
 
+**11. Job match is required. Coincidental size/weight equality is not a match.**
+`actionLarge` is a button role that happens to be 16/800; a card header is also
+16/800 and is not a button. Same numbers, different job, so it is not a match —
+propose a role instead.
+
+*Why this exists:* decision 9 ("roles are size and weight") and the map-by-job
+rule contradict each other, and on facility detail that gap was resolved three
+times by judgement and not consistently — two 11/800 styles were mapped to
+`cardLabel` on numbers alone while a third identical one was skipped. Rule 11
+settles it in favour of job.
+
+**12. A screen is not done until every style maps to a role or is exempted by a
+decision.** No partial migrations. A half-mapped screen looks migrated and is
+not, which is worse than either extreme. If a screen cannot be finished, propose
+the missing roles and leave the screen alone until they are decided.
+
+---
+
+## Proposed roles — NOT DECIDED
+
+Facility detail has nine styles with no matching role. All values below are
+measured from that screen; none is invented. Two ways to close them:
+
+**Option A — five roles, four small visual changes** (recommended)
+
+| Role | Value | Absorbs | Change |
+| --- | --- | --- | --- |
+| `rowTitle` | 14 / 700 | list row primary (`ic.name`) | none |
+| `rowValue` | 14 / 800 | list row value (`ic.price`) | none |
+| `titleSm` | 16 / 800 | card header 16/800 (none), venue name 15/800, sheet title 18/900 | venue name +1; sheet title 18/900 → 16/800 |
+| `controlLabel` | 13 / 700 | tab labels (`invTabText`) | none |
+| `chipValue` | 12 / 800 | chip time 12/800, chip count 11/700, joinable 11/800 | both 11pt values → 12 |
+
+**Option B — admit all nine values as roles.** No visual change anywhere, but
+the scale goes from 12 roles to 21, and 14/700, 14/800, 15/800, 16/800, 18/900,
+13/700, 12/800, 11/700 and 11/800 all become permanent. That is close to
+describing the app rather than standardising it.
+
+**Note against decision 4:** the earlier answer on the 14pt cluster was "map
+each by job" rather than "add a 14pt role". Option A partially reverses that by
+admitting 14 for list rows specifically. That is deliberate — the cluster
+question was about body text and CTA labels, which did map; list row titles and
+values were flagged as needing a call at the time.
+
+Until this is decided, facility detail stays on Commit A (radius) only.
+
 ---
 
 ## Where the tokens live
