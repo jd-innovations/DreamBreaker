@@ -102,6 +102,40 @@ them as plain numbers; web formats to rem at generation (`--radius` emits
 `radius.base / 16` + `rem`), React Native consumes them directly. Verified with
 `node scripts/gen-tokens.mjs --check`, which passes, so web CSS is unchanged.
 
+**6. Section labels are 13/800, ls 0.8, navy.** Facility detail's treatment
+wins over the reference's 11/700/ls1.2 muted ("QUICK ACTIONS"). This is the one
+value in the standard that does **not** come from the reference screens; it was
+chosen deliberately over the measured one. *Consequence:* when Home is migrated,
+"QUICK ACTIONS" grows and turns navy.
+
+**7. `actionLarge` stays 16/800.** Book a Court (already shipped and reviewed)
+uses 16; facility detail used 15 for the same job. Sixteen wins, so facility's
+five CTA labels grow by a point and nothing already approved moves.
+
+**8. `heroTitle` 26/800 lh30 is a role.** A title over a hero image is not
+`statNumber` (26/900) or `cardTitle` (22/800). Added at facility detail's
+existing value, so nothing changes there — and tournament and community hero
+screens now have something to reuse instead of each inventing one.
+
+**9. Roles are atomic: size AND weight together.** Applying a role means taking
+both. The single exception is **state variants** — selected, active, disabled,
+pressed — which may override weight, as a selected segment does.
+
+*Why:* roughly twenty styles on facility detail use a scale size with an
+off-scale weight (11/700, 12/600, 12/700, 12/800, 13/700, 14/600). If weight
+stays free, "consistency" only ever means consistent sizes and the weights stay
+as scattered as they are today.
+
+*Consequence:* those styles shift weight, mostly getting lighter. And
+`helperText` in `booking/index.tsx` needs correcting — it took `action`'s size
+(13) but kept weight 600 where the role is 800. That was an inconsistency
+introduced before this rule existed.
+
+**10. Sizes below 11 have no role and stay as they are** until one is proposed
+with a measurement. The scale floor is 11. Facility detail has a 9pt type label
+and two 10pt status labels; they are left alone rather than forced upward,
+because nothing in the reference screens measures them.
+
 ---
 
 ## Where the tokens live
@@ -144,6 +178,13 @@ labels and a full-width button, the original nine roles came from card screens
 that have neither, and applying `action` (13/800) to a primary submit button
 would have shrunk it by three points. The screen was right and the scale was
 incomplete — which is the expected direction.
+
+**But do not escalate what the decisions already answer.** The rules above are
+the defaults; apply them and show the result. A new question is warranted only
+when a style has no role and no decision covers it. If a default produces
+something that looks wrong on device, that is a finding to report after the
+fact, not a reason to stop before starting — every migration is one revertible
+commit, so the cost of being wrong is a `git revert`, not a redesign.
 
 **Expect form screens to keep finding gaps.** The reference is three
 browse/card screens. Forms, settings, empty states, modals and flows will

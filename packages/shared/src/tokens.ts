@@ -220,6 +220,8 @@ export const space = {
  * shrunk it by three points. Both new values are what that screen already used.
  */
 export const text = {
+  /** Title over a hero image. Added 2026-09-03 (facility detail). */
+  heroTitle:    { size: 26, weight: 800, lineHeight: 30 },
   statNumber:   { size: 26, weight: 900 },
   cardTitle:    { size: 22, weight: 800, lineHeight: 26 },
   sectionTitle: { size: 17, weight: 900 },
@@ -231,9 +233,18 @@ export const text = {
   /** In-card CTAs. */
   action:       { size: 13, weight: 800 },
   link:         { size: 13, weight: 700 },
+  /**
+   * Uppercase screen section headings: "BOOK A COURT".
+   *
+   * Decision 2026-09-03. This is the ONE value here that does not come from the
+   * reference screens — they use 11/700/ls1.2 muted ("QUICK ACTIONS"), and this
+   * is the 13/800/ls0.8 navy treatment from facility detail, chosen
+   * deliberately over the measured one. Consequence: when Home is migrated,
+   * "QUICK ACTIONS" grows and turns navy.
+   */
+  sectionLabel: { size: 13, weight: 800, letterSpacing: 0.8, uppercase: true },
   caption:      { size: 12, weight: 500 },
   cardLabel:    { size: 11, weight: 800, letterSpacing: 0.8, uppercase: true },
-  sectionLabel: { size: 11, weight: 700, letterSpacing: 1.2, uppercase: true },
 } as const;
 
 export type RadiusToken = keyof typeof radius;
