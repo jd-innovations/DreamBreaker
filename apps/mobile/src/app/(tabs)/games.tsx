@@ -15,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components';
 import { useSlideMenu } from '@/components/SlideMenu';
 import { getUpcomingEvents, getCompletedEvents, type GameCard } from '@/lib/gameEventHelpers';
@@ -166,8 +168,8 @@ function SectionHeader({ title }: { title: string }) {
 }
 
 const sec = StyleSheet.create({
-  row:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  title: { color: L.navy, fontSize: 15, fontWeight: '800', letterSpacing: 0.3 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  title: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing },
 });
 
 // ─── Invite Card ──────────────────────────────────────────────────────────────
@@ -249,32 +251,32 @@ function InviteCard({
 
 const inv = StyleSheet.create({
   card: {
-    backgroundColor: L.bg, borderRadius: 16,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1.5, borderColor: '#E8C97A',
     padding: 16, marginBottom: 20,
   },
-  headerRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  label:      { color: L.gold, fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
-  body:       { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  label: { color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  body: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   avatar: {
     width: 52, height: 52, borderRadius: 26,
     backgroundColor: L.borderLight, alignItems: 'center', justifyContent: 'center',
     flexShrink: 0, overflow: 'hidden',
   },
-  nameRow:    { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 4 },
-  invitedBy:  { color: L.textSub, fontSize: 13, fontWeight: '400', flex: 1 },
-  eventName:  { color: L.navy, fontSize: 17, fontWeight: '800', marginBottom: 8 },
-  metaRow:    { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
-  meta:       { color: L.textMuted, fontSize: 12 },
-  actions:    { flexDirection: 'row', gap: 10 },
+  nameRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 4 },
+  invitedBy: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
+  eventName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', marginBottom: 8 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
+  meta: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  actions: { flexDirection: 'row', gap: 10 },
   declineBtn: {
-    flex: 1, paddingVertical: 12, borderRadius: 10,
+    flex: 1, paddingVertical: 12, borderRadius: shape.cta,
     borderWidth: 1.5, borderColor: L.gold, alignItems: 'center',
   },
-  declineText: { color: L.gold, fontSize: 15, fontWeight: '700' },
-  acceptBtn:  { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: L.gold, alignItems: 'center' },
-  acceptText: { color: L.bg, fontSize: 15, fontWeight: '700' },
+  declineText: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
+  acceptBtn: { flex: 1, paddingVertical: 12, borderRadius: shape.cta, backgroundColor: L.gold, alignItems: 'center' },
+  acceptText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 });
 
 // ─── Community Play Card ──────────────────────────────────────────────────────
@@ -381,7 +383,7 @@ function CommunityCard(p: CommunityCardProps) {
 const cc = StyleSheet.create({
   card: {
     backgroundColor: L.bg,
-    borderRadius: 16,
+    borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: 16, marginBottom: 10,
   },
@@ -391,12 +393,12 @@ const cc = StyleSheet.create({
   },
   typeTag: { alignSelf: 'flex-start' },
   typeText: {
-    color: L.gold, fontSize: 11, fontWeight: '800', letterSpacing: 0.8,
+    color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing,
   },
   statusBadge: {
-    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4,
+    borderRadius: shape.pill, paddingHorizontal: 12, paddingVertical: 4,
   },
-  statusText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  statusText: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   chatDotWrap: { position: 'relative' },
   chatDot: {
     position: 'absolute', top: -1, right: -2,
@@ -404,13 +406,13 @@ const cc = StyleSheet.create({
     backgroundColor: L.gold, borderWidth: 1.5, borderColor: L.bg,
   },
   title: {
-    color: L.navy, fontSize: 20, fontWeight: '900',
+    color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800',
     lineHeight: 24, marginBottom: 8,
   },
   metaRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8,
   },
-  metaText: { color: '#000000', fontSize: 15, fontWeight: '500', flex: 1 },
+  metaText: { color: '#000000', fontSize: text.body.size, fontWeight: '500', flex: 1 },
   divider: {
     height: StyleSheet.hairlineWidth, backgroundColor: L.border,
     marginTop: 6, marginBottom: 12,
@@ -419,8 +421,8 @@ const cc = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   countGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  countText:  { color: L.navy, fontSize: 15, fontWeight: '800' },
-  spotsText:  { color: L.gold, fontSize: 13, fontWeight: '700' },
+  countText: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
+  spotsText: { color: L.gold, fontSize: text.caption.size, fontWeight: '500' },
 });
 
 // ─── Event Row ────────────────────────────────────────────────────────────────
@@ -495,34 +497,34 @@ function EventRow(p: EventRowProps) {
 const ev = StyleSheet.create({
   row: {
     flexDirection: 'row', gap: 12,
-    backgroundColor: L.bg, borderRadius: 14,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: 14, marginBottom: 10,
     alignItems: 'flex-start',
   },
   logo: {
-    width: 64, height: 64, borderRadius: 12,
+    width: 64, height: 64, borderRadius: shape.panel,
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0, padding: 4,
   },
   logoImg: {
-    width: 64, height: 64, borderRadius: 12,
+    width: 64, height: 64, borderRadius: shape.panel,
     flexShrink: 0,
   },
-  logoText:    { fontWeight: '800', textAlign: 'center', lineHeight: 12 },
-  badge:       { borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0 },
-  badgeText:   { fontSize: 11, fontWeight: '700' },
-  type:        { color: L.gold, fontSize: 10, fontWeight: '800', letterSpacing: 0.5, marginBottom: 2 },
-  titleRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 2 },
-  title:       { color: L.navy, fontSize: 18, fontWeight: '800', flex: 1 },
-  subtitle:    { color: L.textSub, fontSize: 12, marginBottom: 4 },
-  metaRow:     { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
-  meta:        { color: L.textMuted, fontSize: 11 },
+  logoText: { fontWeight: '800', textAlign: 'center', lineHeight: 12 },
+  badge: { borderRadius: shape.pill, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0 },
+  badgeText: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  type: { color: L.gold, fontSize: 10, fontWeight: '800', letterSpacing: 0.5, marginBottom: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 2 },
+  title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', flex: 1 },
+  subtitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 4 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
+  meta: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   capacityRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
-  resultRow:   { flexDirection: 'row', gap: 20, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: L.borderLight },
-  resultCell:  { gap: 2 },
-  resultLabel: { color: L.textMuted, fontSize: 11 },
-  resultValue: { color: L.navy, fontSize: 13, fontWeight: '800' },
+  resultRow: { flexDirection: 'row', gap: 20, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: L.borderLight },
+  resultCell: { gap: 2 },
+  resultLabel: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  resultValue: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
 });
 
 // ─── Upcoming Content ─────────────────────────────────────────────────────────
@@ -566,8 +568,8 @@ function UpcomingContent({
       {isEmpty ? (
         <View style={{ alignItems: 'center', paddingVertical: 48, gap: 12 }}>
           <Ionicons name="calendar-outline" size={48} color={L.textMuted} />
-          <Text style={{ color: L.text, fontSize: 17, fontWeight: '800' }}>No upcoming events</Text>
-          <Text style={{ color: L.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 22 }}>
+          <Text style={{ color: L.text, fontSize: text.titleSm.size, fontWeight: '800' }}>No upcoming events</Text>
+          <Text style={{ color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 22 }}>
             Create a Quick Game, Round Robin, or Mini Tournament to get started.
           </Text>
         </View>
@@ -637,8 +639,8 @@ function JoinedContent({ events, unreadEventIds }: { events: SBGameCard[]; unrea
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 }}>
         <Ionicons name="people-outline" size={52} color={L.textMuted} />
-        <Text style={{ color: L.text, fontSize: 18, fontWeight: '800' }}>You haven't joined any events yet</Text>
-        <Text style={{ color: L.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 22 }}>
+        <Text style={{ color: L.text, fontSize: text.titleSm.size, fontWeight: '800' }}>You haven't joined any events yet</Text>
+        <Text style={{ color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 22 }}>
           Browse and join a Quick Game, Round Robin, or Mini Tournament.
         </Text>
         <TouchableOpacity
@@ -646,7 +648,7 @@ function JoinedContent({ events, unreadEventIds }: { events: SBGameCard[]; unrea
           onPress={() => router.push('/play-pickleball' as never)}
           activeOpacity={0.85}
         >
-          <Text style={{ color: L.gold, fontSize: 14, fontWeight: '800' }}>Create Community Play</Text>
+          <Text style={{ color: L.gold, fontSize: text.action.size, fontWeight: '800' }}>Create Community Play</Text>
         </TouchableOpacity>
       </View>
     );
@@ -703,11 +705,11 @@ function PastRangeFilter({ value, onChange }: { value: PastRange; onChange: (r: 
 const pf = StyleSheet.create({
   row: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   chip: {
-    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: shape.pill,
     borderWidth: 1, borderColor: L.border, backgroundColor: L.bg,
   },
   chipActive: { backgroundColor: L.navy, borderColor: L.navy },
-  chipText: { color: L.textSub, fontSize: 12, fontWeight: '700' },
+  chipText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   chipTextActive: { color: L.gold },
 });
 
@@ -751,17 +753,17 @@ function PastTypeFilterDropdown({ value, onChange }: { value: PastTypeFilter; on
 const tf = StyleSheet.create({
   trigger: {
     flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: shape.cta,
     borderWidth: 1, borderColor: L.border, backgroundColor: L.bg,
   },
-  triggerText: { color: L.navy, fontSize: 13, fontWeight: '700' },
+  triggerText: { color: L.navy, fontSize: text.controlLabel.size, fontWeight: '700' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: L.bg, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingVertical: 8, paddingBottom: 24 },
   option: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingVertical: 14,
   },
-  optionText: { color: L.text, fontSize: 15, fontWeight: '600' },
+  optionText: { color: L.text, fontSize: text.body.size, fontWeight: '500' },
   optionTextActive: { color: L.navy, fontWeight: '800' },
 });
 
@@ -801,11 +803,11 @@ function PastContent({
         <PastTypeFilterDropdown value={typeFilter} onChange={onTypeFilterChange} />
         <View style={{ alignItems: 'center', paddingVertical: 48, gap: 12 }}>
           <Ionicons name="time-outline" size={52} color={L.textMuted} />
-          <Text style={{ color: L.text, fontSize: 18, fontWeight: '800' }}>
+          <Text style={{ color: L.text, fontSize: text.titleSm.size, fontWeight: '800' }}>
             {loading ? 'Loading…' : 'No past events'}
           </Text>
           {!loading && (
-            <Text style={{ color: L.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 22 }}>
+            <Text style={{ color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 22 }}>
               {events.length > 0
                 ? 'No events match this filter.'
                 : 'Completed and cancelled events will appear here.'}
@@ -883,8 +885,8 @@ function CompletedContent({ events }: { events: (GameCard | SBGameCard)[] }) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 }}>
         <Ionicons name="checkmark-circle-outline" size={52} color={L.textMuted} />
-        <Text style={{ color: L.text, fontSize: 18, fontWeight: '800' }}>No completed games</Text>
-        <Text style={{ color: L.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 22 }}>
+        <Text style={{ color: L.text, fontSize: text.titleSm.size, fontWeight: '800' }}>No completed games</Text>
+        <Text style={{ color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 22 }}>
           Games you've finished will appear here.
         </Text>
       </View>
@@ -1022,7 +1024,7 @@ function HeldTournamentCard({ spot }: { spot: HeldSpot }) {
 
 const hs = StyleSheet.create({
   card: {
-    backgroundColor: L.bg, borderRadius: 14,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     marginBottom: 12, overflow: 'hidden',
   },
@@ -1031,19 +1033,19 @@ const hs = StyleSheet.create({
     padding: 14, paddingBottom: 10,
   },
   logoBox: {
-    width: 56, height: 56, borderRadius: 12,
+    width: 56, height: 56, borderRadius: shape.panel,
     backgroundColor: L.navy,
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0, padding: 4,
   },
   logoLine1: { color: L.goldFill, fontSize: 9, fontWeight: '900', textAlign: 'center' },
   logoLine2: { color: L.goldFill, fontSize: 9, fontWeight: '900', textAlign: 'center' },
-  label:     { color: L.goldFill, fontSize: 10, fontWeight: '800', letterSpacing: 0.5, marginBottom: 2 },
-  title:     { color: L.navy, fontSize: 18, fontWeight: '800', marginBottom: 2 },
-  division:  { color: L.textSub, fontSize: 12 },
+  label: { color: L.goldFill, fontSize: 10, fontWeight: '800', letterSpacing: 0.5, marginBottom: 2 },
+  title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', marginBottom: 2 },
+  division: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   heldBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: L.greenBg, borderRadius: 20,
+    backgroundColor: L.greenBg, borderRadius: shape.pill,
     paddingHorizontal: 8, paddingVertical: 4, flexShrink: 0,
   },
   heldBadgeText: { color: L.green, fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
@@ -1051,29 +1053,29 @@ const hs = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap',
     paddingHorizontal: 14, paddingBottom: 12,
   },
-  meta: { color: L.textMuted, fontSize: 12 },
+  meta: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   feesRow: {
     flexDirection: 'row',
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
     backgroundColor: L.page,
   },
-  feeCell:      { flex: 1, alignItems: 'center', paddingVertical: 10, gap: 3 },
-  feeDivider:   { width: StyleSheet.hairlineWidth, backgroundColor: L.border },
+  feeCell: { flex: 1, alignItems: 'center', paddingVertical: 10, gap: 3 },
+  feeDivider: { width: StyleSheet.hairlineWidth, backgroundColor: L.border },
   feeCellLabel: { color: L.textSub, fontSize: 10, fontWeight: '600' },
-  feeCellValue: { color: L.navy,    fontSize: 14, fontWeight: '800' },
+  feeCellValue: { color: L.navy,    fontSize: text.rowValue.size, fontWeight: '800' },
   actions: { flexDirection: 'row', gap: 8, padding: 12, alignItems: 'center' },
   viewBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderWidth: 1.5, borderColor: L.border, borderRadius: 10,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
     paddingVertical: 9, paddingHorizontal: 14,
   },
-  viewBtnText:    { color: L.navy, fontSize: 13, fontWeight: '700' },
-  registerBtn:    {
+  viewBtnText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
+  registerBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: L.navy, borderRadius: 10, paddingVertical: 10,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 10,
   },
-  registerBtnText:{ color: L.bg, fontSize: 13, fontWeight: '700' },
+  registerBtnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 });
 
 // ─── Held Spots Content ───────────────────────────────────────────────────────
@@ -1083,8 +1085,8 @@ function HeldSpotsContent({ spots }: { spots: HeldSpot[] }) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 }}>
         <Ionicons name="calendar-outline" size={52} color={L.textMuted} />
-        <Text style={{ color: L.text, fontSize: 18, fontWeight: '800' }}>No held spots</Text>
-        <Text style={{ color: L.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 22 }}>
+        <Text style={{ color: L.text, fontSize: text.titleSm.size, fontWeight: '800' }}>No held spots</Text>
+        <Text style={{ color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 22 }}>
           Events where you've paid a deposit will appear here.
         </Text>
       </View>
@@ -1107,8 +1109,8 @@ function EmptyTab({ icon, title, sub }: { icon: string; title: string; sub: stri
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 }}>
       <Ionicons name={icon as never} size={52} color={L.textMuted} />
-      <Text style={{ color: L.text, fontSize: 18, fontWeight: '800' }}>{title}</Text>
-      <Text style={{ color: L.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 22 }}>{sub}</Text>
+      <Text style={{ color: L.text, fontSize: text.titleSm.size, fontWeight: '800' }}>{title}</Text>
+      <Text style={{ color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 22 }}>{sub}</Text>
     </View>
   );
 }
@@ -1373,7 +1375,7 @@ const s = StyleSheet.create({
   subTab: {
     flex: 1, alignItems: 'center', paddingBottom: 10, gap: 4, position: 'relative',
   },
-  subTabLabel:       { color: L.textMuted, fontSize: 11, fontWeight: '500' },
+  subTabLabel: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   subTabLabelActive: { color: L.navy, fontWeight: '700' },
   subTabUnderline: {
     position: 'absolute', bottom: 0, left: 8, right: 8,
