@@ -4,7 +4,9 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import QRCode from 'react-native-qrcode-svg';
 import { StatusChip, type StatusVariant } from '@/components';
@@ -408,53 +410,53 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.screenH, paddingVertical: spacing.screenV, backgroundColor: L.bg,
   },
   iconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  title:   { color: L.navy, fontSize: 17, fontWeight: '900' },
+  title:   { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
 
   card: {
-    backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
     padding: spacing.lg, marginTop: spacing.md,
   },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  assetName: { color: L.navy, fontSize: 17, fontWeight: '900' },
-  facilityName: { color: L.textSub, fontSize: 13, fontWeight: '600', marginTop: 4 },
-  subtitle: { color: L.textSub, fontSize: 12, fontWeight: '500', marginTop: 2 },
+  assetName: { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
+  facilityName: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 4 },
+  subtitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
-  metaText: { color: L.text, fontSize: 13, fontWeight: '600' },
+  metaText: { color: L.text, fontSize: text.caption.size, fontWeight: '500' },
 
-  sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: spacing.sm },
-  checkInCode: { color: colors.navy, fontSize: 26, fontWeight: '900', letterSpacing: 6 },
-  checkInHint: { color: colors.textSub, fontSize: 12, textAlign: 'center' },
-  occupancyText: { color: L.textSub, fontSize: 12, fontWeight: '600' },
+  sectionTitle: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase', marginBottom: spacing.sm },
+  checkInCode: { color: colors.navy, fontSize: text.statNumber.size, fontWeight: '900', letterSpacing: 6 },
+  checkInHint: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center' },
+  occupancyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   rosterRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: L.navy, alignItems: 'center', justifyContent: 'center' },
   avatarImg: { width: 36, height: 36, borderRadius: 18 },
   avatarText: { color: L.white, fontSize: 12, fontWeight: '800' },
-  rosterName: { flex: 1, color: L.text, fontSize: 14, fontWeight: '700' },
+  rosterName: { flex: 1, color: L.text, fontSize: text.rowTitle.size, fontWeight: '700' },
 
-  priceLabel: { color: L.navy, fontSize: 15, fontWeight: '800' },
-  priceValue: { color: L.navy, fontSize: 18, fontWeight: '900' },
+  priceLabel: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  priceValue: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.navy, borderRadius: radius.button, paddingVertical: 15, marginTop: spacing.xl,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 15, marginTop: spacing.xl,
   },
-  primaryBtnText: { color: L.white, fontSize: 15, fontWeight: '800' },
+  primaryBtnText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   secondaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.bg, borderWidth: 1.5, borderColor: L.border, borderRadius: radius.button,
+    backgroundColor: L.bg, borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
     paddingVertical: 14, marginTop: spacing.sm,
   },
-  secondaryBtnText: { color: L.navy, fontSize: 14, fontWeight: '700' },
+  secondaryBtnText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
   dangerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: colors.dangerBg, borderRadius: radius.button, paddingVertical: 14, marginTop: spacing.sm,
+    backgroundColor: colors.dangerBg, borderRadius: shape.cta, paddingVertical: 14, marginTop: spacing.sm,
   },
-  dangerBtnText: { color: L.danger, fontSize: 14, fontWeight: '700' },
+  dangerBtnText: { color: L.danger, fontSize: text.action.size, fontWeight: '800' },
 
-  errorText: { color: L.textSub, fontSize: 14, fontWeight: '500', textAlign: 'center' },
-  errorBackBtn: { marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: radius.button, backgroundColor: L.navy },
-  errorBackText: { color: L.white, fontSize: 14, fontWeight: '700' },
+  errorText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center' },
+  errorBackBtn: { marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: shape.cta, backgroundColor: L.navy },
+  errorBackText: { color: L.white, fontSize: text.action.size, fontWeight: '800' },
 });
