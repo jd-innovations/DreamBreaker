@@ -362,6 +362,34 @@ surface roles those screens do not contain.
 
 One screen per commit, so any screen can be reverted alone.
 
+**0. Check for repeated style names first.**
+
+```
+node scripts/migrate-styles.mjs --collisions <file>
+```
+
+A style name reused across two `StyleSheet.create` blocks usually means two
+different jobs. `stats.tsx` had three styles called `title` — two card
+headings at 22/900 and a modal title at 20/900 — and an earlier version of the
+migrator mapped all three to `modalTitle`, shrinking the card headings. That
+shipped before it was caught. The tool now refuses a bare key for an ambiguous
+name; use `sheet.name`.
+
+Then apply the mapping:
+
+```
+node scripts/migrate-styles.mjs <file> <mapping.json>
+```
+
+```json
+{ "type":  { "cardName": "cardTitle", "ab.label": "controlLabel" },
+  "shape": { "card": "card", "tab": "cta" },
+  "allow": ["10", "9"] }
+```
+
+It asserts every mapped key was found and that the only raw sizes left are the
+exemptions declared in the mapping — rule 12, enforced rather than remembered.
+
 1. **Read the screen's stylesheets.** List every `fontSize` / `fontWeight` /
    `letterSpacing`, every `borderRadius`, and every spacing literal.
 2. **Name the job of each one** — is this a section title, a field label, an
