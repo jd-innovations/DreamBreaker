@@ -6,7 +6,9 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { StatusChip } from '@/components';
 import { useSession } from '@/hooks/useSession';
@@ -71,17 +73,17 @@ function PlayerRow({ row, invited, onInvite }: { row: InviteRow; invited: boolea
 const r = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: L.bg, borderRadius: 14, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
     padding: 12, marginBottom: 8,
   },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: L.navy, alignItems: 'center', justifyContent: 'center' },
   avatarImg: { width: 40, height: 40, borderRadius: 20 },
   avatarText: { color: L.white, fontSize: 13, fontWeight: '800' },
-  name: { color: L.navy, fontSize: 14, fontWeight: '800' },
-  subtitle: { color: L.textSub, fontSize: 12, marginTop: 2 },
-  inviteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: L.navy },
+  name: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  subtitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+  inviteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: shape.cta, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: L.navy },
   invitedBtn: { backgroundColor: L.successBg },
-  inviteBtnText: { color: L.white, fontSize: 12, fontWeight: '700' },
+  inviteBtnText: { color: L.white, fontSize: text.action.size, fontWeight: '800' },
   invitedBtnText: { color: L.success },
 });
 
@@ -314,39 +316,39 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.screenH, paddingVertical: spacing.screenV, backgroundColor: L.bg,
   },
   iconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  title:   { color: L.navy, fontSize: 17, fontWeight: '900' },
+  title:   { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
 
   summaryCard: {
-    backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
     padding: spacing.lg, marginTop: spacing.sm,
   },
-  summaryAsset: { color: L.navy, fontSize: 16, fontWeight: '800' },
-  summarySub: { color: L.textSub, fontSize: 12, fontWeight: '600', marginTop: 2 },
-  occupancyText: { color: L.textSub, fontSize: 12, fontWeight: '600' },
+  summaryAsset: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  summarySub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+  occupancyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
-  sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase', marginTop: spacing.xl, marginBottom: spacing.sm },
+  sectionTitle: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase', marginTop: spacing.xl, marginBottom: spacing.sm },
   rosterRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-  rosterName: { flex: 1, color: L.text, fontSize: 14, fontWeight: '700' },
-  hintText: { color: L.textSub, fontSize: 12, fontWeight: '500', marginTop: 12, textAlign: 'center' },
+  rosterName: { flex: 1, color: L.text, fontSize: text.rowTitle.size, fontWeight: '700' },
+  hintText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 12, textAlign: 'center' },
 
   tabRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xl, marginBottom: spacing.sm },
-  tab: { flex: 1, alignItems: 'center', borderWidth: 1.5, borderColor: L.border, borderRadius: radius.button, paddingVertical: 10 },
+  tab: { flex: 1, alignItems: 'center', borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, paddingVertical: 10 },
   tabActive: { borderColor: L.gold, backgroundColor: L.goldBg },
-  tabText: { color: L.textSub, fontSize: 13, fontWeight: '700' },
+  tabText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   tabTextActive: { color: L.navy },
 
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: 12,
+    backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
     paddingHorizontal: 12, paddingVertical: 10, marginBottom: spacing.sm,
   },
-  searchInput: { flex: 1, color: L.text, fontSize: 14 },
-  emptyText: { color: L.textSub, fontSize: 13, textAlign: 'center', marginTop: 24, lineHeight: 20 },
+  searchInput: { flex: 1, color: L.text, fontSize: text.body.size },
+  emptyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', marginTop: 24, lineHeight: 20 },
 
-  primaryBtn: { backgroundColor: L.navy, borderRadius: radius.button, paddingVertical: 16, alignItems: 'center', marginTop: spacing.xxl },
-  primaryBtnText: { color: L.white, fontSize: 16, fontWeight: '800' },
+  primaryBtn: { backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 16, alignItems: 'center', marginTop: spacing.xxl },
+  primaryBtnText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
 
-  errorText: { color: L.textSub, fontSize: 14, fontWeight: '500', textAlign: 'center' },
-  errorBackBtn: { marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: radius.button, backgroundColor: L.navy },
-  errorBackText: { color: L.white, fontSize: 14, fontWeight: '700' },
+  errorText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center' },
+  errorBackBtn: { marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: shape.cta, backgroundColor: L.navy },
+  errorBackText: { color: L.white, fontSize: text.action.size, fontWeight: '800' },
 });
