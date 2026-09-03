@@ -257,10 +257,14 @@ const s = StyleSheet.create({
     paddingVertical: 12,
   },
   segmentActive:    { borderColor: L.gold, backgroundColor: L.goldBg },
-  // Was 14/700 — 14 is not in the scale. `body` is the nearest value up, so the
-  // control does not shrink.
-  segmentText:      { color: L.textSub, fontSize: text.body.size, fontWeight: '500' },
-  segmentTextActive:{ color: L.navy, fontWeight: '700' },
+  // controlLabel, matching the identical Courts/Ball Machines toggle on Choose
+  // Time and facility detail. This screen was migrated before controlLabel
+  // existed and took `body` as the nearest value up, which left the same
+  // control rendering three points and two weights apart within one flow.
+  segmentText:      { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
+  // State variant (decision 9): the base weight is now 700, so the selected
+  // one moves to 800 to stay distinguishable.
+  segmentTextActive:{ color: L.navy, fontWeight: '800' },
 
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,

@@ -59,12 +59,24 @@ five under option A migrating facility detail.
 filter chip). Rule 11: same numbers, different jobs, so they are separate roles
 and neither substitutes for the other.
 
-**Segmented format selectors take `body`, not `controlLabel`.** Book a Court's
-"Court / Ball Machine" and "Doubles / Singles" were 14/700; 14 was not in the
-scale at the time and they took `body` 15/500 so nothing shrank, with the
-selected one keeping weight 700 as a state variant. `controlLabel` (13/700)
-came later and covers tabs and chips. If these ever need to agree, that is a
-decision to make, not a thing to quietly change.
+**Every two-up toggle takes `controlLabel`**, whether it is called a segment, a
+tab or a filter. Book a Court's "Court / Ball Machine" and "Doubles / Singles",
+Choose Time's and facility detail's "Courts / Ball Machines" — all 13/700, with
+the selected one at 800 as a state variant.
+
+*This was wrong once and is worth remembering.* Book a Court was migrated first,
+before `controlLabel` existed. Its segments were 14/700, 14 was not in the scale,
+and they took `body` 15/500 as the nearest value up. Two screens later
+`controlLabel` (13/700) arrived and the later screens took it — so the same
+toggle rendered three points and two weights apart within one flow. Worse, the
+first version of this note wrote that divergence down as though it were a
+deliberate distinction between "selectors" and "tabs". It was not; it was
+migration order, and codifying an accident as a decision is how a standard stops
+being one. Fixed 2026-09-03.
+
+**The general lesson:** a screen migrated before a role existed can be left
+holding a worse match than a screen migrated after. When a role is added,
+check whether earlier screens should take it.
 
 `sectionTitle` at 17/900 is **identical to the existing `typography.sectionTitle`
 token**. The note in `theme/typography.ts` claiming that token "no longer
