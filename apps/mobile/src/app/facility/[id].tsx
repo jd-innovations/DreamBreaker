@@ -8,7 +8,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, spacing, radius, displayText } from '@/theme';
+import { colors, spacing, displayText } from '@/theme';
+// Shapes come from the shared token source. `radius` is aliased because
+// @/theme exports its own with different values. See DESIGN_STANDARD.md.
+import { radius as shape } from '@shared/tokens';
 import { DEFAULT_FACILITY_COVER } from '@/lib/facilityCover';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
@@ -244,7 +247,7 @@ function AmenityChip({ icon, label, active }: { icon: keyof typeof Ionicons.glyp
 const a = StyleSheet.create({
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.chip,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.pill,
     paddingHorizontal: 10, paddingVertical: 7,
   },
   chipInactive: { opacity: 0.4 },
@@ -310,8 +313,8 @@ const ms = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(10,18,40,0.45)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: L.bg,
-    borderTopLeftRadius: radius.card + 8,
-    borderTopRightRadius: radius.card + 8,
+    borderTopLeftRadius: shape.card + 8,
+    borderTopRightRadius: shape.card + 8,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.xxl,
@@ -324,7 +327,7 @@ const ms = StyleSheet.create({
     backgroundColor: L.navy, alignItems: 'center', justifyContent: 'center',
   },
   mapWrap: {
-    height: 220, borderRadius: radius.md, overflow: 'hidden',
+    height: 220, borderRadius: shape.panel, overflow: 'hidden',
     backgroundColor: L.page, marginBottom: spacing.md,
   },
   mapUnavailable: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
@@ -333,7 +336,7 @@ const ms = StyleSheet.create({
   address: { color: L.textMuted, fontSize: 13, fontWeight: '500', lineHeight: 18, marginBottom: spacing.md },
   directionsBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.navy, borderRadius: 30, paddingVertical: 14,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 14,
   },
   directionsText: { color: L.white, fontSize: 15, fontWeight: '800' },
 });
@@ -368,7 +371,7 @@ function PlayEventCard({ event }: { event: FacilityPlayEvent }) {
 const ec = StyleSheet.create({
   card:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border, gap: 12 },
   left:      { flex: 1, gap: 4 },
-  typePill:  { alignSelf: 'flex-start', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, marginBottom: 2 },
+  typePill:  { alignSelf: 'flex-start', borderRadius: shape.badge, paddingHorizontal: 7, paddingVertical: 2, marginBottom: 2 },
   typeText:  { color: L.gold, fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
   name:      { ...displayText(17, { color: L.navy }) },
   date:      { color: L.textMuted, fontSize: 11, fontWeight: '500' },
@@ -411,7 +414,7 @@ const tc = StyleSheet.create({
   date:       { color: L.textMuted, fontSize: 11, fontWeight: '500' },
   loc:        { color: L.textMuted, fontSize: 11, fontWeight: '400' },
   right:      { alignItems: 'flex-end', gap: 6 },
-  statusPill: { borderRadius: 10, paddingHorizontal: 9, paddingVertical: 3 },
+  statusPill: { borderRadius: shape.pill, paddingHorizontal: 9, paddingVertical: 3 },
   statusText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
 });
 
@@ -1084,15 +1087,15 @@ const s = StyleSheet.create({
   heroFacts:   { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '500' },
   mapPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 4,
-    backgroundColor: L.white, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3,
+    backgroundColor: L.white, borderRadius: shape.pill, paddingHorizontal: 8, paddingVertical: 3,
   },
   mapPillText: { color: L.navy, fontSize: 11, fontWeight: '800' },
 
   body:      { padding: spacing.screenH },
   badgeRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  badge:     { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  badge:     { borderRadius: shape.pill, paddingHorizontal: 10, paddingVertical: 4 },
   badgeText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.4 },
-  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#DBEAFE', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4 },
+  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#DBEAFE', borderRadius: shape.pill, paddingHorizontal: 9, paddingVertical: 4 },
   verifiedText:  { fontSize: 10, fontWeight: '800', color: '#2563EB', letterSpacing: 0.3 },
 
   weatherStrip: { marginTop: 4, marginBottom: 18 },
@@ -1108,7 +1111,7 @@ const s = StyleSheet.create({
   contactRow:  { flexDirection: 'row', gap: 8, marginTop: 10 },
   contactChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.chip,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.pill,
     paddingHorizontal: 12, paddingVertical: 7,
   },
   contactChipText: { color: L.navy, fontSize: 12, fontWeight: '700' },
@@ -1130,7 +1133,7 @@ const s = StyleSheet.create({
   filterRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   filterChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.chip,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.pill,
     paddingHorizontal: 10, paddingVertical: 7,
   },
   filterChipActive:     { borderColor: L.gold, backgroundColor: L.goldBg },
@@ -1138,13 +1141,13 @@ const s = StyleSheet.create({
   filterChipTextActive: { color: L.navy },
 
   invTabRow:  { flexDirection: 'row', gap: spacing.sm, marginBottom: 8 },
-  invTab:     { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: radius.chip, borderWidth: 1, borderColor: L.border },
+  invTab:     { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: shape.pill, borderWidth: 1, borderColor: L.border },
   invTabActive: { borderColor: L.gold, backgroundColor: L.goldBg },
   invTabText:   { color: L.textMuted, fontSize: 13, fontWeight: '700' },
   invTabTextActive: { color: L.navy },
 
   hourChip: {
-    alignItems: 'center', gap: 2, borderWidth: 1, borderColor: L.border, borderRadius: radius.md,
+    alignItems: 'center', gap: 2, borderWidth: 1, borderColor: L.border, borderRadius: shape.panel,
     paddingVertical: 8, paddingHorizontal: 12, marginRight: 8,
   },
   hourChipJoinable: { borderColor: L.gold, backgroundColor: L.goldBg },
@@ -1154,15 +1157,15 @@ const s = StyleSheet.create({
   hourChipJoinableText: { color: L.navy, fontSize: 11, fontWeight: '800' },
 
   ctaStack:        { marginTop: 28, gap: 10 },
-  ctaPrimary:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: L.navy, borderRadius: 30, paddingVertical: 14 },
+  ctaPrimary:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 14 },
   ctaPrimaryText:  { color: L.white, fontSize: 15, fontWeight: '800' },
-  ctaSecondary:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: L.gold + '22', borderWidth: 1.5, borderColor: L.gold, borderRadius: 30, paddingVertical: 13 },
+  ctaSecondary:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: L.gold + '22', borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta, paddingVertical: 13 },
   ctaSecondaryText:{ color: L.navy, fontSize: 15, fontWeight: '800' },
-  ctaGhost:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: L.border, borderRadius: 30, paddingVertical: 13 },
+  ctaGhost:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta, paddingVertical: 13 },
   ctaGhostText:    { color: L.navy, fontSize: 14, fontWeight: '700' },
 
   errorText:    { color: L.textMuted, fontSize: 15, fontWeight: '500', textAlign: 'center', paddingHorizontal: 32 },
-  errorBackBtn: { marginTop: 8, backgroundColor: L.navy, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
+  errorBackBtn: { marginTop: 8, backgroundColor: L.navy, borderRadius: shape.cta, paddingHorizontal: 24, paddingVertical: 12 },
   errorBackText:{ color: L.white, fontSize: 14, fontWeight: '700' },
 });
 
@@ -1176,12 +1179,12 @@ const es = StyleSheet.create({
   title: { color: L.navy, fontSize: 18, fontWeight: '900' },
   sub: { color: L.textSub, fontSize: 13, lineHeight: 19 },
   input: {
-    minHeight: 110, borderWidth: 1, borderColor: L.border, borderRadius: 12,
+    minHeight: 110, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
     padding: 12, color: L.navy, fontSize: 14, lineHeight: 20, backgroundColor: L.page,
   },
   disclosure: { color: L.textMuted, fontSize: 11, lineHeight: 16 },
   submit: {
-    backgroundColor: L.navy, borderRadius: 30, paddingVertical: 14,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 14,
     alignItems: 'center', justifyContent: 'center', marginTop: 2,
   },
   submitDisabled: { opacity: 0.45 },
