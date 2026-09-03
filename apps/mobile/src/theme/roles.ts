@@ -55,6 +55,7 @@ export type ThemeRoles = {
   // Overlays
   overlay: string;
   scrimMedia: string;
+  scrimMediaStrong: string;
 };
 
 export const lightRoles: ThemeRoles = {
@@ -86,6 +87,7 @@ export const lightRoles: ThemeRoles = {
 
   overlay: 'rgba(10,18,40,0.45)',
   scrimMedia: 'rgba(0,0,0,0.45)',
+  scrimMediaStrong: 'rgba(10,18,40,0.72)',
 };
 
 export const darkRoles: ThemeRoles = {
@@ -121,8 +123,12 @@ export const darkRoles: ThemeRoles = {
 
   overlay: 'rgba(7,9,26,0.85)',
   // Text over a photo needs a dark scrim in BOTH themes — the photo does not
-  // get lighter when the app does. This role deliberately does not flip.
+  // get lighter when the app does. These roles deliberately do not flip.
   scrimMedia: 'rgba(0,0,0,0.45)',
+  // Solid chip sitting ON media (a condition badge on a listing photo), as
+  // opposed to a wash laid OVER it. Added during the Phase 2 marketplace pilot:
+  // scrimMedia at 0.45 was too weak to carry small type on a bright photo.
+  scrimMediaStrong: 'rgba(10,18,40,0.72)',
 };
 
 export const themes: Record<ThemeName, ThemeRoles> = {

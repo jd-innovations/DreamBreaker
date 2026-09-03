@@ -20,6 +20,7 @@ import {
   MARKETPLACE_BRANDS, CONDITION_OPTIONS, conditionLabel, formatPriceCents,
   listingAgeLabel, type MarketplaceCondition,
 } from '@/lib/marketplace/constants';
+import { colors, useThemeRoles, useThemedStyles, type ThemeRoles } from '@/theme';
 
 const { width: SW } = Dimensions.get('window');
 const CARD_W = (SW - 16 * 2 - 12) / 2;
@@ -36,10 +37,10 @@ function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number):
   return 2 * earthMiles * Math.asin(Math.sqrt(a));
 }
 
-const L = {
-  bg: '#FFFFFF', navy: '#0A1228', gold: '#C9A84C', text: '#0A1228',
-  textMuted: '#9AAABF', border: '#E0E8F5', green: '#16A34A', greenBg: '#DCFCE7',
-};
+// The local `const L` palette this screen used to carry is gone — it was eight
+// hardcoded values, two of which (#16A34A / #DCFCE7) were duplicates of the
+// success tokens at slightly different values. Colours now come from theme
+// roles; see THEMING_PLAN.md.
 
 const PRICE_BUCKETS: { label: string; min?: number; max?: number }[] = [
   { label: 'Under $100', max: 9999 },
@@ -51,22 +52,25 @@ const PRICE_BUCKETS: { label: string; min?: number; max?: number }[] = [
 // ─── Chip ─────────────────────────────────────────────────────────────────────
 
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const ch = useThemedStyles(chipStyles);
   return (
     <TouchableOpacity style={[ch.chip, active && ch.chipActive]} onPress={onPress} activeOpacity={0.75}>
       <Text style={[ch.text, active && ch.textActive]}>{label}</Text>
     </TouchableOpacity>
   );
 }
-const ch = StyleSheet.create({
-  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: L.border, backgroundColor: L.bg, marginRight: 8, marginBottom: 8 },
-  chipActive: { backgroundColor: L.navy, borderColor: L.navy },
-  text: { color: L.text, fontSize: 13, fontWeight: '500' },
-  textActive: { color: '#FFFFFF', fontWeight: '700' },
+const chipStyles = (t: ThemeRoles) => StyleSheet.create({
+  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: t.border, backgroundColor: t.surface, marginRight: 8, marginBottom: 8 },
+  chipActive: { backgroundColor: t.primary, borderColor: t.primary },
+  text: { color: t.textPrimary, fontSize: 13, fontWeight: '500' },
+  textActive: { color: t.onPrimary, fontWeight: '700' },
 });
 
 // ─── Listing card ───────────────────────────────────────────────────────────
 
 function ListingCard({ listing }: { listing: MarketplaceListingCard }) {
+  const t = useThemeRoles();
+  const card = useThemedStyles(cardStyles);
   return (
     <TouchableOpacity
       style={card.root}
@@ -78,7 +82,7 @@ function ListingCard({ listing }: { listing: MarketplaceListingCard }) {
           <Image source={{ uri: listing.primaryPhotoUrl }} style={card.image} resizeMode="cover" />
         ) : (
           <View style={[card.image, card.imagePlaceholder]}>
-            <Ionicons name="image-outline" size={28} color={L.textMuted} />
+            <Ionicons name="image-outline" size={28} color={t.textMuted} />
           </View>
         )}
         <View style={card.conditionBadge}>
@@ -94,7 +98,7 @@ function ListingCard({ listing }: { listing: MarketplaceListingCard }) {
         </View>
         {(listing.location_city || listing.location_state) && (
           <View style={card.locRow}>
-            <Ionicons name="location-outline" size={11} color={L.textMuted} />
+            <Ionicons name="location-outline" size={11} color={t.textMuted} />
             <Text style={card.loc} numberOfLines={1}>
               {[listing.location_city, listing.location_state].filter(Boolean).join(', ')}
             </Text>
@@ -104,22 +108,25 @@ function ListingCard({ listing }: { listing: MarketplaceListingCard }) {
     </TouchableOpacity>
   );
 }
-const card = StyleSheet.create({
-  root: { width: CARD_W, marginBottom: 16, backgroundColor: L.bg, borderRadius: 16, borderWidth: 1, borderColor: L.border, overflow: 'hidden' },
+const cardStyles = (t: ThemeRoles) => StyleSheet.create({
+  root: { width: CARD_W, marginBottom: 16, backgroundColor: t.surface, borderRadius: 16, borderWidth: 1, borderColor: t.border, overflow: 'hidden' },
   imageWrap: { width: '100%', aspectRatio: 1 },
   image: { width: '100%', height: '100%' },
-  imagePlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F7FB' },
-  conditionBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(10,18,40,0.72)', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
-  conditionText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
+  imagePlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: t.surfaceElevated },
+  // Sits ON the listing photo, so it must stay dark in both themes — hence the
+  // scrimMediaStrong role and a fixed white, not textInverse (which flips).
+  conditionBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: t.scrimMediaStrong, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
+  conditionText: { color: colors.white, fontSize: 10, fontWeight: '700' },
   body: { padding: 10 },
-  title: { color: L.text, fontSize: 13, fontWeight: '700', marginBottom: 4 },
-  brandLine: { color: L.text, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginBottom: 2 },
-  modelLine: { color: L.text, fontSize: 13, fontWeight: '700', marginBottom: 4 },
+  title: { color: t.textPrimary, fontSize: 13, fontWeight: '700', marginBottom: 4 },
+  brandLine: { color: t.textPrimary, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginBottom: 2 },
+  modelLine: { color: t.textPrimary, fontSize: 13, fontWeight: '700', marginBottom: 4 },
   priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  price: { color: L.green, fontSize: 15, fontWeight: '800' },
-  age: { color: L.textMuted, fontSize: 11 },
+  // Was #16A34A, a near-duplicate of the success token.
+  price: { color: t.success, fontSize: 15, fontWeight: '800' },
+  age: { color: t.textMuted, fontSize: 11 },
   locRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
-  loc: { color: L.textMuted, fontSize: 11, flexShrink: 1 },
+  loc: { color: t.textMuted, fontSize: 11, flexShrink: 1 },
 });
 
 // ─── Filter Sheet ─────────────────────────────────────────────────────────────
@@ -135,13 +142,15 @@ function FilterSheet({
   sort: ListingSort; setSort: (s: ListingSort) => void;
   radiusMiles: number | null; setRadiusMiles: (r: number | null) => void;
 }) {
+  const t = useThemeRoles();
+  const fs = useThemedStyles(filterSheetStyles);
   return (
     <Animated.View style={[fs.sheet, { transform: [{ translateY: filterY }] }]}>
       <View style={fs.handleRow}><View style={fs.handle} /></View>
       <View style={fs.header}>
         <Text style={fs.title}>Filters</Text>
         <TouchableOpacity onPress={onClose} style={fs.closeBtn} accessibilityRole="button" accessibilityLabel="Close">
-          <Ionicons name="close" size={22} color={L.navy} />
+          <Ionicons name="close" size={22} color={t.textPrimary} />
         </TouchableOpacity>
       </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={fs.scroll}>
@@ -190,25 +199,28 @@ function FilterSheet({
     </Animated.View>
   );
 }
-const fs = StyleSheet.create({
-  sheet: { position: 'absolute', bottom: 0, left: 0, right: 0, height: FILTER_HEIGHT, paddingBottom: 50, backgroundColor: L.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 20, zIndex: 30 },
+const filterSheetStyles = (t: ThemeRoles) => StyleSheet.create({
+  // shadowColor stays a fixed dark value: a shadow that brightened with the
+  // theme would glow rather than cast.
+  sheet: { position: 'absolute', bottom: 0, left: 0, right: 0, height: FILTER_HEIGHT, paddingBottom: 50, backgroundColor: t.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, shadowColor: colors.navy, shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 20, zIndex: 30 },
   handleRow: { alignItems: 'center', paddingTop: 12, paddingBottom: 4 },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: L.border },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: t.border },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 8 },
-  title: { color: L.navy, fontSize: 18, fontWeight: '800' },
+  title: { color: t.textPrimary, fontSize: 18, fontWeight: '800' },
   closeBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   scroll: { paddingHorizontal: 20, paddingBottom: 32 },
-  sectionLabel: { color: L.textMuted, fontSize: 11, fontWeight: '800', letterSpacing: 1, marginTop: 20, marginBottom: 10 },
+  sectionLabel: { color: t.textMuted, fontSize: 11, fontWeight: '800', letterSpacing: 1, marginTop: 20, marginBottom: 10 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap' },
-  applyBtn: { marginTop: 24, backgroundColor: L.navy, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  applyText: { color: L.bg, fontSize: 16, fontWeight: '800' },
+  applyBtn: { marginTop: 24, backgroundColor: t.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  applyText: { color: t.onPrimary, fontSize: 16, fontWeight: '800' },
 });
 
 function Scrim({ visible, onPress }: { visible: boolean; onPress: () => void }) {
+  const t = useThemeRoles();
   if (!visible) return null;
   return (
     <TouchableOpacity style={StyleSheet.absoluteFill as never} activeOpacity={1} onPress={onPress}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }} />
+      <View style={{ flex: 1, backgroundColor: t.overlay }} />
     </TouchableOpacity>
   );
 }
@@ -217,6 +229,8 @@ function Scrim({ visible, onPress }: { visible: boolean; onPress: () => void }) 
 
 export default function MarketplaceScreen() {
   const insets = useSafeAreaInsets();
+  const t = useThemeRoles();
+  const s = useThemedStyles(screenStyles);
   const { setTriggerVisible } = useSlideMenu();
 
   useFocusEffect(
@@ -321,7 +335,7 @@ export default function MarketplaceScreen() {
             activeOpacity={0.85}
             onPress={() => router.push('/marketplace/create' as never)}
           >
-            <Ionicons name="add" size={16} color="#FFFFFF" />
+            <Ionicons name="add" size={16} color={t.onPrimary} />
             <Text style={s.sellBtnText}>Sell</Text>
           </TouchableOpacity>
         </View>
@@ -329,21 +343,21 @@ export default function MarketplaceScreen() {
         <View style={s.searchRow}>
           <View style={s.searchBox}>
             {refetching && !loading ? (
-              <ActivityIndicator size="small" color={L.textMuted} style={s.searchSpinner} />
+              <ActivityIndicator size="small" color={t.textMuted} style={s.searchSpinner} />
             ) : (
-              <Ionicons name="search" size={16} color={L.textMuted} />
+              <Ionicons name="search" size={16} color={t.textMuted} />
             )}
             <TextInput
               style={s.searchInput}
               placeholder="Search brand or model"
-              placeholderTextColor={L.textMuted}
+              placeholderTextColor={t.textMuted}
               value={search}
               onChangeText={setSearch}
               returnKeyType="search"
             />
           </View>
           <TouchableOpacity style={s.filterBtn} onPress={openFilter} activeOpacity={0.8}>
-            <Ionicons name="options-outline" size={18} color={L.navy} />
+            <Ionicons name="options-outline" size={18} color={t.textPrimary} />
             {activeFilterCount > 0 && (
               <View style={s.filterBadge}><Text style={s.filterBadgeText}>{activeFilterCount}</Text></View>
             )}
@@ -351,10 +365,10 @@ export default function MarketplaceScreen() {
         </View>
 
         {loading ? (
-          <View style={s.centerFill}><ActivityIndicator color={L.navy} /></View>
+          <View style={s.centerFill}><ActivityIndicator color={t.primary} /></View>
         ) : listings.length === 0 ? (
           <View style={s.centerFill}>
-            <Ionicons name="pricetag-outline" size={32} color={L.textMuted} />
+            <Ionicons name="pricetag-outline" size={32} color={t.textMuted} />
             <Text style={s.emptyText}>No listings match yet.</Text>
           </View>
         ) : (
@@ -365,7 +379,7 @@ export default function MarketplaceScreen() {
             columnWrapperStyle={{ gap: 12 }}
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 24 }}
             renderItem={({ item }) => <ListingCard listing={item} />}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={L.navy} />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.primary} />}
           />
         )}
 
@@ -386,20 +400,21 @@ export default function MarketplaceScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F7F9FC' },
+const screenStyles = (t: ThemeRoles) => StyleSheet.create({
+  // Was #F7F9FC, which was neither the page token nor any other token.
+  root: { flex: 1, backgroundColor: t.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12 },
-  headerTitle: { color: L.navy, fontSize: 24, fontWeight: '900' },
-  sellBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: L.navy, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
-  sellBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  headerTitle: { color: t.textPrimary, fontSize: 24, fontWeight: '900' },
+  sellBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: t.primary, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
+  sellBtnText: { color: t.onPrimary, fontSize: 13, fontWeight: '700' },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingBottom: 14 },
-  searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: L.bg, borderRadius: 14, borderWidth: 1, borderColor: L.border, paddingHorizontal: 12, height: 42 },
-  searchInput: { flex: 1, fontSize: 14, color: L.text },
+  searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: t.surface, borderRadius: 14, borderWidth: 1, borderColor: t.border, paddingHorizontal: 12, height: 42 },
+  searchInput: { flex: 1, fontSize: 14, color: t.textPrimary },
   // Matches the search icon's footprint so swapping the two doesn't shift the input.
   searchSpinner: { width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
-  filterBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, alignItems: 'center', justifyContent: 'center' },
-  filterBadge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: L.gold, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
-  filterBadgeText: { color: L.navy, fontSize: 10, fontWeight: '800' },
+  filterBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, alignItems: 'center', justifyContent: 'center' },
+  filterBadge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+  filterBadgeText: { color: t.onAccent, fontSize: 10, fontWeight: '800' },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  emptyText: { color: L.textMuted, fontSize: 14 },
+  emptyText: { color: t.textMuted, fontSize: 14 },
 });
