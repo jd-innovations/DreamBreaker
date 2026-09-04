@@ -8,6 +8,8 @@ import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { usePurchaseHistory } from '@/hooks/usePurchaseHistory';
 import type { Purchase, PurchasePurposeType } from '@/lib/paymentTypes';
 
@@ -328,24 +330,24 @@ const s = StyleSheet.create({
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
     paddingHorizontal: 16, paddingVertical: 12,
   },
-  backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   scroll: { padding: 20 },
 
   intro: {
-    color: L.textMuted, fontSize: 14, fontWeight: '400',
+    color: L.textMuted, fontSize: text.body.size, fontWeight: '500',
     textAlign: 'center', lineHeight: 21, marginBottom: 4,
   },
 
   sectionHeader: {
-    color: L.textMuted, fontSize: 12, fontWeight: '600',
-    letterSpacing: 0.6, textTransform: 'uppercase',
+    color: L.textMuted, fontSize: text.sectionLabel.size, fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase',
     marginBottom: 8, marginTop: 24, paddingHorizontal: 4,
   },
 
   group: {
-    backgroundColor: L.bg, borderRadius: 12,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border, overflow: 'hidden',
   },
 
@@ -356,35 +358,35 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 14, gap: 14,
   },
   rowCenter: { flex: 1 },
-  rowLabel:  { color: L.navy, fontSize: 15, fontWeight: '500', marginBottom: 2 },
-  rowSub:    { color: L.textSub, fontSize: 12, fontWeight: '400' },
-  rowDate:   { color: L.textMuted, fontSize: 12, fontWeight: '400', marginTop: 1 },
+  rowLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 2 },
+  rowSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  rowDate: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
 
   // Loading / empty / error placeholder inside a Group
   stateRow: {
     paddingHorizontal: 16, paddingVertical: 24, alignItems: 'center',
   },
   stateText: {
-    color: L.textMuted, fontSize: 14, fontWeight: '400', textAlign: 'center', lineHeight: 20,
+    color: L.textMuted, fontSize: text.rowTitle.size, fontWeight: '700', textAlign: 'center', lineHeight: 20,
   },
 
   // Visa logo
   visaBox: {
-    width: 52, height: 36, borderRadius: 6,
+    width: 52, height: 36, borderRadius: shape.badge,
     backgroundColor: '#1A1F71',
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   visaText: {
-    color: '#FFFFFF', fontSize: 15, fontWeight: '900',
+    color: '#FFFFFF', fontSize: text.body.size, fontWeight: '500',
     letterSpacing: 1, fontStyle: 'italic',
   },
 
   // Default badge
   defaultBadge: {
-    borderRadius: 20, borderWidth: 1.5, borderColor: L.goldBorder,
+    borderRadius: shape.pill, borderWidth: 1.5, borderColor: L.goldBorder,
     backgroundColor: L.goldBg, paddingHorizontal: 10, paddingVertical: 4,
   },
-  defaultText: { color: L.gold, fontSize: 11, fontWeight: '800', letterSpacing: 0.4 },
+  defaultText: { color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 
   // Solid circle icon
   solidCircle: {
@@ -400,8 +402,8 @@ const s = StyleSheet.create({
   },
 
   // Purchase amount
-  amountCol:  { alignItems: 'flex-end', marginRight: 2 },
-  amount:     { color: L.navy, fontSize: 15, fontWeight: '700' },
+  amountCol: { alignItems: 'flex-end', marginRight: 2 },
+  amount: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
   refundNote: { color: L.textMuted, fontSize: 11, fontWeight: '500', marginTop: 2 },
 
   // View all row
@@ -409,7 +411,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 14, gap: 8,
   },
-  viewAllText: { flex: 1, color: L.blue, fontSize: 15, fontWeight: '600' },
+  viewAllText: { flex: 1, color: L.blue, fontSize: text.body.size, fontWeight: '500' },
 
   // Security / note
   noteRow: {
@@ -417,8 +419,8 @@ const s = StyleSheet.create({
     gap: 8, marginTop: 12, paddingHorizontal: 4,
   },
   noteText: {
-    flex: 1, color: L.textMuted, fontSize: 13,
-    fontWeight: '400', lineHeight: 18,
+    flex: 1, color: L.textMuted, fontSize: text.caption.size,
+    fontWeight: '500', lineHeight: 18,
   },
 
   // Footer
@@ -427,7 +429,7 @@ const s = StyleSheet.create({
     gap: 8, marginTop: 28, paddingHorizontal: 4,
   },
   footerText: {
-    flex: 1, color: L.textMuted, fontSize: 13,
-    fontWeight: '400', lineHeight: 19,
+    flex: 1, color: L.textMuted, fontSize: text.caption.size,
+    fontWeight: '500', lineHeight: 19,
   },
 });

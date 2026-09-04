@@ -16,6 +16,8 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { goBack } from '@/lib/navigation';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
 import { deleteAccount, AccountDeletionError, DELETE_ACCOUNT_MESSAGES } from '@/lib/accountDeletion';
 
@@ -234,39 +236,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { color: L.navy, fontSize: 14, fontWeight: '900', letterSpacing: 1.5 },
+  headerTitle: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing },
 
   scrollContent: { padding: 16, gap: 18 },
 
   warningCard: {
     backgroundColor: L.dangerBg,
-    borderRadius: 16,
+    borderRadius: shape.card,
     borderWidth: 1,
     borderColor: L.danger,
     padding: 16,
     gap: 8,
   },
-  warningTitle: { color: L.danger, fontSize: 17, fontWeight: '900' },
-  warningBody: { color: L.text, fontSize: 13, fontWeight: '500', lineHeight: 19 },
+  warningTitle: { color: L.danger, fontSize: text.sectionTitle.size, fontWeight: '900' },
+  warningBody: { color: L.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19 },
 
   section: { gap: 8 },
-  sectionTitle: { color: L.navy, fontSize: 15, fontWeight: '800' },
-  sectionIntro: { color: L.textSub, fontSize: 13, fontWeight: '500', lineHeight: 19 },
+  sectionTitle: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
+  sectionIntro: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19 },
 
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   bulletIcon: { marginTop: 2, flexShrink: 0 },
-  bulletText: { flex: 1, color: L.text, fontSize: 13, fontWeight: '500', lineHeight: 19 },
+  bulletText: { flex: 1, color: L.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19 },
 
   confirmWord: { color: L.danger, fontWeight: '900' },
 
   input: {
     borderWidth: 1,
     borderColor: L.border,
-    borderRadius: 12,
+    borderRadius: shape.panel,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: text.actionLarge.size,
+    fontWeight: '800',
     letterSpacing: 2,
     color: L.text,
     backgroundColor: L.white,
@@ -277,24 +279,24 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 8,
     backgroundColor: L.dangerBg,
-    borderRadius: 12,
+    borderRadius: shape.panel,
     borderWidth: 1,
     borderColor: L.danger,
     padding: 12,
   },
-  errorText: { flex: 1, color: L.danger, fontSize: 13, fontWeight: '600', lineHeight: 19 },
+  errorText: { flex: 1, color: L.danger, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19 },
 
   deleteBtn: {
     backgroundColor: L.danger,
-    borderRadius: 14,
+    borderRadius: shape.cta,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 54,
   },
   deleteBtnDisabled: { opacity: 0.4 },
-  deleteBtnText: { color: L.white, fontSize: 15, fontWeight: '800' },
+  deleteBtnText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   cancelBtn: { paddingVertical: 12, alignItems: 'center' },
-  cancelText: { color: L.navy, fontSize: 14, fontWeight: '700' },
+  cancelText: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
 });

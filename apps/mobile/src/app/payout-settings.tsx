@@ -4,7 +4,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from 'expo-router';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { useProfile } from '@/hooks/useProfile';
 import { notifyProfileUpdated } from '@/lib/profileEvents';
@@ -227,53 +229,53 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   earningsCard: {
     alignItems: 'center', gap: 2, padding: 20,
-    backgroundColor: L.bg, borderRadius: radius.card,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
   },
-  earningsLabel:  { color: L.textSub, fontSize: 13, fontWeight: '700' },
+  earningsLabel: { color: L.textSub, fontSize: text.fieldLabel.size, fontWeight: '800' },
   earningsAmount: { color: L.navy, fontSize: 38, fontWeight: '900', letterSpacing: -0.5 },
-  earningsSub:    { color: L.textSub, fontSize: 13 },
+  earningsSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   breakdown: {
     alignSelf: 'stretch', marginTop: 16, gap: 8,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border, paddingTop: 14,
   },
-  breakdownRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  breakdownLabel: { color: L.textSub, fontSize: 13 },
-  breakdownValue: { color: L.text, fontSize: 13, fontWeight: '700' },
+  breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  breakdownLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  breakdownValue: { color: L.text, fontSize: text.fieldLabel.size, fontWeight: '800' },
   breakdownTotal: {
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border,
     paddingTop: 8, marginTop: 2,
   },
-  breakdownTotalLabel: { color: L.navy, fontSize: 14, fontWeight: '800' },
-  breakdownTotalValue: { color: L.navy, fontSize: 15, fontWeight: '900' },
+  breakdownTotalLabel: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
+  breakdownTotalValue: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
   earningsNote: { color: L.textSub, fontSize: 11, lineHeight: 17, textAlign: 'center', marginTop: 14 },
 
   statusCard: {
     flexDirection: 'row', gap: 12, padding: 16,
-    borderRadius: radius.card, borderWidth: 1,
+    borderRadius: shape.card, borderWidth: 1,
   },
-  statusOk:      { backgroundColor: L.successBg, borderColor: 'rgba(34,197,94,0.30)' },
+  statusOk: { backgroundColor: L.successBg, borderColor: 'rgba(34,197,94,0.30)' },
   statusPending: { backgroundColor: L.goldBg,    borderColor: 'rgba(201,168,76,0.35)' },
-  statusBad:     { backgroundColor: L.dangerBg,  borderColor: 'rgba(239,68,68,0.30)' },
-  statusTitle:   { color: L.navy, fontSize: 15, fontWeight: '800' },
-  statusBody:    { color: L.text, fontSize: 13, lineHeight: 19 },
+  statusBad: { backgroundColor: L.dangerBg,  borderColor: 'rgba(239,68,68,0.30)' },
+  statusTitle: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
+  statusBody: { color: L.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19 },
 
   connectBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.navy, borderRadius: 30, paddingVertical: 15, minHeight: 52,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 15, minHeight: 52,
   },
   connectBtnDisabled: { opacity: 0.5 },
-  connectBtnText: { color: L.white, fontSize: 16, fontWeight: '800' },
+  connectBtnText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
 
-  note: { color: L.textSub, fontSize: 12, lineHeight: 18, textAlign: 'center', paddingHorizontal: 8 },
+  note: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18, textAlign: 'center', paddingHorizontal: 8 },
 
   card: {
     flexDirection: 'row', gap: 10, alignItems: 'flex-start', padding: 14,
-    backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
   },
-  cardText: { flex: 1, color: L.textSub, fontSize: 13, lineHeight: 19 },
+  cardText: { flex: 1, color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19 },
 });

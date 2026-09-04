@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { haptics } from '@/lib/haptics';
 import { useSession } from '@/hooks/useSession';
@@ -154,14 +156,14 @@ const s = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '800', color: colors.navy },
+  headerTitle: { fontSize: text.titleSm.size, fontWeight: '800', color: colors.navy },
   body: { padding: 16, gap: 10 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: shape.panel,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     padding: 12,
@@ -169,8 +171,8 @@ const s = StyleSheet.create({
   avatar: { width: 40, height: 40, borderRadius: 20 },
   avatarFallback: { backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1 },
-  name: { fontSize: 15, fontWeight: '700', color: colors.navy },
-  sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-  unblock: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.page },
-  unblockText: { fontSize: 13, fontWeight: '700', color: colors.navy },
+  name: { fontSize: text.body.size, fontWeight: '500', color: colors.navy },
+  sub: { fontSize: text.caption.size, fontWeight: '500', color: colors.textMuted, marginTop: 2 },
+  unblock: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: shape.cta, backgroundColor: colors.page },
+  unblockText: { fontSize: text.link.size, fontWeight: '700', color: colors.navy },
 });

@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import { registerPushTokenForUser, isPushRegisteredForThisDevice, deleteCurrentDevicePushToken, type PushRegistrationResult } from '@/lib/pushNotifications';
 import {
@@ -401,32 +403,32 @@ const s = StyleSheet.create({
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
     paddingHorizontal: 8, paddingVertical: 12,
   },
-  backBtn:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
-  backText:   { color: L.blue, fontSize: 17, fontWeight: '400' },
-  headerTitle:{ color: L.navy, fontSize: 17, fontWeight: '700' },
+  backBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
+  backText: { color: L.blue, fontSize: 17, fontWeight: '400' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   scroll: { padding: 20 },
 
   intro: {
-    color: L.textMuted, fontSize: 14, fontWeight: '400',
+    color: L.textMuted, fontSize: text.body.size, fontWeight: '500',
     textAlign: 'center', lineHeight: 20, marginBottom: 4,
   },
 
   sectionHeader: {
-    color: L.textMuted, fontSize: 12, fontWeight: '600',
-    letterSpacing: 0.6, textTransform: 'uppercase',
+    color: L.textMuted, fontSize: text.sectionLabel.size, fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase',
     marginBottom: 8, marginTop: 24, paddingHorizontal: 4,
   },
 
   group: {
-    backgroundColor: L.bg, borderRadius: 12,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border, overflow: 'hidden',
   },
 
   div: { height: StyleSheet.hairlineWidth, backgroundColor: L.div, marginLeft: 68 },
 
   groupNote: {
-    color: L.textMuted, fontSize: 12, fontWeight: '400',
+    color: L.textMuted, fontSize: text.caption.size, fontWeight: '500',
     paddingHorizontal: 4, marginTop: 8,
   },
   openSettingsBtn: {
@@ -437,15 +439,15 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     marginTop: 2,
   },
-  openSettingsText: { color: L.blue, fontSize: 14, fontWeight: '700' },
+  openSettingsText: { color: L.blue, fontSize: text.rowTitle.size, fontWeight: '700' },
 
   row: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 13, gap: 12,
   },
   rowCenter: { flex: 1 },
-  rowLabel:  { color: L.navy, fontSize: 15, fontWeight: '500', marginBottom: 2 },
-  rowSub:    { color: L.textMuted, fontSize: 12, fontWeight: '400' },
+  rowLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 2 },
+  rowSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   // iOS Switch is 51x31. Matching it keeps the row from reflowing when the
   // spinner is replaced by the real control.
   switchSlot: { width: 51, height: 31 },
@@ -457,16 +459,16 @@ const s = StyleSheet.create({
   },
 
   // Time rows
-  timeLabel: { color: L.navy, fontSize: 15, fontWeight: '500', flex: 1, paddingLeft: 4 },
+  timeLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', flex: 1, paddingLeft: 4 },
   timeRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  timeValue: { color: L.gold, fontSize: 15, fontWeight: '600' },
+  timeValue: { color: L.gold, fontSize: text.body.size, fontWeight: '500' },
 
   footer: {
     flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center',
     gap: 8, marginTop: 28, paddingHorizontal: 16,
   },
   footerLine: {
-    color: L.textMuted, fontSize: 13, fontWeight: '400',
+    color: L.textMuted, fontSize: text.caption.size, fontWeight: '500',
     textAlign: 'center', lineHeight: 20,
   },
 });

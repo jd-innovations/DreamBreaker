@@ -9,6 +9,8 @@ import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 // Theme-backed alias â€” brand values resolve from @/theme.
 // purple/teal are plan-tier accent colors (no brand equivalent) â€” documented exception.
@@ -314,25 +316,25 @@ const s = StyleSheet.create({
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
     paddingHorizontal: 8, paddingVertical: 12,
   },
-  backBtn:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
-  backText:    { color: L.blue, fontSize: 17, fontWeight: '400' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '700' },
+  backBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
+  backText: { color: L.blue, fontSize: 17, fontWeight: '400' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   scroll: { padding: 20 },
 
   intro: {
-    color: L.textMuted, fontSize: 14, fontWeight: '400',
+    color: L.textMuted, fontSize: text.body.size, fontWeight: '500',
     textAlign: 'center', lineHeight: 20, marginBottom: 4,
   },
 
   sectionHeader: {
-    color: L.textMuted, fontSize: 12, fontWeight: '600',
-    letterSpacing: 0.6, textTransform: 'uppercase',
+    color: L.textMuted, fontSize: text.sectionLabel.size, fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase',
     marginBottom: 8, marginTop: 24, paddingHorizontal: 4,
   },
 
   group: {
-    backgroundColor: L.bg, borderRadius: 12,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border, overflow: 'hidden',
   },
 
@@ -343,30 +345,30 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start',
     padding: 18, gap: 14,
   },
-  currentIconWrap:   { flexShrink: 0 },
+  currentIconWrap: { flexShrink: 0 },
   currentIconCircle: {
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: L.goldBg, borderWidth: 1.5, borderColor: L.goldBorder,
     alignItems: 'center', justifyContent: 'center',
   },
-  currentInfo:  { flex: 1 },
-  currentLabel: { color: L.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginBottom: 4 },
-  currentName:  { color: L.navy, fontSize: 20, fontWeight: '800', marginBottom: 4 },
-  currentDesc:  { color: L.textMuted, fontSize: 13, fontWeight: '400', lineHeight: 18 },
+  currentInfo: { flex: 1 },
+  currentLabel: { color: L.textMuted, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, marginBottom: 4 },
+  currentName: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900', marginBottom: 4 },
+  currentDesc: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18 },
   freeBadge: {
-    backgroundColor: L.goldBg, borderRadius: 20, borderWidth: 1, borderColor: L.goldBorder,
+    backgroundColor: L.goldBg, borderRadius: shape.pill, borderWidth: 1, borderColor: L.goldBorder,
     paddingHorizontal: 12, paddingVertical: 5, flexShrink: 0, alignSelf: 'flex-start',
   },
-  freeBadgeText: { color: L.gold, fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+  freeBadgeText: { color: L.gold, fontSize: text.chipValue.size, fontWeight: '800', letterSpacing: 0.5 },
 
   upgradeDivider: { height: StyleSheet.hairlineWidth, backgroundColor: L.div },
   upgradeRow: {
     flexDirection: 'row', alignItems: 'center',
     padding: 16, gap: 12,
   },
-  upgradeText:  { flex: 1 },
-  upgradeLabel: { color: L.navy, fontSize: 15, fontWeight: '700', marginBottom: 2 },
-  upgradeSub:   { color: L.textMuted, fontSize: 13, fontWeight: '400' },
+  upgradeText: { flex: 1 },
+  upgradeLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 2 },
+  upgradeSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // â”€â”€ Why Upgrade â”€â”€
   benefitRow: {
@@ -378,13 +380,13 @@ const s = StyleSheet.create({
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  benefitText:  { flex: 1 },
-  benefitLabel: { color: L.navy, fontSize: 15, fontWeight: '600', marginBottom: 3 },
-  benefitSub:   { color: L.textMuted, fontSize: 13, fontWeight: '400', lineHeight: 18 },
+  benefitText: { flex: 1 },
+  benefitLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 3 },
+  benefitSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18 },
 
   // â”€â”€ Plan cards â”€â”€
   plansContainer: {
-    borderRadius: 12, borderWidth: 1, borderColor: L.border,
+    borderRadius: shape.panel, borderWidth: 1, borderColor: L.border,
     backgroundColor: L.bg, overflow: 'hidden',
   },
   planDivider: { height: StyleSheet.hairlineWidth, backgroundColor: L.div },
@@ -397,22 +399,22 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: L.gold,
     margin: -1,
   },
-  planIconWrap:   { flexShrink: 0 },
+  planIconWrap: { flexShrink: 0 },
   planIconCircle: {
     width: 48, height: 48, borderRadius: 24,
     borderWidth: 1, alignItems: 'center', justifyContent: 'center',
   },
-  planInfo:  { flex: 1 },
-  planName:  { color: L.navy, fontSize: 15, fontWeight: '800', marginBottom: 3 },
-  planDesc:  { color: L.textMuted, fontSize: 12, fontWeight: '400', lineHeight: 17 },
+  planInfo: { flex: 1 },
+  planName: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 3 },
+  planDesc: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17 },
   planRight: { alignItems: 'flex-end', gap: 6 },
-  priceRow:  { flexDirection: 'row', alignItems: 'baseline', gap: 1 },
-  priceAmount:{ fontSize: 17, fontWeight: '800' },
-  pricePer:  { fontSize: 12, fontWeight: '500' },
-  popularBadge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  popularText:  { color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 1 },
+  priceAmount: { fontSize: text.titleSm.size, fontWeight: '800' },
+  pricePer: { fontSize: text.caption.size, fontWeight: '500' },
+  popularBadge: { borderRadius: shape.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  popularText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
   currentPlanBadge: {
-    backgroundColor: L.goldBg, borderRadius: 20, borderWidth: 1, borderColor: L.goldBorder,
+    backgroundColor: L.goldBg, borderRadius: shape.pill, borderWidth: 1, borderColor: L.goldBorder,
     paddingHorizontal: 10, paddingVertical: 5,
   },
   currentPlanText: { color: L.gold, fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
@@ -427,9 +429,9 @@ const s = StyleSheet.create({
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  billingText:  { flex: 1 },
-  billingLabel: { color: L.navy, fontSize: 15, fontWeight: '500', marginBottom: 2 },
-  billingSub:   { color: L.textMuted, fontSize: 12, fontWeight: '400' },
+  billingText: { flex: 1 },
+  billingLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 2 },
+  billingSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // â”€â”€ Footer â”€â”€
   footer: {
@@ -437,7 +439,7 @@ const s = StyleSheet.create({
     gap: 8, marginTop: 28, paddingHorizontal: 8,
   },
   footerLine: {
-    color: L.textMuted, fontSize: 13, fontWeight: '400',
+    color: L.textMuted, fontSize: text.caption.size, fontWeight: '500',
     textAlign: 'center', lineHeight: 20,
   },
 });

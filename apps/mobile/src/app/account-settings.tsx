@@ -14,6 +14,8 @@ import { router } from 'expo-router';
 import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useProfile } from '@/hooks/useProfile';
 import { getProfileCompletion } from '@/lib/profileCompletion';
 import { signOut } from '@/lib/auth';
@@ -126,7 +128,7 @@ const cell = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     backgroundColor: L.bg,
-    borderRadius: 14,
+    borderRadius: shape.panel,
     borderWidth: 1,
     borderColor: L.border,
     paddingHorizontal: 14,
@@ -134,7 +136,7 @@ const cell = StyleSheet.create({
   },
   // flexShrink so a long label gives way to the chevron rather than pushing it
   // out of the cell.
-  label: { color: L.text, fontSize: 14, fontWeight: '600', flexShrink: 1 },
+  label: { color: L.text, fontSize: text.rowTitle.size, fontWeight: '700', flexShrink: 1 },
 });
 
 export default function AccountSettingsScreen() {
@@ -378,9 +380,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: L.navy,
-    fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 1.5,
+    fontSize: text.sectionLabel.size,
+    fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing,
   },
 
   scrollContent: { padding: 16, gap: 14 },
@@ -388,7 +390,7 @@ const styles = StyleSheet.create({
   // Profile card
   profileCard: {
     backgroundColor: L.navyHero,
-    borderRadius: 18,
+    borderRadius: shape.card,
     padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -402,12 +404,12 @@ const styles = StyleSheet.create({
   profileInfo: { flex: 1, gap: 6 },
   profileName: {
     color: L.white,
-    fontSize: 22,
-    fontWeight: '900',
+    fontSize: text.cardTitle.size,
+    fontWeight: '800',
     letterSpacing: 0.2,
   },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  ratingText: { color: L.textMuted, fontSize: 13, fontWeight: '600' },
+  ratingText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Upgrade banner
   upgradeBanner: {
@@ -417,7 +419,7 @@ const styles = StyleSheet.create({
     backgroundColor: L.bg,
     borderWidth: 1.5,
     borderColor: L.goldBorder,
-    borderRadius: 16,
+    borderRadius: shape.card,
     padding: 16,
   },
   upgradeBallWrap: { width: 42, height: 38, position: 'relative', flexShrink: 0 },
@@ -445,9 +447,9 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '-18deg' }],
   },
   upgradeText: { flex: 1 },
-  upgradeTitle: { color: L.navy, fontSize: 14, fontWeight: '800', marginBottom: 2 },
+  upgradeTitle: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800', marginBottom: 2 },
   upgradePlus: { color: L.gold },
-  upgradeSub: { color: L.textSub, fontSize: 12, fontWeight: '500' },
+  upgradeSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   upgradeArrow: {
     width: 34,
     height: 34,
@@ -468,7 +470,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     backgroundColor: L.bg,
-    borderRadius: 16,
+    borderRadius: shape.card,
     borderWidth: 1,
     borderColor: L.border,
     padding: 16,
@@ -482,10 +484,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  helpQ: { color: L.gold, fontSize: 20, fontWeight: '900' },
+  helpQ: { color: L.gold, fontSize: text.modalTitle.size, fontWeight: '900' },
   helpText: { flex: 1 },
-  helpTitle: { color: L.navy, fontSize: 14, fontWeight: '800', marginBottom: 2 },
-  helpSub: { color: L.textSub, fontSize: 12, fontWeight: '500' },
+  helpTitle: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800', marginBottom: 2 },
+  helpSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   helpArrow: {
     width: 34,
     height: 34,
@@ -500,7 +502,7 @@ const styles = StyleSheet.create({
   footerRow: {
     flexDirection: 'row',
     backgroundColor: L.bg,
-    borderRadius: 14,
+    borderRadius: shape.panel,
     borderWidth: 1,
     borderColor: L.border,
     overflow: 'hidden',
@@ -521,22 +523,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     backgroundColor: L.bg,
-    borderRadius: 14,
+    borderRadius: shape.panel,
     borderWidth: 1,
     borderColor: L.danger,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
   deleteText: { flex: 1 },
-  deleteTitle: { color: L.danger, fontSize: 14, fontWeight: '800', marginBottom: 2 },
-  deleteSub: { color: L.textSub, fontSize: 12, fontWeight: '500' },
+  deleteTitle: { color: L.danger, fontSize: text.rowValue.size, fontWeight: '800', marginBottom: 2 },
+  deleteSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
-  footerText: { color: L.navy, fontSize: 13, fontWeight: '600' },
+  footerText: { color: L.navy, fontSize: text.caption.size, fontWeight: '500' },
 
   // Version
   version: {
     color: L.textMuted,
-    fontSize: 12,
+    fontSize: text.caption.size,
     fontWeight: '500',
     textAlign: 'center',
     marginTop: 4,
@@ -549,9 +551,9 @@ const dev = StyleSheet.create({
     gap: 8,
   },
   heading: {
-    fontSize: 12,
+    fontSize: text.sectionLabel.size,
     fontWeight: '800',
-    letterSpacing: 0.6,
+    letterSpacing: text.sectionLabel.letterSpacing,
     color: L.textMuted,
     textTransform: 'uppercase',
     paddingHorizontal: 4,
@@ -561,13 +563,13 @@ const dev = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     backgroundColor: L.bg,
-    borderRadius: 14,
+    borderRadius: shape.panel,
     borderWidth: 1,
     borderColor: L.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   rowText: { flex: 1 },
-  rowTitle: { fontSize: 15, fontWeight: '700', color: L.navy },
-  rowSub: { fontSize: 12, color: L.textMuted, marginTop: 2 },
+  rowTitle: { fontSize: text.body.size, fontWeight: '500', color: L.navy },
+  rowSub: { fontSize: text.caption.size, fontWeight: '500', color: L.textMuted, marginTop: 2 },
 });

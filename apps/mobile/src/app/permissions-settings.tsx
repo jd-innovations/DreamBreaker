@@ -9,6 +9,8 @@ import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 // Theme-backed alias â€” brand values resolve from @/theme.
 // blue accent is the device-permissions visual language (intentional, documented).
@@ -180,25 +182,25 @@ const s = StyleSheet.create({
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
     paddingHorizontal: 8, paddingVertical: 12,
   },
-  backBtn:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
-  backText:    { color: L.blue, fontSize: 17, fontWeight: '400' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '700' },
+  backBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
+  backText: { color: L.blue, fontSize: 17, fontWeight: '400' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   scroll: { padding: 20 },
 
   intro: {
-    color: L.textMuted, fontSize: 14, fontWeight: '400',
+    color: L.textMuted, fontSize: text.body.size, fontWeight: '500',
     textAlign: 'center', lineHeight: 20, marginBottom: 4,
   },
 
   sectionHeader: {
-    color: L.textMuted, fontSize: 12, fontWeight: '600',
-    letterSpacing: 0.6, textTransform: 'uppercase',
+    color: L.textMuted, fontSize: text.sectionLabel.size, fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase',
     marginBottom: 8, marginTop: 24, paddingHorizontal: 4,
   },
 
   group: {
-    backgroundColor: L.bg, borderRadius: 12,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border, overflow: 'hidden',
   },
 
@@ -209,8 +211,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 14, gap: 14,
   },
   rowCenter: { flex: 1 },
-  rowLabel:  { color: L.navy, fontSize: 15, fontWeight: '500', marginBottom: 3 },
-  rowSub:    { color: L.textSub, fontSize: 12, fontWeight: '400', lineHeight: 18 },
+  rowLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 3 },
+  rowSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18 },
 
   blueCircle: {
     width: 40, height: 40, borderRadius: 20,
@@ -218,14 +220,14 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
 
-  statusText: { fontSize: 14, fontWeight: '500', flexShrink: 0 },
+  statusText: { fontSize: text.rowTitle.size, fontWeight: '700', flexShrink: 0 },
 
   infoRow: {
     flexDirection: 'row', alignItems: 'flex-start',
     gap: 8, marginVertical: 20, paddingHorizontal: 4,
   },
   infoText: {
-    flex: 1, color: L.textMuted, fontSize: 13,
-    fontWeight: '400', lineHeight: 19,
+    flex: 1, color: L.textMuted, fontSize: text.caption.size,
+    fontWeight: '500', lineHeight: 19,
   },
 });

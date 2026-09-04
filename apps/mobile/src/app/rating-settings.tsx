@@ -10,6 +10,8 @@ import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 // Theme-backed alias — brand values resolve from @/theme.
 const L = {
@@ -342,28 +344,28 @@ const s = StyleSheet.create({
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
     paddingHorizontal: 8, paddingVertical: 12,
   },
-  backBtn:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
-  backText:   { color: L.blue, fontSize: 17, fontWeight: '400' },
-  headerTitle:{ color: L.navy, fontSize: 17, fontWeight: '700' },
+  backBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
+  backText: { color: L.blue, fontSize: 17, fontWeight: '400' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   scroll: { padding: 20 },
 
   // Intro
   intro: {
-    color: L.textMuted, fontSize: 14, fontWeight: '400',
+    color: L.textMuted, fontSize: text.body.size, fontWeight: '500',
     textAlign: 'center', lineHeight: 20, marginBottom: 4,
   },
 
   // Section header
   sectionHeader: {
-    color: L.textMuted, fontSize: 12, fontWeight: '600',
-    letterSpacing: 0.6, textTransform: 'uppercase',
+    color: L.textMuted, fontSize: text.sectionLabel.size, fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase',
     marginBottom: 8, marginTop: 24, paddingHorizontal: 4,
   },
 
   // Group
   group: {
-    backgroundColor: L.bg, borderRadius: 12,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border, overflow: 'hidden',
   },
 
@@ -376,18 +378,18 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 13, gap: 12,
   },
   rowCenter: { flex: 1 },
-  rowLabel:  { color: L.navy, fontSize: 15, fontWeight: '500', marginBottom: 2 },
-  rowSub:    { color: L.textMuted, fontSize: 12, fontWeight: '400' },
+  rowLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 2 },
+  rowSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Connected badge inline
   connectedRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  connectedText:{ color: L.green, fontSize: 12, fontWeight: '500' },
+  connectedText: { color: L.green, fontSize: text.caption.size, fontWeight: '500' },
 
   // Rating value
-  ratingValue: { color: L.navy, fontSize: 17, fontWeight: '700', marginRight: 4 },
+  ratingValue: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', marginRight: 4 },
 
   // Skill range value
-  rangeValue: { color: L.gold, fontSize: 15, fontWeight: '600', marginRight: 4 },
+  rangeValue: { color: L.gold, fontSize: text.body.size, fontWeight: '500', marginRight: 4 },
 
   // DUPR logo box
   duprBox: {
@@ -397,12 +399,12 @@ const s = StyleSheet.create({
 
   // Self rating icon box
   selfIconBox: {
-    width: 46, height: 46, borderRadius: 10,
+    width: 46, height: 46, borderRadius: shape.cta,
     backgroundColor: L.gold, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
 
   parBox: {
-    width: 46, height: 46, borderRadius: 10,
+    width: 46, height: 46, borderRadius: shape.cta,
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
@@ -419,16 +421,16 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 14, gap: 14,
   },
-  sourceInfo:  { flex: 1 },
-  sourceTitle: { color: L.navy, fontSize: 16, fontWeight: '700', marginBottom: 3 },
-  sourceDate:  { color: L.textMuted, fontSize: 12, fontWeight: '400', marginTop: 3 },
-  manageDUPR:  { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  manageDUPRText: { color: L.blue, fontSize: 14, fontWeight: '600' },
+  sourceInfo: { flex: 1 },
+  sourceTitle: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800', marginBottom: 3 },
+  sourceDate: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: 3 },
+  manageDUPR: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  manageDUPRText: { color: L.blue, fontSize: text.rowTitle.size, fontWeight: '700' },
 
   // Footer
   footer: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 6, marginTop: 28,
   },
-  footerText: { color: L.textMuted, fontSize: 13, fontWeight: '400' },
+  footerText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 });

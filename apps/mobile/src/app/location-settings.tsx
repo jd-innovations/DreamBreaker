@@ -10,6 +10,8 @@ import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useCurrentLocation, FALLBACK_LOCATION_LABEL } from '@/lib/location';
 import { useLocationSettings } from '@/hooks/useLocationSettings';
 
@@ -392,22 +394,22 @@ const s = StyleSheet.create({
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
     paddingHorizontal: 8, paddingVertical: 12,
   },
-  backBtn:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
-  backText:   { color: L.blue, fontSize: 17, fontWeight: '400' },
-  headerTitle:{ color: L.navy, fontSize: 17, fontWeight: '700' },
+  backBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
+  backText: { color: L.blue, fontSize: 17, fontWeight: '400' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   scroll: { padding: 20 },
 
   // Section header
   sectionHeader: {
-    color: L.textMuted, fontSize: 12, fontWeight: '600',
-    letterSpacing: 0.6, textTransform: 'uppercase',
+    color: L.textMuted, fontSize: text.sectionLabel.size, fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase',
     marginBottom: 8, marginTop: 24, paddingHorizontal: 4,
   },
 
   // Group
   group: {
-    backgroundColor: L.bg, borderRadius: 12,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border, overflow: 'hidden',
   },
 
@@ -425,39 +427,39 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   locationInfo: { flex: 1, gap: 3 },
-  locationCity: { color: L.navy, fontSize: 17, fontWeight: '700' },
-  locationTime: { color: L.textMuted, fontSize: 13, fontWeight: '400' },
-  refreshRow:   { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
-  refreshText:  { color: L.blue, fontSize: 13, fontWeight: '500' },
+  locationCity: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  locationTime: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  refreshRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
+  refreshText: { color: L.blue, fontSize: text.caption.size, fontWeight: '500' },
   gpsBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: L.greenBg, borderRadius: 20,
+    backgroundColor: L.greenBg, borderRadius: shape.pill,
     paddingHorizontal: 10, paddingVertical: 5,
     borderWidth: 1, borderColor: 'rgba(52,199,89,0.25)',
     flexShrink: 0,
   },
-  gpsBadgeText: { color: L.green, fontSize: 12, fontWeight: '700' },
+  gpsBadgeText: { color: L.green, fontSize: text.chipValue.size, fontWeight: '800' },
   approxBadge: { backgroundColor: L.page, borderColor: L.border },
 
   // Radius control
   radiusWrap: { paddingHorizontal: 16, paddingVertical: 14 },
   radiusHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
-  radiusLabel:  { color: L.navy, fontSize: 15, fontWeight: '600', marginBottom: 2 },
-  radiusSub:    { color: L.textMuted, fontSize: 12, fontWeight: '400' },
+  radiusLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 2 },
+  radiusSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Segmented row
   segRow: {
     flexDirection: 'row',
-    borderWidth: 1, borderColor: L.border, borderRadius: 10, overflow: 'hidden',
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.cta, overflow: 'hidden',
   },
   segBtn: {
     flex: 1, paddingVertical: 9, alignItems: 'center', justifyContent: 'center',
     backgroundColor: L.bg, borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: L.border,
   },
-  segFirst:      {},
-  segLast:       { borderRightWidth: 0 },
-  segActive:     { backgroundColor: L.gold },
-  segText:       { color: L.textMuted, fontSize: 12, fontWeight: '500' },
+  segFirst: {},
+  segLast: { borderRightWidth: 0 },
+  segActive: { backgroundColor: L.gold },
+  segText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   segTextActive: { color: '#FFFFFF', fontWeight: '700' },
 
   // Toggle rows
@@ -470,14 +472,14 @@ const s = StyleSheet.create({
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  toggleText:  { flex: 1 },
-  toggleLabel: { color: L.navy, fontSize: 15, fontWeight: '500', marginBottom: 2 },
-  toggleSub:   { color: L.textMuted, fontSize: 12, fontWeight: '400' },
+  toggleText: { flex: 1 },
+  toggleLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 2 },
+  toggleSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Footer
   footer: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 6, marginTop: 28,
   },
-  footerText: { color: L.textMuted, fontSize: 13, fontWeight: '400' },
+  footerText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 });
