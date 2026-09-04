@@ -471,7 +471,7 @@ exemptions declared in the mapping — rule 12, enforced rather than remembered.
 
 <!-- BEGIN GENERATED: migration-log — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-200 files migrated, listed from the tree with the sha of the commit
+201 files migrated, listed from the tree with the sha of the commit
 that last touched each.
 
 | File | Last commit |
@@ -584,6 +584,7 @@ that last touched each.
 | `app/onboarding/search-radius.tsx` | `482b612` |
 | `app/onboarding/select-home-court.tsx` | `482b612` |
 | `app/onboarding/self-rating.tsx` | `482b612` |
+| `app/onboarding/welcome-to-court.tsx` | `d7cfd90` |
 | `app/onboarding/welcome.tsx` | `482b612` |
 | `app/onboarding/your-name.tsx` | `482b612` |
 | `app/payments-settings.tsx` | `250cb8b` |
@@ -693,11 +694,11 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 
 | | Occurrences | Files |
 | --- | ---: | ---: |
-| Files importing `@shared/tokens` (migrated) | — | **200 of 219** (91%) |
-| Raw `fontSize: N` remaining | 420 | 117 |
+| Files importing `@shared/tokens` (migrated) | — | **201 of 219** (92%) |
+| Raw `fontSize: N` remaining | 402 | 117 |
 | `borderRadius: radius.*` from `@/theme` remaining | 25 | 6 |
 | `borderRadius: 30` → `shape.cta` | 4 | 4 |
-| `borderRadius: 999` → `shape.cta` | 14 | 6 |
+| `borderRadius: 999` → `shape.cta` | 13 | 5 |
 
 Raw sizes include the deliberate exemptions (below the 11pt floor, and
 avatar initials sized to their container), so the remaining count will not
