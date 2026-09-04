@@ -245,11 +245,16 @@ if (!src.includes("@shared/tokens")) {
   }
   const kept = m[1].split(",").map((x) => x.trim())
     .filter((x) => x && x !== "radius" && x !== "typography");
+  // Import only what the mapping actually uses. Importing `shape` into a file
+  // with no shape mappings leaves an unused import and a lint warning.
+  const wanted = [];
+  if (Object.keys(shapeMap).length) wanted.push("radius as shape");
+  if (Object.keys(typeMap).length) wanted.push("text");
   src = src.replace(
     m[0],
     `import { ${kept.join(", ")} } from '@/theme';\n` +
       "// Design standard, from the shared token source. See DESIGN_STANDARD.md.\n" +
-      "import { radius as shape, text } from '@shared/tokens';",
+      `import { ${wanted.join(", ")} } from '@shared/tokens';`,
   );
 }
 

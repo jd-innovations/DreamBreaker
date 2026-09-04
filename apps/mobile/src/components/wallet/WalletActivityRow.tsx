@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
-import { radius as shape, text } from '@shared/tokens';
+import { text } from '@shared/tokens';
 import type { WalletActivityEntry } from '@/lib/walletTypes';
 
 const EVENT_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
