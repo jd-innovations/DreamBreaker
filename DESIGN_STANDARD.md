@@ -471,7 +471,7 @@ exemptions declared in the mapping — rule 12, enforced rather than remembered.
 
 <!-- BEGIN GENERATED: migration-log — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-182 files migrated, listed from the tree with the sha of the commit
+200 files migrated, listed from the tree with the sha of the commit
 that last touched each.
 
 | File | Last commit |
@@ -481,9 +481,11 @@ that last touched each.
 | `app/(tabs)/finder.tsx` | `05efd8b` |
 | `app/(tabs)/games.tsx` | `34a8eeb` |
 | `app/(tabs)/index.tsx` | `2d52fa5` |
+| `app/(tabs)/landing.tsx` | `55a4e5d` |
 | `app/(tabs)/marketplace.tsx` | `fb47edb` |
 | `app/(tabs)/nearby.tsx` | `e7927f3` |
 | `app/(tabs)/partner.tsx` | `fb47edb` |
+| `app/(tabs)/profile.tsx` | `55a4e5d` |
 | `app/(tabs)/stats.tsx` | `5bc03cb` |
 | `app/(tabs)/tournaments.tsx` | `fb47edb` |
 | `app/account-settings.tsx` | `250cb8b` |
@@ -497,6 +499,7 @@ that last touched each.
 | `app/booking/players.tsx` | `f1c1ebd` |
 | `app/booking/results.tsx` | `54ff028` |
 | `app/booking/review.tsx` | `abb9086` |
+| `app/claim/[token].tsx` | `55a4e5d` |
 | `app/coach/[id].tsx` | `2638ed9` |
 | `app/coach/index.tsx` | `2638ed9` |
 | `app/coach/offers/[id]/edit.tsx` | `2638ed9` |
@@ -504,17 +507,23 @@ that last touched each.
 | `app/coach/offers/index.tsx` | `2638ed9` |
 | `app/coach/redeem.tsx` | `2638ed9` |
 | `app/communication-settings.tsx` | `250cb8b` |
-| `app/community/[id].tsx` | `21181ac` |
-| `app/community/[id]/edit.tsx` | `21181ac` |
+| `app/community/[id].tsx` | `2a40ba1` |
+| `app/community/[id]/edit.tsx` | `2a40ba1` |
 | `app/community/[id]/invite-players.tsx` | `21181ac` |
-| `app/create-clinic.tsx` | `2cb52df` |
-| `app/create-mini-tournament.tsx` | `2cb52df` |
-| `app/create-quick-game.tsx` | `2cb52df` |
-| `app/create-round-robin.tsx` | `2cb52df` |
+| `app/conversation/[id].tsx` | `55a4e5d` |
+| `app/create-clinic.tsx` | `2a40ba1` |
+| `app/create-mini-tournament.tsx` | `2a40ba1` |
+| `app/create-quick-game.tsx` | `2a40ba1` |
+| `app/create-round-robin.tsx` | `2a40ba1` |
 | `app/delete-account.tsx` | `250cb8b` |
 | `app/director.tsx` | `2cb52df` |
+| `app/director/create-tournament.tsx` | `55a4e5d` |
 | `app/edit-profile.tsx` | `d32883a` |
 | `app/facility/[id].tsx` | `22a4dd3` |
+| `app/facility/apply.tsx` | `55a4e5d` |
+| `app/facility/check-in.tsx` | `55a4e5d` |
+| `app/facility/deals.tsx` | `55a4e5d` |
+| `app/facility/manage.tsx` | `55a4e5d` |
 | `app/forgot-password.tsx` | `d32883a` |
 | `app/groups/[id].tsx` | `81d23cd` |
 | `app/groups/[id]/chat.tsx` | `81d23cd` |
@@ -548,14 +557,14 @@ that last touched each.
 | `app/marketplace/my-listings.tsx` | `d9a0909` |
 | `app/match/connections.tsx` | `cf36b2d` |
 | `app/match/preferences.tsx` | `cf36b2d` |
-| `app/match/profile/[id].tsx` | `cf36b2d` |
+| `app/match/profile/[id].tsx` | `2a40ba1` |
 | `app/match/requests.tsx` | `cf36b2d` |
 | `app/match/saved.tsx` | `cf36b2d` |
 | `app/membership-settings.tsx` | `250cb8b` |
-| `app/mini-tournament-created.tsx` | `e592d2f` |
-| `app/mini-tournament/[id]/bracket.tsx` | `90cc95d` |
-| `app/mini-tournament/[id]/results.tsx` | `90cc95d` |
-| `app/mini-tournament/[id]/score-entry.tsx` | `90cc95d` |
+| `app/mini-tournament-created.tsx` | `2a40ba1` |
+| `app/mini-tournament/[id]/bracket.tsx` | `2a40ba1` |
+| `app/mini-tournament/[id]/results.tsx` | `2a40ba1` |
+| `app/mini-tournament/[id]/score-entry.tsx` | `2a40ba1` |
 | `app/my-tournaments.tsx` | `d32883a` |
 | `app/new-message.tsx` | `d32883a` |
 | `app/notifications-settings.tsx` | `250cb8b` |
@@ -581,22 +590,28 @@ that last touched each.
 | `app/payout-settings.tsx` | `250cb8b` |
 | `app/permissions-settings.tsx` | `250cb8b` |
 | `app/play-pickleball.tsx` | `d32883a` |
-| `app/players/[id].tsx` | `9021e08` |
+| `app/players/[id].tsx` | `2a40ba1` |
 | `app/players/[id]/invite-details.tsx` | `9021e08` |
 | `app/players/[id]/invite-sent.tsx` | `9021e08` |
 | `app/players/[id]/invite.tsx` | `9021e08` |
-| `app/quick-game-created.tsx` | `e592d2f` |
+| `app/quick-game-created.tsx` | `2a40ba1` |
+| `app/quick-game/[id]/roster.tsx` | `55a4e5d` |
 | `app/rating-settings.tsx` | `250cb8b` |
 | `app/reset-password.tsx` | `d32883a` |
-| `app/round-robin-created.tsx` | `e592d2f` |
+| `app/review/[token].tsx` | `55a4e5d` |
+| `app/round-robin-created.tsx` | `2a40ba1` |
 | `app/round-robin/[id]/results.tsx` | `4b5e3d8` |
-| `app/round-robin/[id]/roster.tsx` | `4b5e3d8` |
+| `app/round-robin/[id]/roster.tsx` | `2a40ba1` |
 | `app/round-robin/[id]/schedule.tsx` | `2c78032` |
 | `app/round-robin/[id]/score-entry.tsx` | `2c78032` |
 | `app/round-robin/[id]/standings.tsx` | `2c78032` |
 | `app/saved-events.tsx` | `d32883a` |
 | `app/sign-in.tsx` | `d32883a` |
 | `app/sign-up.tsx` | `d32883a` |
+| `app/story/[category].tsx` | `55a4e5d` |
+| `app/support/[id].tsx` | `55a4e5d` |
+| `app/support/index.tsx` | `55a4e5d` |
+| `app/support/new-ticket.tsx` | `55a4e5d` |
 | `app/tournament/[id].tsx` | `16871ec` |
 | `app/tournament/[id]/add-registration.tsx` | `9564031` |
 | `app/tournament/[id]/brackets.tsx` | `9933f30` |
@@ -618,6 +633,8 @@ that last touched each.
 | `app/tournament/[id]/select-division.tsx` | `9564031` |
 | `app/tournament/[id]/workspace.tsx` | `c4cd45b` |
 | `app/wallet.tsx` | `d32883a` |
+| `app/wallet/[id].tsx` | `55a4e5d` |
+| `app/wallet/refund-request.tsx` | `55a4e5d` |
 | `components/AmenityPicker.tsx` | `0af9ba0` |
 | `components/AttachmentOptionsSheet.tsx` | `0af9ba0` |
 | `components/ContextMenu.tsx` | `a068e67` |
@@ -626,6 +643,7 @@ that last touched each.
 | `components/ExploreMap.web.tsx` | `0af9ba0` |
 | `components/FacilityCard.tsx` | `8aed181` |
 | `components/FacilityPicker.tsx` | `8aed181` |
+| `components/FieldLabel.tsx` | `2a40ba1` |
 | `components/FileAttachmentRow.tsx` | `0af9ba0` |
 | `components/FindGamesFilterModal.tsx` | `8aed181` |
 | `components/InfoTooltip.tsx` | `0af9ba0` |
@@ -646,7 +664,7 @@ that last touched each.
 | `components/VenueMapCard.web.tsx` | `0af9ba0` |
 | `components/safety/ReportUserSheet.tsx` | `8aed181` |
 | `components/states/OfflineBanner.tsx` | `0af9ba0` |
-| `components/states/ScreenState.tsx` | `0af9ba0` |
+| `components/states/ScreenState.tsx` | `2a40ba1` |
 | `components/stats/ParGauge.tsx` | `a068e67` |
 | `components/stats/PlayerCredentialCard.tsx` | `8aed181` |
 | `components/stats/PlayerStatTile.tsx` | `0af9ba0` |
@@ -670,15 +688,15 @@ container.
 
 <!-- BEGIN GENERATED: progress — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-Measured from the tree when this was generated — 218 `.tsx` files
+Measured from the tree when this was generated — 219 `.tsx` files
 under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 
 | | Occurrences | Files |
 | --- | ---: | ---: |
-| Files importing `@shared/tokens` (migrated) | — | **182 of 218** (83%) |
-| Raw `fontSize: N` remaining | 637 | 119 |
-| `borderRadius: radius.*` from `@/theme` remaining | 94 | 17 |
-| `borderRadius: 30` → `shape.cta` | 9 | 8 |
+| Files importing `@shared/tokens` (migrated) | — | **200 of 219** (91%) |
+| Raw `fontSize: N` remaining | 445 | 117 |
+| `borderRadius: radius.*` from `@/theme` remaining | 25 | 6 |
+| `borderRadius: 30` → `shape.cta` | 4 | 4 |
 | `borderRadius: 999` → `shape.cta` | 14 | 6 |
 
 Raw sizes include the deliberate exemptions (below the 11pt floor, and
