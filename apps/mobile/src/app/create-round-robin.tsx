@@ -290,7 +290,12 @@ export default function CreateRoundRobinScreen() {
       // Upload cover photo if selected
       let coverUrl: string | undefined;
       if (photo) {
-        try { coverUrl = await uploadPlayEventCover(user.id, photo, photoMimeType); } catch { /* non-fatal */ }
+        try {
+          coverUrl = await uploadPlayEventCover(user.id, photo, photoMimeType);
+        } catch (e) {
+          console.error('[cover upload] round-robin:', e);
+          Alert.alert('Photo not uploaded', String(e instanceof Error ? e.message : e));
+        }
       }
 
       const rrCreateLocation =

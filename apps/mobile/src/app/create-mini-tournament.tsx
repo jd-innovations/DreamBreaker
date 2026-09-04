@@ -293,7 +293,14 @@ export default function CreateMiniTournamentScreen() {
     setSaving(true);
     try {
       let coverUrl: string | undefined;
-      if (photo) { try { coverUrl = await uploadPlayEventCover(user.id, photo, photoMimeType); } catch {} }
+      if (photo) {
+        try {
+          coverUrl = await uploadPlayEventCover(user.id, photo, photoMimeType);
+        } catch (e) {
+          console.error('[cover upload] mini-tournament:', e);
+          Alert.alert('Photo not uploaded', String(e instanceof Error ? e.message : e));
+        }
+      }
       const mtLocationText =
       pickerValue?.mode === 'facility' ? `${pickerValue.city}, ${pickerValue.state}` :
       pickerValue?.mode === 'manual'   ? pickerValue.text : '';

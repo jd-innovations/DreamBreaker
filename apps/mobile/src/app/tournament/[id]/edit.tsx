@@ -15,6 +15,7 @@ import { fetchTournamentById, updateTournamentDetails } from '@/lib/supabase/tou
 import { useProfile } from '@/hooks/useProfile';
 import type { Tournament } from '@/lib/tournamentTypes';
 import { DirectorOnly } from '@/components/DirectorOnly';
+import { ErrorState } from '@/components/states/ScreenState';
 import AmenityPicker from '@/components/AmenityPicker';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -222,6 +223,7 @@ function EditTournamentScreen() {
   const stripeOnboarded = !!profile?.stripe_connect_onboarded_at;
 
   const [loading, setLoading]       = useState(true);
+  const [loadError, setLoadError]   = useState<string | null>(null);
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [form, setForm]             = useState<FormState | null>(null);
   const [errors, setErrors]         = useState<Errors>({});
@@ -235,17 +237,29 @@ function EditTournamentScreen() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const t = await fetchTournamentById(id);
-      if (cancelled) return;
-      if (!t || t.status !== 'draft') {
-        Alert.alert('Cannot edit', 'This tournament can no longer be edited.');
-        router.back();
-        return;
+      // Every exit from here MUST clear `loading`. Before this, the failure
+      // paths returned early and `setLoading(false)` was unreachable, so any
+      // problem showed as a spinner that never resolved and reported nothing.
+      try {
+        const t = await fetchTournamentById(id);
+        if (cancelled) return;
+        if (!t) {
+          setLoadError('This tournament could not be loaded.');
+          return;
+        }
+        if (t.status !== 'draft') {
+          setLoadError(`This tournament is "${t.status}" and can only be edited while it is a draft.`);
+          return;
+        }
+        setTournament(t);
+        setForm(tournamentToForm(t));
+        setAmenities(t.amenities ?? []);
+      } catch (e) {
+        console.error('[tournament edit] load failed:', e);
+        if (!cancelled) setLoadError(String(e instanceof Error ? e.message : e));
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setTournament(t);
-      setForm(tournamentToForm(t));
-      setAmenities(t.amenities ?? []);
-      setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [id]);
@@ -344,6 +358,16 @@ function EditTournamentScreen() {
       return;
     }
     router.back();
+  }
+
+  if (loadError) {
+    return (
+      <View style={[s.root, { paddingTop: insets.top }]}>
+        <StatusBar style="dark" />
+        <ErrorState title="Can't open the editor" message={loadError}
+          action={{ label: 'Go back', onPress: () => router.back() }} />
+      </View>
+    );
   }
 
   if (loading || !form || !tournament) {

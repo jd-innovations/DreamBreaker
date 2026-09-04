@@ -204,8 +204,12 @@ export default function CreateQuickGameScreen() {
       if (photo) {
         try {
           coverUrl = await uploadPlayEventCover(user.id, photo, photoMimeType);
-        } catch {
-          // Photo upload failure is non-fatal — create game without cover
+        } catch (e) {
+          // Non-fatal — the game is still created. But the error is REPORTED
+          // now: an empty catch here hid every cover-upload failure since
+          // 2026-08-21, and the events simply came out with no photo.
+          console.error('[cover upload] quick-game:', e);
+          Alert.alert('Photo not uploaded', String(e instanceof Error ? e.message : e));
         }
       }
 
