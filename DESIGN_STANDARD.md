@@ -448,7 +448,7 @@ exemptions declared in the mapping — rule 12, enforced rather than remembered.
 
 <!-- BEGIN GENERATED: migration-log — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-61 files migrated, listed from the tree with the sha of the commit
+73 files migrated, listed from the tree with the sha of the commit
 that last touched each.
 
 | File | Last commit |
@@ -511,9 +511,21 @@ that last touched each.
 | `app/tournament/[id]/results.tsx` | `0a7395d` |
 | `app/tournament/[id]/select-division.tsx` | `9564031` |
 | `app/tournament/[id]/workspace.tsx` | `c4cd45b` |
+| `components/EventWeatherCard.tsx` | `8aed181` |
+| `components/FacilityCard.tsx` | `8aed181` |
+| `components/FacilityPicker.tsx` | `8aed181` |
+| `components/FindGamesFilterModal.tsx` | `8aed181` |
 | `components/PrimaryButton.tsx` | `f4469e9` |
 | `components/SecondaryButton.tsx` | `f4469e9` |
+| `components/SlideMenu/SlideMenuProvider.tsx` | `8aed181` |
 | `components/StatusChip.tsx` | `b0fd68d` |
+| `components/TournamentTrendingCard.tsx` | `8aed181` |
+| `components/safety/ReportUserSheet.tsx` | `8aed181` |
+| `components/stats/PlayerCredentialCard.tsx` | `8aed181` |
+| `components/support/ReportProblemForm.tsx` | `8aed181` |
+| `components/wallet/WalletActivityRow.tsx` | `65f1a6d` |
+| `components/wallet/WalletCard.tsx` | `8aed181` |
+| `components/wallet/WalletRedeemSheet.tsx` | `8aed181` |
 
 <!-- END GENERATED: migration-log -->
 
@@ -531,11 +543,11 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 
 | | Occurrences | Files |
 | --- | ---: | ---: |
-| Files importing `@shared/tokens` (migrated) | — | **61 of 218** (28%) |
-| Raw `fontSize: N` remaining | 1643 | 181 |
-| `borderRadius: radius.*` from `@/theme` remaining | 359 | 87 |
+| Files importing `@shared/tokens` (migrated) | — | **73 of 218** (33%) |
+| Raw `fontSize: N` remaining | 1558 | 175 |
+| `borderRadius: radius.*` from `@/theme` remaining | 337 | 80 |
 | `borderRadius: 30` → `shape.cta` | 10 | 9 |
-| `borderRadius: 999` → `shape.cta` | 16 | 8 |
+| `borderRadius: 999` → `shape.cta` | 15 | 7 |
 
 Raw sizes include the deliberate exemptions (below the 11pt floor, and
 avatar initials sized to their container), so the remaining count will not
