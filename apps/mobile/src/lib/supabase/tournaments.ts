@@ -288,12 +288,40 @@ export async function submitTournamentForApproval(id: string): Promise<{ ok: tru
 // on every director screen mount and needs one column, not the full row.
 // Returns null when the tournament does not exist OR is not readable by the
 // caller — both cases mean "not the director" to the guard.
+// Measured 2026-09-04: this call can never settle. On the tournament edit route
+// the director guard sat at "tournament loading" for 32s and a manual Retry
+// hung the same way, while identical queries on other screens returned
+// normally — so it is this request, not the client and not the session.
+//
+// Root cause unknown. What is certain is that a Supabase call with no timeout
+// hangs forever and reports nothing, which is what made it invisible: the guard
+// spun with no error to show. Bounded here so it fails loudly instead.
+export class QueryTimeoutError extends Error {
+  constructor(what: string, ms: number) {
+    super(`${what} did not respond within ${ms / 1000}s.`);
+    this.name = 'QueryTimeoutError';
+  }
+}
+
+function withTimeout<T>(p: PromiseLike<T>, ms: number, what: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new QueryTimeoutError(what, ms)), ms);
+    Promise.resolve(p).then(
+      v => { clearTimeout(timer); resolve(v); },
+      e => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
 export async function fetchTournamentDirectorId(id: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('tournaments')
-    .select('director_id')
-    .eq('id', id)
-    .maybeSingle();
+  const started = Date.now();
+  const { data, error } = await withTimeout(
+    supabase.from('tournaments').select('director_id').eq('id', id).maybeSingle(),
+    8_000,
+    'The permission check',
+  );
+  console.log(`[fetchTournamentDirectorId] ${id} settled in ${Date.now() - started}ms`,
+    error ? `error=${error.message}` : `director=${data?.director_id ?? 'null'}`);
 
   if (error || !data) return null;
   return data.director_id != null ? String(data.director_id) : null;

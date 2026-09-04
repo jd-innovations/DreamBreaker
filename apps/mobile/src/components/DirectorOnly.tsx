@@ -45,7 +45,7 @@ type Props = {
 const mountProbe = new Map<string, { firstSeen: number; mounts: number }>();
 
 export function DirectorOnly({ tournamentId, children }: Props) {
-  const { canManage, denyReason, loading, profileLoading, directorLoading, refresh } =
+  const { canManage, denyReason, loading, profileLoading, directorLoading, error, refresh } =
     useTournamentDirector(tournamentId);
 
   // A guard that never resolves is indistinguishable from a slow one. After
@@ -107,6 +107,21 @@ export function DirectorOnly({ tournamentId, children }: Props) {
             </Text>
           </>
         )}
+      </View>
+    );
+  }
+
+  // A check that FAILED is not a denial. Showing "only the director can manage
+  // it" for a timed-out request would accuse the actual director of not owning
+  // their own tournament.
+  if (error) {
+    return (
+      <View style={s.root}>
+        <Text style={s.text}>Could not verify your permissions.</Text>
+        <Text style={s.text}>{error}</Text>
+        <TouchableOpacity onPress={() => { void refresh(); }} style={{ marginTop: 16 }}>
+          <Text style={[s.text, { color: colors.gold }]}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }

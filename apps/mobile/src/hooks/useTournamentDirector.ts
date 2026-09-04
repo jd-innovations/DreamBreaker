@@ -34,6 +34,7 @@ export function useTournamentDirector(tournamentId: string | null | undefined) {
   const { user, profile, loading: profileLoading } = useProfile();
   const [directorId, setDirectorId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (profileLoading) return;
@@ -43,8 +44,16 @@ export function useTournamentDirector(tournamentId: string | null | undefined) {
       return;
     }
     setLoading(true);
+    setError(null);
     try {
       setDirectorId(await fetchTournamentDirectorId(tournamentId));
+    } catch (e) {
+      // Without this the throw fell through to canManage === false, and the
+      // guard read a FAILED check as "not the director" and redirected. A
+      // failure to answer is not a denial.
+      console.error('[useTournamentDirector] permission check failed:', e);
+      setDirectorId(null);
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -65,7 +74,7 @@ export function useTournamentDirector(tournamentId: string | null | undefined) {
 
   const canManage = isDirector && isApprovedDirector;
 
-  const denyReason: DirectorDenyReason | null = resolving || canManage
+  const denyReason: DirectorDenyReason | null = resolving || canManage || error
     ? null
     : isDirector
       ? 'not_approved'
@@ -78,6 +87,8 @@ export function useTournamentDirector(tournamentId: string | null | undefined) {
     // one never settled instead of spinning anonymously.
     profileLoading,
     directorLoading: loading,
+    /** The check FAILED (timeout, network). Not the same as a denial. */
+    error,
     isDirector,
     isApprovedDirector,
     canManage,
