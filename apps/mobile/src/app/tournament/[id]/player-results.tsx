@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { StatusChip, PickleballIcon } from '@/components';
 import type { Tournament } from '@/lib/tournamentTypes';
 import { fetchTournamentById } from '@/lib/supabase/tournaments';
@@ -63,7 +65,7 @@ function YouBadge() {
 
 const yb = StyleSheet.create({
   badge: {
-    backgroundColor: L.gold, borderRadius: 5,
+    backgroundColor: L.gold, borderRadius: shape.badge,
     paddingHorizontal: 5, paddingVertical: 1,
   },
   text: { color: L.bg, fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
@@ -93,10 +95,10 @@ function SummaryCard({
 const sc = StyleSheet.create({
   card: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderRadius: radius.card,
+    borderWidth: 1, borderRadius: shape.card,
     paddingVertical: 14, paddingHorizontal: 4, gap: 4, minHeight: 76,
   },
-  value: { fontSize: 22, fontWeight: '900' },
+  value: { fontSize: text.cardTitle.size, fontWeight: '800' },
   label: { color: L.textSub, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, textAlign: 'center' },
 });
 
@@ -140,7 +142,7 @@ const pod = StyleSheet.create({
   },
   rowChamp: { backgroundColor: L.goldBg },
   rowHighlight: {
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: 10,
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta,
     marginHorizontal: 10, marginVertical: 4,
     shadowColor: L.gold, shadowOpacity: 0.30, shadowRadius: 8,
     shadowOffset: { width: 0, height: 0 }, elevation: 4,
@@ -151,7 +153,7 @@ const pod = StyleSheet.create({
     borderWidth: 1,
   },
   rankLabel: { color: L.textSub, fontSize: 10, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 2 },
-  name:      { color: L.navy, fontSize: 15, fontWeight: '800' },
+  name: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
 });
 
 // ─── Division result card ─────────────────────────────────────────────────────
@@ -263,7 +265,7 @@ function DivisionResultCard({
 const dc = StyleSheet.create({
   card: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, overflow: 'hidden', marginBottom: 12,
+    borderRadius: shape.card, overflow: 'hidden', marginBottom: 12,
   },
   cardMe: {
     borderColor: L.gold, borderWidth: 1.5,
@@ -275,10 +277,10 @@ const dc = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 13,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  divName:   { color: L.navy, fontSize: 15, fontWeight: '800', marginBottom: 2 },
-  matchStat: { color: L.textSub, fontSize: 12 },
+  divName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', marginBottom: 2 },
+  matchStat: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   publishedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  publishedText:  { color: L.success, fontSize: 11, fontWeight: '700' },
+  publishedText: { color: L.success, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 
   expandSection: {
     backgroundColor: L.page, paddingHorizontal: 14, paddingVertical: 12, gap: 0,
@@ -288,16 +290,16 @@ const dc = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  expandLabel: { color: L.textSub, fontSize: 13, fontWeight: '600', flex: 1 },
-  expandValue: { color: L.navy,    fontSize: 13, fontWeight: '800' },
+  expandLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
+  expandValue: { color: L.navy,    fontSize: text.rowValue.size, fontWeight: '800' },
 
   roundRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 7,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  roundName: { color: L.navy,    fontSize: 12, fontWeight: '700' },
-  roundStat: { color: L.textSub, fontSize: 12 },
+  roundName: { color: L.navy,    fontSize: text.caption.size, fontWeight: '500' },
+  roundStat: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 });
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -513,7 +515,7 @@ export default function PlayerResultsScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
   scroll: { padding: 16, gap: 4 },
 
   header: {
@@ -523,32 +525,32 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title:   { color: L.navy, fontSize: 19, fontWeight: '800' },
-  sub:     { color: L.textSub, fontSize: 12, marginTop: 1 },
+  title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
 
   section: { marginBottom: 20 },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12,
   },
   sectionTitle: {
-    color: L.navy, fontSize: 11, fontWeight: '800', letterSpacing: 0.8,
+    color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing,
   },
 
   summaryRow: { flexDirection: 'row', gap: 8 },
 
   emptyCard: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, padding: 32,
+    borderRadius: shape.card, padding: 32,
     alignItems: 'center', gap: 10,
   },
-  emptyCardText: { color: L.textSub, fontSize: 14, fontWeight: '600' },
+  emptyCardText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   shareBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    backgroundColor: L.navy, borderRadius: 14,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingVertical: 16,
   },
-  shareBtnText: { color: L.bg, fontSize: 16, fontWeight: '800' },
+  shareBtnText: { color: L.bg, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   // Empty state
   emptyRoot: {
@@ -560,14 +562,14 @@ const s = StyleSheet.create({
     backgroundColor: L.page, borderWidth: 1, borderColor: L.border,
     alignItems: 'center', justifyContent: 'center', marginBottom: 4,
   },
-  emptyTitle: { color: L.navy, fontSize: 18, fontWeight: '800', textAlign: 'center' },
-  emptySub:   {
-    color: L.textSub, fontSize: 14, textAlign: 'center', lineHeight: 22,
+  emptyTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', textAlign: 'center' },
+  emptySub: {
+    color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 22,
   },
   emptyBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: L.navy, borderRadius: 12,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingHorizontal: 22, paddingVertical: 13, marginTop: 8,
   },
-  emptyBtnText: { color: L.bg, fontSize: 14, fontWeight: '700' },
+  emptyBtnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 });

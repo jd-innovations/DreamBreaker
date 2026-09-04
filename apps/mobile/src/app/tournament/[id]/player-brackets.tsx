@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components';
 import type { Tournament } from '@/lib/tournamentTypes';
 import { fetchTournamentById } from '@/lib/supabase/tournaments';
@@ -142,10 +144,10 @@ const pr = StyleSheet.create({
   },
   rowWinner: {
     backgroundColor: L.successBg,
-    borderColor: 'rgba(34,197,94,0.25)', borderWidth: 1, borderRadius: 8,
+    borderColor: 'rgba(34,197,94,0.25)', borderWidth: 1, borderRadius: shape.badge,
   },
   rowMe: {
-    borderColor: L.goldBorder, borderWidth: 1.5, borderRadius: 8,
+    borderColor: L.goldBorder, borderWidth: 1.5, borderRadius: shape.badge,
     backgroundColor: L.goldBg,
   },
   seed: {
@@ -153,15 +155,15 @@ const pr = StyleSheet.create({
     backgroundColor: L.page, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   seedText: { color: L.textSub, fontSize: 10, fontWeight: '700' },
-  nameRow:  { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'nowrap' },
-  name:     { color: L.navy, fontSize: 13, fontWeight: '700', flexShrink: 1 },
-  partner:  { color: L.textSub, fontSize: 11, marginTop: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'nowrap' },
+  name: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', flexShrink: 1 },
+  partner: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
   youBadge: {
-    backgroundColor: L.gold, borderRadius: 5,
+    backgroundColor: L.gold, borderRadius: shape.badge,
     paddingHorizontal: 5, paddingVertical: 1, flexShrink: 0,
   },
-  youText:  { color: L.bg, fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
-  score:    { fontSize: 18, fontWeight: '900', minWidth: 24, textAlign: 'right' },
+  youText: { color: L.bg, fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
+  score: { fontSize: text.modalTitle.size, fontWeight: '900', minWidth: 24, textAlign: 'right' },
 });
 
 // ─── Match card (read-only) ───────────────────────────────────────────────────
@@ -239,7 +241,7 @@ const mc = StyleSheet.create({
   card: {
     width: 220, backgroundColor: L.bg,
     borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, overflow: 'hidden', marginBottom: 10,
+    borderRadius: shape.card, overflow: 'hidden', marginBottom: 10,
   },
   cardMe: {
     borderColor: L.gold, borderWidth: 1.5,
@@ -250,28 +252,28 @@ const mc = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 10, paddingTop: 10, paddingBottom: 6,
   },
-  matchNum: { color: L.textSub, fontSize: 11, fontWeight: '700', letterSpacing: 0.4 },
+  matchNum: { color: L.textSub, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   courtBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: L.goldBg, borderRadius: 6,
+    backgroundColor: L.goldBg, borderRadius: shape.badge,
     paddingHorizontal: 6, paddingVertical: 2,
     borderWidth: StyleSheet.hairlineWidth, borderColor: L.goldBorder,
   },
-  courtText:  { color: L.gold, fontSize: 10, fontWeight: '700' },
+  courtText: { color: L.gold, fontSize: 10, fontWeight: '700' },
   participants: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border },
-  divider:      { height: StyleSheet.hairlineWidth, backgroundColor: L.border, marginHorizontal: 10 },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: L.border, marginHorizontal: 10 },
   awaiting: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 10, paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border,
   },
-  awaitingText: { color: L.textSub, fontSize: 11, fontStyle: 'italic' },
-  scoreFooter:  {
+  awaitingText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', fontStyle: 'italic' },
+  scoreFooter: {
     alignItems: 'center', paddingVertical: 7,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border,
     backgroundColor: L.page,
   },
-  scoreFooterText: { color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.5 },
+  scoreFooterText: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800', letterSpacing: 0.5 },
 });
 
 // ─── Division selector chip ───────────────────────────────────────────────────
@@ -293,11 +295,11 @@ function DivChip({
 const dc = StyleSheet.create({
   chip: {
     paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1, borderColor: L.border,
+    borderRadius: shape.pill, borderWidth: 1, borderColor: L.border,
     backgroundColor: L.bg,
   },
-  chipActive:  { backgroundColor: L.navy, borderColor: L.navy },
-  label:       { color: L.textSub, fontSize: 13, fontWeight: '700' },
+  chipActive: { backgroundColor: L.navy, borderColor: L.navy },
+  label: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   labelActive: { color: L.bg },
 });
 
@@ -341,9 +343,9 @@ const ps = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
     gap: 10,
   },
-  item:  { flex: 1, alignItems: 'center', gap: 3 },
-  div:   { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: L.border },
-  num:   { color: L.navy, fontSize: 16, fontWeight: '900' },
+  item: { flex: 1, alignItems: 'center', gap: 3 },
+  div: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: L.border },
+  num: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
   label: { color: L.textSub, fontSize: 9, fontWeight: '700', letterSpacing: 0.4 },
 });
 
@@ -383,14 +385,14 @@ const cb = StyleSheet.create({
     backgroundColor: L.goldBg, borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: L.goldBorder, paddingHorizontal: 16, paddingVertical: 12, gap: 8,
   },
-  row:        { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  title:      { color: L.gold, fontSize: 10, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
-  name:       { color: L.navy, fontSize: 15, fontWeight: '800' },
-  runnerRow:  { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 2 },
-  runnerLabel:{ color: L.textSub, fontSize: 12, fontWeight: '600' },
-  runnerName: { color: L.navy, fontSize: 13, fontWeight: '700' },
-  youBadge:   { backgroundColor: L.gold, borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1 },
-  youText:    { color: L.bg, fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  title: { color: L.gold, fontSize: 10, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
+  name: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  runnerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 2 },
+  runnerLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  runnerName: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  youBadge: { backgroundColor: L.gold, borderRadius: shape.badge, paddingHorizontal: 5, paddingVertical: 1 },
+  youText: { color: L.bg, fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
 });
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -612,8 +614,8 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title:   { color: L.navy, fontSize: 17, fontWeight: '800' },
-  sub:     { color: L.textSub, fontSize: 12, marginTop: 1 },
+  title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
 
   chipScroll: { maxHeight: 52, flexGrow: 0, backgroundColor: L.bg },
   chipRow: {
@@ -626,15 +628,15 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 8, gap: 8, flexDirection: 'row',
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  tab:           { paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg },
-  tabActive:     { backgroundColor: L.navy, borderColor: L.navy },
-  tabLabel:      { color: L.textSub, fontSize: 13, fontWeight: '700' },
-  tabLabelActive:{ color: L.bg },
+  tab: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: shape.pill, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg },
+  tabActive: { backgroundColor: L.navy, borderColor: L.navy },
+  tabLabel: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
+  tabLabelActive: { color: L.bg },
 
   bracketCanvas: { paddingHorizontal: 16, paddingTop: 16, flexDirection: 'row', gap: 16 },
-  roundCol:      { gap: 0 },
+  roundCol: { gap: 0 },
   roundHeader: {
-    color: L.navy, fontSize: 13, fontWeight: '800', letterSpacing: 0.4,
+    color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing,
     textTransform: 'uppercase', marginBottom: 10, paddingHorizontal: 2,
   },
 
@@ -647,12 +649,12 @@ const s = StyleSheet.create({
     backgroundColor: L.page, borderWidth: 1, borderColor: L.border,
     alignItems: 'center', justifyContent: 'center', marginBottom: 4,
   },
-  emptyTitle: { color: L.navy, fontSize: 18, fontWeight: '800', textAlign: 'center' },
-  emptySub:   { color: L.textSub, fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  emptyTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', textAlign: 'center' },
+  emptySub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 22 },
   emptyBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: L.navy, borderRadius: 12,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingHorizontal: 22, paddingVertical: 13, marginTop: 8,
   },
-  emptyBtnText: { color: L.bg, fontSize: 14, fontWeight: '700' },
+  emptyBtnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 });
