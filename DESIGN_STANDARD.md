@@ -471,7 +471,7 @@ exemptions declared in the mapping — rule 12, enforced rather than remembered.
 
 <!-- BEGIN GENERATED: migration-log — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-156 files migrated, listed from the tree with the sha of the commit
+170 files migrated, listed from the tree with the sha of the commit
 that last touched each.
 
 | File | Last commit |
@@ -525,6 +525,20 @@ that last touched each.
 | `app/lessons/[id].tsx` | `2638ed9` |
 | `app/lessons/index.tsx` | `2638ed9` |
 | `app/location-settings.tsx` | `250cb8b` |
+| `app/log-session/add-player.tsx` | `0e77a68` |
+| `app/log-session/add-players.tsx` | `0e77a68` |
+| `app/log-session/choose-format.tsx` | `0e77a68` |
+| `app/log-session/game-saved.tsx` | `0e77a68` |
+| `app/log-session/game-score.tsx` | `0e77a68` |
+| `app/log-session/how-did-you-feel.tsx` | `0e77a68` |
+| `app/log-session/next-game-options.tsx` | `0e77a68` |
+| `app/log-session/review-players.tsx` | `0e77a68` |
+| `app/log-session/rotate-partners.tsx` | `0e77a68` |
+| `app/log-session/search-player.tsx` | `0e77a68` |
+| `app/log-session/select-location.tsx` | `0e77a68` |
+| `app/log-session/session-games.tsx` | `0e77a68` |
+| `app/log-session/session-saved.tsx` | `0e77a68` |
+| `app/log-session/session-summary.tsx` | `0e77a68` |
 | `app/marketplace/[id].tsx` | `d9a0909` |
 | `app/marketplace/create/index.tsx` | `d9a0909` |
 | `app/marketplace/edit/[id].tsx` | `d9a0909` |
@@ -649,9 +663,9 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 
 | | Occurrences | Files |
 | --- | ---: | ---: |
-| Files importing `@shared/tokens` (migrated) | — | **156 of 218** (72%) |
-| Raw `fontSize: N` remaining | 851 | 128 |
-| `borderRadius: radius.*` from `@/theme` remaining | 154 | 34 |
+| Files importing `@shared/tokens` (migrated) | — | **170 of 218** (78%) |
+| Raw `fontSize: N` remaining | 793 | 124 |
+| `borderRadius: radius.*` from `@/theme` remaining | 123 | 21 |
 | `borderRadius: 30` → `shape.cta` | 9 | 8 |
 | `borderRadius: 999` → `shape.cta` | 14 | 6 |
 
