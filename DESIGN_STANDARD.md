@@ -421,7 +421,7 @@ exemptions declared in the mapping — rule 12, enforced rather than remembered.
 
 <!-- BEGIN GENERATED: migration-log — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-39 files migrated, listed from the tree with the sha of the commit
+42 files migrated, listed from the tree with the sha of the commit
 that last touched each.
 
 | File | Last commit |
@@ -451,6 +451,8 @@ that last touched each.
 | `app/tournament/[id]/check-in-qr.tsx` | `41b6a99` |
 | `app/tournament/[id]/check-in-scan.tsx` | `41b6a99` |
 | `app/tournament/[id]/check-in.tsx` | `9933f30` |
+| `app/tournament/[id]/command-center.tsx` | `c4cd45b` |
+| `app/tournament/[id]/division-bracket.tsx` | `c4cd45b` |
 | `app/tournament/[id]/divisions/create.tsx` | `9564031` |
 | `app/tournament/[id]/edit.tsx` | `9933f30` |
 | `app/tournament/[id]/hold-confirm.tsx` | `41b6a99` |
@@ -462,6 +464,7 @@ that last touched each.
 | `app/tournament/[id]/report.tsx` | `9933f30` |
 | `app/tournament/[id]/results.tsx` | `0a7395d` |
 | `app/tournament/[id]/select-division.tsx` | `9564031` |
+| `app/tournament/[id]/workspace.tsx` | `c4cd45b` |
 | `components/PrimaryButton.tsx` | `f4469e9` |
 | `components/SecondaryButton.tsx` | `f4469e9` |
 | `components/StatusChip.tsx` | `b0fd68d` |
@@ -482,9 +485,9 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 
 | | Occurrences | Files |
 | --- | ---: | ---: |
-| Files importing `@shared/tokens` (migrated) | — | **39 of 218** (18%) |
-| Raw `fontSize: N` remaining | 2041 | 191 |
-| `borderRadius: radius.*` from `@/theme` remaining | 426 | 101 |
+| Files importing `@shared/tokens` (migrated) | — | **42 of 218** (19%) |
+| Raw `fontSize: N` remaining | 1954 | 191 |
+| `borderRadius: radius.*` from `@/theme` remaining | 411 | 98 |
 | `borderRadius: 30` → `shape.cta` | 14 | 11 |
 | `borderRadius: 999` → `shape.cta` | 18 | 10 |
 
