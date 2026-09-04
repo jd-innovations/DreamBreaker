@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { PrimaryButton, SecondaryButton } from '@/components';
 
 // ─── Confetti dot positions (static, decorative) ──────────────────────────────
@@ -177,19 +179,19 @@ const s = StyleSheet.create({
     shadowOpacity: 0.30, shadowRadius: 16, elevation: 8,
   },
 
-  title: { color: colors.navy, fontSize: 30, fontWeight: '900', letterSpacing: 0.2, marginBottom: 10 },
-  subtitle: { color: colors.textSub, fontSize: 16, fontWeight: '400', textAlign: 'center', lineHeight: 24 },
+  title: { color: colors.navy, fontSize: text.pageTitle.size, fontWeight: '900', letterSpacing: 0.2, marginBottom: 10 },
+  subtitle: { color: colors.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center', lineHeight: 24 },
   subtitleBold: { color: colors.navy, fontWeight: '800' },
 
   card: {
-    backgroundColor: colors.bg, borderRadius: radius.card,
+    backgroundColor: colors.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 24,
   },
-  cardTitle: { color: colors.navy, fontSize: 16, fontWeight: '700', paddingHorizontal: 16, paddingVertical: 14 },
+  cardTitle: { color: colors.navy, fontSize: text.actionLarge.size, fontWeight: '800', paddingHorizontal: 16, paddingVertical: 14 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   summaryRow: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16, paddingVertical: 13, gap: 10 },
-  summaryText: { color: colors.textSub, fontSize: 15, fontWeight: '400', flex: 1, lineHeight: 20 },
+  summaryText: { color: colors.textSub, fontSize: text.body.size, fontWeight: '500', flex: 1, lineHeight: 20 },
 
   btnDone: { paddingVertical: 12, alignItems: 'center' },
-  btnDoneText: { color: colors.navy, fontSize: 16, fontWeight: '500' },
+  btnDoneText: { color: colors.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
 });

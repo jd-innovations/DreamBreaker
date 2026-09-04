@@ -8,6 +8,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { goBack } from '@/lib/navigation';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { AppIcon, type AppIconName } from '@/components';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -167,15 +169,15 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 8, paddingVertical: 12, backgroundColor: L.page,
   },
-  backBtn:     { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '700', textAlign: 'center' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', textAlign: 'center' },
 
   scroll: { paddingHorizontal: 20, paddingTop: 8 },
 
   subtitle: {
     color:      L.navy,
-    fontSize:   28,
-    fontWeight: '800',
+    fontSize: text.pageTitle.size,
+    fontWeight: '900',
     lineHeight: 34,
     marginBottom: 28,
   },
@@ -183,7 +185,7 @@ const s = StyleSheet.create({
   // Card containing all rows
   card: {
     backgroundColor: L.bg,
-    borderRadius:    16,
+    borderRadius: shape.card,
     borderWidth:     1,
     borderColor:     L.border,
     overflow:        'hidden',
@@ -209,9 +211,9 @@ const s = StyleSheet.create({
     justifyContent:  'center',
     flexShrink:      0,
   },
-  rowText:  { flex: 1, gap: 3 },
-  rowTitle: { color: L.navy, fontSize: 16, fontWeight: '700' },
-  rowDesc:  { color: L.textSub, fontSize: 13, fontWeight: '400', lineHeight: 18 },
+  rowText: { flex: 1, gap: 3 },
+  rowTitle: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
+  rowDesc: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18 },
 
   divider: {
     height: StyleSheet.hairlineWidth, backgroundColor: L.div, marginLeft: 78,
@@ -220,11 +222,11 @@ const s = StyleSheet.create({
   // Cancel
   cancelBtn: {
     backgroundColor: L.bg,
-    borderRadius:    16,
+    borderRadius: shape.cta,
     borderWidth:     1,
     borderColor:     L.border,
     paddingVertical: 16,
     alignItems:      'center',
   },
-  cancelText: { color: L.navy, fontSize: 16, fontWeight: '600' },
+  cancelText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
 });

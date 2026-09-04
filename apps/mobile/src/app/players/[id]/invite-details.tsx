@@ -11,6 +11,8 @@ import { StatusBar } from 'expo-status-bar';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { goBack } from '@/lib/navigation';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/useSession';
 import { getOrCreateConversation, sendMessage } from '@/lib/conversationService';
@@ -607,19 +609,19 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 8, paddingVertical: 12, backgroundColor: L.page,
   },
-  backBtn:     { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '700' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   scroll: { paddingHorizontal: 20, paddingTop: 4 },
 
   subtitle: {
-    color: L.navy, fontSize: 22, fontWeight: '800', marginBottom: 20,
+    color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800', marginBottom: 20,
   },
 
   // Player card
   playerCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: L.bg, borderRadius: 16,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: 16, gap: 14, marginBottom: 16, minHeight: 88,
   },
@@ -627,22 +629,22 @@ const s = StyleSheet.create({
     width: 56, height: 56, borderRadius: 28,
     borderWidth: 2, borderColor: L.goldBorder, flexShrink: 0,
   },
-  playerInfo:  { flex: 1, gap: 6 },
-  playerName:  { color: L.navy, fontSize: 17, fontWeight: '800' },
-  chipRow:     { flexDirection: 'row', gap: 6 },
+  playerInfo: { flex: 1, gap: 6 },
+  playerName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  chipRow: { flexDirection: 'row', gap: 6 },
   chip: {
-    backgroundColor: '#F0EDE4', borderRadius: 20,
+    backgroundColor: '#F0EDE4', borderRadius: shape.pill,
     paddingHorizontal: 10, paddingVertical: 4,
   },
-  chipGold:     { backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder },
-  chipText:     { color: L.navy, fontSize: 12, fontWeight: '600' },
-  chipGoldText: { color: L.gold, fontSize: 12, fontWeight: '700' },
-  locationRow:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  locationText: { color: L.textMuted, fontSize: 12 },
+  chipGold: { backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder },
+  chipText: { color: L.navy, fontSize: text.caption.size, fontWeight: '500' },
+  chipGoldText: { color: L.gold, fontSize: text.chipValue.size, fontWeight: '800' },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  locationText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Form card
   formCard: {
-    backgroundColor: L.bg, borderRadius: 16,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     overflow: 'hidden', marginBottom: 16,
   },
@@ -652,21 +654,21 @@ const s = StyleSheet.create({
     minHeight: 52,
   },
   rowLabel: {
-    width: 88, color: L.navy, fontSize: 15, fontWeight: '600', flexShrink: 0,
+    width: 88, color: L.navy, fontSize: text.body.size, fontWeight: '500', flexShrink: 0,
   },
-  rowValue:    { flex: 1 },
-  divider:     { height: StyleSheet.hairlineWidth, backgroundColor: L.div, marginLeft: 16 },
+  rowValue: { flex: 1 },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: L.div, marginLeft: 16 },
 
   // Read-only type row
   readonlyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  readonlyText: { color: L.textSub, fontSize: 15, fontWeight: '500' },
+  readonlyText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500' },
 
   // Picker rows
   pickerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  pickerText: { color: L.textSub, fontSize: 15, fontWeight: '500', flex: 1 },
+  pickerText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', flex: 1 },
 
   locationInput: {
-    flex: 1, color: L.navy, fontSize: 15, fontWeight: '500',
+    flex: 1, color: L.navy, fontSize: text.body.size, fontWeight: '500',
     padding: 0, margin: 0,
     borderWidth: 0, backgroundColor: 'transparent',
   },
@@ -677,34 +679,34 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 14, gap: 10,
   },
   eventRowSelected: { backgroundColor: L.goldBg },
-  eventName: { color: L.navy, fontSize: 15, fontWeight: '700' },
-  eventMeta: { color: L.textMuted, fontSize: 13, fontWeight: '400', marginTop: 2 },
-  eventInvitedTag: { color: L.textMuted, fontSize: 12, fontWeight: '600' },
+  eventName: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
+  eventMeta: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+  eventInvitedTag: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Empty state
   emptyWrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: 32, gap: 10 },
-  emptyText: { color: L.textMuted, fontSize: 14, fontWeight: '500', textAlign: 'center', paddingHorizontal: 24 },
-  emptyLink: { color: L.gold, fontSize: 14, fontWeight: '700' },
+  emptyText: { color: L.textMuted, fontSize: text.body.size, fontWeight: '500', textAlign: 'center', paddingHorizontal: 24 },
+  emptyLink: { color: L.gold, fontSize: text.link.size, fontWeight: '700' },
 
   // Message
   msgLabel: {
-    color: L.textMuted, fontSize: 12, fontWeight: '700',
-    letterSpacing: 0.7, textTransform: 'uppercase',
+    color: L.textMuted, fontSize: text.sectionLabel.size, fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase',
     marginBottom: 8,
   },
   msgCard: {
-    backgroundColor: L.bg, borderRadius: 16,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: 14,
   },
   msgInput: {
-    color: L.navy, fontSize: 15, fontWeight: '400', lineHeight: 22,
+    color: L.navy, fontSize: text.body.size, fontWeight: '500', lineHeight: 22,
     minHeight: 96,
     borderWidth: 0, backgroundColor: 'transparent',
     padding: 0, margin: 0,
   },
   charCount: {
-    color: L.textMuted, fontSize: 12, fontWeight: '400',
+    color: L.textMuted, fontSize: text.caption.size, fontWeight: '500',
     textAlign: 'right', marginTop: 8,
   },
 
@@ -716,11 +718,11 @@ const s = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 12,
   },
   sendBtn: {
-    backgroundColor: L.navy, borderRadius: 14,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingVertical: 16, alignItems: 'center',
   },
   sendBtnDisabled: { backgroundColor: L.disabled },
-  sendText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  sendText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 
   // Date/time picker sheet
   pickerSheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' },
@@ -733,7 +735,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.div,
   },
-  pickerDone: { color: L.gold, fontSize: 16, fontWeight: '700' },
+  pickerDone: { color: L.gold, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   // Skill modal
   modalOverlay: {
@@ -742,12 +744,12 @@ const s = StyleSheet.create({
     padding: 32,
   },
   modalCard: {
-    backgroundColor: L.bg, borderRadius: 18, width: '100%',
+    backgroundColor: L.bg, borderRadius: shape.card, width: '100%',
     paddingVertical: 8, overflow: 'hidden',
   },
   modalTitle: {
-    color: L.textMuted, fontSize: 12, fontWeight: '700',
-    letterSpacing: 0.7, textTransform: 'uppercase',
+    color: L.textMuted, fontSize: text.sectionLabel.size, fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase',
     paddingHorizontal: 20, paddingVertical: 12,
   },
   modalRow: {
@@ -755,6 +757,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 14,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.div,
   },
-  modalOption:         { color: L.navy, fontSize: 16, fontWeight: '500' },
+  modalOption: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
   modalOptionSelected: { color: L.gold, fontWeight: '700' },
 });

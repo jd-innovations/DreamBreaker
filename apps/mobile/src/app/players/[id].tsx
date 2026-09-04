@@ -9,7 +9,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateConversation } from '@/lib/conversationService';
 import { useSupportContext } from '@/lib/support/supportContext';
@@ -603,8 +605,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12,
     backgroundColor: L.bg,
   },
-  headerBtn:      { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  headerBack:     { color: L.navy, fontSize: 17, fontWeight: '400' },
+  headerBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  headerBack: { color: L.navy, fontSize: 17, fontWeight: '400' },
   headerOverflow: { padding: 4 },
 
   scroll: { paddingHorizontal: 16, paddingTop: 8 },
@@ -625,37 +627,37 @@ const s = StyleSheet.create({
   },
 
   heroInfo: { flex: 1, paddingTop: 6 },
-  nameRow:  { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  playerName: { color: L.navy, fontSize: 26, fontWeight: '900', letterSpacing: 0.2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  playerName: { color: L.navy, fontSize: text.heroTitle.size, fontWeight: '800', letterSpacing: 0.2 },
 
   chipRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   chip: {
-    backgroundColor: '#F3F0E8', borderRadius: 20,
+    backgroundColor: '#F3F0E8', borderRadius: shape.pill,
     paddingHorizontal: 12, paddingVertical: 5,
   },
-  chipText: { color: L.navy, fontSize: 13, fontWeight: '600' },
+  chipText: { color: L.navy, fontSize: text.controlLabel.size, fontWeight: '700' },
 
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  locationDot: { color: L.textMuted, fontSize: 13 },
-  locationText: { color: L.textMuted, fontSize: 13, fontWeight: '400' },
+  locationDot: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  locationText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // ── Actions ──
   actions: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   btnMessage: {
     flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: L.navy, borderRadius: radius.button, paddingVertical: 12, gap: 7,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 12, gap: 7,
   },
-  btnMessageText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  btnMessageText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 
   btnInvite: {
     flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: L.bg, borderRadius: radius.button, paddingVertical: 12, gap: 7,
+    backgroundColor: L.bg, borderRadius: shape.cta, paddingVertical: 12, gap: 7,
     borderWidth: 1.5, borderColor: L.goldBorder,
   },
-  btnInviteText: { color: L.navy, fontSize: 15, fontWeight: '700' },
+  btnInviteText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   iconBtn: {
-    width: 48, height: 48, borderRadius: 12,
+    width: 48, height: 48, borderRadius: shape.cta,
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -663,7 +665,7 @@ const s = StyleSheet.create({
   // ── Cards ──
   card: {
     flexDirection: 'row',
-    backgroundColor: L.bg, borderRadius: 14,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
     overflow: 'hidden',
   },
@@ -674,7 +676,7 @@ const s = StyleSheet.create({
     paddingVertical: 14, paddingHorizontal: 4, gap: 4,
   },
   attrColBorder: { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: L.div },
-  attrValue: { color: L.navy, fontSize: 12, fontWeight: '700', textAlign: 'center', marginTop: 2 },
+  attrValue: { color: L.navy, fontSize: text.chipValue.size, fontWeight: '800', textAlign: 'center', marginTop: 2 },
   attrLabel: { color: L.textMuted, fontSize: 10, fontWeight: '500', textAlign: 'center' },
 
   // Stat col
@@ -682,8 +684,8 @@ const s = StyleSheet.create({
     flex: 1, alignItems: 'center', paddingVertical: 16, paddingHorizontal: 4,
   },
   statColBorder: { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: L.div },
-  statNumber: { color: L.navy, fontSize: 26, fontWeight: '900', letterSpacing: -0.5 },
-  statLabel:  { color: L.textMuted, fontSize: 11, fontWeight: '500', textAlign: 'center' },
+  statNumber: { color: L.navy, fontSize: text.statNumber.size, fontWeight: '900', letterSpacing: -0.5 },
+  statLabel: { color: L.textMuted, fontSize: 11, fontWeight: '500', textAlign: 'center' },
 
   // ── Sections ──
   section: { marginTop: 20 },
@@ -692,33 +694,33 @@ const s = StyleSheet.create({
     justifyContent: 'space-between', marginBottom: 10,
   },
   sectionLabel: {
-    color: L.textMuted, fontSize: 12, fontWeight: '700',
-    letterSpacing: 0.8, textTransform: 'uppercase',
+    color: L.textMuted, fontSize: text.sectionLabel.size, fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase',
   },
-  sectionAction: { color: L.gold, fontSize: 14, fontWeight: '600' },
+  sectionAction: { color: L.gold, fontSize: text.rowTitle.size, fontWeight: '700' },
 
   // Looking For
   lfRow: { flexDirection: 'row', gap: 8 },
   lfChip: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: L.bg, borderRadius: 12, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.panel, borderWidth: 1, borderColor: L.border,
     paddingVertical: 12, gap: 6,
   },
-  lfLine1: { color: L.navy, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  lfLine1: { color: L.navy, fontSize: text.chipValue.size, fontWeight: '800', textAlign: 'center' },
   lfLine2: { color: L.textMuted, fontSize: 11, fontWeight: '500', textAlign: 'center' },
 
   // About
   aboutText: {
-    color: L.textSub, fontSize: 14, fontWeight: '400', lineHeight: 22,
-    backgroundColor: L.bg, borderRadius: 12, borderWidth: 1, borderColor: L.border,
+    color: L.textSub, fontSize: text.body.size, fontWeight: '500', lineHeight: 22,
+    backgroundColor: L.bg, borderRadius: shape.panel, borderWidth: 1, borderColor: L.border,
     padding: 14,
   },
 
-  placeholderInline: { color: L.textMuted, fontSize: 14, fontWeight: '400' },
+  placeholderInline: { color: L.textMuted, fontSize: text.body.size, fontWeight: '500' },
 
   // Activity
   actCard: {
-    backgroundColor: L.bg, borderRadius: 12,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border, overflow: 'hidden',
   },
   actRow: {
@@ -730,8 +732,8 @@ const s = StyleSheet.create({
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  actLabel: { color: L.navy, fontSize: 14, fontWeight: '600', marginBottom: 2 },
-  actSub:   { color: L.textMuted, fontSize: 12, fontWeight: '400' },
+  actLabel: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 2 },
+  actSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   div: { height: StyleSheet.hairlineWidth, backgroundColor: L.div, marginLeft: 62 },
 
@@ -739,9 +741,9 @@ const s = StyleSheet.create({
   placeholder: {
     alignItems: 'center', justifyContent: 'center',
     paddingVertical: 32, gap: 12,
-    backgroundColor: L.bg, borderRadius: 12, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.panel, borderWidth: 1, borderColor: L.border,
   },
-  placeholderText: { color: L.textMuted, fontSize: 15, fontWeight: '500' },
+  placeholderText: { color: L.textMuted, fontSize: text.body.size, fontWeight: '500' },
 
   // ── Tab bar ──
   tabBarWrap: {
@@ -752,7 +754,7 @@ const s = StyleSheet.create({
   tabItem: {
     flex: 1, alignItems: 'center', justifyContent: 'center', position: 'relative',
   },
-  tabLabel:       { color: L.textMuted, fontSize: 14, fontWeight: '500' },
+  tabLabel: { color: L.textMuted, fontSize: text.controlLabel.size, fontWeight: '700' },
   tabLabelActive: { color: L.gold, fontWeight: '700' },
   tabUnderline: {
     position: 'absolute', bottom: 0, left: 20, right: 20, height: 2.5,
