@@ -240,6 +240,14 @@ function EditTournamentScreen() {
       // Every exit from here MUST clear `loading`. Before this, the failure
       // paths returned early and `setLoading(false)` was unreachable, so any
       // problem showed as a spinner that never resolved and reported nothing.
+      // A request that never settles would leave the finally below unreached,
+      // so the wait is bounded. Ten seconds is well past a normal fetch.
+      const timeout = setTimeout(() => {
+        if (!cancelled) {
+          setLoadError('Timed out loading this tournament (10s). The request never came back.');
+          setLoading(false);
+        }
+      }, 10_000);
       try {
         const t = await fetchTournamentById(id);
         if (cancelled) return;
@@ -258,6 +266,7 @@ function EditTournamentScreen() {
         console.error('[tournament edit] load failed:', e);
         if (!cancelled) setLoadError(String(e instanceof Error ? e.message : e));
       } finally {
+        clearTimeout(timeout);
         if (!cancelled) setLoading(false);
       }
     })();
@@ -375,6 +384,7 @@ function EditTournamentScreen() {
       <View style={[s.root, { paddingTop: insets.top, alignItems: 'center', justifyContent: 'center' }]}>
         <StatusBar style="dark" />
         <ActivityIndicator size="large" color={L.gold} />
+        <Text style={{ marginTop: 12, color: L.textSub }}>Loading tournament…</Text>
       </View>
     );
   }

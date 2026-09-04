@@ -50,9 +50,13 @@ export function DirectorOnly({ tournamentId, children }: Props) {
   }, [loading, denyReason, tournamentId]);
 
   if (loading) {
+    // Labelled so it can be told apart from the screen's own spinner. Both are
+    // a gold ActivityIndicator centred on white, which made "it just spins"
+    // impossible to attribute.
     return (
       <View style={s.root}>
         <ActivityIndicator size="large" color={colors.gold} />
+        <Text style={s.text}>Checking permissions…</Text>
       </View>
     );
   }
