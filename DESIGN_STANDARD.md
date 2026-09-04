@@ -468,7 +468,7 @@ exemptions declared in the mapping — rule 12, enforced rather than remembered.
 
 <!-- BEGIN GENERATED: migration-log — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-143 files migrated, listed from the tree with the sha of the commit
+151 files migrated, listed from the tree with the sha of the commit
 that last touched each.
 
 | File | Last commit |
@@ -501,7 +501,12 @@ that last touched each.
 | `app/coach/offers/index.tsx` | `2638ed9` |
 | `app/coach/redeem.tsx` | `2638ed9` |
 | `app/communication-settings.tsx` | `250cb8b` |
+| `app/create-clinic.tsx` | `2cb52df` |
+| `app/create-mini-tournament.tsx` | `2cb52df` |
+| `app/create-quick-game.tsx` | `2cb52df` |
+| `app/create-round-robin.tsx` | `2cb52df` |
 | `app/delete-account.tsx` | `250cb8b` |
+| `app/director.tsx` | `2cb52df` |
 | `app/edit-profile.tsx` | `d32883a` |
 | `app/facility/[id].tsx` | `22a4dd3` |
 | `app/forgot-password.tsx` | `d32883a` |
@@ -522,6 +527,7 @@ that last touched each.
 | `app/marketplace/edit/[id].tsx` | `d9a0909` |
 | `app/marketplace/my-listings.tsx` | `d9a0909` |
 | `app/membership-settings.tsx` | `250cb8b` |
+| `app/mini-tournament-created.tsx` | `e592d2f` |
 | `app/my-tournaments.tsx` | `d32883a` |
 | `app/new-message.tsx` | `d32883a` |
 | `app/notifications-settings.tsx` | `250cb8b` |
@@ -547,8 +553,10 @@ that last touched each.
 | `app/payout-settings.tsx` | `250cb8b` |
 | `app/permissions-settings.tsx` | `250cb8b` |
 | `app/play-pickleball.tsx` | `d32883a` |
+| `app/quick-game-created.tsx` | `e592d2f` |
 | `app/rating-settings.tsx` | `250cb8b` |
 | `app/reset-password.tsx` | `d32883a` |
+| `app/round-robin-created.tsx` | `e592d2f` |
 | `app/round-robin/[id]/schedule.tsx` | `2c78032` |
 | `app/round-robin/[id]/score-entry.tsx` | `2c78032` |
 | `app/round-robin/[id]/standings.tsx` | `2c78032` |
@@ -633,9 +641,9 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 
 | | Occurrences | Files |
 | --- | ---: | ---: |
-| Files importing `@shared/tokens` (migrated) | — | **143 of 218** (66%) |
-| Raw `fontSize: N` remaining | 1174 | 128 |
-| `borderRadius: radius.*` from `@/theme` remaining | 280 | 47 |
+| Files importing `@shared/tokens` (migrated) | — | **151 of 218** (69%) |
+| Raw `fontSize: N` remaining | 966 | 128 |
+| `borderRadius: radius.*` from `@/theme` remaining | 191 | 39 |
 | `borderRadius: 30` → `shape.cta` | 9 | 8 |
 | `borderRadius: 999` → `shape.cta` | 14 | 6 |
 
