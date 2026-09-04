@@ -74,6 +74,10 @@ export function useTournamentDirector(tournamentId: string | null | undefined) {
   return {
     directorId,
     loading: resolving,
+    // The two halves of `resolving`, exposed so a stuck guard can say WHICH
+    // one never settled instead of spinning anonymously.
+    profileLoading,
+    directorLoading: loading,
     isDirector,
     isApprovedDirector,
     canManage,

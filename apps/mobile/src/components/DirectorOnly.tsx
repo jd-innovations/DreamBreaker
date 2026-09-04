@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
@@ -40,7 +40,17 @@ type Props = {
  * This is UI-level only. RLS remains the real enforcement.
  */
 export function DirectorOnly({ tournamentId, children }: Props) {
-  const { canManage, denyReason, loading } = useTournamentDirector(tournamentId);
+  const { canManage, denyReason, loading, profileLoading, directorLoading, refresh } =
+    useTournamentDirector(tournamentId);
+
+  // A guard that never resolves is indistinguishable from a slow one. After
+  // eight seconds, say which half is stuck and offer a way out.
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    if (!loading) { setStuck(false); return; }
+    const t = setTimeout(() => setStuck(true), 8_000);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   useEffect(() => {
     if (loading || denyReason !== 'not_director') return;
@@ -55,8 +65,25 @@ export function DirectorOnly({ tournamentId, children }: Props) {
     // impossible to attribute.
     return (
       <View style={s.root}>
-        <ActivityIndicator size="large" color={colors.gold} />
-        <Text style={s.text}>Checking permissions…</Text>
+        {stuck ? (
+          <>
+            <Text style={s.text}>Permission check did not finish.</Text>
+            <Text style={s.text}>
+              profile: {profileLoading ? 'still loading' : 'ready'}
+            </Text>
+            <Text style={s.text}>
+              tournament: {directorLoading ? 'still loading' : 'ready'}
+            </Text>
+            <TouchableOpacity onPress={() => { void refresh(); }} style={{ marginTop: 16 }}>
+              <Text style={[s.text, { color: colors.gold }]}>Retry</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <ActivityIndicator size="large" color={colors.gold} />
+            <Text style={s.text}>Checking permissions…</Text>
+          </>
+        )}
       </View>
     );
   }
