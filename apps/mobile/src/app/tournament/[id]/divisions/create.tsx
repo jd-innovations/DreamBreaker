@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import { createDivision } from '@/lib/supabase/divisions';
 import { fetchTournamentById } from '@/lib/supabase/tournaments';
@@ -371,7 +373,7 @@ function CreateDivisionScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 20, paddingVertical: 14,
@@ -381,51 +383,51 @@ const s = StyleSheet.create({
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: L.page, alignItems: 'center', justifyContent: 'center',
   },
-  title:  { color: L.navy, fontSize: 18, fontWeight: '800' },
-  sub:    { color: L.textSub, fontSize: 12, fontWeight: '500', marginTop: 1 },
+  title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
 
-  scroll:       { padding: 16, gap: 12 },
-  card:         { backgroundColor: L.bg, borderRadius: radius.card, padding: 16, gap: 14 },
+  scroll: { padding: 16, gap: 12 },
+  card: { backgroundColor: L.bg, borderRadius: shape.card, padding: 16, gap: 14 },
   sectionTitle: {
-    color: L.navy, fontSize: 11, fontWeight: '800',
-    letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 2,
+    color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase', marginBottom: 2,
   },
   row2: { flexDirection: 'row', gap: 12 },
 
   submitBtn: {
-    backgroundColor: L.navy, borderRadius: radius.button,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingVertical: 16, alignItems: 'center', marginTop: 8,
   },
   submitBtnDisabled: { opacity: 0.6 },
-  submitBtnText: { color: L.bg, fontSize: 16, fontWeight: '800' },
+  submitBtnText: { color: L.bg, fontSize: text.actionLarge.size, fontWeight: '800' },
 });
 
 const f = StyleSheet.create({
-  wrap:       { gap: 6 },
-  label:      { color: L.textSub, fontSize: 12, fontWeight: '600' },
-  input:      {
+  wrap: { gap: 6 },
+  label: { color: L.textSub, fontSize: text.fieldLabel.size, fontWeight: '800' },
+  input: {
     backgroundColor: L.page, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12,
-    color: L.navy, fontSize: 15, fontWeight: '500',
+    borderRadius: shape.cta, paddingHorizontal: 14, paddingVertical: 12,
+    color: L.navy, fontSize: text.body.size, fontWeight: '500',
   },
   inputError: { borderColor: L.danger },
-  hint:       { color: L.textSub, fontSize: 11, lineHeight: 15 },
-  error:      { color: L.danger, fontSize: 12, fontWeight: '500' },
+  hint: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 15 },
+  error: { color: L.danger, fontSize: text.caption.size, fontWeight: '500' },
 });
 
 const cs = StyleSheet.create({
-  wrap:          { gap: 8 },
-  label:         { color: L.textSub, fontSize: 12, fontWeight: '600' },
-  row:           { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip:          {
+  wrap: { gap: 8 },
+  label: { color: L.textSub, fontSize: text.fieldLabel.size, fontWeight: '800' },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
     paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     backgroundColor: L.page, borderWidth: 1, borderColor: L.border,
   },
-  chipActive:    { backgroundColor: L.navy, borderColor: L.navy },
-  chipText:      { color: L.textSub, fontSize: 13, fontWeight: '600' },
-  chipTextActive:{ color: L.bg },
-  error:         { color: L.danger, fontSize: 12, fontWeight: '500' },
+  chipActive: { backgroundColor: L.navy, borderColor: L.navy },
+  chipText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
+  chipTextActive: { color: L.bg },
+  error: { color: L.danger, fontSize: text.caption.size, fontWeight: '500' },
 });
 
 // Director-only route. The screen body above is mounted only after

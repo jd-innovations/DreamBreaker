@@ -7,7 +7,9 @@ import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
 import { DirectorOnly } from '@/components/DirectorOnly';
@@ -445,49 +447,49 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.screenH, paddingVertical: spacing.screenV, backgroundColor: L.bg,
   },
   iconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  title:   { color: L.navy, fontSize: 17, fontWeight: '900' },
-  subtitle: { color: L.textSub, fontSize: 13, fontWeight: '600', marginTop: spacing.sm },
+  title: { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
+  subtitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: spacing.sm },
 
   card: {
-    backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
     padding: spacing.lg, marginTop: spacing.md,
   },
-  sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: spacing.sm },
-  emptyText: { color: L.textSub, fontSize: 13, fontWeight: '500', lineHeight: 18 },
+  sectionTitle: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase', marginBottom: spacing.sm },
+  emptyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18 },
 
   choiceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
   choiceRowActive: {},
-  choiceLabel: { color: L.text, fontSize: 14, fontWeight: '700' },
-  choiceMeta: { color: L.textSub, fontSize: 12, fontWeight: '500', marginTop: 2 },
+  choiceLabel: { color: L.text, fontSize: text.rowTitle.size, fontWeight: '700' },
+  choiceMeta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
 
   noticeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: spacing.sm },
-  noticeText: { flex: 1, color: L.textSub, fontSize: 12, fontWeight: '500', lineHeight: 17, marginTop: 6 },
+  noticeText: { flex: 1, color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17, marginTop: 6 },
 
-  segment: { flexDirection: 'row', backgroundColor: L.page, borderRadius: radius.button, padding: 3, marginBottom: spacing.sm },
-  segmentBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: radius.button - 2 },
+  segment: { flexDirection: 'row', backgroundColor: L.page, borderRadius: shape.cta, padding: 3, marginBottom: spacing.sm },
+  segmentBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: shape.cta - 2 },
   segmentBtnActive: { backgroundColor: L.navy },
-  segmentText: { color: L.textSub, fontSize: 13, fontWeight: '700' },
+  segmentText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   segmentTextActive: { color: L.white },
 
   input: {
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.button,
-    paddingHorizontal: 12, paddingVertical: 10, color: L.text, fontSize: 14, marginTop: 8,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
+    paddingHorizontal: 12, paddingVertical: 10, color: L.text, fontSize: text.body.size, fontWeight: '500', marginTop: 8,
   },
 
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: L.border },
-  resultName: { flex: 1, color: L.text, fontSize: 14, fontWeight: '600' },
+  resultName: { flex: 1, color: L.text, fontSize: text.rowTitle.size, fontWeight: '700' },
 
   chosenRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-  chosenName: { flex: 1, color: L.text, fontSize: 14, fontWeight: '700' },
-  clearText: { color: L.navy, fontSize: 13, fontWeight: '700' },
+  chosenName: { flex: 1, color: L.text, fontSize: text.rowTitle.size, fontWeight: '700' },
+  clearText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
   rosterRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: L.border },
-  rosterName: { flex: 1, color: L.text, fontSize: 14, fontWeight: '600' },
-  rosterTag: { color: L.gold, fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  rosterName: { flex: 1, color: L.text, fontSize: text.rowTitle.size, fontWeight: '700' },
+  rosterTag: { color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, textTransform: 'uppercase' },
 
-  primaryBtn: { backgroundColor: L.navy, borderRadius: radius.button, paddingVertical: 16, alignItems: 'center', marginTop: spacing.xl },
-  primaryBtnText: { color: L.white, fontSize: 15, fontWeight: '800' },
-  footnote: { color: L.textSub, fontSize: 11, fontWeight: '500', textAlign: 'center', marginTop: spacing.md },
+  primaryBtn: { backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 16, alignItems: 'center', marginTop: spacing.xl },
+  primaryBtnText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
+  footnote: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', marginTop: spacing.md },
 });
 
 // Director-only route. The screen body above is mounted only after DirectorOnly

@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import { getRegistrationAvailability } from '@/lib/registrationGate';
 import { fetchTournamentById } from '@/lib/supabase/tournaments';
@@ -147,7 +149,7 @@ function DivisionOption({
 
 const dv = StyleSheet.create({
   card: {
-    borderWidth: 1.5, borderRadius: radius.card,
+    borderWidth: 1.5, borderRadius: shape.card,
     padding: 14, marginBottom: 10, flexDirection: 'row',
     alignItems: 'center', gap: 12,
   },
@@ -156,19 +158,19 @@ const dv = StyleSheet.create({
     shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 3,
   },
   cardDisabled: { opacity: 0.65 },
-  nameRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 },
-  divName:  { color: L.navy, fontSize: 15, fontWeight: '800', flex: 1 },
-  badge:    { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0 },
-  badgeText:{ fontSize: 11, fontWeight: '700' },
-  metaRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  levelChip:{ borderWidth: 1, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  levelChipText: { color: L.navy, fontSize: 11, fontWeight: '800' },
-  eventType:{ color: L.textSub, fontSize: 12 },
-  fillRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  fillTrack:{ flex: 1, height: 4, backgroundColor: L.page, borderRadius: 2, overflow: 'hidden' },
-  fillBar:  { height: '100%', borderRadius: 2 },
-  fillLabel:{ color: L.textSub, fontSize: 10, fontWeight: '700', width: 38, textAlign: 'right' },
-  regCount: { color: L.textSub, fontSize: 11 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 },
+  divName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', flex: 1 },
+  badge: { borderRadius: shape.cta, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0 },
+  badgeText: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  levelChip: { borderWidth: 1, borderRadius: shape.badge, paddingHorizontal: 6, paddingVertical: 2 },
+  levelChipText: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  eventType: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  fillRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  fillTrack: { flex: 1, height: 4, backgroundColor: L.page, borderRadius: 2, overflow: 'hidden' },
+  fillBar: { height: '100%', borderRadius: 2 },
+  fillLabel: { color: L.textSub, fontSize: 10, fontWeight: '700', width: 38, textAlign: 'right' },
+  regCount: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   selectCircle: {
     width: 26, height: 26, borderRadius: 13, flexShrink: 0,
     borderWidth: 2, borderColor: L.border,
@@ -438,7 +440,7 @@ export default function SelectDivisionScreen() {
 }
 
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
 
   header: {
@@ -447,35 +449,35 @@ const s = StyleSheet.create({
     backgroundColor: L.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:   { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headerTitle:{ color: L.navy, fontSize: 17, fontWeight: '800' },
-  headerSub:  { color: L.textSub, fontSize: 12, marginTop: 1 },
+  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  headerSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
 
   regGateBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: L.page, borderWidth: 1, borderColor: L.border,
-    borderRadius: 12, padding: 14, marginBottom: 12,
+    borderRadius: shape.panel, padding: 14, marginBottom: 12,
   },
-  regGateBannerText: { color: L.navy, fontSize: 14, fontWeight: '700', flex: 1 },
+  regGateBannerText: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', flex: 1 },
 
   infoBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     backgroundColor: L.goldLight, borderWidth: 1, borderColor: L.goldBorder,
-    borderRadius: 12, padding: 14, marginBottom: 16,
+    borderRadius: shape.panel, padding: 14, marginBottom: 16,
   },
-  infoBannerText: { color: L.navy, fontSize: 13, lineHeight: 19, flex: 1, fontWeight: '500' },
+  infoBannerText: { color: L.navy, fontSize: text.caption.size, lineHeight: 19, flex: 1, fontWeight: '500' },
 
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12,
   },
-  sectionTitle: { color: L.navy, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
-  sectionSub:   { color: L.textSub, fontSize: 12 },
+  sectionTitle: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing },
+  sectionSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   emptyCard: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, padding: 32, alignItems: 'center', gap: 12,
+    borderRadius: shape.card, padding: 32, alignItems: 'center', gap: 12,
   },
-  emptyText: { color: L.textSub, fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  emptyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center' },
 
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -486,17 +488,17 @@ const s = StyleSheet.create({
   },
   selectedSummary: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: L.goldBg, borderRadius: 10, borderWidth: 1, borderColor: L.goldBorder,
+    backgroundColor: L.goldBg, borderRadius: shape.cta, borderWidth: 1, borderColor: L.goldBorder,
     paddingHorizontal: 12, paddingVertical: 8, marginBottom: 10,
   },
-  selectedLabel:  { color: L.textSub, fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
-  selectedName:   { color: L.navy, fontSize: 13, fontWeight: '800' },
+  selectedLabel: { color: L.textSub, fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
+  selectedName: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
 
   continueBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    backgroundColor: L.navy, borderRadius: 14, paddingVertical: 16,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 16,
   },
   continueBtnDisabled: { backgroundColor: L.border },
-  continueBtnText:     { color: L.bg, fontSize: 16, fontWeight: '800' },
+  continueBtnText: { color: L.bg, fontSize: text.actionLarge.size, fontWeight: '800' },
   continueBtnTextDisabled: { color: L.textSub },
 });
