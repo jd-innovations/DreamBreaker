@@ -296,6 +296,23 @@ function validateStep(step: StepKey, form: FormState, stripeOnboarded: boolean):
 
     if (form.registrationOpenDate.trim() && !parseFormDate(form.registrationOpenDate))
       e.registrationOpenDate = 'Pick a registration open date';
+
+    // Both mirror database CHECK constraints (check_reg_before_event,
+    // check_reg_dates). Reproduced 2026-09-04: an event on Sep 5 with
+    // registration closing Sep 6 passed every per-field check above, reached
+    // Supabase, and failed there with the constraint name in a console log
+    // nobody sees — surfacing to the director as "Failed to create tournament.
+    // Please try again." with no hint which date was wrong.
+    const eventDate  = parseFormDate(form.date);
+    const closeDate  = parseFormDate(form.registrationCloseDate);
+    const openDate   = form.registrationOpenDate.trim() ? parseFormDate(form.registrationOpenDate) : null;
+
+    if (!e.registrationCloseDate && eventDate && closeDate && closeDate > eventDate) {
+      e.registrationCloseDate = 'Registration must close on or before the tournament date';
+    }
+    if (!e.registrationOpenDate && !e.registrationCloseDate && openDate && closeDate && openDate >= closeDate) {
+      e.registrationOpenDate = 'Registration must open before it closes';
+    }
   }
 
   if (step === 'registration') {
