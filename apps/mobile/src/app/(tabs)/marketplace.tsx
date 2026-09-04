@@ -118,10 +118,10 @@ const cardStyles = (t: ThemeRoles) => StyleSheet.create({
   // Sits ON the listing photo, so it must stay dark in both themes — hence the
   // scrimMediaStrong role and a fixed white, not textInverse (which flips).
   conditionBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: t.scrimMediaStrong, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
-  conditionText: { color: colors.white, fontSize: 10, fontWeight: '700' },
+  conditionText: { color: colors.white, fontSize: text.microLabel.size, fontWeight: '700' },
   body: { padding: 10 },
   title: { color: t.textPrimary, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 4 },
-  brandLine: { color: t.textPrimary, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginBottom: 2 },
+  brandLine: { color: t.textPrimary, fontSize: text.microLabel.size, fontWeight: '700', textTransform: 'uppercase', marginBottom: 2 },
   modelLine: { color: t.textPrimary, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 4 },
   priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   // Was #16A34A, a near-duplicate of the success token.

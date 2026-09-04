@@ -563,7 +563,7 @@ const lc = StyleSheet.create({
     borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.pill,
     paddingHorizontal: 8, paddingVertical: 2,
   },
-  skillText: { color: L.gold, fontSize: 10, fontWeight: '700' },
+  skillText: { color: L.gold, fontSize: text.microLabel.size, fontWeight: '700' },
   sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 });
 

@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 
 type Props = {
   /** Spots taken. */
@@ -63,8 +65,8 @@ export function FillBar({ filled, capacity, showLabel = false, waitlist = false,
 }
 
 const s = StyleSheet.create({
-  row:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   track: { flex: 1, height: 4, backgroundColor: colors.page, borderRadius: 2, overflow: 'hidden' },
-  bar:   { height: '100%', borderRadius: 2 },
-  label: { color: colors.textSub, fontSize: 10, fontWeight: '700' },
+  bar: { height: '100%', borderRadius: 2 },
+  label: { color: colors.textSub, fontSize: text.microLabel.size, fontWeight: '700' },
 });

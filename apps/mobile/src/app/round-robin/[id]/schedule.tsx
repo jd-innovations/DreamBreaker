@@ -256,7 +256,7 @@ const mc = StyleSheet.create({
   winnerBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2,
   },
-  winnerBadgeText: { fontSize: 10, fontWeight: '700', color: L.gold },
+  winnerBadgeText: { fontSize: text.microLabel.size, fontWeight: '700', color: L.gold },
   playerNameLoser: { color: L.textSub },
   resultDivider: {
     height: StyleSheet.hairlineWidth, backgroundColor: L.border, marginVertical: 2,

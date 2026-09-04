@@ -159,7 +159,7 @@ const dc = StyleSheet.create({
   podiumGold: { backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder },
   podiumSilver: { backgroundColor: L.page,   borderWidth: 1, borderColor: L.border },
 
-  podiumTitle: { color: L.textSub, fontSize: 10, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 2 },
+  podiumTitle: { color: L.textSub, fontSize: text.microLabel.size, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 2 },
   podiumName: { color: L.navy,    fontSize: text.rowTitle.size, fontWeight: '700' },
 
   publishedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },

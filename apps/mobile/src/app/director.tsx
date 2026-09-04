@@ -306,7 +306,7 @@ const tc = StyleSheet.create({
   fillRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   fillTrack: { flex: 1, height: 5, backgroundColor: L.page, borderRadius: 3, overflow: 'hidden' },
   fillBar: { height: '100%', borderRadius: 3 },
-  fillLabel: { color: L.textSub, fontSize: 10, fontWeight: '700', minWidth: 40, textAlign: 'right' },
+  fillLabel: { color: L.textSub, fontSize: text.microLabel.size, fontWeight: '700', minWidth: 40, textAlign: 'right' },
 
   actions: {
     flexDirection: 'row', gap: 10,

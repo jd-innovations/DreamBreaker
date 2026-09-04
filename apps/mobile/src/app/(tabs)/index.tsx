@@ -1234,7 +1234,7 @@ const sg = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 12,
   },
   setupLeft: { flex: 1 },
-  setupLabel: { color: L.gold, fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 2 },
+  setupLabel: { color: L.gold, fontSize: text.microLabel.size, fontWeight: '700', letterSpacing: 1, marginBottom: 2 },
   setupTask: { color: '#FFFFFF', fontSize: text.rowTitle.size, fontWeight: '700', textTransform: 'uppercase' },
   setupRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 12, height: 12, borderRadius: 6 },

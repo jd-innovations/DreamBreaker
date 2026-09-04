@@ -23,7 +23,7 @@ exercise rather than a redesign.
 
 <!-- BEGIN GENERATED: type-scale — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-20 roles, generated from `packages/shared/src/tokens.ts`.
+21 roles, generated from `packages/shared/src/tokens.ts`.
 
 | Role | Value |
 | --- | --- |
@@ -47,8 +47,9 @@ exercise rather than a redesign.
 | `chipValue` | 12 / 800 |
 | `caption` | 12 / 500 |
 | `cardLabel` | 11 / 800, ls 0.8, uppercase |
+| `microLabel` | 10 / 700 |
 
-Sizes: **28 · 26 · 22 · 20 · 17 · 16 · 15 · 14 · 13 · 12 · 11**. Weights: **900 · 800 · 700 · 500**.
+Sizes: **28 · 26 · 22 · 20 · 17 · 16 · 15 · 14 · 13 · 12 · 11 · 10**. Weights: **900 · 800 · 700 · 500**.
 
 <!-- END GENERATED: type-scale -->
 
@@ -176,10 +177,43 @@ as scattered as they are today.
 (13) but kept weight 600 where the role is 800. That was an inconsistency
 introduced before this rule existed.
 
-**10. Sizes below 11 have no role and stay as they are** until one is proposed
-with a measurement. The scale floor is 11. Facility detail has a 9pt type label
-and two 10pt status labels; they are left alone rather than forced upward,
-because nothing in the reference screens measures them.
+**10. Sizes below the floor have no role and stay as they are** until one is
+proposed with a measurement. Facility detail has a 9pt type label and two 10pt
+status labels; they are left alone rather than forced upward, because nothing
+in the reference screens measures them.
+
+> **The floor was 11 and is now 10.** Decision 17 (below) proposed a 10pt role
+> with the measurement this decision asks for. Sizes of 9 and below still have
+> no role.
+
+**17. `microLabel` is 10/700, and it is the first role below the old floor.
+DECIDED 2026-09-04.** The smallest label: under a quick-action icon, inside a
+fill bar, on a status or skill chip. Plain — no tracking, not uppercase.
+
+The measurement decision 10 asks for, taken across `apps/mobile/src` before the
+role was defined: **145 uses sit below 11pt, and 90 of them are 10pt.**
+
+| Size / weight | Uses | Carries letterSpacing |
+| --- | ---: | ---: |
+| 10 / 800 | 30 | 17 |
+| 10 / 700 | 27 | 8 |
+| 10 / 900 | 9 | — |
+| 10 / 400–600 | 24 | — |
+| 9pt, all weights | 46 | — |
+| 8pt and below | 9 | — |
+
+10/700 and 10/800 are **not** the same job. Only 8 of the 27 ten-seven styles
+carry tracking, against 17 of the 30 ten-eights — the second group is a smaller
+`cardLabel`, the first is a plain label. This role is the plain one. The tracked
+10/800 variant is deliberately left exempt rather than named in the same change.
+
+*Applied to all 28 styles that already sat at 10/700, across 21 files, in the
+same commit that defined it* — no pixels moved there, but no file is left
+holding a worse match. That is the lesson from the `controlLabel` incident
+turned into practice rather than a note.
+
+The one value that actually moves: `GlassQuickAction`'s label, 11/600 → 10/700.
+It is the quick-action label on Home, and it is what prompted the role.
 
 **11. Job match is required. Coincidental size/weight equality is not a match.**
 `actionLarge` is a button role that happens to be 16/800; a card header is also
@@ -471,7 +505,7 @@ exemptions declared in the mapping — rule 12, enforced rather than remembered.
 
 <!-- BEGIN GENERATED: migration-log — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-204 files migrated, listed from the tree with the sha of the commit
+206 files migrated, listed from the tree with the sha of the commit
 that last touched each.
 
 | File | Last commit |
@@ -646,7 +680,9 @@ that last touched each.
 | `components/FacilityPicker.tsx` | `8aed181` |
 | `components/FieldLabel.tsx` | `2a40ba1` |
 | `components/FileAttachmentRow.tsx` | `0af9ba0` |
+| `components/FillBar.tsx` | `238f55e` |
 | `components/FindGamesFilterModal.tsx` | `8aed181` |
+| `components/GlassQuickAction.tsx` | `97f4cb0` |
 | `components/InfoTooltip.tsx` | `0af9ba0` |
 | `components/JoinCelebration.tsx` | `f7318c4` |
 | `components/LocationCard.tsx` | `0af9ba0` |
@@ -697,8 +733,8 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 
 | | Occurrences | Files |
 | --- | ---: | ---: |
-| Files importing `@shared/tokens` (migrated) | — | **204 of 219** (93%) |
-| Raw `fontSize: N` remaining | 393 | 115 |
+| Files importing `@shared/tokens` (migrated) | — | **206 of 219** (94%) |
+| Raw `fontSize: N` remaining | 364 | 110 |
 | `borderRadius: radius.*` from `@/theme` remaining | 18 | 3 |
 | `borderRadius: 30` → `shape.cta` | 4 | 4 |
 | `borderRadius: 999` → `shape.cta` | 13 | 5 |

@@ -716,9 +716,9 @@ const ba = StyleSheet.create({
     flexDirection: 'row' as const, alignItems: 'center' as const, gap: 3,
     marginTop: 2,
   },
-  stateTagCompletedText: { fontSize: 10, fontWeight: '700' as const, color: colors.success },
+  stateTagCompletedText: { fontSize: text.microLabel.size, fontWeight: '700' as const, color: colors.success },
   stateTagActive: { marginTop: 2 },
-  stateTagActiveText: { fontSize: 10, fontWeight: '700' as const, color: L.gold },
+  stateTagActiveText: { fontSize: text.microLabel.size, fontWeight: '700' as const, color: L.gold },
   stateTagLocked: {
     flexDirection: 'row' as const, alignItems: 'center' as const, gap: 3,
     marginTop: 2,

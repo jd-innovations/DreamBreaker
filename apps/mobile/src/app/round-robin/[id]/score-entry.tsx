@@ -151,7 +151,7 @@ const sp = StyleSheet.create({
     paddingHorizontal: 7, paddingVertical: 2,
     borderWidth: 1, borderColor: L.goldBorder,
   },
-  winnerPillText: { fontSize: 10, fontWeight: '700', color: L.gold },
+  winnerPillText: { fontSize: text.microLabel.size, fontWeight: '700', color: L.gold },
 
   controls: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   btn: {

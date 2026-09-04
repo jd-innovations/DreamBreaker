@@ -1226,7 +1226,7 @@ const mt = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 3 },
   name: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
   adminBadge: { backgroundColor: L.goldLight, borderRadius: shape.badge, paddingHorizontal: 6, paddingVertical: 2 },
-  adminText: { color: L.gold, fontSize: 10, fontWeight: '700' },
+  adminText: { color: L.gold, fontSize: text.microLabel.size, fontWeight: '700' },
   meta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   actions: { flexDirection: 'row', gap: 4 },
   actionBtn: {

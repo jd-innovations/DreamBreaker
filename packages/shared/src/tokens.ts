@@ -278,6 +278,22 @@ export const text = {
   chipValue:    { size: 12, weight: 800 },
   caption:      { size: 12, weight: 500 },
   cardLabel:    { size: 11, weight: 800, letterSpacing: 0.8, uppercase: true },
+  /**
+   * The smallest label: under a quick-action icon, inside a fill bar, on a
+   * status or skill chip. Plain — no tracking, not uppercase.
+   *
+   * Decision 17 (2026-09-04), and the first role added below the old 11pt
+   * floor. Decision 10 said sub-11 sizes have no role "until one is proposed
+   * with a measurement", so here is the measurement: 145 uses sit below 11,
+   * and 90 of them are 10pt. Within those, 10/700 (27 uses) and 10/800 (30)
+   * are doing different jobs — only 8 of the 10/700s carry letterSpacing
+   * against 17 of the 10/800s. This role is the plain one.
+   *
+   * The tracked 10/800 variant is deliberately NOT a role yet; it would be a
+   * smaller `cardLabel` and is left exempt. The floor is now 10: 9pt and
+   * below still have no role.
+   */
+  microLabel:   { size: 10, weight: 700 },
 } as const;
 
 export type RadiusToken = keyof typeof radius;

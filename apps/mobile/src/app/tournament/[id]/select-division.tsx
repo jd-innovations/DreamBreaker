@@ -169,7 +169,7 @@ const dv = StyleSheet.create({
   fillRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   fillTrack: { flex: 1, height: 4, backgroundColor: L.page, borderRadius: 2, overflow: 'hidden' },
   fillBar: { height: '100%', borderRadius: 2 },
-  fillLabel: { color: L.textSub, fontSize: 10, fontWeight: '700', width: 38, textAlign: 'right' },
+  fillLabel: { color: L.textSub, fontSize: text.microLabel.size, fontWeight: '700', width: 38, textAlign: 'right' },
   regCount: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   selectCircle: {
     width: 26, height: 26, borderRadius: 13, flexShrink: 0,
@@ -491,7 +491,7 @@ const s = StyleSheet.create({
     backgroundColor: L.goldBg, borderRadius: shape.cta, borderWidth: 1, borderColor: L.goldBorder,
     paddingHorizontal: 12, paddingVertical: 8, marginBottom: 10,
   },
-  selectedLabel: { color: L.textSub, fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
+  selectedLabel: { color: L.textSub, fontSize: text.microLabel.size, fontWeight: '700', letterSpacing: 0.4 },
   selectedName: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
 
   continueBtn: {

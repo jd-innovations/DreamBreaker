@@ -217,5 +217,5 @@ const dw = StyleSheet.create({
   metricText: { color: colors.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 14 },
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   metricPill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.goldBg, borderColor: colors.goldBorder, borderWidth: 1, borderRadius: shape.pill, paddingHorizontal: spacing.sm, paddingVertical: 3 },
-  metricPillText: { color: colors.navy, fontSize: 10, fontWeight: '700', lineHeight: 12 },
+  metricPillText: { color: colors.navy, fontSize: text.microLabel.size, fontWeight: '700', lineHeight: 12 },
 });

@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   },
   yourPar: {
     color: colors.playerCredentialMuted,
-    fontSize: 10,
+    fontSize: text.microLabel.size,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.4,

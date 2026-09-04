@@ -923,7 +923,7 @@ const s = StyleSheet.create({
   podiumNameGold: { fontSize: text.caption.size, fontWeight: '500' },
   podiumRecord: { fontSize: 11, color: L.textSub },
   podiumRecordGold: { fontWeight: '700', color: L.navy },
-  podiumPlace: { fontSize: 10, color: L.textSub, fontWeight: '700' },
+  podiumPlace: { fontSize: text.microLabel.size, color: L.textSub, fontWeight: '700' },
   podiumPlaceGold: { color: L.gold },
 
   // ── Summary ──
@@ -1007,7 +1007,7 @@ const s = StyleSheet.create({
   },
   snapshotTile: { flex: 1, alignItems: 'center' },
   snapshotDivider: { width: 1, height: 28, backgroundColor: L.goldBorder },
-  snapshotLabel: { fontSize: 10, fontWeight: '700', color: L.textSub, marginBottom: 3 },
+  snapshotLabel: { fontSize: text.microLabel.size, fontWeight: '700', color: L.textSub, marginBottom: 3 },
   snapshotValue: { fontSize: text.rowValue.size, fontWeight: '800', color: L.navy },
   snapshotValueDone: { color: L.success },
   snapshotBar: {

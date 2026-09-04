@@ -66,7 +66,7 @@ const gc = StyleSheet.create({
     alignSelf: 'flex-start', borderRadius: shape.badge,
     paddingHorizontal: 6, paddingVertical: 3, backgroundColor: L.goldLight,
   },
-  statusText: { color: L.gold, fontSize: 10, fontWeight: '700' },
+  statusText: { color: L.gold, fontSize: text.microLabel.size, fontWeight: '700' },
 });
 
 // ─── Discover card ──────────────────────────────────────────────────────────

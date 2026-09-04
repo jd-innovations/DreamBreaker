@@ -39,6 +39,7 @@ const ROLE_WEIGHT = {
   titleSm: "800", body: "500", rowTitle: "700", rowValue: "800",
   fieldLabel: "800", action: "800", link: "700", controlLabel: "700",
   sectionLabel: "800", chipValue: "800", caption: "500", cardLabel: "800",
+  microLabel: "700",
 };
 
 // Roles that carry letterSpacing carry it when applied, so a role lands whole

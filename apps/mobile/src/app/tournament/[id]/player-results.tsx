@@ -152,7 +152,7 @@ const pod = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
     borderWidth: 1,
   },
-  rankLabel: { color: L.textSub, fontSize: 10, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 2 },
+  rankLabel: { color: L.textSub, fontSize: text.microLabel.size, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 2 },
   name: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
 });
 

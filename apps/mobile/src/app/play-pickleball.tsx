@@ -179,5 +179,5 @@ const s = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  badgeText: { fontSize: 10, fontWeight: '700', color: colors.white, letterSpacing: 0.5 },
+  badgeText: { fontSize: text.microLabel.size, fontWeight: '700', color: colors.white, letterSpacing: 0.5 },
 });

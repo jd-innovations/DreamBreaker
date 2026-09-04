@@ -278,6 +278,6 @@ const s = StyleSheet.create({
   findGameText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
   tabBar: { position: 'absolute', left: 0, right: 0, bottom: 0, minHeight: 74, borderTopWidth: 1, borderColor: '#E5E7EB', backgroundColor: L.white, flexDirection: 'row', paddingTop: 9, paddingHorizontal: spacing.sm, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: -4 }, elevation: 8 },
   tabItem: { flex: 1, alignItems: 'center', gap: 4 },
-  tabLabel: { color: '#7C8494', fontSize: 10, fontWeight: '700' },
+  tabLabel: { color: '#7C8494', fontSize: text.microLabel.size, fontWeight: '700' },
   tabLabelActive: { color: L.gold, fontWeight: '900' },
 });

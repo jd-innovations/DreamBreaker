@@ -11,6 +11,8 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppIcon, type AppIconName } from './AppIcon';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
@@ -147,8 +149,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: text.microLabel.size,
+    fontWeight: '700',
     color: colors.navy,
     textAlign: 'center',
     lineHeight: 14,

@@ -173,7 +173,7 @@ const ls = StyleSheet.create({
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder,
     alignItems: 'center', justifyContent: 'center', marginBottom: 2,
   },
-  label: { fontSize: 10, fontWeight: '700', color: L.textSub, textAlign: 'center', letterSpacing: 0.3 },
+  label: { fontSize: text.microLabel.size, fontWeight: '700', color: L.textSub, textAlign: 'center', letterSpacing: 0.3 },
   name: { fontSize: text.chipValue.size, fontWeight: '800', color: L.navy, textAlign: 'center' },
   value: { fontSize: text.rowValue.size, fontWeight: '800', color: L.gold },
 });
