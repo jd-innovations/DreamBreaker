@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { LoadingState, ErrorState } from '@/components';
 import { useSession } from '@/hooks/useSession';
@@ -139,25 +141,25 @@ const s = StyleSheet.create({
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
     paddingHorizontal: 8, paddingVertical: 12,
   },
-  backBtn:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
-  backText:    { color: L.blue, fontSize: 17, fontWeight: '400' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '700' },
+  backBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
+  backText: { color: L.blue, fontSize: 17, fontWeight: '400' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 10 },
-  emptyTitle: { color: L.text, fontSize: 18, fontWeight: '800' },
-  emptySub: { color: L.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 20 },
-  newBtn: { marginTop: 8, backgroundColor: L.navy, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 22 },
-  newBtnText: { color: L.gold, fontSize: 14, fontWeight: '800' },
+  emptyTitle: { color: L.text, fontSize: text.titleSm.size, fontWeight: '800' },
+  emptySub: { color: L.textMuted, fontSize: text.body.size, fontWeight: '500', textAlign: 'center', lineHeight: 20 },
+  newBtn: { marginTop: 8, backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 12, paddingHorizontal: 22 },
+  newBtnText: { color: L.gold, fontSize: text.rowValue.size, fontWeight: '800' },
 
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: L.bg, borderRadius: 14, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.panel, borderWidth: 1, borderColor: L.border,
     padding: 14, marginBottom: 10,
   },
   rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 },
-  subject: { flex: 1, color: L.navy, fontSize: 15, fontWeight: '700' },
-  meta: { color: L.textMuted, fontSize: 12 },
-  badge: { borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0 },
+  subject: { flex: 1, color: L.navy, fontSize: text.body.size, fontWeight: '500' },
+  meta: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  badge: { borderRadius: shape.pill, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0 },
   badgeText: { fontSize: 11, fontWeight: '700' },
 
   fab: {

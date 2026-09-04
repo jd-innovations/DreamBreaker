@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import {
   fetchStoryCategories,
@@ -162,14 +164,14 @@ const v = StyleSheet.create({
     flex: 1, alignItems: 'flex-start', justifyContent: 'center',
     paddingHorizontal: 28, gap: 14,
   },
-  subheadline: { color: colors.gold, fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
+  subheadline: { color: colors.gold, fontSize: text.actionLarge.size, fontWeight: '800', letterSpacing: 0.3 },
   headline: { color: '#FFFFFF', fontSize: 32, fontWeight: '800', lineHeight: 38 },
   body: { color: 'rgba(255,255,255,0.85)', fontSize: 19, fontWeight: '500', lineHeight: 26 },
-  metadata: { color: 'rgba(255,255,255,0.6)', fontSize: 16, fontWeight: '600' },
+  metadata: { color: 'rgba(255,255,255,0.6)', fontSize: text.actionLarge.size, fontWeight: '800' },
   ctaBtn: {
     position: 'absolute', left: 24, right: 24,
-    backgroundColor: colors.gold, borderRadius: 16,
+    backgroundColor: colors.gold, borderRadius: shape.cta,
     paddingVertical: 16, alignItems: 'center',
   },
-  ctaText: { color: colors.navy, fontSize: 17, fontWeight: '800' },
+  ctaText: { color: colors.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 });

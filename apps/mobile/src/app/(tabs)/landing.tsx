@@ -15,6 +15,8 @@ import { MOCK_TOURNAMENTS } from '@/data/mock';
 import type { Tournament } from '@/lib/tournamentTypes';
 import { AppIcon, type AppIconName } from '@/components';
 import { displayText } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 const { width } = Dimensions.get('window');
 
@@ -121,7 +123,7 @@ function StatusBadge({ status }: { status: Tournament['status'] }) {
 }
 
 const badge = StyleSheet.create({
-  wrap: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, alignSelf: 'flex-start' },
+  wrap: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: shape.badge, alignSelf: 'flex-start' },
   text: { fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
 });
 
@@ -167,11 +169,11 @@ function TournamentRow({ t, index }: { t: Tournament; index: number }) {
 const row = StyleSheet.create({
   wrap: {
     flexDirection: 'row', gap: 12, marginBottom: 12,
-    backgroundColor: L.card, borderRadius: 14,
+    backgroundColor: L.card, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border, padding: 10, alignItems: 'flex-start',
   },
   thumb: {
-    width: 90, height: 80, borderRadius: 10,
+    width: 90, height: 80, borderRadius: shape.cta,
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0,
   },
   badgeOverlay: { position: 'absolute', bottom: 6, left: 6 },
@@ -179,7 +181,7 @@ const row = StyleSheet.create({
   time: { color: L.textSub, fontSize: 11, fontWeight: '600' },
   name: { ...displayText(17, { color: L.text }) },
   venueRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  venue: { color: L.textSub, fontSize: 12, fontWeight: '500', flex: 1 },
+  venue: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   meta: { color: L.textMuted, fontSize: 11, fontWeight: '600' },
   dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: L.border },
@@ -403,7 +405,7 @@ const styles = StyleSheet.create({
   // Matches the brand wordmark in assets/images/logo-header.png: lowercase,
   // navy "pickleball" + gold "app", set tight. Not letter-spaced — the old
   // uppercase treatment belonged to the previous mark.
-  logoText: { color: L.navy, fontSize: 17, fontWeight: '900', letterSpacing: -0.2, marginTop: 2 },
+  logoText: { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900', letterSpacing: -0.2, marginTop: 2 },
   logoPB: { color: L.gold },
   scroll: { flex: 1 },
   scrollContent: { paddingTop: 16 },
@@ -416,7 +418,7 @@ const styles = StyleSheet.create({
   qaLabel: { color: L.text, fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 14 },
   joinBanner: {
     marginHorizontal: 16, marginBottom: 20, backgroundColor: L.card,
-    borderRadius: 18, borderWidth: 1, borderColor: L.border,
+    borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
     flexDirection: 'row', padding: 16, alignItems: 'center', gap: 12, overflow: 'hidden',
   },
   joinBallArea: { width: 80, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
@@ -433,37 +435,37 @@ const styles = StyleSheet.create({
   joinLine2: { position: 'absolute', width: 14, height: 3, borderRadius: 2, backgroundColor: L.gold, right: -12, bottom: 14, transform: [{ rotate: '-12deg' }] },
   joinLine3: { position: 'absolute', width: 10, height: 3, borderRadius: 2, backgroundColor: L.gold, right: -10, bottom: 6, transform: [{ rotate: '-12deg' }] },
   joinContent: { flex: 1, gap: 6 },
-  joinTitle: { color: L.text, fontSize: 16, fontWeight: '800', letterSpacing: 0.2 },
+  joinTitle: { color: L.text, fontSize: text.actionLarge.size, fontWeight: '800', letterSpacing: 0.2 },
   joinPB: { color: L.gold },
-  joinSub: { color: L.textSub, fontSize: 12, fontWeight: '500', lineHeight: 17 },
+  joinSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17 },
   joinBtn: {
-    backgroundColor: L.gold, borderRadius: 24, paddingVertical: 10, paddingHorizontal: 16,
+    backgroundColor: L.gold, borderRadius: shape.cta, paddingVertical: 10, paddingHorizontal: 16,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4,
   },
-  joinBtnText: { color: L.bg, fontSize: 13, fontWeight: '800', letterSpacing: 0.3 },
+  joinBtnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800', letterSpacing: 0.3 },
   joinArrow: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' },
   section: { marginBottom: 8 },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, marginBottom: 12,
   },
-  sectionTitle: { color: L.text, fontSize: 20, fontWeight: '900', letterSpacing: 0.2 },
+  sectionTitle: { color: L.text, fontSize: text.modalTitle.size, fontWeight: '900', letterSpacing: 0.2 },
   customizeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  customizeText: { color: L.gold, fontSize: 13, fontWeight: '700' },
-  seeAll: { color: L.gold, fontSize: 13, fontWeight: '700' },
+  customizeText: { color: L.gold, fontSize: text.link.size, fontWeight: '700' },
+  seeAll: { color: L.gold, fontSize: text.link.size, fontWeight: '700' },
   filterRow: { paddingHorizontal: 16, gap: 8, marginBottom: 10 },
   pill: {
-    paddingHorizontal: 16, paddingVertical: 9, borderRadius: 24,
+    paddingHorizontal: 16, paddingVertical: 9, borderRadius: shape.pill,
     backgroundColor: L.pillBg, borderWidth: 1, borderColor: L.border,
   },
   pillActive: { backgroundColor: L.pillActive, borderColor: L.pillActive },
-  pillText: { color: L.text, fontSize: 13, fontWeight: '600' },
+  pillText: { color: L.text, fontSize: text.controlLabel.size, fontWeight: '700' },
   pillTextActive: { color: '#FFFFFF' },
   emptyState: { alignItems: 'center', padding: 32, gap: 8 },
-  emptyText: { color: L.textMuted, fontSize: 13, fontWeight: '500' },
+  emptyText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   inboxCard: {
     marginHorizontal: 16, marginBottom: 10,
-    backgroundColor: L.card, borderRadius: 14,
+    backgroundColor: L.card, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 14, paddingVertical: 12, gap: 12,
@@ -483,8 +485,8 @@ const styles = StyleSheet.create({
   },
   inboxBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800', lineHeight: 12 },
   inboxBody: { flex: 1, gap: 3 },
-  inboxTitle: { color: L.text, fontSize: 14, fontWeight: '700' },
-  inboxSub:   { color: L.textMuted, fontSize: 12, fontWeight: '400' },
+  inboxTitle: { color: L.text, fontSize: text.rowTitle.size, fontWeight: '700' },
+  inboxSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   badge: {
     position: 'absolute', top: 2, right: 2,
     minWidth: 16, height: 16, borderRadius: 8,

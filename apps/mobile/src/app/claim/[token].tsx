@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useSession } from '@/hooks/useSession';
 import { claimPersonalMatch, validatePersonalMatchClaim, type PersonalMatchClaimPreview } from '@/lib/supabase/personalMatchClaims';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 function formatDate(value: string | null) {
   if (!value) return 'Date unavailable';
@@ -155,27 +157,27 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.screenH, paddingVertical: 12 },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.sectionTitle, color: colors.navy, fontSize: 17 },
+  title: { color: colors.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
   body: { flex: 1 },
   bodyContent: { padding: spacing.screenH, paddingTop: spacing.xl },
-  card: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.card, padding: spacing.lg, alignItems: 'center', gap: spacing.md },
-  centerCard: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.card, padding: spacing.xl, alignItems: 'center', gap: spacing.md },
+  card: { borderWidth: 1, borderColor: colors.border, borderRadius: shape.card, padding: spacing.lg, alignItems: 'center', gap: spacing.md },
+  centerCard: { borderWidth: 1, borderColor: colors.border, borderRadius: shape.card, padding: spacing.xl, alignItems: 'center', gap: spacing.md },
   statusBadge: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.gold },
   statusBadgeMuted: { backgroundColor: colors.page },
   successBadge: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.success },
-  headline: { ...typography.sectionTitle, color: colors.navy, fontSize: 20, textAlign: 'center' },
-  subText: { ...typography.body, color: colors.textSub, fontSize: 13, lineHeight: 19, textAlign: 'center' },
-  loadingText: { ...typography.body, color: colors.textSub, fontSize: 13 },
+  headline: { color: colors.navy, fontSize: text.modalTitle.size, fontWeight: '900', textAlign: 'center' },
+  subText: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19, textAlign: 'center' },
+  loadingText: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500' },
   details: { width: '100%', gap: spacing.sm, marginTop: spacing.sm },
   detailRow: { gap: 2 },
-  detailLabel: { ...typography.metadata, color: colors.textSub, fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
-  detailValue: { ...typography.cardTitle, color: colors.navy, fontSize: 14, lineHeight: 19 },
+  detailLabel: { color: colors.textSub, fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
+  detailValue: { color: colors.navy, fontSize: text.rowTitle.size, fontWeight: '700', lineHeight: 19 },
   scoreBox: { width: '100%', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, marginTop: spacing.sm, gap: 4 },
-  scoreTitle: { ...typography.metadata, color: colors.textSub, fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
-  scoreLine: { ...typography.body, color: colors.navy, fontSize: 13 },
+  scoreTitle: { color: colors.textSub, fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
+  scoreLine: { color: colors.navy, fontSize: text.caption.size, fontWeight: '500' },
   authActions: { width: '100%', gap: spacing.sm, marginTop: spacing.sm },
   primary: { width: '100%', backgroundColor: colors.gold },
   primaryText: { color: colors.navy },
   secondaryLink: { alignItems: 'center', paddingVertical: spacing.sm },
-  secondaryLinkText: { ...typography.cardTitle, color: colors.navy, fontSize: 14 },
+  secondaryLinkText: { color: colors.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
 });

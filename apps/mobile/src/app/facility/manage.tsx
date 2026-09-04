@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
 import { useFacilityRole } from '@/hooks/useFacilityRole';
@@ -582,101 +584,101 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: colors.navy, ...typography.pageTitle },
+  headerTitle: { fontSize: text.pageTitle.size, fontWeight: '900', color: colors.navy, },
 
   switcher: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   switchChip: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.chip,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: shape.pill,
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg, maxWidth: 200,
   },
   switchChipOn: { borderColor: colors.gold, backgroundColor: colors.goldBg },
-  switchText:   { color: colors.textSub, ...typography.metadata, fontWeight: '700' },
+  switchText: { fontSize: text.chipValue.size, color: colors.textSub, fontWeight: '800' },
   switchTextOn: { color: colors.navy },
 
   facilityCard: {
-    padding: spacing.lg, backgroundColor: colors.bg, borderRadius: radius.card,
+    padding: spacing.lg, backgroundColor: colors.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: colors.border, gap: spacing.xs,
   },
-  facilityName: { color: colors.navy, ...typography.sectionTitle },
-  facilitySub:  { color: colors.textSub, ...typography.metadata, textTransform: 'capitalize' },
+  facilityName: { fontSize: text.sectionTitle.size, fontWeight: '900', color: colors.navy, },
+  facilitySub: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, textTransform: 'capitalize' },
 
   checkInBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.lg,
-    backgroundColor: colors.goldBg, borderRadius: radius.card,
+    backgroundColor: colors.goldBg, borderRadius: shape.card,
     borderWidth: 1.5, borderColor: colors.goldBorder,
   },
-  checkInBtnText: { flex: 1, color: colors.navy, ...typography.cardTitle },
+  checkInBtnText: { fontSize: text.actionLarge.size, fontWeight: '800', flex: 1, color: colors.navy, },
 
   sectionHead: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginTop: spacing.sm,
   },
-  sectionLabel: { color: colors.navy, fontSize: 13, fontWeight: '800', letterSpacing: 0.8 },
-  addLink: { color: colors.gold, fontSize: 13, fontWeight: '800' },
-  empty: { color: colors.textSub, ...typography.body, lineHeight: 21 },
+  sectionLabel: { color: colors.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing },
+  addLink: { color: colors.gold, fontSize: text.link.size, fontWeight: '700' },
+  empty: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, lineHeight: 21 },
 
   assetRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md,
-    backgroundColor: colors.bg, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.bg, borderRadius: shape.card, borderWidth: 1, borderColor: colors.border,
   },
   assetRetired: { opacity: 0.55 },
-  assetName: { color: colors.navy, ...typography.cardTitle },
-  assetSub:  { color: colors.textSub, ...typography.metadata, textTransform: 'capitalize' },
+  assetName: { fontSize: text.actionLarge.size, fontWeight: '800', color: colors.navy, },
+  assetSub: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, textTransform: 'capitalize' },
 
   editor: {
-    padding: spacing.lg, backgroundColor: colors.bg, borderRadius: radius.card,
+    padding: spacing.lg, backgroundColor: colors.bg, borderRadius: shape.card,
     borderWidth: 1.5, borderColor: colors.goldBorder, gap: spacing.sm,
   },
-  editorTitle: { color: colors.navy, ...typography.cardTitle, marginBottom: spacing.xs },
-  fieldLabel: { color: colors.textSub, ...typography.metadata, fontWeight: '700' },
+  editorTitle: { fontSize: text.actionLarge.size, fontWeight: '800', color: colors.navy, marginBottom: spacing.xs },
+  fieldLabel: { fontSize: text.fieldLabel.size, color: colors.textSub, fontWeight: '800' },
   input: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border, borderRadius: shape.panel,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    color: colors.navy, fontSize: 15, backgroundColor: colors.bg, minHeight: 44,
+    color: colors.navy, fontSize: text.body.size, fontWeight: '500', backgroundColor: colors.bg, minHeight: 44,
   },
   typeChip: {
-    flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radius.button,
+    flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: shape.cta,
     borderWidth: 1.5, borderColor: colors.border,
   },
   typeChipOn: { borderColor: colors.gold, backgroundColor: colors.goldBg },
-  typeText:   { color: colors.textSub, fontSize: 14, fontWeight: '700', textTransform: 'capitalize' },
+  typeText: { color: colors.textSub, fontSize: text.rowTitle.size, fontWeight: '700', textTransform: 'capitalize' },
   typeTextOn: { color: colors.navy, fontWeight: '800' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
   card: {
-    padding: spacing.xl, backgroundColor: colors.bg, borderRadius: radius.card,
+    padding: spacing.xl, backgroundColor: colors.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: spacing.sm,
   },
-  cardTitle: { color: colors.navy, ...typography.sectionTitle, textAlign: 'center' },
-  cardBody:  { color: colors.textSub, ...typography.body, textAlign: 'center', lineHeight: 21 },
+  cardTitle: { fontSize: text.sectionTitle.size, fontWeight: '900', color: colors.navy, textAlign: 'center' },
+  cardBody: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, textAlign: 'center', lineHeight: 21 },
 
   secondary: {
     paddingVertical: spacing.md, paddingHorizontal: spacing.xxl,
-    borderRadius: radius.button, borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: shape.cta, borderWidth: 1.5, borderColor: colors.border,
   },
-  secondaryText: { color: colors.navy, fontSize: 15, fontWeight: '800' },
+  secondaryText: { color: colors.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
   saveBtn: {
-    backgroundColor: colors.navy, borderRadius: radius.button, paddingVertical: spacing.md,
+    backgroundColor: colors.navy, borderRadius: shape.cta, paddingVertical: spacing.md,
     alignItems: 'center', justifyContent: 'center',
   },
-  saveText: { color: colors.white, fontSize: 15, fontWeight: '800' },
+  saveText: { color: colors.white, fontSize: text.actionLarge.size, fontWeight: '800' },
   submitDisabled: { opacity: 0.4 },
 
-  footnote: { color: colors.textSub, ...typography.metadata, marginTop: spacing.sm },
+  footnote: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, marginTop: spacing.sm },
 
   payoutCard: {
-    padding: spacing.lg, backgroundColor: colors.bg, borderRadius: radius.card,
+    padding: spacing.lg, backgroundColor: colors.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: colors.border, gap: spacing.sm,
   },
-  payoutTitle: { color: colors.navy, ...typography.cardTitle },
-  payoutBody:  { color: colors.textSub, ...typography.body, lineHeight: 21 },
+  payoutTitle: { fontSize: text.actionLarge.size, fontWeight: '800', color: colors.navy, },
+  payoutBody: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, lineHeight: 21 },
   payoutReady: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md,
-    backgroundColor: colors.successBg, borderRadius: radius.card,
+    backgroundColor: colors.successBg, borderRadius: shape.card,
     borderWidth: 1, borderColor: colors.success,
   },
-  payoutReadyText: { color: colors.navy, ...typography.body, flex: 1 },
+  payoutReadyText: { fontSize: text.body.size, fontWeight: '500', color: colors.navy, flex: 1 },
   earningsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  earningsLabel: { color: colors.textSub, ...typography.body },
-  earningsValue: { color: colors.navy, fontSize: 18, fontWeight: '900' },
+  earningsLabel: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, },
+  earningsValue: { color: colors.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 });

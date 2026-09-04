@@ -8,7 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import { useProfile } from '@/hooks/useProfile';
 import { createDraftTournament } from '@/lib/supabase/tournaments';
@@ -146,21 +148,21 @@ function DateField({
 }
 
 const f = StyleSheet.create({
-  wrap:      { marginBottom: 18 },
-  label:     { color: L.navy, fontSize: 13, fontWeight: '700', marginBottom: 4 },
-  hint:      { color: L.textSub, fontSize: 11, marginBottom: 6 },
+  wrap: { marginBottom: 18 },
+  label: { color: L.navy, fontSize: text.fieldLabel.size, fontWeight: '800', marginBottom: 4 },
+  hint: { color: L.textSub, fontSize: 11, marginBottom: 6 },
   input: {
     backgroundColor: L.bg, borderWidth: 1.5, borderColor: L.border,
-    borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 13,
-    fontSize: 15, color: L.text,
+    borderRadius: shape.panel, paddingHorizontal: 14, paddingVertical: 13,
+    fontSize: text.body.size, fontWeight: '500', color: L.text,
   },
   inputError: { borderColor: L.danger },
-  errorRow:   { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 },
-  errorText:  { color: L.danger, fontSize: 11, fontWeight: '600' },
+  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 },
+  errorText: { color: L.danger, fontSize: 11, fontWeight: '600' },
 
-  dateInput:          { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dateValue:           { fontSize: 15, color: L.text },
-  dateValuePlaceholder:{ fontSize: 15, color: L.textSub },
+  dateInput: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dateValue: { fontSize: text.body.size, fontWeight: '500', color: L.text },
+  dateValuePlaceholder: { fontSize: text.body.size, fontWeight: '500', color: L.textSub },
 });
 
 // ─── Step progress bar ────────────────────────────────────────────────────────
@@ -201,11 +203,11 @@ const sb = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   dotActive: { backgroundColor: L.navy, borderColor: L.navy },
-  dotDone:   { backgroundColor: L.success, borderColor: L.success },
-  dotNum:    { color: L.textSub, fontSize: 11, fontWeight: '800' },
+  dotDone: { backgroundColor: L.success, borderColor: L.success },
+  dotNum: { color: L.textSub, fontSize: 11, fontWeight: '800' },
   dotNumActive: { color: L.bg },
-  line:      { flex: 1, height: 2, backgroundColor: L.border },
-  lineDone:  { backgroundColor: L.success },
+  line: { flex: 1, height: 2, backgroundColor: L.border },
+  lineDone: { backgroundColor: L.success },
 });
 
 // ─── Review row ───────────────────────────────────────────────────────────────
@@ -225,8 +227,8 @@ const rv = StyleSheet.create({
     paddingVertical: 11,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  label: { flex: 1, color: L.textSub, fontSize: 13, fontWeight: '600' },
-  value: { flex: 2, color: L.navy,    fontSize: 13, fontWeight: '700', textAlign: 'right' },
+  label: { flex: 1, color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  value: { flex: 2, color: L.navy,    fontSize: text.fieldLabel.size, fontWeight: '800', textAlign: 'right' },
 });
 
 // ─── Date parsing ─────────────────────────────────────────────────────────────
@@ -802,21 +804,21 @@ const s = StyleSheet.create({
     backgroundColor: L.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
-  headerSub:   { color: L.textSub, fontSize: 12, marginTop: 1 },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  headerSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
 
   scroll: { paddingHorizontal: 20, paddingTop: 24 },
 
   stepBody: {},
 
   stepHero: { alignItems: 'center', marginBottom: 28, gap: 8 },
-  stepHeroTitle: { color: L.navy, fontSize: 20, fontWeight: '900', textAlign: 'center' },
-  stepHeroSub:   { color: L.textSub, fontSize: 13, textAlign: 'center', lineHeight: 19 },
+  stepHeroTitle: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900', textAlign: 'center' },
+  stepHeroSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 19 },
 
   reviewCard: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, padding: 16, marginBottom: 16,
+    borderRadius: shape.card, padding: 16, marginBottom: 16,
   },
   reviewSection: {
     color: L.textSub, fontSize: 10, fontWeight: '900', letterSpacing: 0.8,
@@ -825,9 +827,9 @@ const s = StyleSheet.create({
   reviewNote: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
     backgroundColor: L.goldLight, borderWidth: 1, borderColor: L.goldBorder,
-    borderRadius: 12, padding: 12,
+    borderRadius: shape.panel, padding: 12,
   },
-  reviewNoteText: { flex: 1, color: L.text, fontSize: 12, lineHeight: 18 },
+  reviewNoteText: { flex: 1, color: L.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18 },
 
   bottomBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
@@ -838,17 +840,17 @@ const s = StyleSheet.create({
   backBtnBottom: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 14, paddingVertical: 12,
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.button,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
   },
-  backBtnText: { color: L.navy, fontSize: 14, fontWeight: '700' },
+  backBtnText: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
 
   nextBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: L.navy, borderRadius: radius.button,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingHorizontal: 22, paddingVertical: 13,
   },
-  nextBtnText: { color: L.bg, fontSize: 15, fontWeight: '800' },
-  createBtn:   { backgroundColor: L.success },
+  nextBtnText: { color: L.bg, fontSize: text.actionLarge.size, fontWeight: '800' },
+  createBtn: { backgroundColor: L.success },
   btnDisabled: { opacity: 0.5 },
 
   // Date picker sheet (iOS)
@@ -862,6 +864,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  pickerCancel: { color: L.textSub, fontSize: 16, fontWeight: '600' },
-  pickerDone:   { color: L.gold, fontSize: 16, fontWeight: '700' },
+  pickerCancel: { color: L.textSub, fontSize: text.actionLarge.size, fontWeight: '800' },
+  pickerDone: { color: L.gold, fontSize: text.actionLarge.size, fontWeight: '800' },
 });

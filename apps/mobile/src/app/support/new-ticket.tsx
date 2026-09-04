@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
 import {
@@ -188,42 +190,42 @@ const s = StyleSheet.create({
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
     paddingHorizontal: 8, paddingVertical: 12,
   },
-  backBtn:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
-  backText:    { color: L.blue, fontSize: 17, fontWeight: '400' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '700' },
+  backBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
+  backText: { color: L.blue, fontSize: 17, fontWeight: '400' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   scroll: { padding: 20 },
 
-  label: { color: L.navy, fontSize: 14, fontWeight: '700', marginBottom: 8, marginTop: 18 },
+  label: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 8, marginTop: 18 },
   input: {
-    borderWidth: 1.5, borderColor: L.border, borderRadius: 10,
-    paddingHorizontal: 14, height: 46, fontSize: 15, color: L.text, backgroundColor: L.bg,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
+    paddingHorizontal: 14, height: 46, fontSize: text.body.size, fontWeight: '500', color: L.text, backgroundColor: L.bg,
   },
   textarea: {
-    borderWidth: 1.5, borderColor: L.border, borderRadius: 10,
-    padding: 14, minHeight: 120, fontSize: 15, color: L.text, backgroundColor: L.bg,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
+    padding: 14, minHeight: 120, fontSize: text.body.size, fontWeight: '500', color: L.text, backgroundColor: L.bg,
   },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: shape.pill,
     borderWidth: 1, borderColor: L.border, backgroundColor: L.bg,
   },
   chipActive: { backgroundColor: L.navy, borderColor: L.navy },
-  chipText: { color: L.textSub, fontSize: 12, fontWeight: '700' },
+  chipText: { color: L.textSub, fontSize: text.chipValue.size, fontWeight: '800' },
   chipTextActive: { color: L.gold },
 
   attachRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     marginTop: 20, paddingVertical: 12, paddingHorizontal: 14,
-    borderWidth: 1, borderColor: L.goldBorder, borderRadius: 10, backgroundColor: L.goldBg,
+    borderWidth: 1, borderColor: L.goldBorder, borderRadius: shape.cta, backgroundColor: L.goldBg,
   },
-  attachText: { flex: 1, color: L.navy, fontSize: 14, fontWeight: '600' },
+  attachText: { flex: 1, color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
 
   submitBtn: {
-    marginTop: 28, backgroundColor: L.navy, borderRadius: 12,
+    marginTop: 28, backgroundColor: L.navy, borderRadius: shape.cta,
     paddingVertical: 15, alignItems: 'center',
   },
   submitBtnDisabled: { opacity: 0.5 },
-  submitText: { color: L.gold, fontSize: 16, fontWeight: '800' },
+  submitText: { color: L.gold, fontSize: text.actionLarge.size, fontWeight: '800' },
 });

@@ -5,7 +5,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { haptics } from '@/lib/haptics';
 import { isOnlineNow } from '@/lib/network';
@@ -192,19 +194,19 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.page },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
 
-  manualTitle: { color: colors.navy, fontSize: 22, fontWeight: '900' },
-  manualBody:  { color: colors.textSub, ...typography.body, lineHeight: 21 },
+  manualTitle: { color: colors.navy, fontSize: text.cardTitle.size, fontWeight: '800' },
+  manualBody: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, lineHeight: 21 },
   codeInput: {
-    borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.card,
+    borderWidth: 1.5, borderColor: colors.border, borderRadius: shape.card,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, backgroundColor: colors.bg,
     color: colors.navy, fontSize: 30, fontWeight: '900', letterSpacing: 6, textAlign: 'center',
   },
   submitBtn: {
-    backgroundColor: colors.navy, borderRadius: 30, paddingVertical: 15,
+    backgroundColor: colors.navy, borderRadius: shape.cta, paddingVertical: 15,
     alignItems: 'center', justifyContent: 'center', minHeight: 52,
   },
   submitDisabled: { opacity: 0.4 },
-  submitText: { color: colors.white, fontSize: 16, fontWeight: '800' },
+  submitText: { color: colors.white, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   modeBar: {
     flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.md,
@@ -212,11 +214,11 @@ const s = StyleSheet.create({
   },
   modeBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.button,
+    gap: spacing.sm, paddingVertical: spacing.md, borderRadius: shape.cta,
     borderWidth: 1.5, borderColor: colors.border,
   },
-  modeBtnOn:  { borderColor: colors.gold, backgroundColor: colors.goldBg },
-  modeText:   { color: colors.textSub, fontSize: 14, fontWeight: '700' },
+  modeBtnOn: { borderColor: colors.gold, backgroundColor: colors.goldBg },
+  modeText: { color: colors.textSub, fontSize: text.rowTitle.size, fontWeight: '700' },
   modeTextOn: { color: colors.navy, fontWeight: '800' },
 
   successWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.sm },
@@ -224,15 +226,15 @@ const s = StyleSheet.create({
     width: 88, height: 88, borderRadius: 44, backgroundColor: colors.success,
     alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm,
   },
-  successTitle:  { color: colors.navy, fontSize: 24, fontWeight: '900' },
-  successPlayer: { color: colors.navy, ...typography.sectionTitle },
-  successAsset:  { color: colors.textSub, ...typography.body },
-  successNote:   { color: colors.textSub, ...typography.metadata, textAlign: 'center' },
+  successTitle: { color: colors.navy, fontSize: text.cardTitle.size, fontWeight: '800' },
+  successPlayer: { fontSize: text.sectionTitle.size, fontWeight: '900', color: colors.navy, },
+  successAsset: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, },
+  successNote: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, textAlign: 'center' },
   againBtn: {
-    marginTop: spacing.xl, backgroundColor: colors.navy, borderRadius: 30,
+    marginTop: spacing.xl, backgroundColor: colors.navy, borderRadius: shape.cta,
     paddingVertical: 15, paddingHorizontal: spacing.xxxl, minHeight: 52, justifyContent: 'center',
   },
-  againBtnText: { color: colors.white, fontSize: 16, fontWeight: '800' },
+  againBtnText: { color: colors.white, fontSize: text.actionLarge.size, fontWeight: '800' },
   doneBtn: { marginTop: spacing.sm, paddingVertical: spacing.md, paddingHorizontal: spacing.xxl },
-  doneBtnText: { color: colors.textSub, fontSize: 15, fontWeight: '700' },
+  doneBtnText: { color: colors.textSub, fontSize: text.actionLarge.size, fontWeight: '800' },
 });

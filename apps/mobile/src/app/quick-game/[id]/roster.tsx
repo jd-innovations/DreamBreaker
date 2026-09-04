@@ -7,7 +7,9 @@ import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { supabase as supabaseClient } from '@/lib/supabase';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SecondaryButton } from '@/components/SecondaryButton';
@@ -111,7 +113,7 @@ function ProgressBar({ filled, total }: { filled: number; total: number }) {
 }
 const pb = StyleSheet.create({
   track: { height: 6, borderRadius: 3, backgroundColor: L.border, overflow: 'hidden' },
-  fill:  { height: '100%', borderRadius: 3, backgroundColor: L.gold },
+  fill: { height: '100%', borderRadius: 3, backgroundColor: L.gold },
 });
 
 // ─── Player card ──────────────────────────────────────────────────────────────
@@ -145,7 +147,7 @@ function PlayerCard({ player, onRemove }: { player: RosterPlayer; onRemove?: () 
 const pc = StyleSheet.create({
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: L.bg, borderRadius: radius.md,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
     paddingHorizontal: 12, paddingVertical: 10,
   },
@@ -155,10 +157,10 @@ const pc = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   avatarText: { fontSize: 11, fontWeight: '900', color: L.navy },
-  body:       { flex: 1 },
-  name:       { fontSize: 14, fontWeight: '700', color: L.navy },
-  meta:       { fontSize: 11, color: L.textSub, marginTop: 2 },
-  removeBtn:  { flexShrink: 0, marginLeft: 4 },
+  body: { flex: 1 },
+  name: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.navy },
+  meta: { fontSize: 11, color: L.textSub, marginTop: 2 },
+  removeBtn: { flexShrink: 0, marginLeft: 4 },
 });
 
 // ─── New player input type ────────────────────────────────────────────────────
@@ -309,28 +311,28 @@ function AddPlayerModal({
 }
 
 const am = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.screenH, paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
     backgroundColor: L.bg,
   },
-  title:      { fontSize: 17, fontWeight: '800', color: L.navy },
-  scroll:     { paddingHorizontal: spacing.screenH, paddingTop: spacing.lg },
-  fieldLabel: { fontSize: 12, fontWeight: '700', color: L.textSub, marginBottom: 6, letterSpacing: 0.3 },
-  inputWrap:  {
-    borderWidth: 1.5, borderColor: L.border, borderRadius: radius.sm,
+  title: { fontSize: text.titleSm.size, fontWeight: '800', color: L.navy },
+  scroll: { paddingHorizontal: spacing.screenH, paddingTop: spacing.lg },
+  fieldLabel: { fontSize: text.fieldLabel.size, fontWeight: '800', color: L.textSub, marginBottom: 6, letterSpacing: 0.3 },
+  inputWrap: {
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
     paddingHorizontal: 12, height: 46, justifyContent: 'center',
     backgroundColor: L.bg,
   },
-  input:      { fontSize: 14, color: L.text },
-  footer:     { paddingHorizontal: spacing.screenH, paddingTop: 12 },
-  fullState:  { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 32 },
-  fullTitle:  { fontSize: 17, fontWeight: '800', color: L.navy },
-  fullSub:    { fontSize: 13, color: L.textSub, textAlign: 'center' },
-  savingRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 14 },
-  savingText: { fontSize: 14, color: L.textSub, fontWeight: '600' },
+  input: { fontSize: text.body.size, fontWeight: '500', color: L.text },
+  footer: { paddingHorizontal: spacing.screenH, paddingTop: 12 },
+  fullState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 32 },
+  fullTitle: { fontSize: text.titleSm.size, fontWeight: '800', color: L.navy },
+  fullSub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, textAlign: 'center' },
+  savingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 14 },
+  savingText: { fontSize: text.rowTitle.size, color: L.textSub, fontWeight: '700' },
 });
 
 // ─── Test Player modal (local-only) ───────────────────────────────────────────
@@ -385,19 +387,19 @@ function TestPlayerModal({
 }
 
 const tm = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.screenH, paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
     backgroundColor: L.bg,
   },
-  title:      { fontSize: 17, fontWeight: '800', color: L.navy },
-  sub:        { fontSize: 13, color: L.textSub, paddingHorizontal: spacing.screenH, marginTop: 16, marginBottom: 8 },
+  title: { fontSize: text.titleSm.size, fontWeight: '800', color: L.navy },
+  sub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, paddingHorizontal: spacing.screenH, marginTop: 16, marginBottom: 8 },
   optionList: { paddingHorizontal: spacing.screenH, gap: 10, marginTop: 8 },
   option: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: L.bg, borderRadius: radius.card,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     paddingHorizontal: 14, paddingVertical: 14,
   },
@@ -406,8 +408,8 @@ const tm = StyleSheet.create({
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  optionBody:  { flex: 1 },
-  optionLabel: { fontSize: 14, fontWeight: '700', color: L.navy },
+  optionBody: { flex: 1 },
+  optionLabel: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.navy },
 });
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -817,43 +819,43 @@ const s = StyleSheet.create({
     backgroundColor: L.page,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:      { flexDirection: 'row', alignItems: 'center', gap: 2, minWidth: 60 },
-  backText:     { fontSize: 17, color: '#007AFF', fontWeight: '400' },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, minWidth: 60 },
+  backText: { fontSize: 17, color: '#007AFF', fontWeight: '400' },
   headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle:  { fontSize: 15, fontWeight: '800', color: L.navy },
-  headerSub:    { fontSize: 11, color: L.textSub, marginTop: 1 },
+  headerTitle: { fontSize: text.body.size, fontWeight: '500', color: L.navy },
+  headerSub: { fontSize: 11, color: L.textSub, marginTop: 1 },
   headerAction: { width: 36, height: 36, justifyContent: 'center', minWidth: 60, alignItems: 'flex-end' },
 
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  loadingText: { fontSize: 14, color: L.textSub },
+  loadingText: { fontSize: text.body.size, fontWeight: '500', color: L.textSub },
 
   scroll: { paddingHorizontal: spacing.screenH, paddingTop: spacing.md, gap: 12 },
 
   fillCard: {
-    backgroundColor: L.goldLight, borderRadius: radius.card,
+    backgroundColor: L.goldLight, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.goldBorder,
     padding: spacing.md, gap: 10,
   },
-  fillRow:    { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  fillRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   fillIconWrap: {
     width: 34, height: 34, borderRadius: 17,
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  fillTitle:  { fontSize: 14, fontWeight: '800', color: L.navy },
-  fillSub:    { fontSize: 12, color: L.textSub, marginTop: 1 },
-  fillPct:    { fontSize: 16, fontWeight: '900', color: L.gold },
+  fillTitle: { fontSize: text.rowValue.size, fontWeight: '800', color: L.navy },
+  fillSub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, marginTop: 1 },
+  fillPct: { fontSize: text.actionLarge.size, fontWeight: '800', color: L.gold },
   fullBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: L.goldBg, borderRadius: radius.sm,
+    backgroundColor: L.goldBg, borderRadius: shape.cta,
     paddingHorizontal: 10, paddingVertical: 6,
     borderWidth: 1, borderColor: L.goldBorder,
   },
-  fullBannerText: { fontSize: 12, fontWeight: '700', color: L.navy },
+  fullBannerText: { fontSize: text.chipValue.size, fontWeight: '800', color: L.navy },
 
   inviteCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: L.bg, borderRadius: radius.card,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     paddingHorizontal: 14, paddingVertical: 13,
   },
@@ -862,46 +864,46 @@ const s = StyleSheet.create({
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  inviteBody:  { flex: 1 },
-  inviteTitle: { fontSize: 14, fontWeight: '700', color: L.navy },
-  inviteSub:   { fontSize: 11, color: L.textSub, marginTop: 1 },
+  inviteBody: { flex: 1 },
+  inviteTitle: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.navy },
+  inviteSub: { fontSize: 11, color: L.textSub, marginTop: 1 },
 
-  sectionLabel:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionLabelText: { fontSize: 11, fontWeight: '800', color: L.textSub, letterSpacing: 0.5 },
-  clearText:        { fontSize: 12, fontWeight: '700', color: L.danger },
+  sectionLabel: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionLabelText: { fontSize: text.cardLabel.size, fontWeight: '800', color: L.textSub, letterSpacing: text.cardLabel.letterSpacing },
+  clearText: { fontSize: text.chipValue.size, fontWeight: '800', color: L.danger },
 
-  hostCard:   { marginBottom: 4 },
+  hostCard: { marginBottom: 4 },
   hostAvatar: { borderColor: L.gold },
 
   playerList: { gap: 8 },
 
   emptyCard: {
-    backgroundColor: L.bg, borderRadius: radius.card,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: spacing.xl, alignItems: 'center', gap: 8,
   },
-  emptyTitle:  { fontSize: 15, fontWeight: '800', color: L.navy },
-  emptySub:    { fontSize: 13, color: L.textSub, textAlign: 'center', lineHeight: 19 },
+  emptyTitle: { fontSize: text.body.size, fontWeight: '500', color: L.navy },
+  emptySub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, textAlign: 'center', lineHeight: 19 },
   emptyAddBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderWidth: 1.5, borderColor: L.goldBorder, borderRadius: radius.sm,
+    borderWidth: 1.5, borderColor: L.goldBorder, borderRadius: shape.cta,
     paddingHorizontal: 16, paddingVertical: 9, marginTop: 4,
   },
-  emptyAddText: { fontSize: 13, fontWeight: '700', color: L.gold },
+  emptyAddText: { fontSize: text.action.size, fontWeight: '800', color: L.gold },
 
   openSpotsCard: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: L.bg, borderRadius: radius.md,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border, borderStyle: 'dashed',
     paddingHorizontal: 14, paddingVertical: 12,
   },
-  openSpotsText:       { flex: 1, fontSize: 13, color: L.textSub, fontWeight: '600' },
-  openSpotsInviteBtn:  {
-    backgroundColor: L.goldLight, borderRadius: radius.sm,
+  openSpotsText: { flex: 1, fontSize: text.caption.size, color: L.textSub, fontWeight: '500' },
+  openSpotsInviteBtn: {
+    backgroundColor: L.goldLight, borderRadius: shape.cta,
     borderWidth: 1, borderColor: L.goldBorder,
     paddingHorizontal: 12, paddingVertical: 6,
   },
-  openSpotsInviteText: { fontSize: 12, fontWeight: '700', color: L.gold },
+  openSpotsInviteText: { fontSize: text.chipValue.size, fontWeight: '800', color: L.gold },
 
   footer: {
     position: 'absolute', left: 0, right: 0, bottom: 0,

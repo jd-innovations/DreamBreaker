@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams } from 'expo-router';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
 import {
@@ -182,23 +184,23 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: colors.navy, ...typography.pageTitle },
+  headerTitle: { fontSize: text.pageTitle.size, fontWeight: '900', color: colors.navy, },
 
   centered: { paddingVertical: spacing.xxxl, alignItems: 'center' },
 
   card: {
-    padding: spacing.xl, backgroundColor: colors.bg, borderRadius: radius.card,
+    padding: spacing.xl, backgroundColor: colors.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: spacing.sm,
   },
-  cardTitle: { color: colors.navy, ...typography.sectionTitle, textAlign: 'center' },
-  cardBody: { color: colors.textSub, ...typography.body, textAlign: 'center', lineHeight: 21 },
+  cardTitle: { fontSize: text.sectionTitle.size, fontWeight: '900', color: colors.navy, textAlign: 'center' },
+  cardBody: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, textAlign: 'center', lineHeight: 21 },
 
   prompt: {
-    color: colors.navy, fontSize: 22, fontWeight: '900', textAlign: 'center',
+    color: colors.navy, fontSize: text.cardTitle.size, fontWeight: '800', textAlign: 'center',
     lineHeight: 30, marginTop: spacing.sm,
   },
   promptSubject: { color: colors.gold },
-  note: { color: colors.textSub, ...typography.metadata, textAlign: 'center' },
+  note: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, textAlign: 'center' },
 
   stars: {
     flexDirection: 'row', justifyContent: 'center', gap: spacing.sm,
@@ -206,20 +208,20 @@ const s = StyleSheet.create({
   },
 
   input: {
-    minHeight: 120, borderWidth: 1, borderColor: colors.border, borderRadius: radius.card,
-    padding: spacing.md, color: colors.navy, fontSize: 14, lineHeight: 20,
+    minHeight: 120, borderWidth: 1, borderColor: colors.border, borderRadius: shape.card,
+    padding: spacing.md, color: colors.navy, fontSize: text.body.size, fontWeight: '500', lineHeight: 20,
     backgroundColor: colors.bg,
   },
 
   submit: {
-    backgroundColor: colors.navy, borderRadius: 30, paddingVertical: 15,
+    backgroundColor: colors.navy, borderRadius: shape.cta, paddingVertical: 15,
     alignItems: 'center', justifyContent: 'center', minHeight: 52,
   },
   submitDisabled: { opacity: 0.4 },
   secondary: {
     marginTop: spacing.sm, paddingVertical: spacing.md, paddingHorizontal: spacing.xxl,
-    borderRadius: radius.button, borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: shape.cta, borderWidth: 1.5, borderColor: colors.border,
   },
-  secondaryText: { color: colors.navy, fontSize: 15, fontWeight: '800' },
-  submitText: { color: colors.white, fontSize: 16, fontWeight: '800' },
+  secondaryText: { color: colors.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
+  submitText: { color: colors.white, fontSize: text.actionLarge.size, fontWeight: '800' },
 });

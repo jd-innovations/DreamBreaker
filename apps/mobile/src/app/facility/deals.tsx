@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams } from 'expo-router';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
 import { useFacilityRole } from '@/hooks/useFacilityRole';
@@ -453,97 +455,97 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: colors.navy, ...typography.pageTitle },
+  headerTitle: { fontSize: text.pageTitle.size, fontWeight: '900', color: colors.navy, },
 
-  intro: { color: colors.textSub, ...typography.body, lineHeight: 21 },
+  intro: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, lineHeight: 21 },
 
   switcher: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   switchChip: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.chip,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: shape.pill,
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg, maxWidth: 200,
   },
   switchChipOn: { borderColor: colors.gold, backgroundColor: colors.goldBg },
-  switchText: { color: colors.textSub, ...typography.metadata, fontWeight: '700' },
+  switchText: { fontSize: text.chipValue.size, color: colors.textSub, fontWeight: '800' },
   switchTextOn: { color: colors.navy },
 
   newBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    padding: spacing.lg, borderRadius: radius.card,
+    padding: spacing.lg, borderRadius: shape.card,
     backgroundColor: colors.goldBg, borderWidth: 1.5, borderColor: colors.goldBorder,
   },
-  newBtnText: { color: colors.navy, ...typography.cardTitle },
+  newBtnText: { fontSize: text.actionLarge.size, fontWeight: '800', color: colors.navy, },
 
   editor: {
-    padding: spacing.lg, backgroundColor: colors.bg, borderRadius: radius.card,
+    padding: spacing.lg, backgroundColor: colors.bg, borderRadius: shape.card,
     borderWidth: 1.5, borderColor: colors.goldBorder, gap: spacing.sm,
   },
-  editorTitle: { color: colors.navy, ...typography.cardTitle, marginBottom: spacing.xs },
-  fieldLabel: { color: colors.textSub, ...typography.metadata, fontWeight: '700' },
-  hint: { color: colors.textSub, ...typography.metadata },
-  error: { color: colors.danger, ...typography.metadata },
+  editorTitle: { fontSize: text.actionLarge.size, fontWeight: '800', color: colors.navy, marginBottom: spacing.xs },
+  fieldLabel: { fontSize: text.fieldLabel.size, color: colors.textSub, fontWeight: '800' },
+  hint: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, },
+  error: { fontSize: text.caption.size, fontWeight: '500', color: colors.danger, },
 
   assetWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   assetChip: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.chip,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: shape.pill,
     borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.bg,
   },
   assetChipOn: { borderColor: colors.gold, backgroundColor: colors.goldBg },
-  assetChipText: { color: colors.textSub, fontSize: 13, fontWeight: '700' },
+  assetChipText: { color: colors.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   assetChipTextOn: { color: colors.navy, fontWeight: '800' },
 
   pickerBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border, borderRadius: shape.panel,
     paddingHorizontal: spacing.md, minHeight: 44, backgroundColor: colors.bg,
   },
-  pickerText: { color: colors.navy, fontSize: 15, fontWeight: '600' },
+  pickerText: { color: colors.navy, fontSize: text.body.size, fontWeight: '500' },
 
   input: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border, borderRadius: shape.panel,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    color: colors.navy, fontSize: 15, backgroundColor: colors.bg, minHeight: 44,
+    color: colors.navy, fontSize: text.body.size, fontWeight: '500', backgroundColor: colors.bg, minHeight: 44,
   },
 
   preview: {
-    padding: spacing.md, borderRadius: radius.card,
+    padding: spacing.md, borderRadius: shape.card,
     backgroundColor: colors.page, borderWidth: 1, borderColor: colors.border, gap: spacing.xs,
   },
-  previewLabel: { color: colors.textSub, ...typography.metadata, fontWeight: '700' },
-  previewWas: { color: colors.textSub, fontSize: 15, textDecorationLine: 'line-through' },
-  previewNow: { color: colors.navy, fontSize: 22, fontWeight: '900' },
+  previewLabel: { fontSize: text.fieldLabel.size, color: colors.textSub, fontWeight: '800' },
+  previewWas: { color: colors.textSub, fontSize: text.body.size, fontWeight: '500', textDecorationLine: 'line-through' },
+  previewNow: { color: colors.navy, fontSize: text.cardTitle.size, fontWeight: '800' },
 
   warn: {
-    flexDirection: 'row', gap: spacing.sm, padding: spacing.md, borderRadius: radius.card,
+    flexDirection: 'row', gap: spacing.sm, padding: spacing.md, borderRadius: shape.card,
     backgroundColor: colors.goldBg, borderWidth: 1, borderColor: colors.goldBorder,
   },
-  warnText: { flex: 1, color: colors.text, ...typography.metadata, lineHeight: 17 },
+  warnText: { fontSize: text.caption.size, fontWeight: '500', flex: 1, color: colors.text, lineHeight: 17 },
 
-  empty: { color: colors.textSub, ...typography.body },
+  empty: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, },
 
   dealRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md,
-    backgroundColor: colors.bg, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.bg, borderRadius: shape.card, borderWidth: 1, borderColor: colors.border,
   },
   dealDim: { opacity: 0.55 },
-  dealDiscount: { color: colors.navy, ...typography.cardTitle },
-  dealAsset: { color: colors.navy, ...typography.metadata, fontWeight: '700' },
-  dealWhen: { color: colors.textSub, ...typography.metadata },
+  dealDiscount: { fontSize: text.actionLarge.size, fontWeight: '800', color: colors.navy, },
+  dealAsset: { fontSize: text.chipValue.size, color: colors.navy, fontWeight: '800' },
+  dealWhen: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, },
   badge: {
     color: colors.textSub, fontSize: 10, fontWeight: '900', letterSpacing: 0.6,
-    paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.chip,
+    paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: shape.pill,
     backgroundColor: colors.page, overflow: 'hidden',
   },
   badgeLive: { color: colors.navy, backgroundColor: colors.goldBg },
 
   secondary: {
     paddingVertical: spacing.md, paddingHorizontal: spacing.xxl,
-    borderRadius: radius.button, borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: shape.cta, borderWidth: 1.5, borderColor: colors.border,
   },
-  secondaryText: { color: colors.navy, fontSize: 15, fontWeight: '800' },
+  secondaryText: { color: colors.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
   saveBtn: {
-    backgroundColor: colors.navy, borderRadius: radius.button, paddingVertical: spacing.md,
+    backgroundColor: colors.navy, borderRadius: shape.cta, paddingVertical: spacing.md,
     alignItems: 'center', justifyContent: 'center',
   },
-  saveText: { color: colors.white, fontSize: 15, fontWeight: '800' },
+  saveText: { color: colors.white, fontSize: text.actionLarge.size, fontWeight: '800' },
   disabled: { opacity: 0.4 },
 });

@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { AttachmentOptionsSheet, FileAttachmentRow } from '@/components';
 import { useSession } from '@/hooks/useSession';
@@ -266,30 +268,30 @@ const s = StyleSheet.create({
   },
   backBtn: { width: 26 },
   headerInfo: { flex: 1, gap: 4 },
-  hdrTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  hdrTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   headerBorder: { height: StyleSheet.hairlineWidth, backgroundColor: L.border },
 
-  badge: { borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
+  badge: { borderRadius: shape.pill, paddingHorizontal: 8, paddingVertical: 3 },
   badgeText: { fontSize: 11, fontWeight: '700' },
 
   messageList: { flex: 1 },
   messageContent: { padding: 16 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingTop: 60 },
-  stateText: { color: L.textMuted, fontSize: 14, fontWeight: '500' },
+  stateText: { color: L.textMuted, fontSize: text.body.size, fontWeight: '500' },
 
   sentRow: { alignItems: 'flex-end', marginBottom: 14 },
   receivedRow: { alignItems: 'flex-start', marginBottom: 14 },
   sentBubble: {
-    backgroundColor: L.navy, borderRadius: 16, borderBottomRightRadius: 4,
+    backgroundColor: L.navy, borderRadius: shape.card, borderBottomRightRadius: 4,
     paddingHorizontal: 14, paddingVertical: 10, maxWidth: '82%',
   },
   receivedBubble: {
-    backgroundColor: L.received, borderRadius: 16, borderBottomLeftRadius: 4,
+    backgroundColor: L.received, borderRadius: shape.card, borderBottomLeftRadius: 4,
     paddingHorizontal: 14, paddingVertical: 10, maxWidth: '82%',
   },
-  sentText: { color: L.bg, fontSize: 15, lineHeight: 20 },
-  receivedText: { color: L.text, fontSize: 15, lineHeight: 20 },
-  msgPhoto: { width: 200, height: 200, borderRadius: 10 },
+  sentText: { color: L.bg, fontSize: text.body.size, fontWeight: '500', lineHeight: 20 },
+  receivedText: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 20 },
+  msgPhoto: { width: 200, height: 200, borderRadius: shape.cta },
   msgTime: { color: L.textMuted, fontSize: 11, marginTop: 4 },
 
   closedBanner: {
@@ -297,7 +299,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border,
   },
-  closedText: { flex: 1, color: L.textMuted, fontSize: 13 },
+  closedText: { flex: 1, color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   inputArea: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border, paddingHorizontal: 10, paddingTop: 8 },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
@@ -306,7 +308,7 @@ const s = StyleSheet.create({
     flex: 1, backgroundColor: L.page, borderRadius: 18,
     paddingHorizontal: 14, paddingVertical: 8, maxHeight: 100,
   },
-  inputText: { color: L.text, fontSize: 15 },
+  inputText: { color: L.text, fontSize: text.body.size, fontWeight: '500' },
   sendBtn: { backgroundColor: L.page, borderRadius: 18, borderWidth: 1, borderColor: L.border },
   sendBtnActive: { backgroundColor: L.gold, borderColor: L.gold },
 });

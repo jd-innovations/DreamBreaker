@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams } from 'expo-router';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
 import { useSupportContext } from '@/lib/support/supportContext';
@@ -169,41 +171,41 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   notice: {
     flexDirection: 'row', gap: 10, alignItems: 'flex-start', padding: 14,
-    backgroundColor: colors.goldBg, borderRadius: radius.card,
+    backgroundColor: colors.goldBg, borderRadius: shape.card,
     borderWidth: 1, borderColor: colors.goldBorder,
   },
-  noticeText: { flex: 1, color: L.text, fontSize: 13, lineHeight: 19 },
+  noticeText: { flex: 1, color: L.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19 },
 
   itemCard: {
-    padding: 14, backgroundColor: L.bg, borderRadius: radius.card,
+    padding: 14, backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border, gap: 2,
   },
-  itemTitle: { color: L.navy, fontSize: 15, fontWeight: '800' },
-  itemSub:   { color: L.textSub, fontSize: 13 },
+  itemTitle: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
+  itemSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
-  label: { color: L.navy, fontSize: 14, fontWeight: '800' },
+  label: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
   reason: {
     flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14,
-    backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1.5, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1.5, borderColor: L.border,
   },
-  reasonOn:     { borderColor: L.gold, backgroundColor: colors.goldBg },
-  reasonText:   { color: L.text, fontSize: 14, fontWeight: '600' },
+  reasonOn: { borderColor: L.gold, backgroundColor: colors.goldBg },
+  reasonText: { color: L.text, fontSize: text.rowTitle.size, fontWeight: '700' },
   reasonTextOn: { color: L.navy, fontWeight: '800' },
 
   input: {
-    minHeight: 120, borderWidth: 1, borderColor: L.border, borderRadius: radius.card,
-    padding: 12, color: L.navy, fontSize: 14, lineHeight: 20, backgroundColor: L.bg,
+    minHeight: 120, borderWidth: 1, borderColor: L.border, borderRadius: shape.card,
+    padding: 12, color: L.navy, fontSize: text.body.size, fontWeight: '500', lineHeight: 20, backgroundColor: L.bg,
   },
   counter: { color: L.textSub, fontSize: 11, textAlign: 'right' },
 
   submit: {
-    backgroundColor: L.navy, borderRadius: 30, paddingVertical: 15,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 15,
     alignItems: 'center', justifyContent: 'center', minHeight: 52, marginTop: 4,
   },
   submitDisabled: { opacity: 0.4 },
-  submitText: { color: L.white, fontSize: 16, fontWeight: '800' },
+  submitText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
 });

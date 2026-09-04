@@ -6,7 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { goBack } from '@/lib/navigation';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { Avatar, StatusChip, WalletActivityRow, WalletActivityEmpty, WalletRedeemSheet } from '@/components';
 import { getWalletItemStatusInfo } from '@/lib/walletItemStatus';
 import { getWalletTypeAccent } from '@/lib/walletItemAccent';
@@ -348,8 +350,8 @@ const dr = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   rowLast: { borderBottomWidth: 0 },
-  label: { color: L.textSub, fontSize: 12, fontWeight: '600', width: 120, paddingTop: 1 },
-  value: { color: L.text, fontSize: 13, fontWeight: '600', flex: 1 },
+  label: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', width: 120, paddingTop: 1 },
+  value: { color: L.text, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
 });
 
 const s = StyleSheet.create({
@@ -360,62 +362,62 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 12, fontWeight: '900', letterSpacing: 0.8 },
+  headerTitle: { fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing },
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
 
   eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 },
-  eyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6 },
+  eyebrow: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 
-  hero: { width: '100%', height: 160, borderRadius: radius.card, marginBottom: 12 },
-  detailsCard: { backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: radius.card },
+  hero: { width: '100%', height: 160, borderRadius: shape.card, marginBottom: 12 },
+  detailsCard: { backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: shape.card },
 
-  title: { color: L.navy, fontSize: 20, fontWeight: '900', marginBottom: 2 },
-  subtitle: { color: L.textSub, fontSize: 13, fontWeight: '600', marginBottom: 16 },
+  title: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900', marginBottom: 2 },
+  subtitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 16 },
 
-  infoCard: { borderRadius: radius.card, padding: 16, marginBottom: 16 },
+  infoCard: { borderRadius: shape.card, padding: 16, marginBottom: 16 },
   infoRow: { flexDirection: 'row', alignItems: 'center' },
-  valueAmount: { fontSize: 22, fontWeight: '900' },
-  valueStatus: { color: L.textSub, fontSize: 12, fontWeight: '600', marginTop: 2 },
-  valueSub: { color: L.textSub, fontSize: 12, fontWeight: '600', marginTop: 8 },
+  valueAmount: { fontSize: text.cardTitle.size, fontWeight: '800' },
+  valueStatus: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+  valueSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 8 },
   infoDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(10,18,40,0.12)', marginVertical: 12 },
-  expiresText: { color: L.textSub, fontSize: 12, fontWeight: '600' },
+  expiresText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   section: { marginBottom: 20 },
-  sectionTitle: { color: L.navy, fontSize: 11, fontWeight: '900', letterSpacing: 0.8, marginBottom: 10 },
-  description: { color: L.text, fontSize: 14, lineHeight: 21 },
+  sectionTitle: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, marginBottom: 10 },
+  description: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 21 },
 
   activityCard: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, paddingHorizontal: 14,
+    borderRadius: shape.card, paddingHorizontal: 14,
   },
 
   redeemBlock: {
     alignItems: 'center', gap: 8, paddingVertical: 20, paddingHorizontal: 16,
-    backgroundColor: colors.bg, borderRadius: radius.card,
+    backgroundColor: colors.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: colors.border, marginTop: 4,
   },
-  redeemDone:      { paddingVertical: 26 },
-  redeemDoneText:  { color: colors.navy, fontSize: 17, fontWeight: '900' },
-  redeemTitle:     { color: colors.navy, fontSize: 15, fontWeight: '800' },
-  qrFrame:         { padding: 12, backgroundColor: '#FFFFFF', borderRadius: 12, marginVertical: 4 },
-  redeemCodeLabel: { color: colors.textSub, fontSize: 12, marginTop: 2 },
+  redeemDone: { paddingVertical: 26 },
+  redeemDoneText: { color: colors.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
+  redeemTitle: { color: colors.navy, fontSize: text.body.size, fontWeight: '500' },
+  qrFrame: { padding: 12, backgroundColor: '#FFFFFF', borderRadius: shape.panel, marginVertical: 4 },
+  redeemCodeLabel: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
   redeemCode: {
-    color: colors.navy, fontSize: 26, fontWeight: '900',
+    color: colors.navy, fontSize: text.statNumber.size, fontWeight: '900',
     letterSpacing: 4, fontVariant: ['tabular-nums'],
   },
-  redeemRemaining: { color: colors.text, fontSize: 13, fontWeight: '700' },
-  redeemNote:      { color: colors.textSub, fontSize: 11, textAlign: 'center' },
+  redeemRemaining: { color: colors.text, fontSize: text.caption.size, fontWeight: '500' },
+  redeemNote: { color: colors.textSub, fontSize: 11, textAlign: 'center' },
   refundLink: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 6, paddingVertical: 14,
   },
-  refundLinkText: { color: colors.textSub, fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' },
+  refundLinkText: { color: colors.textSub, fontSize: text.link.size, fontWeight: '700', textDecorationLine: 'underline' },
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderRadius: radius.button, paddingVertical: 14, marginBottom: 20,
+    borderRadius: shape.cta, paddingVertical: 14, marginBottom: 20,
   },
   primaryBtnDisabled: { backgroundColor: L.border },
-  primaryBtnText: { fontSize: 14, fontWeight: '800' },
+  primaryBtnText: { fontSize: text.actionLarge.size, fontWeight: '800' },
 
   addedText: {
     color: L.textSub, fontSize: 11, fontWeight: '600', textAlign: 'center',
@@ -423,5 +425,5 @@ const s = StyleSheet.create({
   },
 
   errorState: { alignItems: 'center', paddingTop: 80, gap: 12, paddingHorizontal: 32 },
-  errorTitle: { color: L.navy, fontSize: 16, fontWeight: '700', textAlign: 'center' },
+  errorTitle: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800', textAlign: 'center' },
 });

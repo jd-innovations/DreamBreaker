@@ -5,7 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { router, useFocusEffect } from 'expo-router';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { tabBarClearance } from '@/constants/tabBar';
 import { SettingsRow, ProfileCompletionRing } from '@/components';
 import { useSlideMenu } from '@/components/SlideMenu';
@@ -108,8 +110,8 @@ const dr = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   rowLast: { borderBottomWidth: 0 },
-  label: { color: colors.textSub, fontSize: 12, fontWeight: '600', width: 110, paddingTop: 1 },
-  value: { color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 },
+  label: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', width: 110, paddingTop: 1 },
+  value: { color: colors.text, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
 });
 
 // â”€â”€â”€ Guest state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -144,16 +146,16 @@ const g = StyleSheet.create({
     backgroundColor: colors.goldBg, borderWidth: 1, borderColor: colors.goldBorder,
     alignItems: 'center', justifyContent: 'center', marginBottom: 24,
   },
-  title:  { color: colors.navy, fontSize: 22, fontWeight: '900', textAlign: 'center', marginBottom: 12 },
-  sub:    { color: colors.textSub, fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
+  title: { color: colors.navy, fontSize: text.cardTitle.size, fontWeight: '800', textAlign: 'center', marginBottom: 12 },
+  sub: { color: colors.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center', lineHeight: 22, marginBottom: 32 },
   primaryBtn: {
     width: '100%', backgroundColor: colors.navy,
-    borderRadius: radius.button, paddingVertical: 15,
+    borderRadius: shape.cta, paddingVertical: 15,
     alignItems: 'center', marginBottom: 12,
   },
-  primaryBtnText:   { color: colors.white, fontSize: 16, fontWeight: '800' },
-  secondaryBtn:     { paddingVertical: 10 },
-  secondaryBtnText: { color: colors.gold, fontSize: 15, fontWeight: '700' },
+  primaryBtnText: { color: colors.white, fontSize: text.actionLarge.size, fontWeight: '800' },
+  secondaryBtn: { paddingVertical: 10 },
+  secondaryBtnText: { color: colors.gold, fontSize: text.actionLarge.size, fontWeight: '800' },
 });
 
 // â”€â”€â”€ Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -389,11 +391,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screenH, paddingTop: 10, paddingBottom: 14,
   },
   headerLeft: { flex: 1 },
-  title: { color: colors.navy, fontSize: 28, fontWeight: '900', lineHeight: 32 },
+  title: { color: colors.navy, fontSize: text.pageTitle.size, fontWeight: '900', lineHeight: 32 },
 
   profileCard: {
     backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.card, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14,
+    borderRadius: shape.card, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14,
     marginBottom: 12,
   },
   avatar: {
@@ -407,52 +409,51 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.bg,
   },
   completionBadgeText: { color: colors.white, fontSize: 9, fontWeight: '800' },
-  avatarInitials:  { color: colors.white, fontSize: 18, fontWeight: '800' },
-  playerName:      { color: colors.text, fontSize: 16, fontWeight: '800', marginBottom: 2, letterSpacing: 0.3, lineHeight: 19 },
-  playerHandle:    { color: colors.textSub, fontSize: 12, fontWeight: '500', marginBottom: 2 },
-  playerSub:       { color: colors.textSub, fontSize: 12, fontWeight: '500' },
-  directorBadge:     { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10, borderWidth: 1, borderColor: colors.goldBorder, backgroundColor: colors.goldBg },
+  avatarInitials: { color: colors.white, fontSize: 18, fontWeight: '800' },
+  playerName: { color: colors.text, fontSize: text.actionLarge.size, fontWeight: '800', marginBottom: 2, letterSpacing: 0.3, lineHeight: 19 },
+  playerHandle: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 2 },
+  playerSub: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  directorBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10, borderWidth: 1, borderColor: colors.goldBorder, backgroundColor: colors.goldBg },
   directorBadgeText: { color: colors.gold, fontSize: 9, fontWeight: '700', letterSpacing: 0.3 },
 
   ratingBox: {
     alignItems: 'center', backgroundColor: colors.goldBg,
-    borderWidth: 1, borderColor: colors.goldBorder, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.goldBorder, borderRadius: shape.cta,
     paddingHorizontal: 10, paddingVertical: 6, minWidth: 64,
   },
-  ratingLabel:    { color: colors.gold, fontSize: 7, fontWeight: '800', letterSpacing: 0.8 },
-  ratingValue:    { color: colors.gold, fontSize: 18, fontWeight: '900' },
+  ratingLabel: { color: colors.gold, fontSize: 7, fontWeight: '800', letterSpacing: 0.8 },
+  ratingValue: { color: colors.gold, fontSize: text.titleSm.size, fontWeight: '800' },
   ratingVerified: { color: colors.gold, fontSize: 7, fontWeight: '700', letterSpacing: 0.5, marginTop: 2 },
 
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   statBox: {
     flex: 1, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.card, paddingVertical: 12, paddingHorizontal: 4, alignItems: 'center',
+    borderRadius: shape.card, paddingVertical: 12, paddingHorizontal: 4, alignItems: 'center',
   },
-  statValue: { color: colors.text, fontSize: 20, fontWeight: '900', marginBottom: 3 },
+  statValue: { color: colors.text, fontSize: text.statValueSm.size, fontWeight: '900', marginBottom: 3 },
   statLabel: { color: colors.textSub, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
 
   infoCard: {
     backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.card, overflow: 'hidden', marginBottom: 12,
+    borderRadius: shape.card, overflow: 'hidden', marginBottom: 12,
   },
-  infoCardTitle: {
-    color: colors.navy, ...typography.cardTitle,
-    paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8,
+  infoCardTitle: { fontSize: text.actionLarge.size, fontWeight: '800',
+    color: colors.navy, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8,
   },
   infoCardDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   bioText: {
-    color: colors.text, fontSize: 13, lineHeight: 20,
+    color: colors.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 20,
     paddingHorizontal: 14, paddingVertical: 12,
   },
 
   menu: {
     backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.card, overflow: 'hidden', marginBottom: 16,
+    borderRadius: shape.card, overflow: 'hidden', marginBottom: 16,
   },
 
   signOutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 14,
   },
-  signOutText: { color: colors.danger, fontSize: 15, fontWeight: '600' },
+  signOutText: { color: colors.danger, fontSize: text.body.size, fontWeight: '500' },
 });

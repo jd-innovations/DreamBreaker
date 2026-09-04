@@ -5,7 +5,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
 import { fetchFacilities, type FacilityWithPrimaryPhoto } from '@/lib/supabase/facilities';
@@ -403,83 +405,83 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: colors.navy, ...typography.pageTitle },
+  headerTitle: { fontSize: text.pageTitle.size, fontWeight: '900', color: colors.navy, },
 
-  intro: { color: colors.textSub, ...typography.body, lineHeight: 21 },
+  intro: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, lineHeight: 21 },
 
   searchRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.bg, borderRadius: radius.card, borderWidth: 1,
+    backgroundColor: colors.bg, borderRadius: shape.card, borderWidth: 1,
     borderColor: colors.border, paddingHorizontal: spacing.md, minHeight: 48,
   },
-  searchInput: { flex: 1, color: colors.navy, fontSize: 15 },
+  searchInput: { flex: 1, color: colors.navy, fontSize: text.body.size, fontWeight: '500' },
 
   resultRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md,
-    backgroundColor: colors.bg, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.bg, borderRadius: shape.card, borderWidth: 1, borderColor: colors.border,
   },
-  resultName: { color: colors.navy, ...typography.cardTitle },
-  resultSub:  { color: colors.textSub, ...typography.metadata },
+  resultName: { fontSize: text.actionLarge.size, fontWeight: '800', color: colors.navy, },
+  resultSub: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, },
 
   addNew: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md,
-    borderRadius: radius.card, borderWidth: 1.5, borderColor: colors.goldBorder,
+    borderRadius: shape.card, borderWidth: 1.5, borderColor: colors.goldBorder,
     backgroundColor: colors.goldBg,
   },
   addNewText: { color: colors.navy, fontWeight: '800', flex: 1 },
 
   backLink: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  backLinkText: { color: colors.textSub, ...typography.metadata },
+  backLinkText: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, },
 
   warn: {
-    flexDirection: 'row', gap: spacing.sm, padding: spacing.md, borderRadius: radius.card,
+    flexDirection: 'row', gap: spacing.sm, padding: spacing.md, borderRadius: shape.card,
     backgroundColor: colors.goldBg, borderWidth: 1, borderColor: colors.goldBorder,
   },
-  warnText: { color: colors.text, ...typography.metadata, lineHeight: 17 },
-  warnItem: { color: colors.navy, ...typography.metadata, fontWeight: '700' },
+  warnText: { fontSize: text.caption.size, fontWeight: '500', color: colors.text, lineHeight: 17 },
+  warnItem: { fontSize: text.chipValue.size, color: colors.navy, fontWeight: '800' },
 
   sectionLabel: {
-    color: colors.navy, fontSize: 13, fontWeight: '800', letterSpacing: 0.8,
+    color: colors.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing,
     marginTop: spacing.sm,
   },
-  fieldLabel: { color: colors.textSub, ...typography.metadata, fontWeight: '700' },
+  fieldLabel: { fontSize: text.fieldLabel.size, color: colors.textSub, fontWeight: '800' },
   input: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border, borderRadius: shape.panel,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    color: colors.navy, fontSize: 15, backgroundColor: colors.bg, minHeight: 44,
+    color: colors.navy, fontSize: text.body.size, fontWeight: '500', backgroundColor: colors.bg, minHeight: 44,
   },
   courtRow: { flexDirection: 'row', gap: spacing.sm },
-  error: { color: colors.danger, ...typography.metadata },
-  hoursNote: { color: colors.textSub, ...typography.metadata, marginTop: -spacing.xs },
+  error: { fontSize: text.caption.size, fontWeight: '500', color: colors.danger, },
+  hoursNote: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, marginTop: -spacing.xs },
 
   textarea: {
-    minHeight: 110, borderWidth: 1, borderColor: colors.border, borderRadius: radius.card,
-    padding: spacing.md, color: colors.navy, fontSize: 15, lineHeight: 20, backgroundColor: colors.bg,
+    minHeight: 110, borderWidth: 1, borderColor: colors.border, borderRadius: shape.card,
+    padding: spacing.md, color: colors.navy, fontSize: text.body.size, fontWeight: '500', lineHeight: 20, backgroundColor: colors.bg,
   },
 
   card: {
-    padding: spacing.xl, backgroundColor: colors.bg, borderRadius: radius.card,
+    padding: spacing.xl, backgroundColor: colors.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: spacing.sm,
   },
-  cardTitle: { color: colors.navy, ...typography.sectionTitle, textAlign: 'center' },
-  cardBody:  { color: colors.textSub, ...typography.body, textAlign: 'center', lineHeight: 21 },
+  cardTitle: { fontSize: text.sectionTitle.size, fontWeight: '900', color: colors.navy, textAlign: 'center' },
+  cardBody: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, textAlign: 'center', lineHeight: 21 },
 
   historyRow: {
-    padding: spacing.md, backgroundColor: colors.bg, borderRadius: radius.card,
+    padding: spacing.md, backgroundColor: colors.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: colors.border, gap: spacing.xs,
   },
-  historyStatus: { color: colors.navy, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
+  historyStatus: { color: colors.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 
   secondary: {
     marginTop: spacing.sm, paddingVertical: spacing.md, paddingHorizontal: spacing.xxl,
-    borderRadius: radius.button, borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: shape.cta, borderWidth: 1.5, borderColor: colors.border,
   },
-  secondaryText: { color: colors.navy, fontSize: 15, fontWeight: '800' },
+  secondaryText: { color: colors.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   submit: {
-    backgroundColor: colors.navy, borderRadius: 30, paddingVertical: 15,
+    backgroundColor: colors.navy, borderRadius: shape.cta, paddingVertical: 15,
     alignItems: 'center', justifyContent: 'center', minHeight: 52, marginTop: spacing.sm,
   },
   submitDisabled: { opacity: 0.4 },
-  submitText: { color: colors.white, fontSize: 16, fontWeight: '800' },
+  submitText: { color: colors.white, fontSize: text.actionLarge.size, fontWeight: '800' },
 });
