@@ -8,7 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { IS_INTERNAL_BUILD } from '@/lib/featureFlags';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components';
 import { useSession } from '@/hooks/useSession';
 import { requireAuth } from '@/lib/authGuard';
@@ -149,9 +151,9 @@ const pr = StyleSheet.create({
     backgroundColor: L.page, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   seedText: { color: L.textSub, fontSize: 10, fontWeight: '700' },
-  name:     { color: L.navy, fontSize: 13, fontWeight: '700' },
-  partner:  { color: L.textSub, fontSize: 11, marginTop: 1 },
-  score:    { fontSize: 18, fontWeight: '900', minWidth: 26, textAlign: 'right' },
+  name: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  partner: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
+  score: { fontSize: text.modalTitle.size, fontWeight: '900', minWidth: 26, textAlign: 'right' },
 });
 
 // ─── Match card ───────────────────────────────────────────────────────────────
@@ -265,47 +267,47 @@ function MatchCard({
 const mc = StyleSheet.create({
   card: {
     width: 220, backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, overflow: 'hidden', marginBottom: 10,
+    borderRadius: shape.card, overflow: 'hidden', marginBottom: 10,
   },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 10, paddingTop: 10, paddingBottom: 6,
   },
-  matchNum: { color: L.textSub, fontSize: 11, fontWeight: '700', letterSpacing: 0.4 },
+  matchNum: { color: L.textSub, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   courtBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: L.goldBg, paddingHorizontal: 10, paddingVertical: 5,
     borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: L.goldBorder,
   },
-  courtText:  { color: L.gold, fontSize: 11, fontWeight: '700' },
-  participants:{ borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border },
-  divider:    { height: StyleSheet.hairlineWidth, backgroundColor: L.border, marginHorizontal: 10 },
-  awaiting:   {
+  courtText: { color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  participants: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: L.border, marginHorizontal: 10 },
+  awaiting: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 10, paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border,
   },
-  awaitingText: { color: L.textSub, fontSize: 11, fontStyle: 'italic' },
+  awaitingText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', fontStyle: 'italic' },
   actions: {
     flexDirection: 'row', gap: 6, padding: 10,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border,
   },
   actionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-    borderWidth: 1, borderColor: L.border, borderRadius: 8, paddingVertical: 8,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.badge, paddingVertical: 8,
   },
-  actionBtnAccent:    { backgroundColor: L.navy, borderColor: L.navy },
-  actionBtnDisabled:  { opacity: 0.4 },
-  actionLabel:        { color: L.navy, fontSize: 11, fontWeight: '700' },
-  actionLabelAccent:  { color: L.bg, fontSize: 11, fontWeight: '700' },
-  actionLabelDisabled:{ color: L.textSub },
+  actionBtnAccent: { backgroundColor: L.navy, borderColor: L.navy },
+  actionBtnDisabled: { opacity: 0.4 },
+  actionLabel: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  actionLabelAccent: { color: L.bg, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  actionLabelDisabled: { color: L.textSub },
   completedRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 10, paddingVertical: 9,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border,
   },
-  completedText: { color: L.success, fontSize: 13, fontWeight: '800' },
+  completedText: { color: L.success, fontSize: text.rowValue.size, fontWeight: '800' },
 });
 
 // ─── Court assignment modal ───────────────────────────────────────────────────
@@ -352,19 +354,19 @@ const cm = StyleSheet.create({
     backgroundColor: L.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: 20, paddingBottom: 32,
   },
-  handle:   { width: 36, height: 4, borderRadius: 2, backgroundColor: L.border, alignSelf: 'center', marginVertical: 12 },
-  title:    { color: L.navy, fontSize: 18, fontWeight: '800', marginBottom: 4 },
-  sub:      { color: L.textSub, fontSize: 13, marginBottom: 18 },
-  grid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: L.border, alignSelf: 'center', marginVertical: 12 },
+  title: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900', marginBottom: 4 },
+  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 18 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
   courtBtn: {
     width: '30%', aspectRatio: 1.3, alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: L.page, borderWidth: 1, borderColor: L.border, borderRadius: 12,
+    backgroundColor: L.page, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
   },
-  courtBtnSelected:   { backgroundColor: L.navy, borderColor: L.navy },
-  courtLabel:         { color: L.navy, fontSize: 13, fontWeight: '700' },
+  courtBtnSelected: { backgroundColor: L.navy, borderColor: L.navy },
+  courtLabel: { color: L.navy, fontSize: text.controlLabel.size, fontWeight: '700' },
   courtLabelSelected: { color: L.bg },
-  cancelBtn: { alignItems: 'center', paddingVertical: 14, borderWidth: 1, borderColor: L.border, borderRadius: 12 },
-  cancelLabel: { color: L.textSub, fontSize: 15, fontWeight: '600' },
+  cancelBtn: { alignItems: 'center', paddingVertical: 14, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta },
+  cancelLabel: { color: L.textSub, fontSize: text.action.size, fontWeight: '800' },
 });
 
 // ─── Match result modal (Phase 3) ─────────────────────────────────────────────
@@ -486,37 +488,37 @@ const rm = StyleSheet.create({
     paddingHorizontal: 20,
   },
   handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: L.border, alignSelf: 'center', marginVertical: 12 },
-  title:  { color: L.navy, fontSize: 18, fontWeight: '800', marginBottom: 4 },
-  sub:    { color: L.textSub, fontSize: 13, marginBottom: 20 },
+  title: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900', marginBottom: 4 },
+  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 20 },
 
   scoreRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12, marginBottom: 16 },
   playerBlock: { flex: 1, gap: 4 },
-  playerName:  { color: L.navy, fontSize: 14, fontWeight: '800' },
-  playerPartner:{ color: L.textSub, fontSize: 12 },
+  playerName: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
+  playerPartner: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   scoreInput: {
-    borderWidth: 2, borderColor: L.border, borderRadius: 12,
+    borderWidth: 2, borderColor: L.border, borderRadius: shape.cta,
     paddingHorizontal: 12, paddingVertical: 10,
-    fontSize: 28, fontWeight: '900', color: L.navy,
+    fontSize: text.pageTitle.size, fontWeight: '900', color: L.navy,
     textAlign: 'center', backgroundColor: L.page,
   },
   vsCol: { alignItems: 'center', paddingBottom: 10 },
-  vs:    { color: L.textSub, fontSize: 13, fontWeight: '800', letterSpacing: 1 },
+  vs: { color: L.textSub, fontSize: text.rowValue.size, fontWeight: '800', letterSpacing: 1 },
 
   hint: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: L.page, borderRadius: 8,
+    backgroundColor: L.page, borderRadius: shape.badge,
     paddingHorizontal: 12, paddingVertical: 8, marginBottom: 16,
   },
-  hintText: { color: L.textSub, fontSize: 12 },
+  hintText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   saveBtn: {
-    backgroundColor: L.navy, borderRadius: 12,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     alignItems: 'center', paddingVertical: 15, marginBottom: 10,
   },
-  saveBtnText: { color: L.bg, fontSize: 16, fontWeight: '800' },
+  saveBtnText: { color: L.bg, fontSize: text.actionLarge.size, fontWeight: '800' },
 
-  cancelBtn: { alignItems: 'center', paddingVertical: 14, borderWidth: 1, borderColor: L.border, borderRadius: 12 },
-  cancelLabel: { color: L.textSub, fontSize: 15, fontWeight: '600' },
+  cancelBtn: { alignItems: 'center', paddingVertical: 14, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta },
+  cancelLabel: { color: L.textSub, fontSize: text.action.size, fontWeight: '800' },
 });
 
 // ─── Context menu (Phase 12) ──────────────────────────────────────────────────
@@ -570,15 +572,15 @@ const ctx = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, zIndex: 100 },
   menu: {
     position: 'absolute', top: 56, right: 16,
-    backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: 14,
+    backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
     shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 }, elevation: 8,
     minWidth: 210, overflow: 'hidden', zIndex: 101,
   },
-  item:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
+  item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
   itemBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border },
-  label:      { color: L.navy, fontSize: 14, fontWeight: '600' },
-  labelDanger:{ color: L.danger },
+  label: { color: L.navy, fontSize: text.controlLabel.size, fontWeight: '700' },
+  labelDanger: { color: L.danger },
 });
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -891,11 +893,11 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, backgroundColor: L.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:    { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title:      { color: L.navy, fontSize: 17, fontWeight: '800' },
-  sub:        { color: L.textSub, fontSize: 12, fontWeight: '500', marginTop: 1 },
-  headerRight:{ flexDirection: 'row', gap: 4 },
-  iconBtn:    { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
+  headerRight: { flexDirection: 'row', gap: 4 },
+  iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
 
   championBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -903,42 +905,42 @@ const s = StyleSheet.create({
     borderBottomColor: L.goldBorder, paddingHorizontal: 16, paddingVertical: 12,
   },
   championLabel: { color: L.gold, fontSize: 10, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
-  championName:  { color: L.navy, fontSize: 15, fontWeight: '800' },
+  championName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   resultsLink: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  resultsLinkText: { color: L.gold, fontSize: 13, fontWeight: '700' },
+  resultsLinkText: { color: L.gold, fontSize: text.link.size, fontWeight: '700' },
 
   summaryStrip: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 12, gap: 10,
     backgroundColor: L.bg, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  summaryItem:  { alignItems: 'center', gap: 2 },
-  summaryDiv:   { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: L.border },
-  summaryNum:   { color: L.navy, fontSize: 16, fontWeight: '900' },
+  summaryItem: { alignItems: 'center', gap: 2 },
+  summaryDiv: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: L.border },
+  summaryNum: { color: L.navy, fontSize: text.statValueSm.size, fontWeight: '900' },
   summaryLabel: { color: L.textSub, fontSize: 9, fontWeight: '700', letterSpacing: 0.4 },
 
-  tabScroll:    { maxHeight: 44, backgroundColor: L.bg },
+  tabScroll: { maxHeight: 44, backgroundColor: L.bg },
   tabRow: {
     paddingHorizontal: 16, paddingVertical: 8, gap: 8, flexDirection: 'row',
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  tab:          { paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg },
-  tabActive:    { backgroundColor: L.navy, borderColor: L.navy },
-  tabLabel:     { color: L.textSub, fontSize: 13, fontWeight: '700' },
-  tabLabelActive:{ color: L.bg },
+  tab: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: shape.pill, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg },
+  tabActive: { backgroundColor: L.navy, borderColor: L.navy },
+  tabLabel: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
+  tabLabelActive: { color: L.bg },
 
   bracketScroll: { paddingHorizontal: 16, paddingTop: 16, flexDirection: 'row', gap: 16 },
-  roundCol:      { gap: 0 },
+  roundCol: { gap: 0 },
   roundHeader: {
-    color: L.navy, fontSize: 13, fontWeight: '800', letterSpacing: 0.4,
+    color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing,
     textTransform: 'uppercase', marginBottom: 10, paddingHorizontal: 2,
   },
 
   noBracket: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 },
-  noBracketTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
-  noBracketSub:   { color: L.textSub, fontSize: 14, textAlign: 'center' },
-  noBracketBtn: { backgroundColor: L.navy, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 13, marginTop: 8 },
-  noBracketBtnText: { color: L.bg, fontSize: 15, fontWeight: '700' },
+  noBracketTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  noBracketSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center' },
+  noBracketBtn: { backgroundColor: L.navy, borderRadius: shape.cta, paddingHorizontal: 24, paddingVertical: 13, marginTop: 8 },
+  noBracketBtnText: { color: L.bg, fontSize: text.actionLarge.size, fontWeight: '800' },
 });
 
 // Director-only route. The screen body above is mounted only after

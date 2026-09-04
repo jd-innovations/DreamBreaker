@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components';
 import { type DivisionMetrics } from '@/lib/directorRegistrationAdapter';
 import type { TournamentRegistration } from '@/lib/registrationStore';
@@ -93,8 +95,8 @@ function SectionHeader({ title, icon }: { title: string; icon: keyof typeof Ioni
 }
 
 const sh = StyleSheet.create({
-  row:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
-  text: { color: L.navy, fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+  text: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, textTransform: 'uppercase' },
 });
 
 // ─── Metric card ──────────────────────────────────────────────────────────────
@@ -126,12 +128,12 @@ function MetricCard({
 const mc = StyleSheet.create({
   card: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderRadius: radius.card,
+    borderWidth: 1, borderRadius: shape.card,
     paddingVertical: 12, paddingHorizontal: 4, gap: 3, minHeight: 76,
   },
-  value: { fontSize: 20, fontWeight: '900' },
+  value: { fontSize: text.statValueSm.size, fontWeight: '900' },
   label: { color: L.textSub, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, textAlign: 'center' },
-  sub:   { color: L.textSub, fontSize: 10, textAlign: 'center', marginTop: 1 },
+  sub: { color: L.textSub, fontSize: 10, textAlign: 'center', marginTop: 1 },
 });
 
 // ─── Checklist item ───────────────────────────────────────────────────────────
@@ -166,8 +168,8 @@ const ci = StyleSheet.create({
   },
   dotDone: { backgroundColor: L.successBg },
   dotWarn: { backgroundColor: L.goldLight },
-  label:  { flex: 1, color: L.navy, fontSize: 13, fontWeight: '600' },
-  status: { fontSize: 11, fontWeight: '700' },
+  label: { flex: 1, color: L.navy, fontSize: text.controlLabel.size, fontWeight: '700' },
+  status: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 });
 
 // ─── Quick action button ──────────────────────────────────────────────────────
@@ -196,32 +198,32 @@ const qa = StyleSheet.create({
   btn: {
     flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, paddingVertical: 16, minWidth: '28%',
+    borderRadius: shape.cta, paddingVertical: 16, minWidth: '28%',
   },
-  btnAccent:  { backgroundColor: L.navy, borderColor: L.navy },
-  label:      { color: L.navy, fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  labelAccent:{ color: L.bg },
+  btnAccent: { backgroundColor: L.navy, borderColor: L.navy },
+  label: { color: L.navy, fontSize: text.controlLabel.size, fontWeight: '700', textAlign: 'center' },
+  labelAccent: { color: L.bg },
 });
 
 const draftBanner = StyleSheet.create({
   card: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     backgroundColor: L.goldLight, borderWidth: 1, borderColor: L.goldBorder,
-    borderRadius: radius.card, padding: 14, marginBottom: 10,
+    borderRadius: shape.card, padding: 14, marginBottom: 10,
   },
-  title: { color: L.navy, fontSize: 13, fontWeight: '800', marginBottom: 2 },
-  sub:   { color: L.textSub, fontSize: 12, lineHeight: 17 },
+  title: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginBottom: 2 },
+  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17 },
   btn: {
-    backgroundColor: L.navy, borderRadius: radius.button,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingVertical: 13, alignItems: 'center', justifyContent: 'center',
   },
-  btnText: { color: L.bg, fontSize: 14, fontWeight: '800' },
+  btnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
   btnRow: { flexDirection: 'row', gap: 10 },
   editBtn: {
-    flex: 1, borderWidth: 1.5, borderColor: L.border, borderRadius: radius.button,
+    flex: 1, borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
     paddingVertical: 13, alignItems: 'center', justifyContent: 'center',
   },
-  editBtnText: { color: L.navy, fontSize: 14, fontWeight: '800' },
+  editBtnText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
   submitBtn: { flex: 1 },
 });
 
@@ -726,50 +728,50 @@ const dsb = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   nameCol: { width: 90, gap: 4 },
-  name: { color: L.navy, fontSize: 12, fontWeight: '700', lineHeight: 16 },
+  name: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', lineHeight: 16 },
   levelBadge: {
     alignSelf: 'flex-start', backgroundColor: L.navy,
-    borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1,
+    borderRadius: shape.badge, paddingHorizontal: 5, paddingVertical: 1,
   },
-  levelText: { color: L.bg, fontSize: 10, fontWeight: '800' },
+  levelText: { color: L.bg, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 
   counts: { flex: 1, flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-  countItem: { fontSize: 11 },
-  countNum:  { color: L.navy, fontWeight: '800' },
-  countLabel:{ color: L.textSub },
+  countItem: { fontSize: text.caption.size, fontWeight: '500' },
+  countNum: { color: L.navy, fontWeight: '800' },
+  countLabel: { color: L.textSub },
 
   statusCol: { width: 88, alignItems: 'flex-end', gap: 5 },
-  barBg:   { width: '100%', height: 4, backgroundColor: L.page, borderRadius: 2, overflow: 'hidden' },
+  barBg: { width: '100%', height: 4, backgroundColor: L.page, borderRadius: 2, overflow: 'hidden' },
   barFill: { height: 4, borderRadius: 2 },
-  barGreen:{ backgroundColor: L.success },
+  barGreen: { backgroundColor: L.success },
   barGold: { backgroundColor: L.gold    },
-  barRed:  { backgroundColor: L.danger  },
+  barRed: { backgroundColor: L.danger  },
 });
 
 // ─── Division section header / empty state styles ────────────────────────────
 
 const divs = StyleSheet.create({
-  sectionRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  addBtn:       {
+  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 10, paddingVertical: 5,
-    borderRadius: radius.chip, borderWidth: 1, borderColor: L.border,
+    borderRadius: shape.pill, borderWidth: 1, borderColor: L.border,
     backgroundColor: L.bg,
   },
-  addBtnText:   { color: L.navy, fontSize: 12, fontWeight: '700' },
+  addBtnText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
-  emptyState:   {
+  emptyState: {
     alignItems: 'center', gap: 6, paddingVertical: 28,
-    backgroundColor: L.bg, borderRadius: radius.card,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
   },
-  emptyTitle:   { color: L.navy, fontSize: 15, fontWeight: '700' },
-  emptySub:     { color: L.textSub, fontSize: 13, textAlign: 'center', paddingHorizontal: 24 },
-  emptyBtn:     {
+  emptyTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  emptySub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', paddingHorizontal: 24 },
+  emptyBtn: {
     marginTop: 4, backgroundColor: L.navy,
-    borderRadius: radius.button, paddingHorizontal: 20, paddingVertical: 8,
+    borderRadius: shape.cta, paddingHorizontal: 20, paddingVertical: 8,
   },
-  emptyBtnText: { color: L.bg, fontSize: 13, fontWeight: '700' },
+  emptyBtnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 });
 
 // ─── Check-in progress card styles ───────────────────────────────────────────
@@ -777,18 +779,18 @@ const divs = StyleSheet.create({
 const ci4 = StyleSheet.create({
   card: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, padding: 16, gap: 10,
+    borderRadius: shape.card, padding: 16, gap: 10,
   },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  fraction: { color: L.navy, fontSize: 22, fontWeight: '900' },
-  total:    { color: L.textSub, fontSize: 14, fontWeight: '500' },
-  pct:      { color: L.gold, fontSize: 22, fontWeight: '900' },
+  fraction: { color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800' },
+  total: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  pct: { color: L.gold, fontSize: text.cardTitle.size, fontWeight: '800' },
 
-  barBg:   { height: 8, backgroundColor: L.page, borderRadius: 4, overflow: 'hidden' },
+  barBg: { height: 8, backgroundColor: L.page, borderRadius: 4, overflow: 'hidden' },
   barFill: { height: 8, backgroundColor: L.success, borderRadius: 4 },
 
-  footer:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  footerText: { color: L.textSub, fontSize: 12, fontWeight: '500' },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  footerText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 });
 
 // ─── Registration health row styles ──────────────────────────────────────────
@@ -801,16 +803,16 @@ const rh = StyleSheet.create({
   },
   rowLast: { borderBottomWidth: 0 },
   statusCol: { width: 112, flexShrink: 0, alignItems: 'flex-start' },
-  count:  { color: L.navy, fontSize: 15, fontWeight: '800', width: 24, textAlign: 'right', flexShrink: 0 },
-  barBg:  { flex: 1, minWidth: 72, height: 6, backgroundColor: L.page, borderRadius: 3, overflow: 'hidden' },
-  barFill:{ height: 6, borderRadius: 3 },
-  pct:    { color: L.textSub, fontSize: 11, fontWeight: '600', width: 34, textAlign: 'right', flexShrink: 0 },
+  count: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800', width: 24, textAlign: 'right', flexShrink: 0 },
+  barBg: { flex: 1, minWidth: 72, height: 6, backgroundColor: L.page, borderRadius: 3, overflow: 'hidden' },
+  barFill: { height: 6, borderRadius: 3 },
+  pct: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', width: 34, textAlign: 'right', flexShrink: 0 },
 });
 
 // ─── Screen styles ────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
   scroll: { padding: 16, gap: 4 },
 
   header: {
@@ -819,9 +821,9 @@ const s = StyleSheet.create({
     backgroundColor: L.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  headerTitle: { color: L.navy, fontSize: 16, fontWeight: '800' },
-  headerSub:   { color: L.textSub, fontSize: 11, fontWeight: '500', marginTop: 1 },
+  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  headerSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
 
   headerActions: {
     flexDirection: 'row', gap: 8,
@@ -831,21 +833,21 @@ const s = StyleSheet.create({
   },
   headerAction: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-    borderWidth: 1, borderColor: L.border, borderRadius: 10,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
     paddingVertical: 7,
   },
-  headerActionText: { color: L.navy, fontSize: 12, fontWeight: '700' },
+  headerActionText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
   section: { marginBottom: 20 },
 
   card: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, paddingHorizontal: 14,
+    borderRadius: shape.card, paddingHorizontal: 14,
   },
 
   divBoard: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, paddingHorizontal: 14,
+    borderRadius: shape.card, paddingHorizontal: 14,
   },
 
   metricRow: { flexDirection: 'row', gap: 8 },
@@ -854,9 +856,9 @@ const s = StyleSheet.create({
 
   emptyInline: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, padding: 20, alignItems: 'center',
+    borderRadius: shape.card, padding: 20, alignItems: 'center',
   },
-  emptyInlineText: { color: L.textSub, fontSize: 13, fontWeight: '500' },
+  emptyInlineText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 });
 
 // Director-only route. The screen body above is mounted only after
