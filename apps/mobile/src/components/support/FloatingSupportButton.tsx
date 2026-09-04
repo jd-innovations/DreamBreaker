@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, useTheme } from '@/theme';
 import { tabBarClearance } from '@/constants/tabBar';
 import { resolveSupportVisibility, useCurrentSupportContext } from '@/lib/support/supportContext';
 import { recordRouteVisit } from '@/lib/support/supportDiagnostics';
@@ -41,6 +41,7 @@ const SIZE_MINIMIZED = 40;
  * rules and the feature flag -- no screen renders or imports this directly.
  */
 export function FloatingSupportButton() {
+  const { roles, scheme } = useTheme();
   const enabled = useSupportEnabled();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
@@ -126,7 +127,7 @@ export function FloatingSupportButton() {
           >
             <Animated.View style={[styles.shadowLayer, { width: size, height: size, borderRadius: radius }, animatedStyle]}>
               <View style={[styles.clip, { width: size, height: size, borderRadius: radius }]}>
-                <BlurView tint="light" intensity={44} style={StyleSheet.absoluteFill} />
+                <BlurView tint={scheme === 'dark' ? 'dark' : 'light'} intensity={44} style={StyleSheet.absoluteFill} />
                 <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,18,40,0.14)' }]} />
                 <LinearGradient
                   colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
@@ -139,7 +140,7 @@ export function FloatingSupportButton() {
                   style={[styles.border, { borderRadius: radius }]}
                 />
                 <View style={styles.iconLayer}>
-                  <Ionicons name="help-circle" size={iconSize} color={colors.navy} />
+                  <Ionicons name="help-circle" size={iconSize} color={roles.textPrimary} />
                 </View>
               </View>
             </Animated.View>

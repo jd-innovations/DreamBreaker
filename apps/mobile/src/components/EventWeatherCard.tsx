@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, useThemedStyles, type ThemeRoles } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import type { EventWeatherResult } from '@/lib/supabase/weather';
@@ -67,6 +67,7 @@ function feelsLikeTemp(w: AvailableEventWeather): number | null {
 }
 
 function WeatherWidget({ w, style }: { w: EventWeatherResult | 'loading' | null; style?: StyleProp<ViewStyle> }) {
+  const ww = useThemedStyles(wwStyles);
   if (w == null) return null;
 
   if (w === 'loading') {
@@ -117,16 +118,16 @@ function WeatherWidget({ w, style }: { w: EventWeatherResult | 'loading' | null;
   );
 }
 
-const ww = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: shape.card, padding: spacing.lg, gap: spacing.lg, backgroundColor: colors.bg },
+const wwStyles = (t: ThemeRoles) => StyleSheet.create({
+  card: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: t.border, borderRadius: shape.card, padding: spacing.lg, gap: spacing.lg, backgroundColor: t.surface },
   centered: { justifyContent: 'center', gap: spacing.sm, minHeight: 60 },
-  unavailableText: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  unavailableText: { color: t.textSecondary, fontSize: text.caption.size, fontWeight: '500' },
   left: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  hiTemp: { color: colors.navy, fontSize: text.statNumber.size, fontWeight: '900', lineHeight: 28 },
-  loTemp: { color: colors.textSub, fontSize: text.statValueSm.size, fontWeight: '900', lineHeight: 24 },
-  divider: { width: 1, height: 48, backgroundColor: colors.border },
+  hiTemp: { color: t.textPrimary, fontSize: text.statNumber.size, fontWeight: '900', lineHeight: 28 },
+  loTemp: { color: t.textSecondary, fontSize: text.statValueSm.size, fontWeight: '900', lineHeight: 24 },
+  divider: { width: 1, height: 48, backgroundColor: t.border },
   right: { flex: 1, gap: spacing.sm },
-  condition: { color: colors.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  condition: { color: t.textPrimary, fontSize: text.titleSm.size, fontWeight: '800' },
   statRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   precipPill: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -135,9 +136,9 @@ const ww = StyleSheet.create({
   precipPillText: { color: '#2563EB', fontSize: text.chipValue.size, fontWeight: '800' },
   windPill: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.page, borderRadius: shape.pill, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
+    backgroundColor: t.background, borderRadius: shape.pill, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
   },
-  windPillText: { color: colors.textSub, fontSize: text.chipValue.size, fontWeight: '800' },
+  windPillText: { color: t.textSecondary, fontSize: text.chipValue.size, fontWeight: '800' },
 });
 
 export function EventWeatherCard({ w, locationLabel, style }: {
@@ -146,6 +147,7 @@ export function EventWeatherCard({ w, locationLabel, style }: {
   /** Outer spacing is the host screen's call, not this component's. */
   style?: StyleProp<ViewStyle>;
 }) {
+  const dw = useThemedStyles(dwStyles);
   if (w == null || w === 'loading' || !w.available) {
     return <WeatherWidget w={w} style={style} />;
   }
@@ -201,21 +203,21 @@ export function EventWeatherCard({ w, locationLabel, style }: {
   );
 }
 
-const dw = StyleSheet.create({
-  card: { borderWidth: 1, borderColor: colors.border, borderRadius: shape.card, paddingVertical: spacing.md, paddingHorizontal: spacing.md, gap: spacing.sm, backgroundColor: colors.bg },
+const dwStyles = (t: ThemeRoles) => StyleSheet.create({
+  card: { borderWidth: 1, borderColor: t.border, borderRadius: shape.card, paddingVertical: spacing.md, paddingHorizontal: spacing.md, gap: spacing.sm, backgroundColor: t.surface },
   mainRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   iconPanel: { width: 50, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   primary: { flex: 1.15, minWidth: 0 },
-  currentTemp: { color: colors.navy, fontSize: 31, fontWeight: '900', lineHeight: 34 },
-  condition: { color: colors.navy, fontSize: text.rowTitle.size, fontWeight: '700', lineHeight: 17 },
-  feels: { color: colors.navy, fontSize: text.caption.size, fontWeight: '500', lineHeight: 15, marginTop: 2 },
+  currentTemp: { color: t.textPrimary, fontSize: 31, fontWeight: '900', lineHeight: 34 },
+  condition: { color: t.textPrimary, fontSize: text.rowTitle.size, fontWeight: '700', lineHeight: 17 },
+  feels: { color: t.textPrimary, fontSize: text.caption.size, fontWeight: '500', lineHeight: 15, marginTop: 2 },
   details: { flex: 0.9, alignItems: 'flex-end', gap: spacing.xs, minWidth: 0 },
   locationRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'flex-end', gap: spacing.xs, maxWidth: '100%' },
-  locationText: { color: colors.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, lineHeight: 14, flexShrink: 1, textAlign: 'right' },
-  highLow: { color: colors.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 14 },
+  locationText: { color: t.textPrimary, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, lineHeight: 14, flexShrink: 1, textAlign: 'right' },
+  highLow: { color: t.textPrimary, fontSize: text.caption.size, fontWeight: '500', lineHeight: 14 },
   metricRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  metricText: { color: colors.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 14 },
+  metricText: { color: t.textPrimary, fontSize: text.caption.size, fontWeight: '500', lineHeight: 14 },
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  metricPill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.goldBg, borderColor: colors.goldBorder, borderWidth: 1, borderRadius: shape.pill, paddingHorizontal: spacing.sm, paddingVertical: 3 },
-  metricPillText: { color: colors.navy, fontSize: text.microLabel.size, fontWeight: '700', lineHeight: 12 },
+  metricPill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: t.accentBg, borderColor: t.accentBorder, borderWidth: 1, borderRadius: shape.pill, paddingHorizontal: spacing.sm, paddingVertical: 3 },
+  metricPillText: { color: t.textPrimary, fontSize: text.microLabel.size, fontWeight: '700', lineHeight: 12 },
 });
