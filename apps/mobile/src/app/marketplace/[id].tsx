@@ -22,6 +22,9 @@ import { BRAND_LOGOS } from '@/lib/marketplace/brandLogos';
 import { haptics } from '@/lib/haptics';
 import { appLinks } from '@/lib/appLinks';
 
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
+
 const L = {
   navy: '#0A1228', gold: '#C9A84C', text: '#0A1228', textMuted: '#9AAABF',
   border: '#E0E8F5', green: '#16A34A', danger: '#EF4444', dangerBg: '#FEE2E2',
@@ -433,47 +436,47 @@ const s = StyleSheet.create({
   topRight: { flexDirection: 'row', gap: 8 },
   topBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.38)', alignItems: 'center', justifyContent: 'center' },
 
-  title: { color: L.text, fontSize: 20, fontWeight: '900', marginBottom: 6 },
+  title: { color: L.text, fontSize: text.cardTitle.size, fontWeight: '800', marginBottom: 6 },
   brandRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  brandLine: { color: L.text, fontSize: 13, fontWeight: '700', marginBottom: 2, textTransform: 'uppercase' },
-  modelLine: { color: L.text, fontSize: 20, fontWeight: '900', marginBottom: 6 },
+  brandLine: { color: L.text, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, marginBottom: 2, textTransform: 'uppercase' },
+  modelLine: { color: L.text, fontSize: text.cardTitle.size, fontWeight: '800', marginBottom: 6 },
   brandLogo: { width: 80, height: 80 / (320 / 84), marginTop: 2 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
-  price: { color: L.green, fontSize: 20, fontWeight: '900' },
-  conditionBadge: { backgroundColor: '#F0F4FF', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
-  conditionText: { color: L.navy, fontSize: 12, fontWeight: '700' },
-  meta: { color: L.textMuted, fontSize: 13, marginBottom: 4 },
-  locationText: { color: L.text, fontSize: 13, fontWeight: '600', marginBottom: 4 },
-  description: { color: L.text, fontSize: 14, lineHeight: 20, marginTop: 12 },
-  sectionLabel: { color: L.textMuted, fontSize: 11, fontWeight: '800', letterSpacing: 1, marginTop: 20, marginBottom: 8 },
+  price: { color: L.green, fontSize: text.cardTitle.size, fontWeight: '800' },
+  conditionBadge: { backgroundColor: '#F0F4FF', borderRadius: shape.pill, paddingHorizontal: 10, paddingVertical: 3 },
+  conditionText: { color: L.navy, fontSize: text.chipValue.size, fontWeight: '800' },
+  meta: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginBottom: 4 },
+  locationText: { color: L.text, fontSize: text.caption.size, fontWeight: '500', marginBottom: 4 },
+  description: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 20, marginTop: 12 },
+  sectionLabel: { color: L.textMuted, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginTop: 20, marginBottom: 8 },
   sellerRow: { marginTop: 14 },
-  sellerName: { color: L.text, fontSize: 15, fontWeight: '700' },
+  sellerName: { color: L.text, fontSize: text.rowTitle.size, fontWeight: '700' },
 
   ctaRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  offerBtn: { flex: 1, backgroundColor: L.navy, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
-  offerBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
-  msgBtn: { flex: 1, flexDirection: 'row', gap: 6, borderWidth: 1.5, borderColor: L.gold, borderRadius: 14, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
-  msgBtnText: { color: L.navy, fontSize: 15, fontWeight: '800' },
+  offerBtn: { flex: 1, backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 14, alignItems: 'center' },
+  offerBtnText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
+  msgBtn: { flex: 1, flexDirection: 'row', gap: 6, borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
+  msgBtnText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: L.border },
-  detailLabel: { color: L.textMuted, fontSize: 13 },
-  detailValue: { color: L.text, fontSize: 13, fontWeight: '600' },
+  detailLabel: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  detailValue: { color: L.text, fontSize: text.caption.size, fontWeight: '500' },
   reportLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 24, alignSelf: 'center' },
-  reportLinkText: { color: L.textMuted, fontSize: 13 },
+  reportLinkText: { color: L.textMuted, fontSize: text.link.size, fontWeight: '700' },
 
   modalScrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   moreSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingVertical: 12, paddingHorizontal: 8 },
   moreRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16 },
-  moreRowText: { color: L.text, fontSize: 15, fontWeight: '600' },
+  moreRowText: { color: L.text, fontSize: text.body.size, fontWeight: '500' },
 
   reportSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 32 },
   reportHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-  reportTitle: { color: L.navy, fontSize: 18, fontWeight: '800' },
+  reportTitle: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900' },
   reasonRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  reasonText: { color: L.text, fontSize: 14, fontWeight: '500' },
+  reasonText: { color: L.text, fontSize: text.body.size, fontWeight: '500' },
 
   offerSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 32 },
-  amountRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: L.border, borderRadius: 14, paddingHorizontal: 16, marginVertical: 16 },
-  amountPrefix: { color: L.text, fontSize: 22, fontWeight: '800', marginRight: 4 },
-  amountInput: { flex: 1, fontSize: 22, fontWeight: '800', color: L.text, paddingVertical: 12 },
+  amountRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, paddingHorizontal: 16, marginVertical: 16 },
+  amountPrefix: { color: L.text, fontSize: text.cardTitle.size, fontWeight: '800', marginRight: 4 },
+  amountInput: { flex: 1, fontSize: text.cardTitle.size, fontWeight: '800', color: L.text, paddingVertical: 12 },
 });

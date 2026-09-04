@@ -14,6 +14,9 @@ import {
 } from '@/lib/marketplace/listingService';
 import { conditionLabel, formatPriceCents } from '@/lib/marketplace/constants';
 
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
+
 const L = {
   navy: '#0A1228', text: '#0A1228', textMuted: '#9AAABF', border: '#E0E8F5',
   green: '#16A34A', gold: '#C9A84C', danger: '#EF4444', bg: '#FFFFFF',
@@ -140,18 +143,18 @@ export default function MyListingsScreen() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
-  limitLine: { color: L.textMuted, fontSize: 12, textAlign: 'center', marginBottom: 8 },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  limitLine: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', marginBottom: 8 },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  emptyText: { color: L.textMuted, fontSize: 14 },
-  sellBtn: { marginTop: 8, backgroundColor: L.navy, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 10 },
-  sellBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  emptyText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  sellBtn: { marginTop: 8, backgroundColor: L.navy, borderRadius: shape.pill, paddingHorizontal: 20, paddingVertical: 10 },
+  sellBtnText: { color: '#FFFFFF', fontSize: text.action.size, fontWeight: '800' },
   row: { flexDirection: 'row', gap: 12, marginBottom: 14, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: L.border },
-  thumb: { width: 68, height: 68, borderRadius: 12 },
+  thumb: { width: 68, height: 68, borderRadius: shape.panel },
   thumbPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F7FB' },
-  title: { color: L.text, fontSize: 14, fontWeight: '700', marginBottom: 2 },
-  meta: { color: L.textMuted, fontSize: 12, marginBottom: 2 },
-  status: { fontSize: 11, fontWeight: '800', marginBottom: 6 },
+  title: { color: L.text, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 2 },
+  meta: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginBottom: 2 },
+  status: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, marginBottom: 6 },
   actionRow: { flexDirection: 'row', gap: 16 },
-  actionText: { color: L.navy, fontSize: 12, fontWeight: '700' },
+  actionText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 });

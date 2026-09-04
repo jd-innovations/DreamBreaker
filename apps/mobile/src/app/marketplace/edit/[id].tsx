@@ -16,6 +16,9 @@ import {
 } from '@/lib/marketplace/constants';
 import { fetchListingDetail, updateListing } from '@/lib/marketplace/listingService';
 
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
+
 const L = {
   navy: '#0A1228', gold: '#C9A84C', text: '#0A1228', textMuted: '#9AAABF',
   border: '#E0E8F5', danger: '#EF4444', bg: '#FFFFFF',
@@ -168,36 +171,36 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.bg },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: L.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   body: { paddingHorizontal: 20, paddingBottom: 40 },
   footer: { paddingHorizontal: 20, paddingTop: 8, borderTopWidth: 1, borderTopColor: L.border },
 
-  fieldLabel: { color: L.text, fontSize: 13, fontWeight: '700', marginBottom: 8 },
-  stepHint: { color: L.textMuted, fontSize: 12, marginBottom: 8 },
+  fieldLabel: { color: L.text, fontSize: text.fieldLabel.size, fontWeight: '800', marginBottom: 8 },
+  stepHint: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginBottom: 8 },
 
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pickChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1.5, borderColor: L.border },
+  pickChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: shape.pill, borderWidth: 1.5, borderColor: L.border },
   pickChipActive: { backgroundColor: L.navy, borderColor: L.navy },
-  pickChipText: { color: L.text, fontSize: 14, fontWeight: '600' },
+  pickChipText: { color: L.text, fontSize: text.controlLabel.size, fontWeight: '700' },
   pickChipTextActive: { color: '#FFFFFF' },
 
-  textInput: { borderWidth: 1.5, borderColor: L.border, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: L.text },
-  titlePreview: { color: L.navy, fontSize: 13, fontWeight: '700', marginTop: 8 },
+  textInput: { borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, paddingHorizontal: 16, paddingVertical: 14, fontSize: text.body.size, fontWeight: '500', color: L.text },
+  titlePreview: { color: L.navy, fontSize: text.caption.size, fontWeight: '500', marginTop: 8 },
 
-  optionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, borderWidth: 1.5, borderColor: L.border, marginBottom: 8 },
+  optionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16, borderRadius: shape.cta, borderWidth: 1.5, borderColor: L.border, marginBottom: 8 },
   optionRowActive: { borderColor: L.navy, backgroundColor: '#F0F4FF' },
-  optionRowText: { color: L.text, fontSize: 15, fontWeight: '600' },
+  optionRowText: { color: L.text, fontSize: text.body.size, fontWeight: '500' },
   optionRowTextActive: { color: L.navy, fontWeight: '800' },
 
-  amountRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: L.border, borderRadius: 14, paddingHorizontal: 16 },
-  amountPrefix: { color: L.text, fontSize: 22, fontWeight: '800', marginRight: 4 },
-  amountInput: { flex: 1, fontSize: 22, fontWeight: '800', color: L.text, paddingVertical: 12 },
-  errorText: { color: L.danger, fontSize: 12, marginTop: 8 },
+  amountRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, paddingHorizontal: 16 },
+  amountPrefix: { color: L.text, fontSize: text.cardTitle.size, fontWeight: '800', marginRight: 4 },
+  amountInput: { flex: 1, fontSize: text.cardTitle.size, fontWeight: '800', color: L.text, paddingVertical: 12 },
+  errorText: { color: L.danger, fontSize: text.caption.size, fontWeight: '500', marginTop: 8 },
 
-  descInput: { borderWidth: 1.5, borderColor: L.border, borderRadius: 14, padding: 16, fontSize: 15, color: L.text, minHeight: 100, textAlignVertical: 'top' },
-  charCount: { color: L.textMuted, fontSize: 11, textAlign: 'right', marginTop: 4 },
+  descInput: { borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, padding: 16, fontSize: text.body.size, fontWeight: '500', color: L.text, minHeight: 100, textAlignVertical: 'top' },
+  charCount: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'right', marginTop: 4 },
 
-  saveBtn: { backgroundColor: L.navy, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  saveBtn: { backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 16, alignItems: 'center' },
   saveBtnDisabled: { opacity: 0.4 },
-  saveBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  saveBtnText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 });
