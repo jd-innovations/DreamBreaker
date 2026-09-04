@@ -2,7 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { OnboardingScreen, ScreenTitle, OnboardingCTA, OnboardingSkipLink } from '@/lib/onboarding/components';
 import { useOnboarding } from '@/lib/onboarding/state';
 
@@ -67,28 +69,28 @@ export default function ReviewCourtScreen() {
 
 const s = StyleSheet.create({
   card: {
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.card,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.card,
     overflow: 'hidden', backgroundColor: L.bg,
   },
   photo: { width: '100%', height: 160, backgroundColor: L.page },
   body: { padding: spacing.lg },
   rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
-  name: { fontSize: 17, fontWeight: '800', color: L.text, flex: 1, marginRight: spacing.sm },
+  name: { fontSize: text.titleSm.size, fontWeight: '800', color: L.text, flex: 1, marginRight: spacing.sm },
   editBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: L.goldLight, borderRadius: radius.chip, paddingHorizontal: 8, paddingVertical: 3,
+    backgroundColor: L.goldLight, borderRadius: shape.pill, paddingHorizontal: 8, paddingVertical: 3,
   },
   editBadgeText: { fontSize: 10, fontWeight: '800', color: L.gold },
-  address: { fontSize: 13, color: L.textSub, lineHeight: 19, marginBottom: spacing.md },
+  address: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, lineHeight: 19, marginBottom: spacing.md },
   statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   statChip: {
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.chip,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.pill,
     paddingHorizontal: spacing.sm, paddingVertical: 4,
   },
-  statChipText: { fontSize: 11, fontWeight: '700', color: L.textSub },
+  statChipText: { fontSize: text.chipValue.size, fontWeight: '800', color: L.textSub },
   emptyCard: {
     alignItems: 'center', gap: spacing.sm, padding: spacing.xxxl,
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.card,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.card,
   },
-  emptyText: { color: L.textSub, fontSize: 13, textAlign: 'center' },
+  emptyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center' },
 });

@@ -12,7 +12,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { OnboardingCTA } from '@/lib/onboarding/components';
 import { useOnboarding, validators } from '@/lib/onboarding/state';
 import { PASSWORD_PLACEHOLDER } from '@/lib/authPolicy';
@@ -138,7 +140,7 @@ const s = StyleSheet.create({
   },
   title: {
     color: L.navy,
-    fontSize: 30,
+    fontSize: text.pageTitle.size,
     lineHeight: 36,
     fontWeight: '900',
     textAlign: 'center',
@@ -146,7 +148,7 @@ const s = StyleSheet.create({
   },
   subtitle: {
     color: L.navy,
-    fontSize: 15,
+    fontSize: text.body.size, fontWeight: '500',
     lineHeight: 21,
     textAlign: 'center',
     maxWidth: 292,
@@ -154,7 +156,7 @@ const s = StyleSheet.create({
   formCard: {
     borderWidth: 1,
     borderColor: '#E7DED0',
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     backgroundColor: 'rgba(255,255,255,0.82)',
     padding: spacing.lg,
     shadowColor: '#000',
@@ -171,7 +173,7 @@ const s = StyleSheet.create({
   },
   label: {
     color: L.navy,
-    fontSize: 13,
+    fontSize: text.fieldLabel.size,
     fontWeight: '800',
     marginBottom: spacing.sm,
   },
@@ -182,15 +184,15 @@ const s = StyleSheet.create({
     gap: spacing.sm,
     borderWidth: 1,
     borderColor: '#E7DED0',
-    borderRadius: radius.button,
+    borderRadius: shape.cta,
     backgroundColor: L.white,
     paddingHorizontal: spacing.md,
   },
   input: {
     flex: 1,
     color: L.navy,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: text.body.size,
+    fontWeight: '500',
     paddingVertical: 12,
   },
   eyeBtn: {
@@ -201,7 +203,7 @@ const s = StyleSheet.create({
   },
   note: {
     color: L.textSub,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
     lineHeight: 19,
     textAlign: 'center',
     marginTop: spacing.lg,

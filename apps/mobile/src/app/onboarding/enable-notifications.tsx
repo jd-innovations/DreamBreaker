@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { OnboardingCTA, OnboardingProgressBar } from '@/lib/onboarding/components';
 import { useSession } from '@/hooks/useSession';
 import { registerPushTokenForUser, type PushRegistrationResult } from '@/lib/pushNotifications';
@@ -153,7 +155,7 @@ const s = StyleSheet.create({
   },
   headerBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   skipBtn: { minHeight: 36, justifyContent: 'center', paddingHorizontal: spacing.sm },
-  skipText: { color: L.gold, fontSize: 14, fontWeight: '800' },
+  skipText: { color: L.gold, fontSize: text.rowValue.size, fontWeight: '800' },
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
@@ -161,12 +163,12 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   titleBlock: { alignItems: 'center', marginBottom: spacing.xl },
-  title: { color: L.navy, fontSize: 30, fontWeight: '900', lineHeight: 36, textAlign: 'center' },
-  subtitle: { color: '#39415A', fontSize: 15, lineHeight: 21, textAlign: 'center', marginTop: spacing.xs, maxWidth: 300 },
+  title: { color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900', lineHeight: 36, textAlign: 'center' },
+  subtitle: { color: '#39415A', fontSize: text.body.size, fontWeight: '500', lineHeight: 21, textAlign: 'center', marginTop: spacing.xs, maxWidth: 300 },
   card: {
     borderWidth: 1.5,
     borderColor: '#E5DED1',
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     backgroundColor: 'rgba(255,255,255,0.82)',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
@@ -184,10 +186,10 @@ const s = StyleSheet.create({
     gap: spacing.md,
   },
   optionTextWrap: { flex: 1, minWidth: 0 },
-  optionTitle: { color: L.navy, fontSize: 15, fontWeight: '900', lineHeight: 20 },
-  optionSub: { color: '#39415A', fontSize: 13, fontWeight: '600', lineHeight: 18, marginTop: 2 },
+  optionTitle: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800', lineHeight: 20 },
+  optionSub: { color: '#39415A', fontSize: text.caption.size, fontWeight: '500', lineHeight: 18, marginTop: 2 },
   divider: { height: 1, backgroundColor: '#E9E1D5' },
-  helperText: { color: '#7F8AA3', fontSize: 13, fontWeight: '600', textAlign: 'center', marginTop: spacing.xl },
+  helperText: { color: '#7F8AA3', fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', marginTop: spacing.xl },
   footer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,

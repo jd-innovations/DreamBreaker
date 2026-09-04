@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { OnboardingCTA, OnboardingProgressBar, selectWithHaptic } from '@/lib/onboarding/components';
 import { useOnboarding } from '@/lib/onboarding/state';
 import { useCurrentLocation } from '@/lib/location';
@@ -212,7 +214,7 @@ const s = StyleSheet.create({
   },
   headerBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   skipBtn: { minHeight: 36, justifyContent: 'center', paddingHorizontal: spacing.sm },
-  skipText: { color: L.gold, fontSize: 14, fontWeight: '800' },
+  skipText: { color: L.gold, fontSize: text.rowValue.size, fontWeight: '800' },
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
@@ -220,23 +222,23 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   titleBlock: { alignItems: 'center', marginBottom: spacing.xl },
-  title: { color: L.navy, fontSize: 30, fontWeight: '900', lineHeight: 36, textAlign: 'center' },
-  subtitle: { color: '#39415A', fontSize: 18, lineHeight: 24, textAlign: 'center', marginTop: spacing.xs },
+  title: { color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900', lineHeight: 36, textAlign: 'center' },
+  subtitle: { color: '#39415A', fontSize: text.body.size, fontWeight: '500', lineHeight: 24, textAlign: 'center', marginTop: spacing.xs },
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    borderWidth: 1.5, borderColor: '#D8DEEA', borderRadius: radius.md,
+    borderWidth: 1.5, borderColor: '#D8DEEA', borderRadius: shape.panel,
     paddingHorizontal: spacing.lg, minHeight: 54, marginBottom: spacing.xl,
     backgroundColor: 'rgba(255,255,255,0.86)',
   },
-  searchInput: { flex: 1, fontSize: 18, color: L.navy, padding: 0 },
+  searchInput: { flex: 1, fontSize: text.body.size, fontWeight: '500', color: L.navy, padding: 0 },
   centered: { paddingVertical: spacing.xxxl, alignItems: 'center' },
-  errorText: { color: '#39415A', fontSize: 13 },
-  emptyText: { color: '#39415A', fontSize: 13 },
+  errorText: { color: '#39415A', fontSize: text.caption.size, fontWeight: '500' },
+  emptyText: { color: '#39415A', fontSize: text.caption.size, fontWeight: '500' },
   list: { gap: spacing.md },
   card: {
     minHeight: 70,
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    borderWidth: 1.5, borderColor: '#E5DED1', borderRadius: radius.card,
+    borderWidth: 1.5, borderColor: '#E5DED1', borderRadius: shape.card,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     backgroundColor: 'rgba(255,255,255,0.82)',
     shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 10,
@@ -247,10 +249,10 @@ const s = StyleSheet.create({
     position: 'absolute', top: -13, right: 40,
     backgroundColor: L.gold, borderRadius: 8, paddingHorizontal: spacing.sm, paddingVertical: 4,
   },
-  homeBadgeText: { color: L.white, fontSize: 12, fontWeight: '800' },
+  homeBadgeText: { color: L.white, fontSize: text.chipValue.size, fontWeight: '800' },
   cardBody: { flex: 1, minWidth: 0 },
-  cardTitle: { color: L.navy, fontSize: 14, fontWeight: '900', marginBottom: 2 },
-  cardMeta: { color: '#4C5262', fontSize: 12, fontWeight: '600' },
+  cardTitle: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800', marginBottom: 2 },
+  cardMeta: { color: '#4C5262', fontSize: text.caption.size, fontWeight: '500' },
   stars: { color: L.gold, fontWeight: '900' },
   radio: {
     width: 30, height: 30, borderRadius: 15,
@@ -263,7 +265,7 @@ const s = StyleSheet.create({
     borderWidth: 1.5,
     borderStyle: 'dashed',
     borderColor: '#4C5262',
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     backgroundColor: 'rgba(255,255,255,0.38)',
   },
@@ -271,7 +273,7 @@ const s = StyleSheet.create({
     width: 30, height: 30, borderRadius: 15,
     backgroundColor: L.gold, alignItems: 'center', justifyContent: 'center',
   },
-  searchAnotherText: { color: L.navy, fontSize: 18, fontWeight: '800' },
+  searchAnotherText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
   footer: {
     paddingHorizontal: spacing.lg, paddingTop: spacing.md,
     backgroundColor: SCREEN_BG, gap: spacing.md,
@@ -289,5 +291,5 @@ const s = StyleSheet.create({
     borderRadius: 17, backgroundColor: L.gold, borderWidth: 2, borderColor: '#F4E6BC',
     alignItems: 'center', justifyContent: 'center',
   },
-  progressKnobText: { color: L.white, fontSize: 13, fontWeight: '900', letterSpacing: -1 },
+  progressKnobText: { color: L.white, fontSize: text.fieldLabel.size, fontWeight: '800', letterSpacing: -1 },
 });

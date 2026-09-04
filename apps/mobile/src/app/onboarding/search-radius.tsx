@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 import { OnboardingCTA, OnboardingProgressBar, onboardingSelectionHaptic } from '@/lib/onboarding/components';
 import { useOnboarding } from '@/lib/onboarding/state';
 import Svg, { G, Path } from 'react-native-svg';
@@ -197,7 +199,7 @@ const s = StyleSheet.create({
   },
   headerBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   skipBtn: { minHeight: 36, justifyContent: 'center', paddingHorizontal: spacing.sm },
-  skipText: { color: L.gold, fontSize: 14, fontWeight: '800' },
+  skipText: { color: L.gold, fontSize: text.rowValue.size, fontWeight: '800' },
   content: {
     flex: 1,
     paddingHorizontal: spacing.xxl,
@@ -206,8 +208,8 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   titleBlock: { alignItems: 'center', marginBottom: spacing.lg },
-  title: { color: L.navy, fontSize: 30, fontWeight: '900', lineHeight: 36, textAlign: 'center' },
-  subtitle: { color: '#39415A', fontSize: 15, lineHeight: 21, textAlign: 'center', marginTop: spacing.xs, maxWidth: 260 },
+  title: { color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900', lineHeight: 36, textAlign: 'center' },
+  subtitle: { color: '#39415A', fontSize: text.body.size, fontWeight: '500', lineHeight: 21, textAlign: 'center', marginTop: spacing.xs, maxWidth: 260 },
   radiusViz: {
     width: 260,
     height: 230,
@@ -234,7 +236,7 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 }, elevation: 3,
   },
-  calloutText: { color: L.navy, fontSize: 15, fontWeight: '900' },
+  calloutText: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
   calloutTip: {
     position: 'absolute', bottom: -8, alignSelf: 'center',
     width: 0, height: 0, borderLeftWidth: 8, borderRightWidth: 8, borderTopWidth: 9,
@@ -279,7 +281,7 @@ const s = StyleSheet.create({
   tick: { width: 4, height: 4, borderRadius: 2, backgroundColor: 'transparent' },
   tickActive: { backgroundColor: L.gold },
   labelsRow: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 3, marginTop: 2 },
-  radiusLabel: { color: L.navy, fontSize: 12, fontWeight: '700' },
+  radiusLabel: { color: L.navy, fontSize: text.chipValue.size, fontWeight: '800' },
   radiusLabelActive: { color: L.gold, fontWeight: '900' },
   footer: {
     paddingHorizontal: spacing.lg, paddingTop: spacing.md,
@@ -298,5 +300,5 @@ const s = StyleSheet.create({
     borderRadius: 17, backgroundColor: L.gold, borderWidth: 2, borderColor: '#F4E6BC',
     alignItems: 'center', justifyContent: 'center',
   },
-  progressKnobText: { color: L.white, fontSize: 13, fontWeight: '900', letterSpacing: -1 },
+  progressKnobText: { color: L.white, fontSize: text.fieldLabel.size, fontWeight: '800', letterSpacing: -1 },
 });

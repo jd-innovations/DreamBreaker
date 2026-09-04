@@ -3,7 +3,9 @@ import { ActivityIndicator, Alert, Animated, Easing, View, Text, StyleSheet, Tou
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { AppIcon, type AppIconName } from '@/components';
 import { useOnboarding } from '@/lib/onboarding/state';
 import { finalizeOnboarding } from '@/lib/onboarding/finalize';
@@ -417,7 +419,7 @@ const s = StyleSheet.create({
   },
   title: {
     color: L.navy,
-    fontSize: 30,
+    fontSize: text.pageTitle.size,
     lineHeight: 36,
     fontWeight: '900',
     textAlign: 'center',
@@ -425,7 +427,7 @@ const s = StyleSheet.create({
   },
   subtitle: {
     color: '#39415A',
-    fontSize: 15,
+    fontSize: text.body.size, fontWeight: '500',
     lineHeight: 21,
     textAlign: 'center',
     maxWidth: 310,
@@ -449,13 +451,13 @@ const s = StyleSheet.create({
   },
   checkText: {
     color: L.navy,
-    fontSize: 14,
+    fontSize: text.rowValue.size,
     fontWeight: '800',
   },
   infoCard: {
     borderWidth: 1.5,
     borderColor: L.gold,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     backgroundColor: '#FFF9E8',
     padding: spacing.lg,
     gap: spacing.md,
@@ -467,8 +469,8 @@ const s = StyleSheet.create({
   },
   infoTitle: {
     color: L.navy,
-    fontSize: 14,
-    fontWeight: '900',
+    fontSize: text.rowValue.size,
+    fontWeight: '800',
     marginBottom: spacing.xs,
   },
   infoRow: {
@@ -479,9 +481,9 @@ const s = StyleSheet.create({
   infoText: {
     flex: 1,
     color: L.navy,
-    fontSize: 13,
+    fontSize: text.caption.size,
     lineHeight: 18,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   ctaWrap: {
     position: 'relative',
@@ -492,7 +494,7 @@ const s = StyleSheet.create({
     right: 10,
     top: 4,
     bottom: -7,
-    borderRadius: radius.button,
+    borderRadius: shape.cta,
     backgroundColor: L.gold,
     shadowColor: L.gold,
     shadowOpacity: 0.68,
@@ -502,7 +504,7 @@ const s = StyleSheet.create({
   },
   cta: {
     minHeight: 54,
-    borderRadius: radius.button,
+    borderRadius: shape.cta,
     backgroundColor: L.gold,
     alignItems: 'center',
     justifyContent: 'center',
@@ -516,8 +518,8 @@ const s = StyleSheet.create({
   },
   ctaText: {
     color: L.navy,
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: text.actionLarge.size,
+    fontWeight: '800',
   },
   ctaDisabled: {
     opacity: 0.78,

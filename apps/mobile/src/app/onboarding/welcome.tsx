@@ -5,7 +5,9 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { DeviceMotion, type DeviceMotionMeasurement } from 'expo-sensors';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 const L = colors;
 
@@ -215,9 +217,9 @@ const s = StyleSheet.create({
   logoCompact: { width: '84%', height: 58 },
   tagline: {
     color: L.white,
-    fontSize: 12,
+    fontSize: text.chipValue.size,
     lineHeight: 17,
-    fontWeight: '900',
+    fontWeight: '800',
     letterSpacing: 4.2,
     marginTop: 25,
   },
@@ -226,7 +228,7 @@ const s = StyleSheet.create({
   actionBlock: { gap: spacing.md, paddingBottom: 2, marginTop: -12 },
   getStarted: {
     minHeight: 56,
-    borderRadius: radius.button + 12,
+    borderRadius: shape.cta + 12,
     backgroundColor: L.gold,
     alignItems: 'center',
     justifyContent: 'center',
@@ -238,16 +240,16 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 7 },
     elevation: 4,
   },
-  getStartedText: { color: L.navy, fontSize: 16, fontWeight: '900' },
+  getStartedText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
   signIn: {
     minHeight: 56,
-    borderRadius: radius.button + 12,
+    borderRadius: shape.cta + 12,
     borderWidth: 1.2,
     borderColor: L.gold,
     backgroundColor: L.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  signInText: { color: L.navy, fontSize: 16, fontWeight: '900' },
+  signInText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
   pagerSpacer: { height: 12 },
 });

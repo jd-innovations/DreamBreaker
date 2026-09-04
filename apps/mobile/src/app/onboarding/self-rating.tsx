@@ -4,7 +4,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, gradients, spacing, radius } from '@/theme';
+import { colors, gradients, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { OnboardingCTA, OnboardingProgressBar, selectWithHaptic } from '@/lib/onboarding/components';
 import { useOnboarding, validators } from '@/lib/onboarding/state';
 import { SELF_RATING_OPTIONS } from '@/lib/onboarding/mockData';
@@ -89,17 +91,17 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   titleBlock: { marginBottom: spacing.xxxl },
-  title: { color: L.navy, fontSize: 30, fontWeight: '900', lineHeight: 36, textAlign: 'center' },
-  subtitle: { color: '#7F8AA3', fontSize: 15, lineHeight: 22, textAlign: 'center', marginTop: spacing.sm },
+  title: { color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900', lineHeight: 36, textAlign: 'center' },
+  subtitle: { color: '#7F8AA3', fontSize: text.body.size, fontWeight: '500', lineHeight: 22, textAlign: 'center', marginTop: spacing.sm },
   section: { marginBottom: spacing.xxxl },
-  sectionTitle: { color: L.navy, fontSize: 18, fontWeight: '900', marginBottom: spacing.md },
+  sectionTitle: { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900', marginBottom: spacing.md },
   noteRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.md },
-  noteText: { fontSize: 12, color: L.textSub },
+  noteText: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
     borderWidth: 1.5,
     borderColor: '#D8DEEA',
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     backgroundColor: L.white,
     paddingHorizontal: spacing.lg,
     paddingVertical: 11,
@@ -108,7 +110,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   chipSelected: { backgroundColor: L.gold, borderColor: L.gold },
-  chipText: { color: L.navy, fontSize: 14, fontWeight: '800' },
+  chipText: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
   chipTextSelected: { color: L.navy },
   footer: {
     position: 'absolute',
@@ -158,5 +160,5 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  progressKnobText: { color: L.white, fontSize: 13, fontWeight: '900', letterSpacing: -1 },
+  progressKnobText: { color: L.white, fontSize: text.fieldLabel.size, fontWeight: '800', letterSpacing: -1 },
 });

@@ -4,7 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { getUser, signInWithGoogle, signInWithApple } from '@/lib/auth';
 import { haptics } from '@/lib/haptics';
 import { useOnboarding } from '@/lib/onboarding/state';
@@ -213,7 +215,7 @@ const s = StyleSheet.create({
   },
   title: {
     color: L.navy,
-    fontSize: 30,
+    fontSize: text.pageTitle.size,
     lineHeight: 36,
     fontWeight: '900',
     textAlign: 'center',
@@ -221,7 +223,7 @@ const s = StyleSheet.create({
   },
   subtitle: {
     color: L.navy,
-    fontSize: 15,
+    fontSize: text.body.size, fontWeight: '500',
     lineHeight: 21,
     textAlign: 'center',
     maxWidth: 260,
@@ -236,7 +238,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#E7DED0',
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     backgroundColor: 'rgba(255,255,255,0.86)',
     paddingHorizontal: spacing.xl,
     shadowColor: '#000',
@@ -261,12 +263,12 @@ const s = StyleSheet.create({
   },
   accountButtonText: {
     color: L.navy,
-    fontSize: 15,
+    fontSize: text.actionLarge.size,
     fontWeight: '800',
   },
   legal: {
     color: L.textSub,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
     lineHeight: 19,
     textAlign: 'center',
   },

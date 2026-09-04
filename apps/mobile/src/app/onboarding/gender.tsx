@@ -4,7 +4,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Svg, { G, Path } from 'react-native-svg';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { OnboardingCTA, OnboardingProgressBar, selectWithHaptic } from '@/lib/onboarding/components';
 import { useOnboarding } from '@/lib/onboarding/state';
 
@@ -148,7 +150,7 @@ const s = StyleSheet.create({
   },
   headerBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   skipBtn: { minHeight: 36, justifyContent: 'center', paddingHorizontal: spacing.sm },
-  skipText: { color: L.gold, fontSize: 14, fontWeight: '800' },
+  skipText: { color: L.gold, fontSize: text.rowValue.size, fontWeight: '800' },
   content: {
     flex: 1,
     paddingHorizontal: spacing.xxl,
@@ -156,14 +158,14 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   titleBlock: { alignItems: 'center', marginBottom: spacing.xl },
-  title: { color: L.navy, fontSize: 30, fontWeight: '900', lineHeight: 36, textAlign: 'center' },
-  subtitle: { color: '#39415A', fontSize: 15, lineHeight: 22, textAlign: 'center', marginTop: spacing.sm, maxWidth: 280 },
+  title: { color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900', lineHeight: 36, textAlign: 'center' },
+  subtitle: { color: '#39415A', fontSize: text.body.size, fontWeight: '500', lineHeight: 22, textAlign: 'center', marginTop: spacing.sm, maxWidth: 280 },
   optionList: { gap: spacing.sm },
   optionCard: {
     minHeight: 52,
     borderWidth: 1.5,
     borderColor: '#E5DED1',
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     backgroundColor: 'rgba(255,255,255,0.72)',
     flexDirection: 'row',
     alignItems: 'center',
@@ -177,9 +179,9 @@ const s = StyleSheet.create({
   },
   optionCardSelected: { borderColor: L.gold, backgroundColor: 'rgba(255,255,255,0.9)' },
   optionLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
-  optionText: { color: L.navy, fontSize: 14, fontWeight: '800' },
+  optionText: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
   handednessBlock: { marginTop: spacing.xl },
-  sectionTitle: { color: L.navy, fontSize: 18, fontWeight: '900', textAlign: 'center', marginBottom: spacing.md },
+  sectionTitle: { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900', textAlign: 'center', marginBottom: spacing.md },
   radio: {
     width: 22,
     height: 22,

@@ -2,7 +2,9 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { OnboardingScreen, OnboardingCTA, OnboardingSkipLink, ScreenTitle } from '@/lib/onboarding/components';
 import { useOnboarding } from '@/lib/onboarding/state';
 import { useCurrentLocation } from '@/lib/location';
@@ -71,8 +73,8 @@ const s = StyleSheet.create({
   },
   benefit: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.card,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.card,
     padding: spacing.lg, marginBottom: spacing.sm, backgroundColor: L.bg,
   },
-  benefitText: { fontSize: 14, fontWeight: '600', color: L.text, flex: 1 },
+  benefitText: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.text, flex: 1 },
 });

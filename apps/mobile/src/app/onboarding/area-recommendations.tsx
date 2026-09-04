@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { OnboardingCTA, OnboardingProgressBar } from '@/lib/onboarding/components';
 import { useOnboarding } from '@/lib/onboarding/state';
 import { supabase } from '@/lib/supabase';
@@ -262,7 +264,7 @@ const s = StyleSheet.create({
   },
   headerBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   skipBtn: { minHeight: 36, justifyContent: 'center', paddingHorizontal: spacing.sm },
-  skipText: { color: L.gold, fontSize: 14, fontWeight: '800' },
+  skipText: { color: L.gold, fontSize: text.rowValue.size, fontWeight: '800' },
   content: {
     flex: 1,
     paddingHorizontal: spacing.xxl,
@@ -270,14 +272,14 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   titleBlock: { alignItems: 'center', marginBottom: spacing.xxxl },
-  locationLine: { color: L.navy, fontSize: 30, fontWeight: '900', lineHeight: 36, textAlign: 'center' },
-  areaTitle: { color: L.gold, fontSize: 22, fontWeight: '900', lineHeight: 28, textAlign: 'center', marginTop: spacing.xs },
-  title: { color: L.navy, fontSize: 30, fontWeight: '900', textAlign: 'center', lineHeight: 36 },
-  subtitle: { color: '#39415A', fontSize: 15, lineHeight: 22, textAlign: 'center', marginTop: spacing.sm, maxWidth: 300 },
+  locationLine: { color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900', lineHeight: 36, textAlign: 'center' },
+  areaTitle: { color: L.gold, fontSize: text.cardTitle.size, fontWeight: '800', lineHeight: 28, textAlign: 'center', marginTop: spacing.xs },
+  title: { color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900', textAlign: 'center', lineHeight: 36 },
+  subtitle: { color: '#39415A', fontSize: text.body.size, fontWeight: '500', lineHeight: 22, textAlign: 'center', marginTop: spacing.sm, maxWidth: 300 },
   statsCard: {
     borderWidth: 1.5,
     borderColor: '#E5DED1',
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     backgroundColor: 'rgba(255,255,255,0.82)',
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
@@ -289,10 +291,10 @@ const s = StyleSheet.create({
     elevation: 2,
   },
   loadingRow: { minHeight: 176, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
-  loadingText: { color: '#39415A', fontSize: 14, fontWeight: '700' },
+  loadingText: { color: '#39415A', fontSize: text.rowTitle.size, fontWeight: '700' },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, minHeight: 30 },
-  infoText: { flex: 1, color: L.navy, fontSize: 15, fontWeight: '700' },
-  infoTextEmphasized: { fontSize: 17, fontWeight: '900' },
+  infoText: { flex: 1, color: L.navy, fontSize: text.body.size, fontWeight: '500' },
+  infoTextEmphasized: { fontSize: text.sectionTitle.size, fontWeight: '900' },
   footer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
@@ -337,5 +339,5 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  progressKnobText: { color: L.white, fontSize: 13, fontWeight: '900', letterSpacing: -1 },
+  progressKnobText: { color: L.white, fontSize: text.fieldLabel.size, fontWeight: '800', letterSpacing: -1 },
 });

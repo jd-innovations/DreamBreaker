@@ -12,7 +12,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { OnboardingCTA, OnboardingProgressBar } from '@/lib/onboarding/components';
 import { useOnboarding, validators } from '@/lib/onboarding/state';
 
@@ -113,22 +115,22 @@ const s = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   titleBlock: { alignItems: 'center', marginBottom: spacing.xxxl },
-  title: { color: L.navy, fontSize: 30, fontWeight: '900', lineHeight: 36, textAlign: 'center' },
-  subtitle: { color: '#7F8AA3', fontSize: 15, lineHeight: 22, textAlign: 'center', marginTop: spacing.sm },
+  title: { color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900', lineHeight: 36, textAlign: 'center' },
+  subtitle: { color: '#7F8AA3', fontSize: text.body.size, fontWeight: '500', lineHeight: 22, textAlign: 'center', marginTop: spacing.sm },
   field: { marginBottom: spacing.xl },
   fieldLast: { marginBottom: 0 },
-  label: { color: '#8190B4', fontSize: 13, fontWeight: '800', marginBottom: spacing.sm },
+  label: { color: '#8190B4', fontSize: text.fieldLabel.size, fontWeight: '800', marginBottom: spacing.sm },
   input: {
     minHeight: 54,
     borderWidth: 1.5,
     borderColor: '#E7DED0',
-    borderRadius: radius.button,
+    borderRadius: shape.cta,
     backgroundColor: 'rgba(255,255,255,0.86)',
     paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     color: L.navy,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: text.body.size,
+    fontWeight: '500',
   },
   footer: {
     position: 'absolute',

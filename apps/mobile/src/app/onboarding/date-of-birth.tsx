@@ -3,6 +3,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 import { OnboardingScreen, ScreenTitle, OnboardingCTA } from '@/lib/onboarding/components';
 import { useOnboarding, validators } from '@/lib/onboarding/state';
 import { DateOfBirthField } from '@/lib/onboarding/DateOfBirthField';
@@ -39,5 +41,5 @@ export default function DateOfBirthScreen() {
 
 const s = StyleSheet.create({
   noteRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.lg },
-  noteText: { fontSize: 12, color: L.textSub },
+  noteText: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub },
 });

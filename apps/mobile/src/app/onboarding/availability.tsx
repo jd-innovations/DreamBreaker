@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { AppIcon, type AppIconName } from '@/components';
 import { OnboardingCTA, OnboardingEntrance, OnboardingPressableCard, OnboardingProgressBar } from '@/lib/onboarding/components';
 import { useOnboarding, validators } from '@/lib/onboarding/state';
@@ -109,7 +111,7 @@ const s = StyleSheet.create({
   },
   title: {
     color: L.navy,
-    fontSize: 30,
+    fontSize: text.pageTitle.size,
     lineHeight: 36,
     fontWeight: '900',
     textAlign: 'center',
@@ -118,7 +120,7 @@ const s = StyleSheet.create({
   },
   subtitle: {
     color: '#7F8AA3',
-    fontSize: 15,
+    fontSize: text.body.size, fontWeight: '500',
     lineHeight: 22,
     textAlign: 'center',
   },
@@ -135,7 +137,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#E7DED0',
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     backgroundColor: 'rgba(255,255,255,0.86)',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.md,
@@ -160,7 +162,7 @@ const s = StyleSheet.create({
   },
   cardText: {
     color: L.navy,
-    fontSize: 12,
+    fontSize: text.chipValue.size,
     lineHeight: 15,
     fontWeight: '800',
     textAlign: 'center',

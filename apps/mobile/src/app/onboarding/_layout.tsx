@@ -2,7 +2,9 @@ import { Stack, router } from 'expo-router';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingProvider } from '@/lib/onboarding/state';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 const L = colors;
 
@@ -44,7 +46,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     backgroundColor: 'rgba(255,255,255,0.9)',
     borderWidth: 1,
     borderColor: 'rgba(211,169,67,0.6)',
@@ -57,7 +59,7 @@ const s = StyleSheet.create({
   },
   devExitText: {
     color: L.navy,
-    fontSize: 12,
-    fontWeight: '900',
+    fontSize: text.chipValue.size,
+    fontWeight: '800',
   },
 });
