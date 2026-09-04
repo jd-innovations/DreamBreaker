@@ -139,6 +139,6 @@ const s = StyleSheet.create({
     backgroundColor: colors.success, borderWidth: 2, borderColor: '#FFFFFF',
     alignItems: 'center', justifyContent: 'center',
   },
-  title: { color: colors.navy, fontSize: 24, fontWeight: '900' },
+  title: { color: colors.navy, fontSize: text.cardTitle.size, fontWeight: '800' },
   subtitle: { color: colors.textSub, fontSize: text.rowTitle.size, fontWeight: '700' },
 });

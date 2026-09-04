@@ -252,24 +252,44 @@ they could cost a day of rework. The measurement should have come first.
 Coverage turned out to be roughly right — about 18 distinct jobs against 20
 roles — and this was the one value clearly chosen from too small a sample.
 
-## OPEN — deferred 2026-09-03, revisit before finishing round-robin
+## The ceiling (16, decided) and what is still open
 
-**16 (proposed). The scale has a floor but no ceiling.** Decision 10 says sizes
-below 11 have no role and stay until one is proposed. Nothing says the same at
-the top. `round-robin/[id]/score-entry` has a score input at **36/900**, a
-success score at **48/900** and a dash at **32/400**; the largest role is
-`statNumber` 26/900, so forcing them would shrink a 48pt score to 26.
+**16. The scale has a ceiling, and it is a floor-style exemption. DECIDED
+2026-09-04.** Decision 10 says sizes below 11 have no role and stay until one is
+proposed. The same now holds at the top: **display numerals above `statNumber`
+(26/900) have no role and stay raw**, each declared in its mapping's `allow`
+list so none is silent. A scoreboard numeral is sized to its container, not from
+a type scale — the same reasoning as decision 14's avatar initials and as a 36px
+circle's `borderRadius: 18`.
 
-They are currently left raw on the reasoning that decision 10's logic applies
-in both directions. **That reasoning is not yet a decision.** Either confirm it,
-or say those numerals map to `statNumber`, or add a display-numeral role.
+Measured before deciding, across all of `apps/mobile/src` (69 uses at 23pt+):
 
-Until it is settled, `round-robin/[id]/results.tsx` and `roster.tsx` are not
-migrated — results carries the same large score display and would need the same
-call.
+| Size | Uses | What they are |
+| --- | --- | --- |
+| 24 | 9 | 2 titles, rest stat/score values |
+| 26 | 11 | `statNumber` |
+| 28 | 9 | `pageTitle` |
+| 30 | 22 | headings — 14 `title`, 7 `titleBlock`, 2 `heading`, 1 `welcome` |
+| 31–38 | 6 | weather temp, score entry, stepper values |
+| 48, 56 | 2 | score-entry and game-score scoreboards |
 
-**Also open, and the reason those three screens are committed but not
-published:** "Back" was 17/400 and takes `link` 13/700 on schedule, standings
+Two consequences settled at the same time, both against the population and in
+favour of the reference screens:
+
+**`pageTitle` stays 28/900.** The app's de facto page title is 30 — 24 headings,
+mostly onboarding — against 9 at 28. The reference screens won anyway: raising
+it would have grown 9 already-reviewed files by 2pt to chase screens not yet
+migrated. Those 24 headings fold **30 → 28** when their screens are migrated.
+
+**24pt folds down to `cardTitle` (22/800).** Nine uses, no role between
+`cardTitle` and `statNumber`. Folding down reinforces the most-used role (16
+files) rather than widening the scale.
+
+This unblocks `round-robin/[id]/results.tsx` and `roster.tsx`, which were held
+because results carries the same large score display.
+
+**Still open, and the reason those three round-robin screens were committed
+before being published:** "Back" was 17/400 and takes `link` 13/700 on schedule, standings
 and score-entry. It is a text navigation link, so `link` is the job match, but
 it is four points smaller and heavier on a back button that appears on every
 round-robin screen. Worth looking at on device before it spreads.
@@ -569,7 +589,7 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 | | Occurrences | Files |
 | --- | ---: | ---: |
 | Files importing `@shared/tokens` (migrated) | — | **98 of 218** (45%) |
-| Raw `fontSize: N` remaining | 1510 | 156 |
+| Raw `fontSize: N` remaining | 1509 | 155 |
 | `borderRadius: radius.*` from `@/theme` remaining | 327 | 74 |
 | `borderRadius: 30` → `shape.cta` | 10 | 9 |
 | `borderRadius: 999` → `shape.cta` | 15 | 7 |
