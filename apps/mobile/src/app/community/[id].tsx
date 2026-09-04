@@ -11,7 +11,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { supabase } from '@/lib/supabase';
 import { platformAlert } from '@/lib/platformAlert';
@@ -289,11 +291,11 @@ function InfoRow({ icon, label, value, valueColor }: {
 }
 
 const ir = StyleSheet.create({
-  row:     { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
-  iconWrap:{ width: 36, height: 36, borderRadius: radius.sm, backgroundColor: L.goldLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  text:    { flex: 1 },
-  label:   { color: L.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 0.3, marginBottom: spacing.xs },
-  value:   { color: L.navy, fontSize: 14, fontWeight: '700', lineHeight: 20 },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
+  iconWrap: { width: 36, height: 36, borderRadius: shape.cta, backgroundColor: L.goldLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  text: { flex: 1 },
+  label: { color: L.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 0.3, marginBottom: spacing.xs },
+  value: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', lineHeight: 20 },
 });
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -1797,8 +1799,8 @@ const tb = StyleSheet.create({
   },
   label: {
     color: L.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: text.controlLabel.size,
+    fontWeight: '700',
     textTransform: 'uppercase',
   },
   labelActive: {
@@ -1822,7 +1824,7 @@ const pl = StyleSheet.create({
   segWrap: {
     flexDirection: 'row',
     backgroundColor: '#EEF2F9',
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     padding: spacing.xs,
     marginBottom: spacing.xxl,
   },
@@ -1830,7 +1832,7 @@ const pl = StyleSheet.create({
     flex: 1,
     paddingVertical: spacing.sm,
     alignItems: 'center',
-    borderRadius: radius.sm,
+    borderRadius: shape.cta,
   },
   segActive: {
     backgroundColor: L.bg,
@@ -1841,8 +1843,8 @@ const pl = StyleSheet.create({
     elevation: 2,
   },
   segLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: text.controlLabel.size,
+    fontWeight: '700',
     color: L.textMuted,
   },
   segLabelActive: {
@@ -1857,7 +1859,7 @@ const pl = StyleSheet.create({
     backgroundColor: L.bg,
     borderWidth: 1,
     borderColor: L.border,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     padding: spacing.md,
     marginBottom: spacing.xxl,
   },
@@ -1871,7 +1873,7 @@ const pl = StyleSheet.create({
     backgroundColor: L.goldLight,
     borderWidth: 1,
     borderColor: L.gold,
-    borderRadius: 6,
+    borderRadius: shape.badge,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
@@ -1895,7 +1897,7 @@ const pl = StyleSheet.create({
   },
   viewAllText: {
     color: L.gold,
-    fontSize: 13,
+    fontSize: text.link.size,
     fontWeight: '700',
   },
 
@@ -1903,7 +1905,7 @@ const pl = StyleSheet.create({
     backgroundColor: L.bg,
     borderWidth: 1,
     borderColor: L.border,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     overflow: 'hidden',
     marginBottom: spacing.xxl,
   },
@@ -1929,9 +1931,9 @@ const pl = StyleSheet.create({
   },
   playerInfo: { flex: 1 },
   playerNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
-  playerName: { color: L.navy, fontSize: 15, fontWeight: '700' },
-  playerRating: { color: L.gold, fontSize: 12, fontWeight: '700' },
-  playerMeta: { color: L.textMuted, fontSize: 12 },
+  playerName: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
+  playerRating: { color: L.gold, fontSize: text.chipValue.size, fontWeight: '800' },
+  playerMeta: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   acceptedChip: {
     flexDirection: 'row',
@@ -1940,7 +1942,7 @@ const pl = StyleSheet.create({
     backgroundColor: L.greenBg,
     borderWidth: 1,
     borderColor: L.greenBorder,
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
@@ -1956,7 +1958,7 @@ const pl = StyleSheet.create({
     backgroundColor: '#FFF7ED',
     borderWidth: 1,
     borderColor: '#FED7AA',
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
@@ -1968,7 +1970,7 @@ const pl = StyleSheet.create({
     paddingVertical: spacing.xxxl,
     gap: spacing.sm,
   },
-  emptyText: { color: L.textMuted, fontSize: 14, fontWeight: '500', textAlign: 'center' },
+  emptyText: { color: L.textMuted, fontSize: text.body.size, fontWeight: '500', textAlign: 'center' },
 
   inviteBtn: {
     flexDirection: 'row',
@@ -1977,19 +1979,19 @@ const pl = StyleSheet.create({
     gap: spacing.sm,
     borderWidth: 1.5,
     borderColor: L.gold,
-    borderRadius: radius.button,
+    borderRadius: shape.cta,
     paddingVertical: spacing.md,
     backgroundColor: L.bg,
     marginBottom: spacing.sm,
   },
-  inviteBtnText: { color: L.navy, fontSize: 15, fontWeight: '700' },
+  inviteBtnText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
   inviteBtnDisabled: { opacity: 0.5, borderColor: L.border },
   inviteBtnTextDisabled: { color: L.textMuted },
   pastNotice: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     marginBottom: spacing.sm,
   },
-  pastNoticeText: { fontSize: 12, color: L.textMuted, flex: 1 },
+  pastNoticeText: { fontSize: text.caption.size, fontWeight: '500', color: L.textMuted, flex: 1 },
 });
 
 // ─── Chat tab styles ──────────────────────────────────────────────────────────
@@ -2008,22 +2010,22 @@ const gf = StyleSheet.create({
     width: 36, height: 4, borderRadius: 2, backgroundColor: L.border,
     alignSelf: 'center', marginVertical: spacing.md,
   },
-  title:  { color: L.navy, fontSize: 20, fontWeight: '900', marginBottom: spacing.xs },
-  sub:    { color: L.textSub, fontSize: 13, marginBottom: spacing.xl },
+  title: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900', marginBottom: spacing.xs },
+  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: spacing.xl },
   fieldWrap: { marginBottom: spacing.md },
   label: { color: L.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 0.3, marginBottom: spacing.xs },
   input: {
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.md,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.panel,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    fontSize: 15, color: L.navy, backgroundColor: L.bg,
+    fontSize: text.body.size, fontWeight: '500', color: L.navy, backgroundColor: L.bg,
   },
   submitBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: L.gold, borderRadius: radius.button, paddingVertical: spacing.md, marginTop: spacing.xs,
+    backgroundColor: L.gold, borderRadius: shape.cta, paddingVertical: spacing.md, marginTop: spacing.xs,
   },
-  submitText: { color: L.navy, fontSize: 15, fontWeight: '800' },
+  submitText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
   signInLink: { alignItems: 'center', marginTop: spacing.lg },
-  signInText: { color: L.gold, fontSize: 13, fontWeight: '600' },
+  signInText: { color: L.gold, fontSize: text.caption.size, fontWeight: '500' },
 });
 
 const ch = StyleSheet.create({
@@ -2036,9 +2038,9 @@ const ch = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: L.border,
   },
-  headerLeft:  {},
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '900' },
-  headerSub:   { color: L.textMuted, fontSize: 12, fontWeight: '500', marginTop: spacing.xs },
+  headerLeft: {},
+  headerTitle: { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
+  headerSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: spacing.xs },
 
   emptyWrap: {
     alignItems: 'center',
@@ -2047,7 +2049,7 @@ const ch = StyleSheet.create({
   },
   emptyText: {
     color: L.textMuted,
-    fontSize: 14,
+    fontSize: text.body.size,
     fontWeight: '500',
     textAlign: 'center',
     lineHeight: 20,
@@ -2084,7 +2086,7 @@ const ch = StyleSheet.create({
 
   bubble: {
     maxWidth: '74%',
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     gap: spacing.xs,
@@ -2108,9 +2110,9 @@ const ch = StyleSheet.create({
   },
   messageText: {
     color: L.navy,
-    fontSize: 14,
+    fontSize: text.body.size,
     lineHeight: 20,
-    fontWeight: '400',
+    fontWeight: '500',
   },
   messageTextMe: {
     color: colors.white,
@@ -2152,21 +2154,21 @@ const s = StyleSheet.create({
     position: 'absolute', left: spacing.screenH, right: spacing.screenH,
     flexDirection: 'row', justifyContent: 'space-between', zIndex: 10,
   },
-  topRight:    { flexDirection: 'row', gap: spacing.sm },
+  topRight: { flexDirection: 'row', gap: spacing.sm },
   circleBtn: {
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: 'rgba(0,0,0,0.38)',
     alignItems: 'center', justifyContent: 'center',
   },
-  heroContent:  { position: 'absolute', bottom: 0, left: spacing.screenH, right: spacing.screenH, paddingBottom: spacing.xl },
+  heroContent: { position: 'absolute', bottom: 0, left: spacing.screenH, right: spacing.screenH, paddingBottom: spacing.xl },
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start',
     borderRadius: 8, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, marginBottom: spacing.sm,
   },
-  badgeText:    { fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
-  heroTitle:    { color: colors.white, fontSize: 32, fontWeight: '800', lineHeight: 36, marginBottom: spacing.sm, textTransform: 'uppercase' },
-  heroMeta:     { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
-  heroMetaText: { color: 'rgba(255,255,255,0.88)', fontSize: 13, fontWeight: '500' },
+  badgeText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
+  heroTitle: { color: colors.white, fontSize: 32, fontWeight: '800', lineHeight: 36, marginBottom: spacing.sm, textTransform: 'uppercase' },
+  heroMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
+  heroMetaText: { color: 'rgba(255,255,255,0.88)', fontSize: text.caption.size, fontWeight: '500' },
   heroMetaSubline: { marginLeft: 17, marginBottom: spacing.xs },
 
   // Content
@@ -2175,29 +2177,29 @@ const s = StyleSheet.create({
   // Stat pills
   bracketBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: radius.sm,
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     marginBottom: spacing.md,
   },
-  bracketBannerText: { flex: 1, color: L.navy, fontSize: 14, fontWeight: '800' },
+  bracketBannerText: { flex: 1, color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
   statPills: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap', marginBottom: spacing.md, justifyContent: 'center' },
   statPill: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.chip,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.pill,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs, backgroundColor: L.bg,
   },
-  statPillText: { color: L.textSub, fontSize: 12, fontWeight: '600' },
+  statPillText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   // Fill bar
-  fillBarRow:  { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxl },
-  fillBarBg:   { flex: 1, height: 6, borderRadius: 3, backgroundColor: L.border },
+  fillBarRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxl },
+  fillBarBg: { flex: 1, height: 6, borderRadius: 3, backgroundColor: L.border },
   fillBarFill: { height: 6, borderRadius: 3 },
-  fillPct:     { color: L.textMuted, fontSize: 12, fontWeight: '600' },
+  fillPct: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Section title
   // Matches the tournament detail screen's sectionTitle (13 / 900 / 0.8) so
   // headings read the same across both screens. Margins are this screen's own.
-  sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.8, marginBottom: spacing.md, marginTop: spacing.xs },
+  sectionTitle: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginBottom: spacing.md, marginTop: spacing.xs },
   // Overview-tab headings only. sectionTitle is shared with the Players tab
   // (Accepted Players, Pending Invites, Waitlist), which stays title case.
   sectionTitleUpper: { textTransform: 'uppercase' as const },
@@ -2205,86 +2207,86 @@ const s = StyleSheet.create({
   // Organizer
   organizerCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: radius.card,
+    backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: shape.card,
     padding: spacing.md, marginBottom: spacing.xxl,
   },
-  orgInfo:     { flex: 1 },
-  orgName:     { color: L.navy, fontSize: 15, fontWeight: '800', marginBottom: spacing.xs },
-  orgMeta:     { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  orgMetaText: { color: L.textMuted, fontSize: 12 },
-  orgDot:      { color: L.textMuted, fontSize: 12 },
+  orgInfo: { flex: 1 },
+  orgName: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: spacing.xs },
+  orgMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  orgMetaText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  orgDot: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   followBtn: {
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: radius.sm,
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
-  followBtnText: { color: L.gold, fontSize: 13, fontWeight: '700' },
+  followBtnText: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
 
   msgOrgBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
     marginTop: spacing.md,
     marginBottom: spacing.xxl,
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: radius.md,
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta,
     paddingVertical: spacing.sm, backgroundColor: L.page,
   },
-  msgOrgText: { color: L.navy, fontSize: 14, fontWeight: '700' },
+  msgOrgText: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
 
   // About
   // Matches the tournament detail screen's `description` (text / 14 / 22 / 400).
   // Only the colour differed — this was textSub, which read as muted next to
   // the tournament copy. paddingHorizontal is deliberately not copied across:
   // that screen's description sits in an unpadded container, this one doesn't.
-  aboutText: { color: L.text, fontSize: 14, lineHeight: 22, fontWeight: '400', marginBottom: spacing.xxl },
+  aboutText: { color: L.text, fontSize: text.body.size, lineHeight: 22, fontWeight: '500', marginBottom: spacing.xxl },
 
   // Details card
   detailsCard: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, overflow: 'hidden', marginBottom: spacing.xxl,
+    borderRadius: shape.card, overflow: 'hidden', marginBottom: spacing.xxl,
   },
   divider: { height: 1, backgroundColor: L.border },
 
   // Players preview
-  playersRow:     { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xxl },
+  playersRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xxl },
   playerAvatarWrap: {
     width: 38, height: 38, borderRadius: 19,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2.5, borderColor: L.page, marginRight: -8,
   },
-  playerMore:     { backgroundColor: L.border },
+  playerMore: { backgroundColor: L.border },
   playerMoreText: { color: L.textSub, fontSize: 11, fontWeight: '800' },
-  playersLabel:   { color: L.textSub, fontSize: 13, fontWeight: '600', marginLeft: spacing.xl },
+  playersLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginLeft: spacing.xl },
 
   // Location
   locationCard: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, overflow: 'hidden', marginBottom: spacing.xxl,
+    borderRadius: shape.card, overflow: 'hidden', marginBottom: spacing.xxl,
   },
   mapPlaceholder: {
     height: 130, backgroundColor: '#F0F4FA',
     alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
   },
-  mapText:         { color: L.textMuted, fontSize: 13 },
-  locationInfo:    { padding: spacing.md, gap: spacing.xs },
-  locationTitleRow:{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
-  locationVenue:   { color: L.navy, fontSize: 15, fontWeight: '800' },
+  mapText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  locationInfo: { padding: spacing.md, gap: spacing.xs },
+  locationTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
+  locationVenue: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
   locationVerifiedBadge: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: '#DBEAFE', borderRadius: radius.chip, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
+    backgroundColor: '#DBEAFE', borderRadius: shape.pill, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
   },
   locationVerifiedText: { fontSize: 9, fontWeight: '800', color: '#2563EB', letterSpacing: 0.4 },
-  locationAddr:    { color: L.textSub, fontSize: 13 },
+  locationAddr: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   locationBtnRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, justifyContent: 'center' },
   directionsBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: radius.sm, alignSelf: 'flex-start',
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta, alignSelf: 'flex-start',
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
-  directionsBtnText: { color: L.gold, fontSize: 13, fontWeight: '700' },
+  directionsBtnText: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
   viewFacilityBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: radius.sm, alignSelf: 'flex-start',
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta, alignSelf: 'flex-start',
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
-  viewFacilityBtnText: { color: L.gold, fontSize: 13, fontWeight: '700' },
+  viewFacilityBtnText: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
 
   // Joined state — stacked so the status message always gets full width
   // (a single row was squeezing it against the action buttons and truncating it).
@@ -2295,8 +2297,8 @@ const s = StyleSheet.create({
     backgroundColor: L.greenBg, borderWidth: 1.5, borderColor: L.green,
     alignItems: 'center', justifyContent: 'center',
   },
-  joinedLabel: { color: L.navy, fontSize: 15, fontWeight: '800' },
-  joinedSub:   { color: L.textMuted, fontSize: 12, marginTop: spacing.xs },
+  joinedLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
+  joinedSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: spacing.xs },
   joinedActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
 
   // Bottom bar
@@ -2307,21 +2309,21 @@ const s = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: L.border,
     gap: spacing.sm,
   },
-  bottomSpots:   { color: L.navy, fontSize: 15, fontWeight: '800' },
-  bottomPlayers: { color: L.textMuted, fontSize: 12 },
+  bottomSpots: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
+  bottomPlayers: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   joinBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: L.gold, borderRadius: radius.button,
+    backgroundColor: L.gold, borderRadius: shape.cta,
     paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
   },
-  joinBtnText: { color: L.navy, fontSize: 15, fontWeight: '900' },
+  joinBtnText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
   viewPlayersBtn: { flexShrink: 1, paddingHorizontal: spacing.md },
   leaveBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderRadius: radius.button, paddingHorizontal: spacing.md, paddingVertical: spacing.md,
+    borderRadius: shape.cta, paddingHorizontal: spacing.md, paddingVertical: spacing.md,
     borderWidth: 1.5, borderColor: L.danger, backgroundColor: L.dangerBg,
   },
-  leaveBtnText: { color: L.danger, fontSize: 14, fontWeight: '800' },
+  leaveBtnText: { color: L.danger, fontSize: text.rowValue.size, fontWeight: '800' },
 
   // Chat input (in bottom bar when on chat tab)
   chatInput: {
@@ -2332,7 +2334,7 @@ const s = StyleSheet.create({
     borderColor: L.border,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    fontSize: 14,
+    fontSize: text.body.size, fontWeight: '500',
     color: L.navy,
     maxHeight: 42,
   },

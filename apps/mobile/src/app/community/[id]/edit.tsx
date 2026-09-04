@@ -8,7 +8,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import {
   fetchPlayEventWithOrganizer, updatePlayEvent, parseDurationLabel,
   type UpdatePlayEventPatch,
@@ -56,8 +58,8 @@ function CardSection({ title, children }: { title: string; children: React.React
 }
 const cs = StyleSheet.create({
   wrap: { marginBottom: spacing.xxl },
-  title: { color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.5, marginBottom: spacing.sm, marginLeft: 2 },
-  card: { backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1, borderColor: L.border, overflow: 'hidden' },
+  title: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginBottom: spacing.sm, marginLeft: 2 },
+  card: { backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border, overflow: 'hidden' },
 });
 
 function FieldLabel({ children }: { children: string }) {
@@ -300,7 +302,7 @@ const s = StyleSheet.create({
   },
   backBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '900' },
+  headerTitle: { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
   scroll: { padding: spacing.screenH, paddingTop: spacing.xl },
   cta: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -309,14 +311,14 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: -3 },
     elevation: 8,
   },
-  ctaBtn: { backgroundColor: L.gold, borderRadius: radius.button, paddingVertical: spacing.lg, alignItems: 'center' },
-  ctaBtnText: { color: colors.white, fontSize: 16, fontWeight: '800' },
+  ctaBtn: { backgroundColor: L.gold, borderRadius: shape.cta, paddingVertical: spacing.lg, alignItems: 'center' },
+  ctaBtnText: { color: colors.white, fontSize: text.actionLarge.size, fontWeight: '800' },
 });
 
 const gd = StyleSheet.create({
   field: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   fieldBorder: { borderTopWidth: 1, borderTopColor: L.border },
-  input: { color: L.text, fontSize: 15, padding: 0 },
+  input: { color: L.text, fontSize: text.body.size, fontWeight: '500', padding: 0 },
   textArea: { minHeight: 90, lineHeight: 22 },
   charCounter: { fontSize: 11, color: L.textSub, textAlign: 'right', marginTop: spacing.xs },
   dtRow: { flexDirection: 'row', gap: spacing.sm },
@@ -324,8 +326,8 @@ const gd = StyleSheet.create({
   dtBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     borderWidth: 1.5, borderColor: L.border,
-    borderRadius: radius.sm, paddingHorizontal: spacing.sm, height: 40,
+    borderRadius: shape.cta, paddingHorizontal: spacing.sm, height: 40,
     backgroundColor: L.bg,
   },
-  dtBtnText: { flex: 1, fontSize: 12, fontWeight: '600', color: L.navy },
+  dtBtnText: { flex: 1, fontSize: text.caption.size, fontWeight: '500', color: L.navy },
 });

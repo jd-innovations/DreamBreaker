@@ -8,6 +8,8 @@ import { useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { goBack } from '@/lib/navigation';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import {
   fetchFriends, searchPlayers, fetchInvitedUserIds, sendPlayEventInvite,
@@ -66,7 +68,7 @@ function PlayerRow({
 const r = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: L.bg, borderRadius: 14, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.panel, borderWidth: 1, borderColor: L.border,
     padding: 12, marginBottom: 8,
   },
   avatar: {
@@ -75,15 +77,15 @@ const r = StyleSheet.create({
   },
   avatarImg: { width: 40, height: 40, borderRadius: 20 },
   avatarText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
-  name: { color: L.navy, fontSize: 14, fontWeight: '800' },
-  rating: { color: L.textSub, fontSize: 12, marginTop: 2 },
+  name: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
+  rating: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
   inviteBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: shape.cta, paddingHorizontal: 12, paddingVertical: 8,
     backgroundColor: L.navy,
   },
   invitedBtn: { backgroundColor: L.successBg },
-  inviteBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  inviteBtnText: { color: '#FFFFFF', fontSize: text.chipValue.size, fontWeight: '800' },
   invitedBtnText: { color: L.success },
 });
 
@@ -216,29 +218,29 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, backgroundColor: L.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   tabs: {
     flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6,
     backgroundColor: L.bg,
   },
   tab: {
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
+    paddingHorizontal: 16, paddingVertical: 8, borderRadius: shape.pill,
     backgroundColor: L.page,
   },
   tabActive: { backgroundColor: L.goldBg },
-  tabText: { color: L.textSub, fontSize: 13, fontWeight: '700' },
+  tabText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   tabTextActive: { color: L.gold },
 
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginHorizontal: 16, marginTop: 10, marginBottom: 4,
-    backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: 12,
+    backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: shape.panel,
     paddingHorizontal: 12, paddingVertical: 10,
   },
-  searchInput: { flex: 1, color: L.text, fontSize: 14 },
+  searchInput: { flex: 1, color: L.text, fontSize: text.body.size, fontWeight: '500' },
 
   list: { paddingHorizontal: 16, paddingTop: 16 },
-  emptyText: { color: L.textSub, fontSize: 13, textAlign: 'center', marginTop: 32, lineHeight: 20 },
+  emptyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', marginTop: 32, lineHeight: 20 },
 });
