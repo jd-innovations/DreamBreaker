@@ -5,7 +5,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 export default function GameSavedScreen() {
   const insets = useSafeAreaInsets();
@@ -72,7 +74,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     backgroundColor: colors.bg,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.xl,
@@ -87,20 +89,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   title: {
-    ...typography.sectionTitle,
     color: colors.navy,
-    fontSize: 18,
+    fontSize: text.sectionTitle.size, fontWeight: '900',
   },
   result: {
-    ...typography.sectionTitle,
     color: colors.gold,
-    fontSize: 20,
+    fontSize: text.modalTitle.size, fontWeight: '900',
     marginTop: spacing.sm,
   },
   body: {
-    ...typography.body,
     color: colors.textSub,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
     textAlign: 'center',
     lineHeight: 19,
     marginTop: spacing.md,
@@ -111,10 +110,9 @@ const styles = StyleSheet.create({
     width: '100%',
     marginVertical: spacing.lg,
   },
-  prompt: {
-    ...typography.metadata,
+  prompt: { fontSize: text.caption.size,
     color: colors.textSub,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: spacing.md,
   },
   addButton: {
@@ -131,8 +129,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   finishButtonText: {
-    ...typography.cardTitle,
     color: colors.navy,
-    fontSize: 15,
+    fontSize: text.actionLarge.size, fontWeight: '800',
   },
 });

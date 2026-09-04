@@ -6,7 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { setRosterSlot, type RosterSlot } from '@/lib/logSessionStore';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 type Comparison = 'weaker' | 'similar' | 'stronger';
 type Amount = 'slightly' | 'much';
@@ -141,7 +143,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.sectionTitle, color: colors.navy, fontSize: 17 },
+  title: { color: colors.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
   body: { flex: 1, paddingHorizontal: spacing.screenH, paddingTop: spacing.sm },
   avatarWrap: {
     alignSelf: 'center',
@@ -158,8 +160,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   avatarInitials: {
-    ...typography.sectionTitle,
-    color: colors.textSub,
+    fontWeight: '900', color: colors.textSub,
     fontSize: 28,
   },
   cameraBadge: {
@@ -175,23 +176,21 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.bg,
   },
-  fieldLabel: {
-    ...typography.metadata,
+  fieldLabel: { fontSize: text.fieldLabel.size,
     color: colors.textSub,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: spacing.sm,
     marginTop: spacing.md,
   },
   inputWrap: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     paddingHorizontal: spacing.md,
   },
   input: {
-    ...typography.body,
     color: colors.navy,
-    fontSize: 15,
+    fontSize: text.body.size, fontWeight: '500',
     paddingVertical: 12,
   },
   comparisonRow: {
@@ -205,7 +204,7 @@ const styles = StyleSheet.create({
     gap: 4,
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     paddingVertical: spacing.md,
   },
   comparisonOptionActive: {
@@ -213,9 +212,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.goldLight,
   },
   comparisonLabel: {
-    ...typography.metadata,
-    fontWeight: '700',
-    fontSize: 12,
+    fontWeight: '800',
+    fontSize: text.chipValue.size,
   },
   amountRow: {
     flexDirection: 'row',
@@ -227,7 +225,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     paddingVertical: spacing.md,
   },
   amountOptionActive: {
@@ -235,9 +233,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.goldLight,
   },
   amountLabel: {
-    ...typography.cardTitle,
     color: colors.textSub,
-    fontSize: 14,
+    fontSize: text.rowTitle.size, fontWeight: '700',
   },
   amountLabelActive: {
     color: colors.navy,
@@ -261,8 +258,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
-  noteText: {
-    ...typography.metadata,
+  noteText: { fontSize: text.caption.size, fontWeight: '500',
     color: colors.textSub,
   },
 });

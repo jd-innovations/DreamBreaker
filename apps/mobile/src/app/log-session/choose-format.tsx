@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { clearLogSession, setSessionFormat, type SessionFormat } from '@/lib/logSessionStore';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 type Format = SessionFormat;
 
@@ -94,12 +96,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.sectionTitle, color: colors.navy, fontSize: 17 },
+  title: { color: colors.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
   body: { flex: 1, paddingHorizontal: spacing.screenH, paddingTop: spacing.md },
   question: {
-    ...typography.body,
     color: colors.textSub,
-    fontSize: 15,
+    fontSize: text.body.size, fontWeight: '500',
     marginBottom: spacing.lg,
   },
   options: { gap: spacing.md },
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     padding: spacing.md,
     backgroundColor: colors.bg,
   },
@@ -130,12 +131,10 @@ const styles = StyleSheet.create({
   },
   optionText: { flex: 1 },
   optionLabel: {
-    ...typography.cardTitle,
     color: colors.navy,
-    fontSize: 16,
+    fontSize: text.actionLarge.size, fontWeight: '800',
   },
-  optionSub: {
-    ...typography.metadata,
+  optionSub: { fontSize: text.caption.size, fontWeight: '500',
     color: colors.textSub,
     marginTop: 2,
   },
@@ -153,8 +152,7 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: spacing.lg,
   },
-  noteText: {
-    ...typography.metadata,
+  noteText: { fontSize: text.caption.size, fontWeight: '500',
     color: colors.textSub,
   },
   footer: {

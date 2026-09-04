@@ -8,7 +8,9 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { useCurrentLocation } from '@/lib/location';
 import { fetchFacilities, type FacilityWithPrimaryPhoto } from '@/lib/supabase/facilities';
 import { setSessionLocation } from '@/lib/logSessionStore';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 const SEARCH_RADIUS_MILES = 25;
 
@@ -157,12 +159,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.sectionTitle, color: colors.navy, fontSize: 17 },
+  title: { color: colors.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
   body: { flex: 1, paddingHorizontal: spacing.screenH, paddingTop: spacing.md },
   subtitle: {
-    ...typography.body,
     color: colors.textSub,
-    fontSize: 14,
+    fontSize: text.body.size, fontWeight: '500',
     marginBottom: spacing.md,
   },
   searchBar: {
@@ -171,18 +172,18 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
   },
   searchInput: {
     flex: 1,
     color: colors.navy,
-    fontSize: 15,
+    fontSize: text.body.size, fontWeight: '500',
     paddingVertical: 12,
   },
   centered: { paddingVertical: spacing.xxl, alignItems: 'center' },
-  emptyText: { ...typography.body, color: colors.textSub, fontSize: 13 },
+  emptyText: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500' },
   list: { gap: spacing.sm },
   card: {
     flexDirection: 'row',
@@ -190,7 +191,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     padding: spacing.md,
   },
   cardActive: {
@@ -199,12 +200,10 @@ const styles = StyleSheet.create({
   },
   cardText: { flex: 1, minWidth: 0 },
   cardTitle: {
-    ...typography.cardTitle,
     color: colors.navy,
-    fontSize: 15,
+    fontSize: text.body.size, fontWeight: '500',
   },
-  cardSub: {
-    ...typography.metadata,
+  cardSub: { fontSize: text.caption.size, fontWeight: '500',
     color: colors.textSub,
     marginTop: 2,
   },

@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@/hooks/useSession';
 import { searchPlayers, type InvitablePlayer } from '@/lib/supabase/playEventInvites';
 import { setRosterSlot, type RosterSlot } from '@/lib/logSessionStore';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 const SLOT_TITLES: Record<RosterSlot, string> = {
   partner: 'Add Partner',
@@ -147,7 +149,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.sectionTitle, color: colors.navy, fontSize: 17 },
+  title: { color: colors.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
   body: { flex: 1, paddingHorizontal: spacing.screenH, paddingTop: spacing.md },
   searchBar: {
     flexDirection: 'row',
@@ -155,21 +157,20 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
   },
   searchInput: {
     flex: 1,
     color: colors.navy,
-    fontSize: 15,
+    fontSize: text.body.size, fontWeight: '500',
     paddingVertical: 12,
   },
   centered: { paddingVertical: spacing.xxl, alignItems: 'center' },
   hintText: {
-    ...typography.body,
     color: colors.textSub,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
     textAlign: 'center',
   },
   list: { gap: spacing.sm },
@@ -179,7 +180,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     padding: spacing.md,
   },
   avatar: { width: 40, height: 40, borderRadius: 20 },
@@ -192,14 +193,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.goldBg,
   },
   avatarInitials: {
-    ...typography.cardTitle,
-    color: colors.gold,
+    fontWeight: '700', color: colors.gold,
     fontSize: 13,
   },
   resultName: {
-    ...typography.cardTitle,
     color: colors.navy,
-    fontSize: 15,
+    fontSize: text.body.size, fontWeight: '500',
     flex: 1,
   },
   tempRow: {
@@ -210,13 +209,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.border,
     borderStyle: 'dashed',
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     paddingVertical: spacing.md,
     marginTop: spacing.md,
   },
   tempRowText: {
-    ...typography.cardTitle,
     color: colors.navy,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
   },
 });

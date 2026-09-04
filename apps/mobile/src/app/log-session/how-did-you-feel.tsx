@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { completeCurrentLogSession } from '@/lib/logSessionPersistence';
 import { setSessionNotes } from '@/lib/logSessionStore';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 type Feeling = 'great' | 'good' | 'average' | 'tired';
 type Competitiveness = 'casual' | 'competitive' | 'training' | 'tourney';
@@ -141,12 +143,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.sectionTitle, color: colors.navy, fontSize: 17 },
+  title: { color: colors.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
   body: { flex: 1, paddingHorizontal: spacing.screenH, paddingTop: spacing.md },
-  fieldLabel: {
-    ...typography.metadata,
+  fieldLabel: { fontSize: text.fieldLabel.size,
     color: colors.textSub,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: spacing.sm,
   },
   feelingRow: {
@@ -159,13 +160,12 @@ const styles = StyleSheet.create({
     gap: 4,
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     paddingVertical: spacing.sm,
   },
   feelingEmoji: { fontSize: 12, fontWeight: '800', color: colors.navy },
   feelingLabel: {
-    ...typography.metadata,
-    color: colors.navy,
+    fontWeight: '400', color: colors.navy,
     fontSize: 11,
   },
   competitivenessGrid: {
@@ -180,14 +180,13 @@ const styles = StyleSheet.create({
     gap: 6,
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     paddingVertical: spacing.md,
   },
   competitivenessLabel: {
-    ...typography.metadata,
     color: colors.navy,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: text.caption.size,
+    fontWeight: '500',
   },
   optionActive: {
     borderColor: colors.gold,
@@ -196,15 +195,14 @@ const styles = StyleSheet.create({
   noteWrap: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     minHeight: 44,
   },
   noteInput: {
-    ...typography.body,
     color: colors.navy,
-    fontSize: 14,
+    fontSize: text.body.size, fontWeight: '500',
   },
   footer: {
     paddingHorizontal: spacing.screenH,

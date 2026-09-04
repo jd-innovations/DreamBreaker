@@ -8,7 +8,9 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { getRoster, setRosterSlot, type RosterPlayer } from '@/lib/logSessionStore';
 import { buildTeamLabels } from '@/lib/logSessionPersistence';
 import { useSession } from '@/hooks/useSession';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 function initialsFor(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || '?';
@@ -113,19 +115,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.sectionTitle, color: colors.navy, fontSize: 17 },
+  title: { color: colors.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
   body: { flex: 1, paddingHorizontal: spacing.screenH, paddingTop: spacing.md, gap: spacing.md },
-  prompt: { ...typography.body, color: colors.textSub, fontSize: 14 },
+  prompt: { color: colors.textSub, fontSize: text.body.size, fontWeight: '500' },
   card: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     padding: spacing.md,
     gap: spacing.sm,
   },
-  sectionLabel: { ...typography.metadata, color: colors.textSub, fontWeight: '800' },
+  sectionLabel: { fontSize: text.sectionLabel.size, color: colors.textSub, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing },
   teamRow: { gap: spacing.sm },
-  selfName: { ...typography.cardTitle, color: colors.navy, fontSize: 15 },
+  selfName: { color: colors.navy, fontSize: text.body.size, fontWeight: '500' },
   playerPill: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   avatar: { width: 32, height: 32, borderRadius: 16 },
   avatarFallback: {
@@ -136,8 +138,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.goldBg,
   },
-  avatarInitials: { ...typography.metadata, color: colors.gold, fontWeight: '800', fontSize: 11 },
-  playerName: { ...typography.cardTitle, color: colors.navy, fontSize: 14 },
+  avatarInitials: { color: colors.gold, fontWeight: '800', fontSize: 11 },
+  playerName: { color: colors.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
   footer: {
     paddingHorizontal: spacing.screenH,
     paddingTop: spacing.md,

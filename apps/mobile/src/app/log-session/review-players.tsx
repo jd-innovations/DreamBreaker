@@ -9,7 +9,9 @@ import { SecondaryButton } from '@/components/SecondaryButton';
 import { useSession } from '@/hooks/useSession';
 import { fetchMyStatsPlayerCard, type MyStatsPlayerCard } from '@/lib/stats/myStats';
 import { getRoster, type RosterPlayer } from '@/lib/logSessionStore';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 
 function firstName(fullName: string | null | undefined) {
@@ -162,20 +164,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.sectionTitle, color: colors.navy, fontSize: 17 },
+  title: { color: colors.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
   body: { flex: 1, paddingHorizontal: spacing.screenH, paddingTop: spacing.md },
-  sectionLabel: {
-    ...typography.metadata,
+  sectionLabel: { fontSize: text.sectionLabel.size,
     color: colors.textSub,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: text.sectionLabel.letterSpacing,
     marginBottom: spacing.sm,
     marginTop: spacing.md,
   },
   card: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     overflow: 'hidden',
   },
   playerRow: {
@@ -205,24 +206,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.goldBg,
   },
   avatarInitials: {
-    ...typography.cardTitle,
-    color: colors.gold,
+    fontWeight: '700', color: colors.gold,
     fontSize: 15,
   },
   playerInfo: { flex: 1 },
   playerName: {
-    ...typography.cardTitle,
     color: colors.navy,
-    fontSize: 15,
+    fontSize: text.body.size, fontWeight: '500',
   },
-  playerPar: {
-    ...typography.metadata,
+  playerPar: { fontSize: text.chipValue.size,
     color: colors.gold,
     fontWeight: '800',
     marginTop: 2,
   },
-  playerComparison: {
-    ...typography.metadata,
+  playerComparison: { fontSize: text.caption.size, fontWeight: '500',
     color: colors.textSub,
     marginTop: 2,
   },

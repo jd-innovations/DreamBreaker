@@ -15,7 +15,9 @@ import {
 } from '@/lib/logSessionStore';
 import { markPersonalGuestShareInitiated } from '@/lib/supabase/personalSessions';
 import { createPersonalMatchClaimLink } from '@/lib/supabase/personalMatchClaims';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 function initialsFor(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || '?';
@@ -262,7 +264,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.sectionTitle, color: colors.navy, fontSize: 17 },
+  title: { color: colors.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
   body: { flex: 1 },
   bodyContent: { paddingHorizontal: spacing.screenH, paddingTop: spacing.lg, alignItems: 'center' },
   successBadge: {
@@ -275,15 +277,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   headline: {
-    ...typography.sectionTitle,
     color: colors.navy,
-    fontSize: 20,
+    fontSize: text.modalTitle.size, fontWeight: '900',
     textAlign: 'center',
   },
   subtitle: {
-    ...typography.body,
     color: colors.textSub,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
     textAlign: 'center',
     lineHeight: 19,
     marginTop: spacing.sm,
@@ -293,22 +293,20 @@ const styles = StyleSheet.create({
     width: '100%',
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     padding: spacing.md,
     marginTop: spacing.xl,
     gap: spacing.md,
   },
-  playersLabel: {
-    ...typography.metadata,
+  playersLabel: { fontSize: text.sectionLabel.size,
     color: colors.textSub,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: text.sectionLabel.letterSpacing,
     textTransform: 'uppercase',
   },
   emptyText: {
-    ...typography.body,
     color: colors.textSub,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
   },
   playerRow: {
     flexDirection: 'row',
@@ -324,7 +322,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.goldBg,
   },
   avatarInitials: {
-    ...typography.metadata,
     color: colors.gold,
     fontWeight: '800',
     fontSize: 11,
@@ -335,9 +332,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   playerName: {
-    ...typography.cardTitle,
     color: colors.navy,
-    fontSize: 14,
+    fontSize: text.rowTitle.size, fontWeight: '700',
     lineHeight: 19,
   },
   inlineStatus: {
@@ -346,12 +342,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statusText: {
-    ...typography.metadata,
     fontWeight: '700',
     fontSize: 11,
   },
   statusShared: {
-    ...typography.metadata,
     color: colors.success,
     fontWeight: '700',
     fontSize: 11,
@@ -366,12 +360,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.goldBorder,
     backgroundColor: colors.goldBg,
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 7,
   },
   smsButtonText: {
-    ...typography.metadata,
     color: colors.navy,
     fontWeight: '700',
     fontSize: 11,
@@ -385,14 +378,14 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     paddingHorizontal: spacing.md,
     paddingVertical: 8,
     color: colors.navy,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
   },
   phoneSendButton: {
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     backgroundColor: colors.gold,
     paddingHorizontal: spacing.md,
     justifyContent: 'center',
@@ -401,9 +394,8 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   phoneSendButtonText: {
-    ...typography.cardTitle,
     color: colors.navy,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
   },
   footer: {
     paddingHorizontal: spacing.screenH,

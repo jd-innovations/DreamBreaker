@@ -8,7 +8,9 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { SecondaryButton } from '@/components/SecondaryButton';
 import { useSession } from '@/hooks/useSession';
 import { buildTeamLabels, saveCurrentLogSessionGame } from '@/lib/logSessionPersistence';
-import { colors, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 
 function firstName(fullName: string | null | undefined, email: string | null | undefined) {
   const trimmed = fullName?.trim();
@@ -187,12 +189,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.sectionTitle, color: colors.navy, fontSize: 17 },
+  title: { color: colors.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
   body: { flex: 1, paddingHorizontal: spacing.screenH, paddingTop: spacing.md },
-  subtitle: {
-    ...typography.metadata,
+  subtitle: { fontSize: text.caption.size,
     color: colors.textSub,
-    fontWeight: '700',
+    fontWeight: '500',
     textAlign: 'center',
     marginBottom: spacing.lg,
   },
@@ -209,18 +210,16 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   scoreColumnLabel: {
-    ...typography.metadata,
     color: colors.textSub,
     fontWeight: '800',
-    letterSpacing: 0.5,
-    fontSize: 11,
+    letterSpacing: text.cardLabel.letterSpacing,
+    fontSize: text.cardLabel.size,
   },
   scoreColumnNames: {
-    ...typography.cardTitle,
     color: colors.gold,
     width: '100%',
     minHeight: 42,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
     lineHeight: 18,
     textAlign: 'center',
   },
@@ -272,13 +271,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
-  noteText: {
-    ...typography.metadata,
+  noteText: { fontSize: text.caption.size, fontWeight: '500',
     color: colors.textSub,
   },
   resultText: {
-    ...typography.cardTitle,
-    fontSize: 14,
+    fontSize: text.rowTitle.size, fontWeight: '700',
     textAlign: 'center',
   },
   resultWon: {

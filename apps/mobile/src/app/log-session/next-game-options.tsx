@@ -4,7 +4,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 import { buildTeamLabels } from '@/lib/logSessionPersistence';
 import { useSession } from '@/hooks/useSession';
@@ -139,18 +141,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.sectionTitle, color: colors.navy, fontSize: 17 },
+  title: { color: colors.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
   body: { flex: 1, paddingHorizontal: spacing.screenH, paddingTop: spacing.md, gap: spacing.md },
-  prompt: {
-    ...typography.metadata,
+  prompt: { fontSize: text.caption.size,
     color: colors.textSub,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: spacing.xs,
   },
   option: {
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     padding: spacing.md,
   },
   optionActive: {
@@ -175,23 +176,19 @@ const styles = StyleSheet.create({
   },
   optionText: { flex: 1 },
   optionLabel: {
-    ...typography.cardTitle,
     color: colors.navy,
-    fontSize: 15,
+    fontSize: text.body.size, fontWeight: '500',
   },
-  optionSub: {
-    ...typography.metadata,
+  optionSub: { fontSize: text.caption.size, fontWeight: '500',
     color: colors.textSub,
     marginTop: 2,
   },
-  optionTeams: {
-    ...typography.metadata,
+  optionTeams: { fontSize: text.caption.size, fontWeight: '500',
     color: colors.textSub,
     marginTop: 2,
   },
   optionVs: {
-    ...typography.metadata,
-    color: colors.textSub,
+    fontWeight: '400', color: colors.textSub,
     fontSize: 10,
     marginTop: 1,
   },
@@ -212,13 +209,12 @@ const styles = StyleSheet.create({
   cancelButton: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.button,
+    borderRadius: shape.cta,
     paddingVertical: 15,
     alignItems: 'center',
   },
   cancelButtonText: {
-    ...typography.cardTitle,
     color: colors.navy,
-    fontSize: 15,
+    fontSize: text.actionLarge.size, fontWeight: '800',
   },
 });

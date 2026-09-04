@@ -6,7 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { getSavedGames } from '@/lib/logSessionStore';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 export default function SessionSummaryScreen() {
   const insets = useSafeAreaInsets();
@@ -115,16 +117,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.sectionTitle, color: colors.navy, fontSize: 17 },
+  title: { color: colors.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
   body: { flex: 1, paddingHorizontal: spacing.screenH, paddingTop: spacing.sm },
   hero: {
     height: 140,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     overflow: 'hidden',
     justifyContent: 'flex-end',
   },
   heroImage: {
-    borderRadius: radius.card,
+    borderRadius: shape.card,
   },
   heroFallback: {
     backgroundColor: colors.page,
@@ -137,17 +139,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     margin: spacing.sm,
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     alignSelf: 'flex-start',
     maxWidth: '90%',
   },
   locationName: {
-    ...typography.cardTitle,
     color: colors.white,
-    fontSize: 14,
+    fontSize: text.rowTitle.size, fontWeight: '700',
   },
-  locationSub: {
-    ...typography.metadata,
+  locationSub: { fontSize: text.caption.size, fontWeight: '500',
     color: colors.playerTextSub,
     marginTop: 1,
   },
@@ -162,15 +162,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   metaText: {
-    ...typography.metadata,
     color: colors.textSub,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
   },
-  sectionLabel: {
-    ...typography.metadata,
+  sectionLabel: { fontSize: text.sectionLabel.size,
     color: colors.textSub,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: text.sectionLabel.letterSpacing,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
@@ -184,17 +182,16 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
   statValue: {
     color: colors.navy,
-    fontSize: 24,
-    fontWeight: '900',
+    fontSize: text.cardTitle.size,
+    fontWeight: '800',
   },
-  statLabel: {
-    ...typography.metadata,
+  statLabel: { fontSize: text.caption.size, fontWeight: '500',
     color: colors.textSub,
     marginTop: 2,
   },
@@ -202,18 +199,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.goldBorder,
     backgroundColor: colors.goldLight,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     paddingVertical: spacing.md,
     alignItems: 'center',
     marginTop: spacing.sm,
   },
   winPctValue: {
     color: colors.gold,
-    fontSize: 24,
-    fontWeight: '900',
+    fontSize: text.cardTitle.size,
+    fontWeight: '800',
   },
-  winPctLabel: {
-    ...typography.metadata,
+  winPctLabel: { fontSize: text.caption.size, fontWeight: '500',
     color: colors.textSub,
     marginTop: 2,
   },

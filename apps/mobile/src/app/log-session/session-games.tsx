@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SecondaryButton } from '@/components/SecondaryButton';
 import { getSavedGames } from '@/lib/logSessionStore';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 export default function SessionGamesScreen() {
   const insets = useSafeAreaInsets();
@@ -89,26 +91,25 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.sectionTitle, color: colors.navy, fontSize: 17 },
+  title: { color: colors.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
   body: { flex: 1, paddingHorizontal: spacing.screenH, paddingTop: spacing.md, gap: spacing.md },
   emptyCard: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     padding: spacing.lg,
     alignItems: 'center',
   },
-  emptyTitle: { ...typography.cardTitle, color: colors.textSub, fontSize: 14 },
+  emptyTitle: { color: colors.textSub, fontSize: text.rowTitle.size, fontWeight: '700' },
   card: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     padding: spacing.md,
   },
   gameLabel: {
-    ...typography.cardTitle,
     color: colors.navy,
-    fontSize: 14,
+    fontSize: text.rowTitle.size, fontWeight: '700',
     marginBottom: spacing.sm,
   },
   matchupBlock: {
@@ -118,20 +119,17 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   teamSideLabel: {
-    ...typography.metadata,
     color: colors.textSub,
     fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   teamName: {
-    ...typography.cardTitle,
     color: colors.textSub,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
     lineHeight: 18,
   },
   vsText: {
-    ...typography.metadata,
     color: colors.textSub,
     fontSize: 11,
     fontWeight: '800',
@@ -157,8 +155,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   result: {
-    ...typography.cardTitle,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
     textAlign: 'center',
     marginTop: spacing.xs,
   },
