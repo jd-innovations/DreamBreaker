@@ -285,8 +285,11 @@ migrated. Those 24 headings fold **30 → 28** when their screens are migrated.
 `cardTitle` and `statNumber`. Folding down reinforces the most-used role (16
 files) rather than widening the scale.
 
-This unblocks `round-robin/[id]/results.tsx` and `roster.tsx`, which were held
-because results carries the same large score display.
+This unblocked `round-robin/[id]/results.tsx` and `roster.tsx`, which were held
+because results carries the same large score display. **Both were migrated on
+2026-09-04**, so the deferral is closed. results' champion name at 24/900 folded
+to `cardTitle` — the second application of the 24pt rule, after
+`JoinCelebration`.
 
 **Still open, and the reason those three round-robin screens were committed
 before being published:** "Back" was 17/400 and takes `link` 13/700 on schedule, standings
