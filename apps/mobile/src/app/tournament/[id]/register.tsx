@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { PrimaryButton, SecondaryButton } from '@/components';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/useSession';
@@ -150,8 +152,8 @@ const cr = StyleSheet.create({
     backgroundColor: L.goldBg, alignItems: 'center', justifyContent: 'center',
   },
   avatarText: { color: L.navy, fontSize: 16, fontWeight: '800' },
-  name: { color: L.navy, fontSize: 14, fontWeight: '700', marginBottom: 2 },
-  sub:  { color: L.textSub, fontSize: 12 },
+  name: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 2 },
+  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   radio: {
     width: 20, height: 20, borderRadius: 10, flexShrink: 0,
     borderWidth: 2, borderColor: L.border,
@@ -204,7 +206,7 @@ function OptionCard({
 const oc = StyleSheet.create({
   card: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, marginBottom: 10, overflow: 'hidden',
+    borderRadius: shape.card, marginBottom: 10, overflow: 'hidden',
   },
   cardSelected: { borderColor: L.navy },
   row: {
@@ -216,9 +218,9 @@ const oc = StyleSheet.create({
     backgroundColor: L.page, alignItems: 'center', justifyContent: 'center',
   },
   iconCircleSelected: { backgroundColor: L.goldBg },
-  label:         { color: L.textSub, fontSize: 14, fontWeight: '600' },
+  label: { color: L.textSub, fontSize: text.rowTitle.size, fontWeight: '700' },
   labelSelected: { color: L.navy },
-  sublabel:      { color: L.textSub, fontSize: 12, marginTop: 1 },
+  sublabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
   radio: {
     width: 20, height: 20, borderRadius: 10, flexShrink: 0,
     borderWidth: 2, borderColor: L.border,
@@ -691,39 +693,39 @@ export default function TournamentRegisterScreen() {
 }
 
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12, backgroundColor: L.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   scroll: { paddingHorizontal: 16, paddingTop: 20 },
 
   summaryCard: {
     flexDirection: 'row', gap: 12, alignItems: 'flex-start',
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, padding: 14, marginBottom: 20,
+    borderRadius: shape.card, padding: 14, marginBottom: 20,
   },
   summaryLogoCol: { flexShrink: 0 },
   summaryLogo: {
-    width: 48, height: 48, borderRadius: 12,
+    width: 48, height: 48, borderRadius: shape.panel,
     backgroundColor: L.goldBg, alignItems: 'center', justifyContent: 'center',
   },
-  summaryName:     { color: L.navy, fontSize: 15, fontWeight: '800', marginBottom: 2 },
-  summaryDiv:      { color: L.textSub, fontSize: 12, fontWeight: '600', marginBottom: 6 },
-  summaryMeta:     { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
-  summaryMetaText: { color: L.textSub, fontSize: 11 },
+  summaryName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', marginBottom: 2 },
+  summaryDiv: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 6 },
+  summaryMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
+  summaryMetaText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
-  section:      { marginBottom: 20 },
-  sectionTitle: { color: L.navy, fontSize: 11, fontWeight: '900', letterSpacing: 0.8, marginBottom: 10 },
+  section: { marginBottom: 20 },
+  sectionTitle: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginBottom: 10 },
 
   feesCard: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, overflow: 'hidden',
+    borderRadius: shape.card, overflow: 'hidden',
   },
   feeRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -735,28 +737,28 @@ const s = StyleSheet.create({
     backgroundColor: L.goldLight, paddingHorizontal: 16, paddingVertical: 14,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  feeLabel:    { color: L.textSub, fontSize: 14 },
-  feeValue:    { color: L.navy,    fontSize: 14, fontWeight: '700' },
-  balanceLabel:{ color: L.navy,    fontSize: 14, fontWeight: '700' },
-  balanceValue:{ color: L.navy,    fontSize: 17, fontWeight: '900' },
-  feeNote:     { color: L.textSub, fontSize: 12, lineHeight: 17, marginTop: 8 },
+  feeLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  feeValue: { color: L.navy,    fontSize: text.rowValue.size, fontWeight: '800' },
+  balanceLabel: { color: L.navy,    fontSize: text.rowTitle.size, fontWeight: '700' },
+  balanceValue: { color: L.navy,    fontSize: text.titleSm.size, fontWeight: '800' },
+  feeNote: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17, marginTop: 8 },
 
   emptyConnections: {
     alignItems: 'center', paddingVertical: 20, paddingHorizontal: 16,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border,
   },
-  emptyConnectionsText: { color: L.textSub, fontSize: 14, marginTop: 8, marginBottom: 4 },
+  emptyConnectionsText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 8, marginBottom: 4 },
 
   agreeRow: {
     flexDirection: 'row', gap: 12, alignItems: 'flex-start',
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, padding: 16,
+    borderRadius: shape.card, padding: 16,
   },
   checkbox: {
-    width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+    width: 22, height: 22, borderRadius: shape.badge, flexShrink: 0,
     borderWidth: 2, borderColor: L.border,
     alignItems: 'center', justifyContent: 'center',
   },
   checkboxChecked: { backgroundColor: L.navy, borderColor: L.navy },
-  agreeText: { color: L.text, fontSize: 13, lineHeight: 20, flex: 1 },
+  agreeText: { color: L.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 20, flex: 1 },
 });
