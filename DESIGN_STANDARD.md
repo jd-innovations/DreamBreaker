@@ -468,7 +468,7 @@ exemptions declared in the mapping — rule 12, enforced rather than remembered.
 
 <!-- BEGIN GENERATED: migration-log — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-98 files migrated, listed from the tree with the sha of the commit
+116 files migrated, listed from the tree with the sha of the commit
 that last touched each.
 
 | File | Last commit |
@@ -508,6 +508,24 @@ that last touched each.
 | `app/marketplace/create/index.tsx` | `d9a0909` |
 | `app/marketplace/edit/[id].tsx` | `d9a0909` |
 | `app/marketplace/my-listings.tsx` | `d9a0909` |
+| `app/onboarding/_layout.tsx` | `482b612` |
+| `app/onboarding/all-set.tsx` | `482b612` |
+| `app/onboarding/area-recommendations.tsx` | `482b612` |
+| `app/onboarding/availability.tsx` | `482b612` |
+| `app/onboarding/brings-you-here.tsx` | `482b612` |
+| `app/onboarding/create-account.tsx` | `482b612` |
+| `app/onboarding/date-of-birth.tsx` | `482b612` |
+| `app/onboarding/email-account.tsx` | `482b612` |
+| `app/onboarding/enable-location.tsx` | `482b612` |
+| `app/onboarding/enable-notifications.tsx` | `482b612` |
+| `app/onboarding/gender.tsx` | `482b612` |
+| `app/onboarding/playing-style.tsx` | `482b612` |
+| `app/onboarding/review-court.tsx` | `482b612` |
+| `app/onboarding/search-radius.tsx` | `482b612` |
+| `app/onboarding/select-home-court.tsx` | `482b612` |
+| `app/onboarding/self-rating.tsx` | `482b612` |
+| `app/onboarding/welcome.tsx` | `482b612` |
+| `app/onboarding/your-name.tsx` | `482b612` |
 | `app/round-robin/[id]/schedule.tsx` | `2c78032` |
 | `app/round-robin/[id]/score-entry.tsx` | `2c78032` |
 | `app/round-robin/[id]/standings.tsx` | `2c78032` |
@@ -588,9 +606,9 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 
 | | Occurrences | Files |
 | --- | ---: | ---: |
-| Files importing `@shared/tokens` (migrated) | — | **98 of 218** (45%) |
-| Raw `fontSize: N` remaining | 1509 | 155 |
-| `borderRadius: radius.*` from `@/theme` remaining | 327 | 74 |
+| Files importing `@shared/tokens` (migrated) | — | **116 of 218** (53%) |
+| Raw `fontSize: N` remaining | 1428 | 139 |
+| `borderRadius: radius.*` from `@/theme` remaining | 302 | 58 |
 | `borderRadius: 30` → `shape.cta` | 10 | 9 |
 | `borderRadius: 999` → `shape.cta` | 15 | 7 |
 
