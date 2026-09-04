@@ -7,7 +7,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { goBack } from '@/lib/navigation';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components';
 import { getPlayerRegStatusInfo } from '@/lib/tournamentStatus';
 import type { HeldSpot } from '@/lib/tournamentStore';
@@ -482,7 +484,7 @@ function SavedTournamentCard({ tournament, onUnsave }: { tournament: BookmarkedT
 
 const c = StyleSheet.create({
   card: {
-    backgroundColor: L.bg, borderRadius: radius.card,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     marginBottom: 12, overflow: 'hidden',
   },
@@ -491,25 +493,25 @@ const c = StyleSheet.create({
     padding: 14, paddingBottom: 10,
   },
   logoBox: {
-    width: 48, height: 48, borderRadius: 12,
+    width: 48, height: 48, borderRadius: shape.panel,
     backgroundColor: L.goldBg, alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   },
-  tournamentName: { color: L.navy, fontSize: 18, fontWeight: '800', marginBottom: 2 },
-  divisionLine:   { color: L.textSub, fontSize: 12, fontWeight: '500' },
-  partnerRow:     { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
-  partnerText:    { color: L.textSub, fontSize: 11 },
+  tournamentName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', marginBottom: 2 },
+  divisionLine: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  partnerRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  partnerText: { color: L.textSub, fontSize: 11 },
 
   heldBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: L.successBg, borderRadius: 20,
+    backgroundColor: L.successBg, borderRadius: shape.pill,
     paddingHorizontal: 8, paddingVertical: 4,
   },
   heldBadgeText: { color: L.success, fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
 
   registeredBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: L.successBg, borderRadius: 20,
+    backgroundColor: L.successBg, borderRadius: shape.pill,
     paddingHorizontal: 8, paddingVertical: 4,
   },
   registeredBadgeText: { color: L.success, fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
@@ -518,7 +520,7 @@ const c = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap',
     paddingHorizontal: 14, paddingBottom: 12,
   },
-  metaText: { color: L.textSub, fontSize: 12 },
+  metaText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   feesRow: {
     flexDirection: 'row',
@@ -526,34 +528,34 @@ const c = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
     backgroundColor: L.page,
   },
-  feeCell:      { flex: 1, alignItems: 'center', paddingVertical: 12, gap: 3 },
-  feeDivider:   { width: StyleSheet.hairlineWidth, backgroundColor: L.border },
+  feeCell: { flex: 1, alignItems: 'center', paddingVertical: 12, gap: 3 },
+  feeDivider: { width: StyleSheet.hairlineWidth, backgroundColor: L.border },
   feeCellLabel: { color: L.textSub, fontSize: 10, fontWeight: '600' },
-  feeCellValue: { color: L.navy,    fontSize: 14, fontWeight: '800' },
+  feeCellValue: { color: L.navy,    fontSize: text.rowValue.size, fontWeight: '800' },
 
   actions: { flexDirection: 'row', gap: 8, padding: 12, alignItems: 'center' },
 
   viewBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderWidth: 1.5, borderColor: L.border, borderRadius: 10,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
     paddingVertical: 9, paddingHorizontal: 14,
   },
-  viewBtnText: { color: L.navy, fontSize: 13, fontWeight: '700' },
+  viewBtnText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
   qrBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: L.navy, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 12,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 9, paddingHorizontal: 12,
   },
-  qrBtnText: { color: L.bg, fontSize: 13, fontWeight: '700' },
+  qrBtnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 
   registerBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: L.navy, borderRadius: 10, paddingVertical: 10,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 10,
   },
-  registerBtnText: { color: L.bg, fontSize: 13, fontWeight: '700' },
+  registerBtnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 
   cancelBtn: {
-    width: 38, height: 38, borderRadius: 10,
+    width: 38, height: 38, borderRadius: shape.cta,
     borderWidth: 1.5, borderColor: L.dangerBg,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -754,22 +756,22 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, backgroundColor: L.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
-  list:         { paddingHorizontal: 16, paddingTop: 16 },
-  sectionLabel: { color: L.textSub, fontSize: 11, fontWeight: '800', letterSpacing: 0.5, marginBottom: 12 },
+  list: { paddingHorizontal: 16, paddingTop: 16 },
+  sectionLabel: { color: L.textSub, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, marginBottom: 12 },
 
   empty: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 40, gap: 12,
   },
-  emptyTitle: { color: L.navy, fontSize: 20, fontWeight: '800' },
-  emptySub:   { color: L.textSub, fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  emptyTitle: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900' },
+  emptySub: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center', lineHeight: 22 },
   browseBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: L.navy, borderRadius: 14,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingVertical: 14, paddingHorizontal: 24, marginTop: 8,
   },
-  browseBtnText: { color: L.bg, fontSize: 15, fontWeight: '700' },
+  browseBtnText: { color: L.bg, fontSize: text.actionLarge.size, fontWeight: '800' },
 });

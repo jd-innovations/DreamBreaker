@@ -9,6 +9,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { goBack } from '@/lib/navigation';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -283,22 +285,22 @@ export default function InviteDetailScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:  { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
 
   // Header
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 8, paddingVertical: 12, backgroundColor: L.bg,
   },
-  backBtn:     { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '700' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   scroll: { paddingHorizontal: 20, paddingTop: 16 },
 
   // Sender card
   senderCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: L.bg, borderRadius: 16,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: 16, gap: 14, marginBottom: 12,
   },
@@ -306,37 +308,37 @@ const s = StyleSheet.create({
     width: 58, height: 58, borderRadius: 29,
     borderWidth: 2, borderColor: L.goldBorder, flexShrink: 0,
   },
-  senderInfo:   { flex: 1, gap: 6 },
-  senderName:   { color: L.navy, fontSize: 18, fontWeight: '800' },
-  chipRow:      { flexDirection: 'row', gap: 6 },
+  senderInfo: { flex: 1, gap: 6 },
+  senderName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  chipRow: { flexDirection: 'row', gap: 6 },
   chip: {
-    backgroundColor: '#F0EDE4', borderRadius: 20,
+    backgroundColor: '#F0EDE4', borderRadius: shape.pill,
     paddingHorizontal: 10, paddingVertical: 4,
   },
-  chipGold:     { backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder },
-  chipText:     { color: L.navy, fontSize: 12, fontWeight: '600' },
-  chipGoldText: { color: L.gold, fontSize: 12, fontWeight: '700' },
-  locationRow:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  locationDot:  { color: L.textMuted, fontSize: 12 },
-  locationText: { color: L.textMuted, fontSize: 12 },
+  chipGold: { backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder },
+  chipText: { color: L.navy, fontSize: text.chipValue.size, fontWeight: '800' },
+  chipGoldText: { color: L.gold, fontSize: text.chipValue.size, fontWeight: '800' },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  locationDot: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  locationText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Status banner
   statusBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderRadius: 12, borderWidth: 1,
+    borderRadius: shape.panel, borderWidth: 1,
     paddingHorizontal: 14, paddingVertical: 10,
     marginBottom: 12,
   },
-  statusBannerText: { fontSize: 14, fontWeight: '700' },
+  statusBannerText: { fontSize: text.rowTitle.size, fontWeight: '700' },
 
   // Detail card
   detailCard: {
-    backgroundColor: L.bg, borderRadius: 16,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     overflow: 'hidden', marginBottom: 16,
   },
   detailCardTitle: {
-    color: L.navy, fontSize: 16, fontWeight: '700',
+    color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800',
     paddingHorizontal: 16, paddingVertical: 14,
   },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: L.div },
@@ -344,21 +346,21 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start',
     paddingHorizontal: 16, paddingVertical: 13, gap: 10,
   },
-  detailText: { color: L.textSub, fontSize: 15, fontWeight: '400', flex: 1, lineHeight: 20 },
+  detailText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', flex: 1, lineHeight: 20 },
 
   // Message
   msgSection: { marginBottom: 8 },
   msgLabel: {
-    color: L.navy, fontSize: 14, fontWeight: '700',
+    color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700',
     marginBottom: 10,
   },
   msgBubble: {
-    backgroundColor: L.bg, borderRadius: 14,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
     padding: 14,
   },
-  msgText: { color: L.textSub, fontSize: 15, fontWeight: '400', lineHeight: 22 },
-  msgTs:   { color: L.textMuted, fontSize: 12, fontWeight: '400', textAlign: 'right', marginTop: 6 },
+  msgText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', lineHeight: 22 },
+  msgTs: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'right', marginTop: 6 },
 
   // Footer
   footer: {
@@ -370,35 +372,35 @@ const s = StyleSheet.create({
 
   btnAccept: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: L.navy, borderRadius: 14, paddingVertical: 15, gap: 8,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 15, gap: 8,
   },
-  btnAcceptText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  btnAcceptText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 
   btnDecline: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: L.bg, borderRadius: 14, paddingVertical: 13, gap: 8,
+    backgroundColor: L.bg, borderRadius: shape.cta, paddingVertical: 13, gap: 8,
     borderWidth: 1.5, borderColor: L.navy,
   },
-  btnDeclineText: { color: L.navy, fontSize: 16, fontWeight: '600' },
+  btnDeclineText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   btnMessage: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     paddingVertical: 4, gap: 6,
   },
-  btnMessageText: { color: L.textSub, fontSize: 15, fontWeight: '500' },
+  btnMessageText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500' },
 
   // Accepted state
   acceptedBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 4,
   },
-  acceptedBannerText: { color: L.gold, fontSize: 16, fontWeight: '700' },
+  acceptedBannerText: { color: L.gold, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   btnViewEvent: {
-    backgroundColor: L.navy, borderRadius: 14,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingVertical: 15, alignItems: 'center',
   },
-  btnViewEventText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  btnViewEventText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 
   // Decline modal
   modalOverlay: {
@@ -406,18 +408,18 @@ const s = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', padding: 40,
   },
   modalCard: {
-    backgroundColor: L.bg, borderRadius: 18, width: '100%', overflow: 'hidden',
+    backgroundColor: L.bg, borderRadius: shape.card, width: '100%', overflow: 'hidden',
   },
   modalTitle: {
-    color: L.navy, fontSize: 17, fontWeight: '700',
+    color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900',
     textAlign: 'center', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 6,
   },
   modalSub: {
-    color: L.textMuted, fontSize: 14, fontWeight: '400',
+    color: L.textMuted, fontSize: text.body.size, fontWeight: '500',
     textAlign: 'center', paddingHorizontal: 20, paddingBottom: 16, lineHeight: 20,
   },
   modalDivider: { height: StyleSheet.hairlineWidth, backgroundColor: L.div },
-  modalBtn:    { paddingVertical: 16, alignItems: 'center' },
-  modalBtnCancel:  { color: L.navy, fontSize: 16, fontWeight: '600' },
-  modalBtnDecline: { color: L.danger, fontSize: 16, fontWeight: '700' },
+  modalBtn: { paddingVertical: 16, alignItems: 'center' },
+  modalBtnCancel: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
+  modalBtnDecline: { color: L.danger, fontSize: text.actionLarge.size, fontWeight: '800' },
 });

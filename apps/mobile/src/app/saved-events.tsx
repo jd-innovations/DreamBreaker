@@ -5,7 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { goBack } from '@/lib/navigation';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import { useTournamentBookmarks } from '@/hooks/useTournamentBookmarks';
 import { usePlayEventBookmarks } from '@/hooks/usePlayEventBookmarks';
@@ -49,24 +51,24 @@ function SavedCard({
 const c = StyleSheet.create({
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: L.bg, borderRadius: radius.card,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: 12, marginBottom: 10,
   },
   logoBox: {
-    width: 40, height: 40, borderRadius: 12,
+    width: 40, height: 40, borderRadius: shape.panel,
     backgroundColor: L.goldBg, alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   },
-  title:    { color: L.navy, fontSize: 17, fontWeight: '800', textTransform: 'uppercase', lineHeight: 21 },
-  subtitle: { color: L.textSub, fontSize: 12, marginTop: 2 },
+  title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', textTransform: 'uppercase', lineHeight: 21 },
+  subtitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
   viewBtn: {
-    width: 34, height: 34, borderRadius: 10,
+    width: 34, height: 34, borderRadius: shape.cta,
     borderWidth: 1.5, borderColor: L.border,
     alignItems: 'center', justifyContent: 'center',
   },
   unsaveBtn: {
-    width: 34, height: 34, borderRadius: 10,
+    width: 34, height: 34, borderRadius: shape.cta,
     borderWidth: 1.5, borderColor: L.dangerBg,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -174,16 +176,16 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, backgroundColor: L.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
-  list:         { paddingHorizontal: 16, paddingTop: 16 },
-  sectionLabel: { color: L.textSub, fontSize: 11, fontWeight: '800', letterSpacing: 0.5, marginBottom: 12 },
+  list: { paddingHorizontal: 16, paddingTop: 16 },
+  sectionLabel: { color: L.textSub, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, marginBottom: 12 },
 
   empty: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 40, gap: 12,
   },
-  emptyTitle: { color: L.navy, fontSize: 20, fontWeight: '800' },
-  emptySub:   { color: L.textSub, fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  emptyTitle: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900' },
+  emptySub: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center', lineHeight: 22 },
 });

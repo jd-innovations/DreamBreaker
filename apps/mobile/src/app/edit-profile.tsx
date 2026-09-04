@@ -11,6 +11,8 @@ import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import {
   fetchProfile, updateProfile,
@@ -687,17 +689,17 @@ const s = StyleSheet.create({
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
     paddingHorizontal: 16, paddingVertical: 13,
   },
-  headerSide:   { minWidth: 70 },
-  headerRight:  { alignItems: 'flex-end' },
-  headerTitle:  { color: L.navy, fontSize: 17, fontWeight: '700' },
+  headerSide: { minWidth: 70 },
+  headerRight: { alignItems: 'flex-end' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   headerAction: { color: L.blue, fontSize: 17, fontWeight: '400' },
-  headerDone:   { fontWeight: '600' },
+  headerDone: { fontWeight: '600' },
 
   scroll: { padding: 20, gap: 0 },
 
   // Avatar
   avatarSection: { alignItems: 'center', marginBottom: 28 },
-  avatarWrap:    { position: 'relative', marginBottom: 10 },
+  avatarWrap: { position: 'relative', marginBottom: 10 },
   avatar: {
     width: 90, height: 90, borderRadius: 45,
     borderWidth: 2, borderColor: L.border,
@@ -708,18 +710,18 @@ const s = StyleSheet.create({
     backgroundColor: L.navy, borderWidth: 2, borderColor: L.bg,
     alignItems: 'center', justifyContent: 'center',
   },
-  changePhoto: { color: L.blue, fontSize: 15, fontWeight: '500' },
+  changePhoto: { color: L.blue, fontSize: text.body.size, fontWeight: '500' },
 
   // Section header
   sectionHeader: {
-    color: L.textMuted, fontSize: 12, fontWeight: '600',
-    letterSpacing: 0.6, textTransform: 'uppercase',
+    color: L.textMuted, fontSize: text.sectionLabel.size, fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing, textTransform: 'uppercase',
     marginBottom: 8, marginTop: 24, paddingHorizontal: 4,
   },
 
   // Group
   group: {
-    backgroundColor: L.bg, borderRadius: 12,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
   },
 
@@ -731,9 +733,9 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 13, minHeight: 46,
   },
-  fieldLabel: { color: L.text, fontSize: 15, fontWeight: '500', width: 130 },
+  fieldLabel: { color: L.text, fontSize: text.body.size, fontWeight: '500', width: 130 },
   fieldInput: {
-    flex: 1, color: L.text, fontSize: 15, fontWeight: '400',
+    flex: 1, color: L.text, fontSize: text.body.size, fontWeight: '500',
     textAlign: 'right', padding: 0,
     borderWidth: 0, backgroundColor: 'transparent',
     // suppress iOS focus shadow
@@ -747,43 +749,43 @@ const s = StyleSheet.create({
   },
   bioRight: { flex: 1 },
   bioInput: {
-    color: L.text, fontSize: 15, fontWeight: '400',
+    color: L.text, fontSize: text.body.size, fontWeight: '500',
     textAlign: 'right', padding: 0, minHeight: 56,
     borderWidth: 0, backgroundColor: 'transparent',
     shadowColor: 'transparent', elevation: 0,
   },
   bioCount: {
-    color: L.textMuted, fontSize: 12, fontWeight: '400',
+    color: L.textMuted, fontSize: text.caption.size, fontWeight: '500',
     textAlign: 'right', marginTop: 4,
   },
 
   // Rating
   ratingRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  ratingValue: { color: L.gold, fontSize: 15, fontWeight: '600' },
+  ratingValue: { color: L.gold, fontSize: text.body.size, fontWeight: '500' },
 
   // Home court
-  homeCourtValue: { color: L.gold, fontSize: 15, fontWeight: '600', maxWidth: 200 },
-  homeCourtSub:   { color: L.textMuted, fontSize: 13, fontWeight: '400' },
+  homeCourtValue: { color: L.gold, fontSize: text.body.size, fontWeight: '500', maxWidth: 200 },
+  homeCourtSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Segmented control
-  segmented: { flexDirection: 'row', borderRadius: 8, borderWidth: 1, borderColor: L.border, overflow: 'hidden' },
-  segBtn:    { paddingHorizontal: 16, paddingVertical: 6, backgroundColor: L.bg },
+  segmented: { flexDirection: 'row', borderRadius: shape.cta, borderWidth: 1, borderColor: L.border, overflow: 'hidden' },
+  segBtn: { paddingHorizontal: 16, paddingVertical: 6, backgroundColor: L.bg },
   segBtnLeft: { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: L.border },
-  segBtnRight:{},
+  segBtnRight: {},
   segBtnActive: { backgroundColor: L.navy },
-  segText:   { color: L.textMuted, fontSize: 14, fontWeight: '500' },
+  segText: { color: L.textMuted, fontSize: text.controlLabel.size, fontWeight: '700' },
   segTextActive: { color: '#FFFFFF', fontWeight: '600' },
 
   // Chip selector
   chipSection: { paddingHorizontal: 14, paddingVertical: 10 },
-  chipWrap:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  chip:        { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg },
-  chipActive:  { backgroundColor: L.navy, borderColor: L.navy },
-  chipText:    { color: L.textMuted, fontSize: 13, fontWeight: '500' },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: shape.pill, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg },
+  chipActive: { backgroundColor: L.navy, borderColor: L.navy },
+  chipText: { color: L.textMuted, fontSize: text.controlLabel.size, fontWeight: '700' },
   chipTextActive: { color: '#FFFFFF', fontWeight: '600' },
   otherInput: {
-    marginTop: 10, color: L.text, fontSize: 14, fontWeight: '400',
-    borderWidth: 1, borderColor: L.border, borderRadius: 8,
+    marginTop: 10, color: L.text, fontSize: text.body.size, fontWeight: '500',
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
     paddingHorizontal: 12, paddingVertical: 10,
     backgroundColor: L.page,
   },
@@ -794,34 +796,34 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 6, gap: 8,
   },
-  availDayLabel: { color: L.text, fontSize: 13, fontWeight: '500', width: 82 },
+  availDayLabel: { color: L.text, fontSize: text.caption.size, fontWeight: '500', width: 82 },
   availBlockRow: { flexDirection: 'row', flex: 1, gap: 6, justifyContent: 'flex-end' },
   availPill: {
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: shape.pill,
     borderWidth: 1, borderColor: L.border, backgroundColor: L.bg,
   },
   availPillActive: { backgroundColor: L.navy, borderColor: L.navy },
-  availPillText: { color: L.textMuted, fontSize: 11, fontWeight: '600' },
+  availPillText: { color: L.textMuted, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   availPillTextActive: { color: '#FFFFFF' },
 
   // Stepper
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: 0, borderWidth: 1, borderColor: L.border, borderRadius: 8, overflow: 'hidden' },
-  stepBtn:  { paddingHorizontal: 14, paddingVertical: 6, backgroundColor: L.page },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 0, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta, overflow: 'hidden' },
+  stepBtn: { paddingHorizontal: 14, paddingVertical: 6, backgroundColor: L.page },
   stepIcon: { color: L.navy, fontSize: 18, fontWeight: '400', lineHeight: 22 },
-  stepValue:{ color: L.navy, fontSize: 15, fontWeight: '600', paddingHorizontal: 16, borderLeftWidth: StyleSheet.hairlineWidth, borderRightWidth: StyleSheet.hairlineWidth, borderColor: L.border, paddingVertical: 6 },
+  stepValue: { color: L.navy, fontSize: text.body.size, fontWeight: '500', paddingHorizontal: 16, borderLeftWidth: StyleSheet.hairlineWidth, borderRightWidth: StyleSheet.hairlineWidth, borderColor: L.border, paddingVertical: 6 },
 
   // Toggle row
   toggleRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 11,
   },
-  toggleText:  { flex: 1, marginRight: 12 },
-  toggleLabel: { color: L.text, fontSize: 15, fontWeight: '500', marginBottom: 2 },
-  toggleSub:   { color: L.textMuted, fontSize: 12, fontWeight: '400' },
+  toggleText: { flex: 1, marginRight: 12 },
+  toggleLabel: { color: L.text, fontSize: text.body.size, fontWeight: '500', marginBottom: 2 },
+  toggleSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Footer
   footer: {
-    color: L.textMuted, fontSize: 13, fontWeight: '400',
+    color: L.textMuted, fontSize: text.caption.size, fontWeight: '500',
     textAlign: 'center', marginTop: 28,
   },
 });

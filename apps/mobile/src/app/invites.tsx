@@ -8,6 +8,8 @@ import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { goBack } from '@/lib/navigation';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import { useProfile } from '@/hooks/useProfile';
 import {
@@ -684,8 +686,8 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 8, paddingVertical: 12, backgroundColor: L.bg,
   },
-  backBtn:     { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '700' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   // Tab bar
   tabBar: {
@@ -695,7 +697,7 @@ const s = StyleSheet.create({
   tabItem: {
     flex: 1, alignItems: 'center', paddingVertical: 12, position: 'relative',
   },
-  tabLabel:       { color: L.textMuted, fontSize: 15, fontWeight: '600' },
+  tabLabel: { color: L.textMuted, fontSize: text.controlLabel.size, fontWeight: '700' },
   tabLabelActive: { color: L.gold },
   tabUnderline: {
     position: 'absolute', bottom: 0, left: 24, right: 24,
@@ -708,29 +710,29 @@ const s = StyleSheet.create({
 
   // Section label
   sectionLabel: {
-    color: L.navy, fontSize: 15, fontWeight: '700',
+    color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing,
     marginBottom: 10,
   },
 
   // New invite card
   newCard: {
-    backgroundColor: L.bg, borderRadius: 14,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
     padding: 14, marginBottom: 8,
   },
-  newCardTop:     { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 10 },
+  newCardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 10 },
   newCardNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
-  newCardName:    { color: L.navy, fontSize: 15, fontWeight: '800', flex: 1 },
-  newCardType:    { color: L.gold, fontSize: 13, fontWeight: '700' },
+  newCardName: { color: L.navy, fontSize: text.body.size, fontWeight: '500', flex: 1 },
+  newCardType: { color: L.gold, fontSize: text.caption.size, fontWeight: '500' },
 
   newCardDetails: { gap: 6, paddingLeft: 58 },
-  detailRow:      { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  detailText:     { color: L.textSub, fontSize: 13, fontWeight: '400' },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  detailText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   detailTextFlex: { flex: 1, flexShrink: 1 },
 
   // Compact card group
   card: {
-    backgroundColor: L.bg, borderRadius: 14,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
     overflow: 'hidden',
   },
@@ -738,17 +740,17 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 14, paddingVertical: 12, gap: 12,
   },
-  rowName: { color: L.navy, fontSize: 15, fontWeight: '700', marginBottom: 2 },
-  rowType: { color: L.textSub, fontSize: 13, fontWeight: '400' },
+  rowName: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 2 },
+  rowType: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   rowRight: { alignItems: 'flex-end', gap: 5 },
-  rowDate:  { color: L.textMuted, fontSize: 12, fontWeight: '400' },
-  cancelLink: { color: L.gold, fontSize: 13, fontWeight: '700' },
+  rowDate: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  cancelLink: { color: L.gold, fontSize: text.link.size, fontWeight: '700' },
 
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: L.div, marginLeft: 68 },
 
   // Status chip
-  chip: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
-  chipText: { fontSize: 11, fontWeight: '700' },
+  chip: { borderRadius: shape.pill, paddingHorizontal: 10, paddingVertical: 3 },
+  chipText: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 
   // Avatar fallback
   avatarFallback: {
@@ -761,21 +763,21 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     paddingTop: 80, paddingHorizontal: 32, gap: 12,
   },
-  emptyTitle: { color: L.navy, fontSize: 17, fontWeight: '700', textAlign: 'center' },
-  emptySub:   { color: L.textMuted, fontSize: 14, fontWeight: '400', textAlign: 'center', lineHeight: 20 },
+  emptyTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', textAlign: 'center' },
+  emptySub: { color: L.textMuted, fontSize: text.body.size, fontWeight: '500', textAlign: 'center', lineHeight: 20 },
 
   // Game invite actions (real play_event_invites)
   gameInviteActions: { flexDirection: 'row', gap: 8, paddingLeft: 58 },
   declineBtn: {
-    flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10,
+    flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: shape.cta,
     borderWidth: 1.5, borderColor: L.border,
   },
-  declineBtnText: { color: L.textSub, fontSize: 13, fontWeight: '700' },
+  declineBtnText: { color: L.textSub, fontSize: text.action.size, fontWeight: '800' },
   acceptBtn: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10,
+    flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: shape.cta,
     backgroundColor: L.navy,
   },
-  acceptBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  acceptBtnText: { color: '#FFFFFF', fontSize: text.action.size, fontWeight: '800' },
 
   // Activity / notifications feed
   notifRow: {
@@ -787,9 +789,9 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   notifIconUnread: { backgroundColor: L.goldBg },
-  notifTitle: { color: L.navy, fontSize: 14, fontWeight: '600', marginBottom: 2 },
+  notifTitle: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 2 },
   notifTitleUnread: { fontWeight: '800' },
-  notifBody: { color: L.textSub, fontSize: 13, lineHeight: 18, marginBottom: 4 },
+  notifBody: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18, marginBottom: 4 },
   notifTime: { color: L.textMuted, fontSize: 11 },
   notifDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: L.gold, marginTop: 4 },
 });

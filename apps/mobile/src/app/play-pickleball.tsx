@@ -6,7 +6,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, typography, spacing, radius, iconCircle } from '@/theme';
+import { colors, spacing, iconCircle } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 // ─── Row config ────────────────────────────────────────────────────────────────
 
@@ -133,18 +135,18 @@ const s = StyleSheet.create({
 
   scroll: { paddingHorizontal: spacing.screenH, paddingTop: spacing.xl },
 
-  title:    { ...typography.pageTitle, fontSize: 28, fontWeight: '900', color: colors.navy, marginBottom: 6 },
-  subtitle: { ...typography.body, color: colors.textSub, marginBottom: spacing.xl },
+  title: { fontSize: text.pageTitle.size, fontWeight: '900', color: colors.navy, marginBottom: 6 },
+  subtitle: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, marginBottom: spacing.xl },
 
-  section:      { marginBottom: spacing.xl },
+  section: { marginBottom: spacing.xl },
   sectionLabel: {
-    fontSize: 12, fontWeight: '700', letterSpacing: 0.8,
+    fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing,
     color: colors.textSub, marginBottom: spacing.sm, marginLeft: 2,
   },
 
   card: {
     backgroundColor: colors.bg,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
@@ -166,14 +168,14 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
 
-  rowBody:    { flex: 1 },
+  rowBody: { flex: 1 },
   rowLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  rowLabel:   { ...typography.body, fontWeight: '700', color: colors.navy },
-  rowSub:     { ...typography.metadata, color: colors.textSub, marginTop: 2 },
+  rowLabel: { fontSize: text.body.size, fontWeight: '500', color: colors.navy },
+  rowSub: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, marginTop: 2 },
 
   badge: {
     backgroundColor: colors.gold,
-    borderRadius: 6,
+    borderRadius: shape.badge,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },

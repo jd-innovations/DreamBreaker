@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 // Local alias kept minimal; values sourced from the design system.
 const L = {
@@ -97,7 +99,7 @@ export default function InviteAcceptedScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:  { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
 
   header: {
     flexDirection: 'row', justifyContent: 'flex-end',
@@ -111,18 +113,18 @@ const s = StyleSheet.create({
   },
 
   // After accepting label + info
-  afterRow:  { marginBottom: 10 },
+  afterRow: { marginBottom: 10 },
   afterLabel: {
-    color: L.gold, fontSize: 13, fontWeight: '800', letterSpacing: 0.8,
+    color: L.gold, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing,
   },
   infoText: {
-    color: L.navy, fontSize: 18, fontWeight: '700', lineHeight: 26,
+    color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', lineHeight: 26,
     marginBottom: 28,
   },
 
   // Card
   card: {
-    backgroundColor: L.bg, borderRadius: 20,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: 28, alignItems: 'center',
   },
@@ -145,11 +147,11 @@ const s = StyleSheet.create({
   },
 
   title: {
-    color: L.navy, fontSize: 26, fontWeight: '900',
+    color: L.navy, fontSize: text.heroTitle.size, fontWeight: '800',
     letterSpacing: 0.1, marginBottom: 10, textAlign: 'center',
   },
   subtitle: {
-    color: L.textSub, fontSize: 15, fontWeight: '400',
+    color: L.textSub, fontSize: text.body.size, fontWeight: '500',
     textAlign: 'center', lineHeight: 22, marginBottom: 24,
   },
   subtitleBold: { color: L.navy, fontWeight: '700' },
@@ -160,12 +162,12 @@ const s = StyleSheet.create({
   },
 
   btnPrimary: {
-    backgroundColor: L.navy, borderRadius: 14,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingVertical: 15, alignItems: 'center',
     width: '100%', marginBottom: 12,
   },
-  btnPrimaryText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  btnPrimaryText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 
-  btnDone:     { paddingVertical: 6, alignItems: 'center', width: '100%' },
-  btnDoneText: { color: L.navy, fontSize: 15, fontWeight: '500' },
+  btnDone: { paddingVertical: 6, alignItems: 'center', width: '100%' },
+  btnDoneText: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
 });

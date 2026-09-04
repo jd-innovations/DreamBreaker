@@ -10,7 +10,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { signInWithGoogle, signInWithApple, signUp } from '@/lib/auth';
-import { colors, gradients, radius } from '@/theme';
+import { colors, gradients } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { isPasswordLongEnough, PASSWORD_PLACEHOLDER, PASSWORD_TOO_SHORT_MESSAGE } from '@/lib/authPolicy';
 import { haptics } from '@/lib/haptics';
 import { openPrivacy, openTerms } from '@/lib/legal';
@@ -235,7 +237,7 @@ export default function SignUpScreen() {
                 <AppleAuthentication.AppleAuthenticationButton
                   buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
                   buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                  cornerRadius={radius.card}
+                  cornerRadius={shape.card}
                   style={s.appleBtn}
                   onPress={handleAppleSignUp}
                 />
@@ -300,14 +302,14 @@ const s = StyleSheet.create({
   },
   heading: {
     color: colors.navy,
-    fontSize: 30,
+    fontSize: text.pageTitle.size,
     lineHeight: 36,
     fontWeight: '900',
     textAlign: 'center',
   },
   sub: {
     color: MUTED_BLUE,
-    fontSize: 16,
+    fontSize: text.body.size, fontWeight: '500',
     lineHeight: 22,
     marginTop: 5,
     textAlign: 'center',
@@ -317,7 +319,7 @@ const s = StyleSheet.create({
   field: { gap: 8 },
   label: {
     color: colors.navy,
-    fontSize: 13,
+    fontSize: text.fieldLabel.size,
     fontWeight: '800',
   },
   input: {
@@ -325,10 +327,10 @@ const s = StyleSheet.create({
     backgroundColor: INPUT_BG,
     borderWidth: 1,
     borderColor: 'rgba(130,151,195,0.08)',
-    borderRadius: 12,
+    borderRadius: shape.panel,
     paddingHorizontal: 15,
     color: colors.navy,
-    fontSize: 15,
+    fontSize: text.body.size,
     fontWeight: '500',
   },
   inputRow: { position: 'relative', flexDirection: 'row', alignItems: 'center' },
@@ -352,7 +354,7 @@ const s = StyleSheet.create({
     right: 12,
     top: 5,
     bottom: -7,
-    borderRadius: radius.button,
+    borderRadius: shape.cta,
     backgroundColor: colors.gold,
     shadowColor: colors.gold,
     shadowOpacity: 0.45,
@@ -363,7 +365,7 @@ const s = StyleSheet.create({
   btn: {
     minHeight: 54,
     backgroundColor: colors.gold,
-    borderRadius: radius.button,
+    borderRadius: shape.cta,
     borderWidth: 2,
     borderColor: colors.navy,
     alignItems: 'center',
@@ -377,8 +379,8 @@ const s = StyleSheet.create({
   btnLoading: { opacity: 0.78 },
   btnText: {
     color: colors.navy,
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: text.actionLarge.size,
+    fontWeight: '800',
   },
 
   divider: {
@@ -389,7 +391,7 @@ const s = StyleSheet.create({
     marginBottom: 26,
   },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#E4E9F4' },
-  dividerText: { color: MUTED_BLUE, fontSize: 13, fontWeight: '700' },
+  dividerText: { color: MUTED_BLUE, fontSize: text.controlLabel.size, fontWeight: '700' },
 
   appleBtn: {
     height: 54,
@@ -403,7 +405,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#E7DED0',
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     backgroundColor: 'rgba(255,255,255,0.86)',
     marginBottom: 20,
   },
@@ -413,10 +415,10 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
   },
-  googleBtnText: { color: colors.navy, fontSize: 15, fontWeight: '800' },
+  googleBtnText: { color: colors.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   linkBtn: { alignItems: 'center', marginBottom: 18 },
-  linkText: { color: MUTED_BLUE, fontSize: 14, fontWeight: '600' },
+  linkText: { color: MUTED_BLUE, fontSize: text.link.size, fontWeight: '700' },
   linkAccent: { color: colors.gold, fontWeight: '900' },
 
   terms: { color: MUTED_BLUE, fontSize: 11, textAlign: 'center', lineHeight: 16 },

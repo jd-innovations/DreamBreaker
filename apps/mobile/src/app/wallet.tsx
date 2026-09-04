@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { goBack } from '@/lib/navigation';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { WalletSection, WalletEmptyState, WalletSkeleton } from '@/components';
 import { useWallet } from '@/hooks/useWallet';
 import { groupWalletItems } from '@/lib/walletItemStatus';
@@ -79,11 +81,11 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
   errorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: L.dangerBg, borderRadius: 12, padding: 12, marginBottom: 16,
+    backgroundColor: L.dangerBg, borderRadius: shape.panel, padding: 12, marginBottom: 16,
   },
-  errorText: { color: L.danger, fontSize: 13, fontWeight: '600', flex: 1 },
+  errorText: { color: L.danger, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
 });

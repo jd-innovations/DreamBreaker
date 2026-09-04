@@ -8,7 +8,9 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { requestPasswordReset } from '@/lib/auth';
-import { colors, typography, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 export default function ForgotPasswordScreen() {
   const insets = useSafeAreaInsets();
@@ -102,25 +104,25 @@ const s = StyleSheet.create({
 
   backBtn: { width: 36, height: 36, justifyContent: 'center', marginBottom: 12 },
 
-  heading: { ...typography.pageTitle, color: colors.navy, fontSize: 28, marginBottom: 8 },
-  sub: { ...typography.body, color: colors.textSub, marginBottom: 32, lineHeight: 21 },
+  heading: { color: colors.navy, fontSize: text.pageTitle.size, fontWeight: '900', marginBottom: 8 },
+  sub: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, marginBottom: 32, lineHeight: 21 },
 
   field: { marginBottom: 20 },
-  label: { color: colors.text, fontSize: 13, fontWeight: '600', marginBottom: 6 },
+  label: { color: colors.text, fontSize: text.fieldLabel.size, fontWeight: '800', marginBottom: 6 },
   input: {
     backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 13,
-    color: colors.text, fontSize: 15,
+    borderRadius: shape.panel, paddingHorizontal: 14, paddingVertical: 13,
+    color: colors.text, fontSize: text.body.size, fontWeight: '500',
   },
 
   btn: {
-    backgroundColor: colors.gold, borderRadius: radius.button,
+    backgroundColor: colors.gold, borderRadius: shape.cta,
     paddingVertical: 15, alignItems: 'center', marginTop: 4,
   },
-  btnText: { color: colors.navy, fontSize: 16, fontWeight: '800' },
+  btnText: { color: colors.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   linkBtn: { alignItems: 'center', marginTop: 24 },
-  linkText: { color: colors.textSub, fontSize: 14 },
+  linkText: { color: colors.textSub, fontSize: text.link.size, fontWeight: '700' },
   linkAccent: { color: colors.gold, fontWeight: '700' },
 
   sentBlock: { alignItems: 'center', paddingTop: 40 },

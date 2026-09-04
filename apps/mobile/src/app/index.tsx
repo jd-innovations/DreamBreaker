@@ -4,7 +4,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useSession } from '@/hooks/useSession';
 import { useProfile, reloadProfile } from '@/hooks/useProfile';
 import { resolveAuthGate } from '@/lib/authGate';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 // The app's entry gate. Replaces the previous unconditional
 // `<Redirect href="/(tabs)" />`, which dropped fresh installs straight into the
@@ -62,24 +64,24 @@ const s = StyleSheet.create({
   },
   errorTitle: {
     color: colors.white,
-    fontSize: 18,
+    fontSize: text.titleSm.size,
     fontWeight: '800',
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
   errorBody: {
     color: colors.textSub,
-    fontSize: 14,
+    fontSize: text.body.size, fontWeight: '500',
     lineHeight: 20,
     textAlign: 'center',
     marginBottom: spacing.xl,
   },
   retryBtn: {
-    borderRadius: radius.sm,
+    borderRadius: shape.cta,
     borderWidth: 1,
     borderColor: colors.gold,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
   },
-  retryText: { color: colors.gold, fontSize: 15, fontWeight: '700' },
+  retryText: { color: colors.gold, fontSize: text.body.size, fontWeight: '500' },
 });

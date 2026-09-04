@@ -9,6 +9,8 @@ import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import {
   SUPPORT_EMAIL,
   SUPPORT_MAILTO,
@@ -240,9 +242,9 @@ const s = StyleSheet.create({
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
     paddingHorizontal: 8, paddingVertical: 12,
   },
-  backBtn:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
-  backText:    { color: L.blue, fontSize: 17, fontWeight: '400' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '700' },
+  backBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minWidth: 80 },
+  backText: { color: L.blue, fontSize: 17, fontWeight: '400' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   scroll: { padding: 20 },
 
@@ -258,22 +260,22 @@ const s = StyleSheet.create({
     position: 'absolute', bottom: 22, right: 22,
   },
   heroTitle: {
-    color: L.navy, fontSize: 26, fontWeight: '900',
+    color: L.navy, fontSize: text.heroTitle.size, fontWeight: '800',
     marginBottom: 10, letterSpacing: 0.2,
   },
   heroSub: {
-    color: L.textMuted, fontSize: 15, fontWeight: '400',
+    color: L.textMuted, fontSize: text.body.size, fontWeight: '500',
     textAlign: 'center', lineHeight: 22,
   },
 
   // â”€â”€ Card â”€â”€
   card: {
-    backgroundColor: L.bg, borderRadius: 14,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
     paddingTop: 16, paddingBottom: 6, marginBottom: 16,
   },
   cardTitle: {
-    color: L.navy, fontSize: 17, fontWeight: '800',
+    color: L.navy, fontSize: text.titleSm.size, fontWeight: '800',
     paddingHorizontal: 16, marginBottom: 6,
   },
 
@@ -285,8 +287,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 13, gap: 14,
   },
   rowCenter: { flex: 1 },
-  rowLabel:  { color: L.navy, fontSize: 16, fontWeight: '700', marginBottom: 2 },
-  rowSub:    { color: L.textSub, fontSize: 13, fontWeight: '400' },
+  rowLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 2 },
+  rowSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   iconCircle: {
     width: 40, height: 40, borderRadius: 20,
@@ -299,7 +301,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     paddingVertical: 14, gap: 6,
   },
-  viewAllText: { color: L.gold, fontSize: 15, fontWeight: '700' },
+  viewAllText: { color: L.gold, fontSize: text.body.size, fontWeight: '500' },
 
   // Footer
   footer: {
@@ -307,7 +309,7 @@ const s = StyleSheet.create({
     gap: 8, marginTop: 12, paddingHorizontal: 16,
   },
   footerText: {
-    color: L.textMuted, fontSize: 13, fontWeight: '400',
+    color: L.textMuted, fontSize: text.caption.size, fontWeight: '500',
     textAlign: 'center', lineHeight: 19,
   },
 });

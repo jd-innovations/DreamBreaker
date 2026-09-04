@@ -10,7 +10,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { completePasswordRecovery, updatePassword } from '@/lib/auth';
 import { isPasswordLongEnough, PASSWORD_PLACEHOLDER, PASSWORD_TOO_SHORT_MESSAGE } from '@/lib/authPolicy';
-import { colors, typography, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 type Status = 'verifying' | 'ready' | 'invalid';
 
@@ -129,25 +131,25 @@ const s = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.page },
   container: { flexGrow: 1, paddingHorizontal: 24, justifyContent: 'center' },
 
-  heading: { ...typography.pageTitle, color: colors.navy, fontSize: 28, marginBottom: 8, textAlign: 'center' },
-  sub: { ...typography.body, color: colors.textSub, marginBottom: 32, lineHeight: 21, textAlign: 'center' },
+  heading: { color: colors.navy, fontSize: text.pageTitle.size, fontWeight: '900', marginBottom: 8, textAlign: 'center' },
+  sub: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, marginBottom: 32, lineHeight: 21, textAlign: 'center' },
 
   field: { marginBottom: 20 },
-  label: { color: colors.text, fontSize: 13, fontWeight: '600', marginBottom: 6 },
+  label: { color: colors.text, fontSize: text.fieldLabel.size, fontWeight: '800', marginBottom: 6 },
   input: {
     backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 13,
-    color: colors.text, fontSize: 15,
+    borderRadius: shape.panel, paddingHorizontal: 14, paddingVertical: 13,
+    color: colors.text, fontSize: text.body.size, fontWeight: '500',
   },
   inputRow: { position: 'relative', flexDirection: 'row', alignItems: 'center' },
   inputFlex: { flex: 1, paddingRight: 44 },
   eyeBtn: { position: 'absolute', right: 14, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
 
   btn: {
-    backgroundColor: colors.gold, borderRadius: radius.button,
+    backgroundColor: colors.gold, borderRadius: shape.cta,
     paddingVertical: 15, alignItems: 'center', marginTop: 4,
   },
-  btnText: { color: colors.navy, fontSize: 16, fontWeight: '800' },
+  btnText: { color: colors.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   centerBlock: { alignItems: 'center', paddingTop: 40 },
   iconWrap: {
