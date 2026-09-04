@@ -7,7 +7,9 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components/StatusChip';
 import { AppIcon, type AppIconName } from '@/components';
 import { getMiniTournament } from '@/lib/miniTournamentStore';
@@ -618,37 +620,37 @@ const s = StyleSheet.create({
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  headerCenter:  { flex: 1 },
-  headerTitle:   { fontSize: 16, fontWeight: '800', color: L.navy },
-  headerSub:     { fontSize: 12, color: L.textSub, marginTop: 1 },
-  headerRight:   { flexDirection: 'row', gap: 2, flexShrink: 0 },
+  headerCenter: { flex: 1 },
+  headerTitle: { fontSize: text.actionLarge.size, fontWeight: '800', color: L.navy },
+  headerSub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, marginTop: 1 },
+  headerRight: { flexDirection: 'row', gap: 2, flexShrink: 0 },
 
   scroll: { paddingHorizontal: spacing.screenH, paddingTop: 16, gap: 14 },
 
   // Not complete guard
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: L.navy, textAlign: 'center' },
-  emptySub:   { fontSize: 14, color: L.textSub, textAlign: 'center', lineHeight: 20 },
+  emptyTitle: { fontSize: text.titleSm.size, fontWeight: '800', color: L.navy, textAlign: 'center' },
+  emptySub: { fontSize: text.body.size, fontWeight: '500', color: L.textSub, textAlign: 'center', lineHeight: 20 },
   emptyBtn: {
-    backgroundColor: L.gold, borderRadius: radius.sm,
+    backgroundColor: L.gold, borderRadius: shape.cta,
     paddingVertical: 12, paddingHorizontal: 24, marginTop: 8,
   },
-  emptyBtnText: { fontSize: 14, fontWeight: '700', color: L.white },
+  emptyBtnText: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.white },
 
   // Complete banner
   completeBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: '#E8F5E9',
-    borderRadius: radius.sm,
+    borderRadius: shape.cta,
     borderWidth: 1, borderColor: colors.success + '55',
     paddingHorizontal: 12, paddingVertical: 7,
   },
   completeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success, flexShrink: 0 },
-  completeText: { fontSize: 12, fontWeight: '600', color: colors.success, flex: 1 },
+  completeText: { fontSize: text.caption.size, fontWeight: '500', color: colors.success, flex: 1 },
 
   // Champion hero
   heroCard: {
-    borderRadius: 20,
+    borderRadius: shape.card,
     overflow: 'hidden',
     borderWidth: 2, borderColor: L.goldBorder,
     shadowColor: L.gold, shadowOpacity: 0.2,
@@ -660,8 +662,8 @@ const s = StyleSheet.create({
     alignItems: 'center', paddingVertical: 16, gap: 6,
   },
   heroTopLabel: {
-    fontSize: 11, fontWeight: '900', color: L.gold,
-    letterSpacing: 2, textTransform: 'uppercase',
+    fontSize: text.cardLabel.size, fontWeight: '800', color: L.gold,
+    letterSpacing: text.cardLabel.letterSpacing, textTransform: 'uppercase',
   },
   heroBody: {
     backgroundColor: L.bg,
@@ -675,22 +677,22 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   heroAvatarText: { fontSize: 20, fontWeight: '900', color: L.gold },
-  heroName:       { fontSize: 22, fontWeight: '900', color: L.navy },
-  heroMeta:       { fontSize: 14, color: L.textSub },
-  heroCity:       { fontSize: 13, color: L.textSub },
+  heroName: { fontSize: text.cardTitle.size, fontWeight: '800', color: L.navy },
+  heroMeta: { fontSize: text.body.size, fontWeight: '500', color: L.textSub },
+  heroCity: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub },
   heroScore: {
     marginTop: 8,
     paddingHorizontal: 14, paddingVertical: 5,
     backgroundColor: L.goldLight,
-    borderRadius: 20,
+    borderRadius: shape.pill,
     borderWidth: 1, borderColor: L.goldBorder,
   },
-  heroScoreText: { fontSize: 13, fontWeight: '700', color: L.navy },
+  heroScoreText: { fontSize: text.chipValue.size, fontWeight: '800', color: L.navy },
 
   // Cards
   card: {
     backgroundColor: L.bg,
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
     overflow: 'hidden',
     shadowColor: '#000', shadowOpacity: 0.04,
@@ -699,7 +701,7 @@ const s = StyleSheet.create({
     paddingVertical: 16,
   },
   cardTitle: {
-    fontSize: 14, fontWeight: '800', color: L.navy,
+    fontSize: text.rowValue.size, fontWeight: '800', color: L.navy,
     paddingHorizontal: 16, marginBottom: 12,
   },
 
@@ -709,23 +711,23 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 11,
   },
   podiumRowFirst: { backgroundColor: L.goldLight },
-  podiumBorder:   { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border },
+  podiumBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border },
   medalBadge: {
     width: 26, height: 26, borderRadius: 13,
     borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  medalText:      { fontSize: 11, fontWeight: '900' },
+  medalText: { fontSize: 11, fontWeight: '900' },
   podiumAvatar: {
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: L.goldBg, borderWidth: 1.5, borderColor: L.goldBorder,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   podiumAvatarText: { fontSize: 10, fontWeight: '800', color: L.gold },
-  podiumBody:     { flex: 1 },
-  podiumName:     { fontSize: 13, fontWeight: '700', color: L.navy },
-  podiumMeta:     { fontSize: 11, color: L.textSub, marginTop: 1 },
-  podiumPlace:    { fontSize: 11, fontWeight: '700', flexShrink: 0 },
+  podiumBody: { flex: 1 },
+  podiumName: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.navy },
+  podiumMeta: { fontSize: 11, color: L.textSub, marginTop: 1 },
+  podiumPlace: { fontSize: 11, fontWeight: '700', flexShrink: 0 },
 
   // Summary rows
   summaryRow: {
@@ -733,24 +735,24 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10,
   },
   summaryRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border },
-  summaryText: { fontSize: 13, color: L.navy, flex: 1 },
+  summaryText: { fontSize: text.caption.size, fontWeight: '500', color: L.navy, flex: 1 },
 
   // Stats pills
   statsRow: { flexDirection: 'row', gap: 8 },
   statPill: {
     flex: 1, alignItems: 'center', gap: 3,
     backgroundColor: L.bg,
-    borderRadius: radius.sm,
+    borderRadius: shape.cta,
     borderWidth: 1, borderColor: L.border,
     paddingVertical: 10,
   },
-  statVal:   { fontSize: 15, fontWeight: '900', color: L.navy },
+  statVal: { fontSize: text.body.size, fontWeight: '500', color: L.navy },
   statLabel: { fontSize: 10, color: L.textSub },
 
   // Match history
   historyRoundLabel: {
-    fontSize: 11, fontWeight: '800', color: L.textSub,
-    letterSpacing: 0.5, textTransform: 'uppercase',
+    fontSize: text.cardLabel.size, fontWeight: '800', color: L.textSub,
+    letterSpacing: text.cardLabel.letterSpacing, textTransform: 'uppercase',
     paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4,
   },
   historyRow: {
@@ -758,15 +760,15 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 9, gap: 12,
   },
   historyRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border },
-  historyLeft:   { flex: 1 },
-  historyWinner: { fontSize: 13, fontWeight: '700', color: L.navy },
-  historyDef:    { fontSize: 11, color: L.textSub, marginTop: 1 },
-  historyScore:  { fontSize: 13, fontWeight: '800', color: L.navy, flexShrink: 0 },
+  historyLeft: { flex: 1 },
+  historyWinner: { fontSize: text.fieldLabel.size, fontWeight: '800', color: L.navy },
+  historyDef: { fontSize: 11, color: L.textSub, marginTop: 1 },
+  historyScore: { fontSize: text.fieldLabel.size, fontWeight: '800', color: L.navy, flexShrink: 0 },
 
   // Bracket snapshot
   snapshotCard: {
     marginHorizontal: 16, marginBottom: 10,
-    borderRadius: radius.sm,
+    borderRadius: shape.cta,
     borderWidth: 1, borderColor: L.border,
     overflow: 'hidden',
   },
@@ -781,31 +783,31 @@ const s = StyleSheet.create({
   },
   snapshotAvatarGold: { backgroundColor: L.goldBg, borderColor: L.goldBorder },
   snapshotAvatarText: { fontSize: 8, fontWeight: '800', color: L.textSub },
-  snapshotName:       { flex: 1, fontSize: 13, fontWeight: '600', color: L.navy },
+  snapshotName: { flex: 1, fontSize: text.caption.size, fontWeight: '500', color: L.navy },
   snapshotNameWinner: { fontWeight: '800' },
-  snapshotScore:      { fontSize: 15, fontWeight: '900', color: L.navy, flexShrink: 0 },
-  snapshotDivider:    { height: StyleSheet.hairlineWidth, backgroundColor: L.border },
+  snapshotScore: { fontSize: text.body.size, fontWeight: '500', color: L.navy, flexShrink: 0 },
+  snapshotDivider: { height: StyleSheet.hairlineWidth, backgroundColor: L.border },
   viewBracketBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 16, paddingVertical: 12,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border,
   },
-  viewBracketText: { fontSize: 13, fontWeight: '600', color: L.navy },
+  viewBracketText: { fontSize: text.caption.size, fontWeight: '500', color: L.navy },
 
   // Primary / Secondary buttons
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.gold, borderRadius: radius.md, paddingVertical: 15,
+    backgroundColor: L.gold, borderRadius: shape.cta, paddingVertical: 15,
     shadowColor: L.gold, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
-  primaryBtnText: { fontSize: 15, fontWeight: '800', color: L.white },
+  primaryBtnText: { fontSize: text.actionLarge.size, fontWeight: '800', color: L.white },
   secondaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.bg, borderRadius: radius.md, paddingVertical: 14,
+    backgroundColor: L.bg, borderRadius: shape.cta, paddingVertical: 14,
     borderWidth: 1.5, borderColor: L.border,
   },
-  secondaryBtnText: { fontSize: 15, fontWeight: '700', color: L.navy },
+  secondaryBtnText: { fontSize: text.actionLarge.size, fontWeight: '800', color: L.navy },
 
   // Management rows
   mgmtRow: {
@@ -818,14 +820,14 @@ const s = StyleSheet.create({
     backgroundColor: L.page,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  mgmtLabel: { flex: 1, fontSize: 14, fontWeight: '500', color: L.navy },
+  mgmtLabel: { flex: 1, fontSize: text.rowTitle.size, fontWeight: '700', color: L.navy },
 
   // Delete row
   deleteRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 14,
   },
-  deleteText: { fontSize: 14, fontWeight: '600', color: L.danger },
+  deleteText: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.danger },
 });
 
 // ─── Context menu styles ──────────────────────────────────────────────────────────
@@ -867,7 +869,7 @@ const mm = StyleSheet.create({
     backgroundColor: '#F3F6FC',
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  rowLabel: { color: '#0A1228', fontSize: 14, fontWeight: '500' },
+  rowLabel: { color: '#0A1228', fontSize: text.rowTitle.size, fontWeight: '700' },
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: '#E5E9F0',
