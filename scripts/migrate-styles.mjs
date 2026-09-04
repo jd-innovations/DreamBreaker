@@ -193,7 +193,10 @@ function applyRoles(name, props, offset) {
       process.exit(1);
     }
     // A `...typography.X` spread supplied size and weight; the role does both.
-    out = out.replace(/\.\.\.typography\.\w+,\s*/g, "");
+    // Optional trailing comma: a spread written last in the block
+    // (`{ color: x, ...typography.metadata }`) has none, and requiring one left
+    // it in place — which the leftover-spread check then refused, on four files.
+    out = out.replace(/\.\.\.typography\.\w+\s*,?\s*/g, "");
     const size = `fontSize: text.${role}.size`;
     const weight = `fontWeight: '${ROLE_WEIGHT[role]}'`;
 
@@ -235,7 +238,7 @@ function applyRoles(name, props, offset) {
     const add = [];
     if (!/fontSize:/.test(out)) add.push(`fontSize: ${preset.size}`);
     if (!/fontWeight:/.test(out)) add.push(`fontWeight: '${preset.weight}'`);
-    out = out.replace(/\.\.\.typography\.\w+,?\s*/, add.length ? `${add.join(", ")}, ` : "");
+    out = out.replace(/\.\.\.typography\.\w+\s*,?\s*/, add.length ? `${add.join(", ")}, ` : "");
     seen.add(name);
   }
 
@@ -266,6 +269,28 @@ for (const [start, end] of regions) {
 rebuilt += src.slice(cursor);
 src = rebuilt;
 
+// Legacy radius tokens also appear in arithmetic the shape mapping never sees:
+// three bottom sheets set `borderTopLeftRadius: radius.card + 8` for their top
+// corners. Renaming the token is safe wherever the number is unchanged, so the
+// equivalences are checked against both scales rather than trusted. `button`
+// (14) has no value-identical partner — decision 2 moved CTAs to 10 — so it is
+// deliberately absent and must be mapped by hand.
+{
+  const scale = (path, re) => {
+    const body = re.exec(readFileSync(new URL(path, import.meta.url), "utf8"))[1];
+    return Object.fromEntries([...body.matchAll(/(\w+):\s*(\d+)/g)].map((m) => [m[1], +m[2]]));
+  };
+  const legacy = scale("../apps/mobile/src/theme/radius.ts", /export const radius = \{([\s\S]*?)\n\} as const;/);
+  const shared = scale("../packages/shared/src/tokens.ts", /export const radius = \{([\s\S]*?)\n\} as const;/);
+  for (const [from, to] of [["card", "card"], ["chip", "pill"], ["sm", "cta"], ["md", "panel"]]) {
+    if (legacy[from] !== shared[to]) {
+      console.error(`[migrate-styles] radius.${from} (${legacy[from]}) != shape.${to} (${shared[to]}) — not a rename`);
+      process.exit(1);
+    }
+    src = src.replace(new RegExp(`\\bradius\\.${from}\\b`, "g"), `shape.${to}`);
+  }
+}
+
 const missing = [...new Set([...Object.keys(typeMap), ...Object.keys(shapeMap)])]
   .filter((k) => !seen.has(k));
 if (missing.length) {
@@ -284,11 +309,13 @@ if (!src.includes("@shared/tokens")) {
   }
   const kept = m[1].split(",").map((x) => x.trim())
     .filter((x) => x && x !== "radius" && x !== "typography");
-  // Import only what the mapping actually uses. Importing `shape` into a file
-  // with no shape mappings leaves an unused import and a lint warning.
+  // Import what the rewritten file actually references, not what the mapping
+  // declared. A file can gain `shape.` from the value-identical rename above
+  // without having a single shape mapping, and importing `shape` where nothing
+  // uses it leaves an unused import and a lint warning.
   const wanted = [];
-  if (Object.keys(shapeMap).length) wanted.push("radius as shape");
-  if (Object.keys(typeMap).length) wanted.push("text");
+  if (/\bshape\.\w+/.test(src)) wanted.push("radius as shape");
+  if (/\btext\.\w+\.(?:size|letterSpacing)/.test(src)) wanted.push("text");
   src = src.replace(
     m[0],
     `import { ${kept.join(", ")} } from '@/theme';\n` +
@@ -305,6 +332,7 @@ if (JSON.stringify(left) !== JSON.stringify(allow)) {
   );
   process.exit(1);
 }
+
 const stale = src.match(/\bradius\.(?:button|card|chip|sm|md)\b/g);
 if (stale) {
   console.error(`[migrate-styles] ${file}: ${stale.length} leftover @/theme radius`);

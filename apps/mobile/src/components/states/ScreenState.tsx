@@ -45,6 +45,8 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -53,12 +55,12 @@ const ICON_SIZE = 44;
 // `paddingTop: 60` matches the spacing the screens already used, so adopting
 // these components does not visibly shift any existing layout.
 const s = StyleSheet.create({
-  wrap:    { alignItems: 'center', paddingTop: 60, paddingHorizontal: spacing.xxl, gap: spacing.md },
-  inline:  { alignItems: 'center', paddingVertical: spacing.xxl, paddingHorizontal: spacing.xxl, gap: spacing.sm },
-  title:   { color: colors.textMuted, fontSize: 15, fontWeight: '500', textAlign: 'center' },
-  message: { color: colors.textMuted, fontSize: 13, textAlign: 'center', opacity: 0.85 },
-  action:  { marginTop: spacing.sm },
-  actionText: { color: colors.gold, fontWeight: '600', fontSize: 15 },
+  wrap: { alignItems: 'center', paddingTop: 60, paddingHorizontal: spacing.xxl, gap: spacing.md },
+  inline: { alignItems: 'center', paddingVertical: spacing.xxl, paddingHorizontal: spacing.xxl, gap: spacing.sm },
+  title: { color: colors.textMuted, fontSize: text.body.size, fontWeight: '500', textAlign: 'center' },
+  message: { color: colors.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', opacity: 0.85 },
+  action: { marginTop: spacing.sm },
+  actionText: { color: colors.gold, fontWeight: '800', fontSize: text.actionLarge.size },
 });
 
 export type ScreenStateAction = {

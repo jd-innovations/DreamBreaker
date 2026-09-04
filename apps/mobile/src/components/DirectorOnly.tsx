@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 import { useTournamentDirector } from '@/hooks/useTournamentDirector';
 
 type Props = {
@@ -80,8 +82,8 @@ const s = StyleSheet.create({
   },
   text: {
     color: colors.textSub,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: text.rowTitle.size,
+    fontWeight: '700',
     textAlign: 'center',
     lineHeight: 20,
   },

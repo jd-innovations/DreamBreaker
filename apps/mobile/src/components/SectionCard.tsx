@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { colors, radius, typography } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 /**
  * SectionCard — canonical bordered card (radius 16) with an optional
@@ -25,10 +27,10 @@ export function SectionCard({
 }
 
 const s = StyleSheet.create({
-  title: { ...typography.sectionTitle, color: colors.navy, marginBottom: 12, marginTop: 4 },
+  title: { fontSize: text.sectionTitle.size, fontWeight: '900', color: colors.navy, marginBottom: 12, marginTop: 4 },
   card: {
     backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.card, overflow: 'hidden',
+    borderRadius: shape.card, overflow: 'hidden',
   },
   padded: { padding: 14 },
 });

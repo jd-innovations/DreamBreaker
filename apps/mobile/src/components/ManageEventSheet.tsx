@@ -1,7 +1,9 @@
 import React, { useRef } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 export function ManageEventSheet({
   visible, onClose, onEdit, onCancelEvent,
@@ -68,8 +70,8 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(10,18,40,0.45)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.bg,
-    borderTopLeftRadius: radius.card + 8,
-    borderTopRightRadius: radius.card + 8,
+    borderTopLeftRadius: shape.card + 8,
+    borderTopRightRadius: shape.card + 8,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xxl,
@@ -82,7 +84,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingVertical: spacing.md,
   },
-  rowLabel: { fontSize: 16, fontWeight: '600', color: colors.navy },
+  rowLabel: { fontSize: text.body.size, fontWeight: '500', color: colors.navy },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   cancelBtn: {
     marginTop: spacing.sm,
@@ -91,5 +93,5 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
-  cancelText: { fontSize: 16, fontWeight: '700', color: colors.textSub },
+  cancelText: { fontSize: text.actionLarge.size, fontWeight: '800', color: colors.textSub },
 });

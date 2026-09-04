@@ -3,6 +3,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 import { useNetworkStatus } from '@/lib/network';
 
 /**
@@ -60,5 +62,5 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: colors.danger,
   },
-  text: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  text: { color: '#FFFFFF', fontSize: text.controlLabel.size, fontWeight: '700' },
 });

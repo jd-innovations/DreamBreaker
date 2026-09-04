@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import type { QRScannerHandle, QRScannerProps } from './QRScanner.types';
 
 // expo-camera's live scanning surface targets native (Phase 5 is an iOS
@@ -34,7 +36,7 @@ const s = StyleSheet.create({
     flex: 1, backgroundColor: colors.navy,
     alignItems: 'center', justifyContent: 'center', gap: 14, padding: 32,
   },
-  text: { color: 'rgba(255,255,255,0.7)', fontSize: 14, textAlign: 'center' },
-  closeBtn: { backgroundColor: colors.gold, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 28 },
-  closeBtnText: { color: colors.navy, fontSize: 14, fontWeight: '800' },
+  text: { color: 'rgba(255,255,255,0.7)', fontSize: text.body.size, fontWeight: '500', textAlign: 'center' },
+  closeBtn: { backgroundColor: colors.gold, borderRadius: shape.cta, paddingVertical: 12, paddingHorizontal: 28 },
+  closeBtnText: { color: colors.navy, fontSize: text.rowValue.size, fontWeight: '800' },
 });

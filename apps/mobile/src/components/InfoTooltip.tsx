@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 // The centred explainer dialog: gold icon, title, body, optional footnote,
 // single dismiss button.
@@ -70,36 +72,36 @@ const s = StyleSheet.create({
   },
   card: {
     width: '100%', backgroundColor: colors.bg,
-    borderRadius: 20, padding: 24,
+    borderRadius: shape.card, padding: 24,
     shadowColor: '#000', shadowOpacity: 0.18,
     shadowRadius: 20, shadowOffset: { width: 0, height: 8 },
     elevation: 12,
   },
-  iconRow:    { alignItems: 'center', marginBottom: 14 },
+  iconRow: { alignItems: 'center', marginBottom: 14 },
   iconCircle: {
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: colors.goldLight,
     alignItems: 'center', justifyContent: 'center',
   },
   title: {
-    fontSize: 20, fontWeight: '900', color: colors.navy,
+    fontSize: text.modalTitle.size, fontWeight: '900', color: colors.navy,
     textAlign: 'center', marginBottom: 12,
   },
   body: {
-    fontSize: 15, color: colors.text, lineHeight: 22,
-    textAlign: 'center', fontWeight: '400',
+    fontSize: text.body.size, color: colors.text, lineHeight: 22,
+    textAlign: 'center', fontWeight: '500',
   },
   divider: {
     height: StyleSheet.hairlineWidth, backgroundColor: colors.border,
     marginVertical: 16,
   },
   footer: {
-    fontSize: 13, color: colors.textSub, lineHeight: 19,
+    fontSize: text.caption.size, color: colors.textSub, lineHeight: 19,
     textAlign: 'center', fontWeight: '500', marginBottom: 20,
   },
   doneBtn: {
-    backgroundColor: colors.gold, borderRadius: 14,
+    backgroundColor: colors.gold, borderRadius: shape.cta,
     paddingVertical: 14, alignItems: 'center',
   },
-  doneBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  doneBtnText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 });

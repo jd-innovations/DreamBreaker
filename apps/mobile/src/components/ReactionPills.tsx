@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import type { MessageReaction } from '@/lib/messageReactions';
 
 export function ReactionPills({
@@ -55,7 +57,7 @@ const styles = StyleSheet.create({
     gap: 3,
     paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     backgroundColor: colors.page,
     borderWidth: 1,
     borderColor: colors.border,
@@ -65,6 +67,6 @@ const styles = StyleSheet.create({
     borderColor: colors.goldBorder,
   },
   emoji: { fontSize: 13 },
-  count: { fontSize: 11, fontWeight: '700', color: colors.textSub },
+  count: { fontSize: text.chipValue.size, fontWeight: '800', color: colors.textSub },
   countMine: { color: colors.gold },
 });

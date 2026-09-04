@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 
 export function WalletEmptyState() {
   return (
@@ -23,6 +25,6 @@ const s = StyleSheet.create({
     width: 80, height: 80, borderRadius: 40, backgroundColor: colors.page,
     alignItems: 'center', justifyContent: 'center', marginBottom: 4,
   },
-  title: { color: colors.navy, fontSize: 20, fontWeight: '900', textAlign: 'center' },
-  sub: { color: colors.textSub, fontSize: 14, lineHeight: 21, textAlign: 'center' },
+  title: { color: colors.navy, fontSize: text.modalTitle.size, fontWeight: '900', textAlign: 'center' },
+  sub: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 21, textAlign: 'center' },
 });

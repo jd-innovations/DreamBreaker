@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { AMENITY_CATALOG, MAX_AMENITIES } from '@/lib/tournamentAmenities';
 
 // Lets a director pick up to three amenity chips for the detail strip.
@@ -78,21 +80,21 @@ export default function AmenityPicker({ value, onChange }: Props) {
 
 const s = StyleSheet.create({
   labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  label:    { color: colors.navy, fontSize: 13, fontWeight: '700' },
+  label: { color: colors.navy, fontSize: text.controlLabel.size, fontWeight: '700' },
   optional: { color: colors.textSub, fontWeight: '400' },
-  counter:  { color: colors.textSub, fontSize: 12, fontWeight: '700' },
+  counter: { color: colors.textSub, fontSize: text.chipValue.size, fontWeight: '800' },
   counterFull: { color: colors.gold },
-  hint:     { color: colors.textSub, fontSize: 12, lineHeight: 17, marginTop: 2, marginBottom: spacing.sm },
-  grid:     { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  hint: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17, marginTop: 2, marginBottom: spacing.sm },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.chip,
+    borderWidth: 1.5, borderColor: colors.border, borderRadius: shape.pill,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     backgroundColor: colors.bg,
   },
-  chipOn:      { borderColor: colors.gold, backgroundColor: colors.goldBg },
-  chipDim:     { opacity: 0.45 },
-  chipText:    { color: colors.text, fontSize: 13, fontWeight: '600' },
-  chipTextOn:  { color: colors.navy, fontWeight: '800' },
+  chipOn: { borderColor: colors.gold, backgroundColor: colors.goldBg },
+  chipDim: { opacity: 0.45 },
+  chipText: { color: colors.text, fontSize: text.controlLabel.size, fontWeight: '700' },
+  chipTextOn: { color: colors.navy, fontWeight: '800' },
   chipTextDim: { color: colors.textSub },
 });

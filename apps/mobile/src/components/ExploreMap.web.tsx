@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 import type { ExploreMapProps } from './ExploreMap.types';
 
 // react-native-maps has no web support — this stub keeps the web preview
@@ -28,7 +30,7 @@ export function ExploreMap({ pins, selectedId: _selectedId, onSelectPin: _onSele
 const s = StyleSheet.create({
   root: { flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: L.page },
   placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 10 },
-  text: { color: L.textSub, fontSize: 13, textAlign: 'center', lineHeight: 19 },
+  text: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 19 },
   gpsBtn: {
     position: 'absolute', bottom: 116, right: 16,
     width: 46, height: 46, borderRadius: 23,

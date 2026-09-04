@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, iconCircle } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 
 /**
  * SettingsRow — canonical row for settings & menu lists.
@@ -59,10 +61,10 @@ const s = StyleSheet.create({
     borderRadius: iconCircle.standard / 2,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  body:  { flex: 1 },
-  label: { color: colors.navy, fontSize: 15, fontWeight: '500' },
-  sub:   { color: colors.textSub, fontSize: 12, fontWeight: '400', marginTop: 2 },
-  value: { color: colors.textSub, fontSize: 15, fontWeight: '500' },
+  body: { flex: 1 },
+  label: { color: colors.navy, fontSize: text.body.size, fontWeight: '500' },
+  sub: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+  value: { color: colors.textSub, fontSize: text.body.size, fontWeight: '500' },
 });
 
 export default SettingsRow;

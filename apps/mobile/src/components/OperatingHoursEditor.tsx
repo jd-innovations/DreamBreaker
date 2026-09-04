@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Switch } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import {
   fetchOperatingHours, upsertOperatingHours,
   type DayHours, type OperatingHoursOwnerType,
@@ -253,24 +255,24 @@ export function OperatingHoursEditor({
 }
 
 const s = StyleSheet.create({
-  note: { color: colors.textSub, ...typography.metadata },
+  note: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, },
   dayRow: {
-    padding: spacing.md, backgroundColor: colors.bg, borderRadius: radius.card,
+    padding: spacing.md, backgroundColor: colors.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: colors.border, gap: spacing.sm,
   },
   dayHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  dayName: { color: colors.navy, ...typography.cardTitle },
-  openLabel: { color: colors.textSub, ...typography.metadata },
+  dayName: { fontSize: text.rowTitle.size, fontWeight: '700', color: colors.navy, },
+  openLabel: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, },
   timeBtn: {
-    flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radius.button,
+    flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: shape.cta,
     borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.bg,
   },
-  timeText: { color: colors.navy, fontSize: 15, fontWeight: '700' },
-  dash: { color: colors.textSub, ...typography.metadata },
+  timeText: { color: colors.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  dash: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, },
   saveBtn: {
-    backgroundColor: colors.navy, borderRadius: radius.button, paddingVertical: spacing.md,
+    backgroundColor: colors.navy, borderRadius: shape.cta, paddingVertical: spacing.md,
     alignItems: 'center', justifyContent: 'center', marginTop: spacing.xs,
   },
-  saveText: { color: colors.white, fontSize: 15, fontWeight: '800' },
+  saveText: { color: colors.white, fontSize: text.actionLarge.size, fontWeight: '800' },
   disabled: { opacity: 0.4 },
 });

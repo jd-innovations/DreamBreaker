@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { VenueMapCard } from './VenueMapCard';
 
 // The LOCATION section: a map well over the venue's name, address and actions.
@@ -102,28 +104,28 @@ export default function LocationCard({
 const s = StyleSheet.create({
   card: {
     backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.card, overflow: 'hidden',
+    borderRadius: shape.card, overflow: 'hidden',
   },
   mapWell: {
     height: 130, backgroundColor: '#F0F4FA',
     alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
   },
-  mapText:  { color: colors.textSub, fontSize: 13 },
-  info:     { padding: spacing.md, gap: spacing.xs },
+  mapText: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  info: { padding: spacing.md, gap: spacing.xs },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
-  venue:    { color: colors.navy, fontSize: 15, fontWeight: '800', flexShrink: 1 },
+  venue: { color: colors.navy, fontSize: text.rowValue.size, fontWeight: '800', flexShrink: 1 },
   verifiedBadge: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: '#DBEAFE', borderRadius: radius.chip,
+    backgroundColor: '#DBEAFE', borderRadius: shape.pill,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
   },
   verifiedText: { fontSize: 9, fontWeight: '800', color: '#2563EB', letterSpacing: 0.4 },
-  addr:     { color: colors.textSub, fontSize: 13 },
-  btnRow:   { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, justifyContent: 'center' },
+  addr: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  btnRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, justifyContent: 'center' },
   btn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1.5, borderColor: colors.gold, borderRadius: radius.sm,
+    borderWidth: 1.5, borderColor: colors.gold, borderRadius: shape.cta,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
-  btnText:  { color: colors.gold, fontSize: 13, fontWeight: '700' },
+  btnText: { color: colors.gold, fontSize: text.controlLabel.size, fontWeight: '700' },
 });

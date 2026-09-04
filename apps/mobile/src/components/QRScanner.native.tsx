@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } 
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import type { QRScannerHandle, QRScannerProps } from './QRScanner.types';
 
 const L = {
@@ -173,15 +175,15 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center', justifyContent: 'center', marginBottom: 18,
   },
-  permissionTitle: { color: L.white, fontSize: 18, fontWeight: '800', marginBottom: 8, textAlign: 'center' },
-  permissionBody: { color: 'rgba(255,255,255,0.7)', fontSize: 14, lineHeight: 20, textAlign: 'center', marginBottom: 24 },
+  permissionTitle: { color: L.white, fontSize: text.titleSm.size, fontWeight: '800', marginBottom: 8, textAlign: 'center' },
+  permissionBody: { color: 'rgba(255,255,255,0.7)', fontSize: text.body.size, fontWeight: '500', lineHeight: 20, textAlign: 'center', marginBottom: 24 },
   primaryBtn: {
-    backgroundColor: L.gold, borderRadius: 14,
+    backgroundColor: L.gold, borderRadius: shape.cta,
     paddingVertical: 14, paddingHorizontal: 32, marginBottom: 12, minWidth: 200, alignItems: 'center',
   },
-  primaryBtnText: { color: L.navy, fontSize: 15, fontWeight: '800' },
+  primaryBtnText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
   secondaryBtn: { paddingVertical: 8, paddingHorizontal: 16 },
-  secondaryBtnText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600' },
+  secondaryBtnText: { color: 'rgba(255,255,255,0.7)', fontSize: text.action.size, fontWeight: '800' },
 
   dim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
   frameRow: { flexDirection: 'row', height: FRAME_SIZE },
@@ -191,7 +193,7 @@ const s = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   bottomArea: { alignItems: 'center', paddingTop: 24 },
-  instruction: { color: L.white, fontSize: 14, fontWeight: '600', textAlign: 'center', paddingHorizontal: 32 },
+  instruction: { color: L.white, fontSize: text.body.size, fontWeight: '500', textAlign: 'center', paddingHorizontal: 32 },
 
   closeBtn: {
     position: 'absolute', top: 56, left: 20,

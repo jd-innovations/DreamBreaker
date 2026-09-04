@@ -6,6 +6,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 import { PickleballIcon } from './PickleballIcon';
 import { haptics } from '@/lib/haptics';
 
@@ -138,5 +140,5 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   title: { color: colors.navy, fontSize: 24, fontWeight: '900' },
-  subtitle: { color: colors.textSub, fontSize: 14, fontWeight: '600' },
+  subtitle: { color: colors.textSub, fontSize: text.rowTitle.size, fontWeight: '700' },
 });

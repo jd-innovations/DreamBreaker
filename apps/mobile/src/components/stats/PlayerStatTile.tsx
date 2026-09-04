@@ -1,7 +1,9 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppIcon, type AppIconName } from '@/components/AppIcon';
-import { colors, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 
 export function PlayerStatTile({
   icon,
@@ -32,13 +34,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   value: {
-    ...typography.cardTitle,
     color: colors.playerCredentialText,
-    fontSize: 16,
+    fontSize: text.actionLarge.size, fontWeight: '800',
     marginTop: spacing.xs,
   },
   label: {
-    ...typography.metadata,
     color: colors.playerCredentialMuted,
     marginTop: 1,
     fontSize: 10,

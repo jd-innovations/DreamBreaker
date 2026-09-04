@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import type { SupportContext } from '@/lib/support/supportContext';
 import type { SupportTicket, SupportTicketCategory } from '@/lib/supportTicketService';
 import { trackSupportEvent } from '@/lib/support/supportAnalytics';
@@ -171,8 +173,8 @@ const styles = StyleSheet.create({
   sheet: {
     maxHeight: '85%',
     backgroundColor: colors.bg,
-    borderTopLeftRadius: radius.card + 8,
-    borderTopRightRadius: radius.card + 8,
+    borderTopLeftRadius: shape.card + 8,
+    borderTopRightRadius: shape.card + 8,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xxl,
@@ -185,15 +187,15 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: spacing.md,
   },
-  title: { ...typography.cardTitle, color: colors.navy },
-  subtitle: { ...typography.metadata, color: colors.textSub, marginTop: 2, marginBottom: spacing.sm },
+  title: { fontSize: text.titleSm.size, fontWeight: '800', color: colors.navy },
+  subtitle: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, marginTop: 2, marginBottom: spacing.sm },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.md,
   },
-  rowLabel: { ...typography.body, fontWeight: '600', color: colors.navy, flex: 1 },
+  rowLabel: { fontSize: text.body.size, fontWeight: '500', color: colors.navy, flex: 1 },
   rowChevron: { marginLeft: spacing.sm },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   cancelBtn: {
@@ -203,5 +205,5 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
-  cancelText: { fontSize: 16, fontWeight: '700', color: colors.textSub },
+  cancelText: { fontSize: text.actionLarge.size, fontWeight: '800', color: colors.textSub },
 });

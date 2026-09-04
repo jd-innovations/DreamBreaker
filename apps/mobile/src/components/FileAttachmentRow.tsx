@@ -2,6 +2,8 @@ import React from 'react';
 import { Linking, Pressable, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 
 // Renders a tappable filename row for a non-image ('file') message
 // attachment. `onDark` matches it to the sent-bubble (navy) vs
@@ -30,6 +32,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     maxWidth: 200,
   },
-  name: { fontSize: 14, fontWeight: '600', color: colors.navy },
+  name: { fontSize: text.rowTitle.size, fontWeight: '700', color: colors.navy },
   nameOnDark: { color: colors.white },
 });

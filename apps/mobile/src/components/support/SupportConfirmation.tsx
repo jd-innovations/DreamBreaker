@@ -1,7 +1,9 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import type { SupportTicket } from '@/lib/supportTicketService';
 
 export function SupportConfirmation({ ticket, onViewTicket }: { ticket: SupportTicket; onViewTicket: () => void }) {
@@ -31,16 +33,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
-  title: { ...typography.cardTitle, color: colors.navy },
-  subject: { ...typography.body, color: colors.textSub, textAlign: 'center', marginTop: spacing.sm },
-  footnote: { ...typography.metadata, color: colors.textSub, marginTop: spacing.md },
+  title: { fontSize: text.titleSm.size, fontWeight: '800', color: colors.navy },
+  subject: { fontSize: text.body.size, fontWeight: '500', color: colors.textSub, textAlign: 'center', marginTop: spacing.sm },
+  footnote: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, marginTop: spacing.md },
   viewBtn: {
     marginTop: spacing.lg,
     alignSelf: 'stretch',
     backgroundColor: colors.navy,
-    borderRadius: 14,
+    borderRadius: shape.cta,
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
-  viewBtnText: { color: colors.gold, fontSize: 16, fontWeight: '800' },
+  viewBtnText: { color: colors.gold, fontSize: text.actionLarge.size, fontWeight: '800' },
 });
