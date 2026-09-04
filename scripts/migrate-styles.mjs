@@ -139,7 +139,31 @@ function lookup(table, sheet, name) {
   return null;
 }
 
-src = src.replace(BLOCK, (whole, name, props, offset) => {
+// Only ever edit inside a StyleSheet.create(...) body.
+//
+// Without this the block regex matches any `name: { ... }` anywhere in the
+// file, including JSX. On marketplace/[id].tsx it matched
+// `Asking price: {formatPriceCents(...)}` and injected style props into a JSX
+// expression. tsc caught it, but the tool should not be able to write it.
+function styleSheetRegions(text) {
+  const out = [];
+  for (const m of text.matchAll(/StyleSheet\.create\(/g)) {
+    let i = m.index + m[0].length - 1;
+    let depth = 0;
+    for (; i < text.length; i += 1) {
+      const c = text[i];
+      if (c === "(" || c === "{" || c === "[") depth += 1;
+      else if (c === ")" || c === "}" || c === "]") {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+    out.push([m.index, i + 1]);
+  }
+  return out;
+}
+
+function applyRoles(name, props, offset) {
   const sheet = sheetAt(sheets, offset);
   let out = props;
 
@@ -185,7 +209,26 @@ src = src.replace(BLOCK, (whole, name, props, offset) => {
   }
 
   return `${name}: {${out}}`;
-});
+}
+
+const regions = styleSheetRegions(src);
+if (!regions.length) {
+  console.error(`[migrate-styles] ${file}: no StyleSheet.create found`);
+  process.exit(1);
+}
+
+// Rebuild the file, running the block replacement only inside each region.
+let rebuilt = "";
+let cursor = 0;
+for (const [start, end] of regions) {
+  rebuilt += src.slice(cursor, start);
+  rebuilt += src
+    .slice(start, end)
+    .replace(BLOCK, (whole, name, props, inner) => applyRoles(name, props, start + inner));
+  cursor = end;
+}
+rebuilt += src.slice(cursor);
+src = rebuilt;
 
 const missing = [...new Set([...Object.keys(typeMap), ...Object.keys(shapeMap)])]
   .filter((k) => !seen.has(k));
