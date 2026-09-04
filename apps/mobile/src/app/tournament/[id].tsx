@@ -10,6 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { isTournamentCompleted, getAllBrackets } from '@/lib/directorBracketStore';
 import { isTournamentCompleted as fetchHasPublishedResults } from '@/lib/supabase/brackets';
@@ -212,39 +214,39 @@ const dr = StyleSheet.create({
     paddingVertical: 14, paddingHorizontal: 16, gap: 10,
     borderBottomWidth: 1, borderBottomColor: L.border,
   },
-  center:   { flex: 1, minWidth: 0 },
-  nameLine: { color: L.navy, fontSize: 16, fontWeight: '700', lineHeight: 20 },
-  dates:    { color: L.textMuted, fontSize: 12, marginTop: 4 },
+  center: { flex: 1, minWidth: 0 },
+  nameLine: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', lineHeight: 20 },
+  dates: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: 4 },
 
   // Col 2 — badge stacked above count
   countCol: {
     alignItems: 'center', flexShrink: 0, minWidth: 60, gap: 3,
   },
   levelBadge: {
-    borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2,
+    borderRadius: shape.badge, paddingHorizontal: 8, paddingVertical: 2,
   },
-  levelText:  { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
-  countNum:   { color: L.navy, fontSize: 13, fontWeight: '800' },
+  levelText: { color: '#FFFFFF', fontSize: text.chipValue.size, fontWeight: '800' },
+  countNum: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
   countLabel: { color: L.textMuted, fontSize: 10 },
 
   // Col 3 — status pill + sub + chevron stacked
   statusCol: { alignItems: 'center', flexShrink: 0, minWidth: 88, gap: 2 },
   statusBadge: {
-    borderWidth: 1.5, borderRadius: 20,
+    borderWidth: 1.5, borderRadius: shape.pill,
     paddingHorizontal: 8, paddingVertical: 3,
   },
-  statusAvail:          { borderColor: L.green, backgroundColor: L.greenBg },
-  statusWait:           { borderColor: L.red,   backgroundColor: L.redBg   },
-  statusHeld:           { borderColor: L.gold,  backgroundColor: L.goldLight },
-  statusRegistered:     { borderColor: L.green, backgroundColor: L.greenBg  },
-  statusPast:           { borderColor: L.border, backgroundColor: L.page   },
-  statusText:           { fontSize: 11, fontWeight: '700' },
-  statusTextAvail:      { color: L.green },
-  statusTextWait:       { color: L.red   },
-  statusTextHeld:       { color: L.gold  },
+  statusAvail: { borderColor: L.green, backgroundColor: L.greenBg },
+  statusWait: { borderColor: L.red,   backgroundColor: L.redBg   },
+  statusHeld: { borderColor: L.gold,  backgroundColor: L.goldLight },
+  statusRegistered: { borderColor: L.green, backgroundColor: L.greenBg  },
+  statusPast: { borderColor: L.border, backgroundColor: L.page   },
+  statusText: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  statusTextAvail: { color: L.green },
+  statusTextWait: { color: L.red   },
+  statusTextHeld: { color: L.gold  },
   statusTextRegistered: { color: L.green },
-  statusTextPast:       { color: L.textMuted },
-  statusSub:            { color: L.textMuted, fontSize: 10, fontWeight: '500' },
+  statusTextPast: { color: L.textMuted },
+  statusSub: { color: L.textMuted, fontSize: 10, fontWeight: '500' },
 });
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -905,9 +907,9 @@ export default function TournamentDetail() {
           {(() => {
             const access = facility ? facilityAccessType(facility) : null;
             const BADGE = {
-              public:     { label: 'Public',     bg: '#DCFCE7', color: '#16A34A' },
+              public: { label: 'Public',     bg: '#DCFCE7', color: '#16A34A' },
               membership: { label: 'Membership', bg: '#FEF9C3', color: '#CA8A04' },
-              private:    { label: 'Private',    bg: '#FEE2E2', color: '#DC2626' },
+              private: { label: 'Private',    bg: '#FEE2E2', color: '#DC2626' },
             }[access ?? 'public'];
             const cityState = [tournament.city, tournament.state].filter(Boolean).join(', ');
             return (
@@ -1196,10 +1198,10 @@ export default function TournamentDetail() {
 // What survives of the old compact facility row: the access badge and court
 // count, which LocationCard has no opinion about and renders via `meta`.
 const fc = StyleSheet.create({
-  meta:        { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 },
-  accessBadge: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
-  accessText:  { fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
-  courts:      { color: L.textSub, fontSize: 11, fontWeight: '600' },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 },
+  accessBadge: { borderRadius: shape.badge, paddingHorizontal: 7, paddingVertical: 2 },
+  accessText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
+  courts: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 });
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -1228,10 +1230,10 @@ const s = StyleSheet.create({
     paddingBottom: spacing.xxxl + spacing.lg,
   },
   heroLine1: {
-    color: '#FFFFFF', fontSize: 32, fontWeight: '800', letterSpacing: 0.5,
+    color: '#FFFFFF', fontSize: text.heroTitle.size, fontWeight: '800', letterSpacing: 0.5,
   },
   heroLine2: {
-    color: '#FFFFFF', fontSize: 32, fontWeight: '800', letterSpacing: 0.5,
+    color: '#FFFFFF', fontSize: text.heroTitle.size, fontWeight: '800', letterSpacing: 0.5,
     marginBottom: 6,
   },
   heroUnderline: {
@@ -1242,12 +1244,12 @@ const s = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.92)',
-    borderRadius: 8, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, marginBottom: spacing.md,
+    borderRadius: shape.badge, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, marginBottom: spacing.md,
   },
-  datePillText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  locationRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
-  locationName: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
-  locationCity: { color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '400' },
+  datePillText: { color: '#FFFFFF', fontSize: text.chipValue.size, fontWeight: '800' },
+  locationRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
+  locationName: { color: '#FFFFFF', fontSize: text.rowTitle.size, fontWeight: '700' },
+  locationCity: { color: 'rgba(255,255,255,0.75)', fontSize: text.caption.size, fontWeight: '500' },
   statusRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 14,
@@ -1264,7 +1266,7 @@ const s = StyleSheet.create({
   // Host card
   hostCard: {
     marginHorizontal: 16, marginTop: 0, marginBottom: 18,
-    borderRadius: 16, borderWidth: 1, borderColor: L.border,
+    borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
     backgroundColor: L.bg,
     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 2 },
     elevation: 3,
@@ -1274,17 +1276,17 @@ const s = StyleSheet.create({
     padding: 16,
   },
   hostAvatar: { width: 56, height: 56, borderRadius: 28, flexShrink: 0 },
-  hostInfo:   { flex: 1 },
-  hostedBy:   { color: L.textMuted, fontSize: 11, fontWeight: '500', marginBottom: 1 },
-  hostNameRow:{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
-  hostName:   { color: L.navy, fontSize: 16, fontWeight: '800', textTransform: 'uppercase' },
+  hostInfo: { flex: 1 },
+  hostedBy: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginBottom: 1 },
+  hostNameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
+  hostName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', textTransform: 'uppercase' },
   directorPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     alignSelf: 'flex-start',
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: 20,
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.pill,
     paddingHorizontal: 10, paddingVertical: 3, marginBottom: 5,
   },
-  directorText: { color: L.gold, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  directorText: { color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 
   hostDivider: { height: 1, backgroundColor: L.border, marginHorizontal: 16, marginTop: 14 },
 
@@ -1292,18 +1294,18 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 14, gap: 4,
   },
-  hostStat:     { flex: 1, alignItems: 'center', gap: 4 },
-  hostStatNum:  { color: L.navy, fontSize: 17, fontWeight: '900' },
-  hostStatLabel:{ color: L.textMuted, fontSize: 10, fontWeight: '500', textAlign: 'center', lineHeight: 14 },
-  hostMore:     { paddingLeft: 8 },
+  hostStat: { flex: 1, alignItems: 'center', gap: 4 },
+  hostStatNum: { color: L.navy, fontSize: text.statValueSm.size, fontWeight: '900' },
+  hostStatLabel: { color: L.textMuted, fontSize: 10, fontWeight: '500', textAlign: 'center', lineHeight: 14 },
+  hostMore: { paddingLeft: 8 },
 
   msgDirectorBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     marginHorizontal: 16, marginTop: 14, marginBottom: 4,
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: 12,
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta,
     paddingVertical: 10, backgroundColor: L.page,
   },
-  msgDirectorText: { color: L.navy, fontSize: 14, fontWeight: '700' },
+  msgDirectorText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
   directorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -1311,32 +1313,32 @@ const s = StyleSheet.create({
     // CTA stack; without it the banner sat 4px under Tournament Chat.
     marginHorizontal: 16, marginTop: 10, marginBottom: 8,
     paddingHorizontal: 14, paddingVertical: 10,
-    backgroundColor: L.goldLight, borderRadius: 10,
+    backgroundColor: L.goldLight, borderRadius: shape.panel,
     borderWidth: 1, borderColor: colors.goldBorder,
   },
-  directorBannerText: { flex: 1, color: L.navy, fontSize: 13, fontWeight: '700' },
+  directorBannerText: { flex: 1, color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
   bracketsBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginHorizontal: 16, marginBottom: 8,
     paddingHorizontal: 14, paddingVertical: 10,
-    backgroundColor: L.bg, borderRadius: 10,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
   },
-  bracketsBannerText: { flex: 1, color: L.navy, fontSize: 13, fontWeight: '700' },
+  bracketsBannerText: { flex: 1, color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
   resultsBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginHorizontal: 16, marginBottom: 14,
     paddingHorizontal: 14, paddingVertical: 10,
-    backgroundColor: L.goldLight, borderRadius: 10,
+    backgroundColor: L.goldLight, borderRadius: shape.panel,
     borderWidth: 1, borderColor: colors.goldBorder,
   },
-  resultsBannerText: { flex: 1, color: L.navy, fontSize: 13, fontWeight: '700' },
+  resultsBannerText: { flex: 1, color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
   // Description
   description: {
-    color: L.text, fontSize: 14, lineHeight: 22, fontWeight: '400',
+    color: L.text, fontSize: text.body.size, lineHeight: 22, fontWeight: '500',
     paddingHorizontal: 16, marginBottom: 18,
   },
   aboutPrompt: {
@@ -1346,11 +1348,11 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: L.border,
-    borderRadius: 12,
+    borderRadius: shape.panel,
     paddingVertical: 14,
     paddingHorizontal: 14,
   },
-  aboutPromptText: { flex: 1, color: L.textMuted, fontSize: 13, lineHeight: 18 },
+  aboutPromptText: { flex: 1, color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18 },
 
   // Amenities — one tinted strip with hairline dividers, rather than four
   // separate bordered cards. `alignItems: 'stretch'` is what lets the dividers
@@ -1358,7 +1360,7 @@ const s = StyleSheet.create({
   amenitiesRow: {
     flexDirection: 'row', alignItems: 'stretch',
     marginHorizontal: 16, marginBottom: 24,
-    borderRadius: 18,
+    borderRadius: shape.card,
     backgroundColor: L.page,
     paddingVertical: 14,
   },
@@ -1373,44 +1375,44 @@ const s = StyleSheet.create({
     // reference where dividers span the content rather than the full height.
     marginVertical: 2,
   },
-  amenityTitle: { color: L.navy,    fontSize: 11, fontWeight: '700', textAlign: 'center' },
-  amenitySub:   { color: L.textMuted, fontSize: 10, textAlign: 'center' },
+  amenityTitle: { color: L.navy,    fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, textAlign: 'center' },
+  amenitySub: { color: L.textMuted, fontSize: 10, textAlign: 'center' },
 
   // Section
-  section:      { marginBottom: 24, paddingHorizontal: 16 },
-  sectionHeader:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.8 },
+  section: { marginBottom: 24, paddingHorizontal: 16 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sectionTitle: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing },
   // For headings whose content is a card that carries its own horizontal
   // margin, so it cannot sit inside s.section without doubling the inset to 32.
   locationWrap: { marginHorizontal: 16, marginBottom: 18 },
   sectionTitleStandalone: {
-    color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.8,
+    color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing,
     paddingHorizontal: 16, marginBottom: 12,
   },
-  edtRow:       { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  edtText:      { color: L.textMuted, fontSize: 12 },
+  edtRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  edtText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Divisions card
   divisionsCard: {
-    borderWidth: 1, borderColor: L.border, borderRadius: 16, overflow: 'hidden',
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.card, overflow: 'hidden',
     backgroundColor: L.bg,
   },
   viewAllBtn: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6,
     paddingVertical: 14,
   },
-  viewAllText: { color: L.navy, fontSize: 14, fontWeight: '700' },
+  viewAllText: { color: L.navy, fontSize: text.link.size, fontWeight: '700' },
 
   noDivisionsState: {
     alignItems: 'center', gap: 6, paddingVertical: 28,
-    backgroundColor: L.bg, borderRadius: 16, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
   },
-  noDivisionsText: { color: L.navy, fontSize: 15, fontWeight: '700' },
-  noDivisionsSub:  { color: L.textSub, fontSize: 13, textAlign: 'center', paddingHorizontal: 24 },
+  noDivisionsText: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  noDivisionsSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', paddingHorizontal: 24 },
 
   // Fees card
   feesCard: {
-    borderWidth: 1, borderColor: L.border, borderRadius: 16, overflow: 'hidden',
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.card, overflow: 'hidden',
     backgroundColor: L.bg,
   },
   feesGrid: {
@@ -1421,21 +1423,21 @@ const s = StyleSheet.create({
     paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: L.border,
   },
   feeRowLast: { borderBottomWidth: 0 },
-  feeIcon:    { flexShrink: 0 },
+  feeIcon: { flexShrink: 0 },
   feeTextCol: { flex: 1, gap: 3 },
   feeLabel: { color: L.textMuted, fontSize: 10, fontWeight: '600', lineHeight: 14 },
-  feeValue: { color: L.navy,     fontSize: 14, fontWeight: '900' },
-  feeUnit:  { fontSize: 11, fontWeight: '500', color: L.textMuted },
-  feeSub:   { color: L.textMuted, fontSize: 10 },
-  feeSubRow:{ flexDirection: 'row', alignItems: 'center', gap: 5 },
+  feeValue: { color: L.navy,     fontSize: text.rowValue.size, fontWeight: '800' },
+  feeUnit: { fontSize: text.caption.size, fontWeight: '500', color: L.textMuted },
+  feeSub: { color: L.textMuted, fontSize: 10 },
+  feeSubRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
 
   feesNote: {
     flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5,
     paddingHorizontal: 14, paddingVertical: 12,
     backgroundColor: L.goldLight,
   },
-  feesNoteText: { color: L.text, fontSize: 12, fontWeight: '500', flex: 1 },
-  learnMore:    { color: L.gold, fontSize: 12, fontWeight: '700' },
+  feesNoteText: { color: L.text, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
+  learnMore: { color: L.gold, fontSize: text.link.size, fontWeight: '700' },
 
   // Bottom bar — 2-row layout
   bottomBar: {
@@ -1452,48 +1454,48 @@ const s = StyleSheet.create({
   // Bottom — Save Tournament / See Results, same size/weight as the others
   saveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 1.5, borderColor: L.border, borderRadius: 14,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
     minHeight: 56,
   },
-  saveBtnText: { color: L.navy, fontSize: 14, fontWeight: '800' },
+  saveBtnText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
   // Registration unavailable banner
   regUnavailableRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 14,
   },
-  regUnavailableText: { color: L.textSub, fontSize: 14, fontWeight: '600' },
+  regUnavailableText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   // Middle — Hold, full width
   holdBtn: {
     alignItems: 'center',
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: 14,
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta,
     paddingVertical: 12, paddingHorizontal: 8,
     minHeight: 56,
     justifyContent: 'center',
   },
-  holdBtnNav:      { borderColor: L.navy },
+  holdBtnNav: { borderColor: L.navy },
   holdBtnDisabled: { borderColor: L.border },
   holdBtnLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  holdBtnLabel:    { color: L.gold,  fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  holdBtnLabel: { color: L.gold,  fontSize: text.actionLarge.size, fontWeight: '800', textAlign: 'center' },
   holdBtnNavLabel: { color: L.navy },
   holdBtnDisabledLabel: { color: L.textMuted },
-  holdBtnSub:      { color: L.gold,  fontSize: 11, fontWeight: '500', textAlign: 'center', marginTop: 1 },
+  holdBtnSub: { color: L.gold,  fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', marginTop: 1 },
 
   registerBtn: {
     alignItems: 'center',
-    backgroundColor: L.gold, borderRadius: 14,
+    backgroundColor: L.gold, borderRadius: shape.cta,
     paddingVertical: 12, paddingHorizontal: 8,
     minHeight: 56,
     justifyContent: 'center',
   },
-  registerBtnLabel:    { color: '#FFFFFF', fontSize: 14, fontWeight: '800', textAlign: 'center' },
-  registerBtnSub:      { color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '500', textAlign: 'center', marginTop: 1 },
+  registerBtnLabel: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800', textAlign: 'center' },
+  registerBtnSub: { color: 'rgba(255,255,255,0.85)', fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', marginTop: 1 },
   registerBtnComplete: { backgroundColor: L.navy },
-  registerBtnDone:     { backgroundColor: L.green, alignItems: 'center', justifyContent: 'center' },
-  registerBtnDoneLabel:{ color: '#FFFFFF', fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  registerBtnDone: { backgroundColor: L.green, alignItems: 'center', justifyContent: 'center' },
+  registerBtnDoneLabel: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800', textAlign: 'center' },
   registerBtnDisabled: { backgroundColor: L.page, borderWidth: 1, borderColor: L.border, alignItems: 'center', justifyContent: 'center' },
-  registerBtnDisabledLabel: { color: L.textMuted, fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  registerBtnDisabledLabel: { color: L.textMuted, fontSize: text.actionLarge.size, fontWeight: '800', textAlign: 'center' },
 });
 
 // ─── Tooltip styles ───────────────────────────────────────────────────────────
@@ -1522,18 +1524,18 @@ const sheet = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: 16,
   },
-  title: { color: L.navy, fontSize: 17, fontWeight: '900' },
+  title: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900' },
 
 
   directorHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
   directorAvatar: { width: 64, height: 64, borderRadius: 32 },
-  directorName:   { color: L.navy, fontSize: 18, fontWeight: '800', textTransform: 'uppercase' },
-  directorBio:    { color: L.text, fontSize: 13, lineHeight: 20, marginBottom: 14 },
+  directorName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', textTransform: 'uppercase' },
+  directorBio: { color: L.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 20, marginBottom: 14 },
 
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.navy, borderRadius: 14,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingVertical: 14, marginTop: 4,
   },
-  primaryBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  primaryBtnText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 });
