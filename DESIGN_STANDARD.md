@@ -215,6 +215,11 @@ turned into practice rather than a note.
 The one value that actually moves: `GlassQuickAction`'s label, 11/600 → 10/700.
 It is the quick-action label on Home, and it is what prompted the role.
 
+**9/800 stays exempt** — asked and answered 2026-09-04. `AppHeader`'s
+notification count is the case: a numeral drawn inside a 18px badge, sized to
+its container rather than from the scale, the same reasoning as decision 14's
+avatar initials. The floor stops at 10 and there is no plan to go lower.
+
 **11. Job match is required. Coincidental size/weight equality is not a match.**
 `actionLarge` is a button role that happens to be 16/800; a card header is also
 16/800 and is not a button. Same numbers, different job, so it is not a match —
