@@ -315,11 +315,23 @@ function withTimeout<T>(p: PromiseLike<T>, ms: number, what: string): Promise<T>
 
 export async function fetchTournamentDirectorId(id: string): Promise<string | null> {
   const started = Date.now();
-  const { data, error } = await withTimeout(
+  // Measured 2026-09-04: server-side this query plans and executes in 0.138ms
+  // with RLS applied, yet the device sometimes never receives a response while
+  // other queries from the same client succeed. That is a lost request, not a
+  // slow one — so one retry, which costs nothing when the first attempt works.
+  const run = () => withTimeout(
     supabase.from('tournaments').select('director_id').eq('id', id).maybeSingle(),
     8_000,
     'The permission check',
   );
+  let result;
+  try {
+    result = await run();
+  } catch (first) {
+    console.warn('[fetchTournamentDirectorId] first attempt failed, retrying:', first);
+    result = await run();
+  }
+  const { data, error } = result;
   console.log(`[fetchTournamentDirectorId] ${id} settled in ${Date.now() - started}ms`,
     error ? `error=${error.message}` : `director=${data?.director_id ?? 'null'}`);
 
