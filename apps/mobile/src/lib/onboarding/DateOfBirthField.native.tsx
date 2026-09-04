@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import type { DateOfBirthFieldProps } from './DateOfBirthField.types';
 
 const L = colors;
@@ -54,9 +56,9 @@ export function DateOfBirthField({ value, onChange, maxDate }: DateOfBirthFieldP
 const s = StyleSheet.create({
   field: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    borderWidth: 1.5, borderColor: L.border, borderRadius: radius.button,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
     paddingHorizontal: spacing.lg, paddingVertical: 14, backgroundColor: L.bg,
   },
-  fieldText: { flex: 1, fontSize: 15, color: L.text, fontWeight: '600' },
+  fieldText: { flex: 1, fontSize: text.body.size, color: L.text, fontWeight: '500' },
   fieldPlaceholder: { color: L.textSub, fontWeight: '400' },
 });

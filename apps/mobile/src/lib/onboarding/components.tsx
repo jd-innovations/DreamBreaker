@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Easing,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { colors, spacing, radius, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { AppIcon, type AppIconName } from '@/components';
 import { haptics } from '@/lib/haptics';
 
@@ -401,8 +403,8 @@ const s = StyleSheet.create({
 
   scrollContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
 
-  title: { ...typography.pageTitle, fontSize: 24, color: L.navy, marginBottom: spacing.xs },
-  sub: { ...typography.body, color: L.textSub, lineHeight: 21 },
+  title: { fontSize: text.pageTitle.size, fontWeight: '900', color: L.navy, marginBottom: spacing.xs },
+  sub: { fontSize: text.body.size, fontWeight: '500', color: L.textSub, lineHeight: 21 },
 
   footer: {
     paddingHorizontal: spacing.lg, paddingTop: spacing.md,
@@ -418,7 +420,7 @@ const s = StyleSheet.create({
     right: 10,
     top: 4,
     bottom: -6,
-    borderRadius: radius.button,
+    borderRadius: shape.cta,
     backgroundColor: L.gold,
     shadowColor: L.gold,
     shadowOpacity: 0.55,
@@ -428,40 +430,40 @@ const s = StyleSheet.create({
   },
   cta: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: L.gold, borderRadius: radius.button, paddingVertical: 15,
+    backgroundColor: L.gold, borderRadius: shape.cta, paddingVertical: 15,
     shadowColor: L.gold, shadowOpacity: 0.24, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 4,
   },
   ctaDisabled: { backgroundColor: L.border },
-  ctaText: { color: L.navy, fontSize: 16, fontWeight: '800' },
+  ctaText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   skipLink: { alignItems: 'center', paddingVertical: spacing.sm },
-  skipText: { color: L.gold, fontSize: 14, fontWeight: '700' },
+  skipText: { color: L.gold, fontSize: text.rowTitle.size, fontWeight: '700' },
 
   row: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    borderWidth: 1.5, borderColor: L.border, borderRadius: radius.card,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.card,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, marginBottom: spacing.sm,
     backgroundColor: L.bg,
   },
   rowSelected: { borderColor: L.gold, backgroundColor: L.goldLight },
   rowIconWrap: {
-    width: 36, height: 36, borderRadius: radius.sm, backgroundColor: L.page,
+    width: 36, height: 36, borderRadius: shape.cta, backgroundColor: L.page,
     alignItems: 'center', justifyContent: 'center',
   },
   rowIconWrapSelected: { backgroundColor: L.goldBg },
-  rowLabel: { fontSize: 15, fontWeight: '700', color: L.navy },
+  rowLabel: { fontSize: text.body.size, fontWeight: '500', color: L.navy },
   rowLabelSelected: { color: L.navy },
-  rowSub: { fontSize: 12, color: L.textSub, marginTop: 2 },
+  rowSub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, marginTop: 2 },
 
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderWidth: 1.5, borderColor: L.border, borderRadius: radius.chip,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.pill,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     backgroundColor: L.bg,
   },
   chipSelected: { borderColor: L.gold, backgroundColor: L.goldLight },
   chipDisabled: { opacity: 0.4 },
-  chipText: { fontSize: 13, fontWeight: '700', color: L.textSub },
+  chipText: { fontSize: text.controlLabel.size, fontWeight: '700', color: L.textSub },
   chipTextSelected: { color: L.navy },
   progressCard: {
     backgroundColor: 'rgba(255,255,255,0.82)',

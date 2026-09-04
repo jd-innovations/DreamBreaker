@@ -1,6 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, TextInput } from 'react-native';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import type { DateOfBirthFieldProps } from './DateOfBirthField.types';
 
 // @react-native-community/datetimepicker has no web implementation (no
@@ -102,12 +104,12 @@ export function DateOfBirthField({ value, onChange, maxDate }: DateOfBirthFieldP
 const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   field: {
-    borderWidth: 1.5, borderColor: L.border, borderRadius: radius.button,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
     paddingHorizontal: spacing.md, paddingVertical: 14, backgroundColor: L.bg,
   },
   fieldSmall: { width: 64 },
   fieldLarge: { flex: 1 },
-  input: { fontSize: 15, color: L.text, fontWeight: '600', padding: 0, textAlign: 'center' },
+  input: { fontSize: text.body.size, color: L.text, fontWeight: '500', padding: 0, textAlign: 'center' },
   sep: { fontSize: 18, color: L.textSub, fontWeight: '600' },
-  error: { fontSize: 12, color: L.danger, marginTop: spacing.sm },
+  error: { fontSize: text.caption.size, fontWeight: '500', color: L.danger, marginTop: spacing.sm },
 });
