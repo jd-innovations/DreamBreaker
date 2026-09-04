@@ -10,9 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
-// NOTE: this screen is only PARTIALLY migrated — see the deliberate exception
-// recorded under rule 12. Only `sectionLabelSmall` uses these tokens so far.
-import { text } from '@shared/tokens';
+import { radius as shape, text } from '@shared/tokens';
 import { AppHeader, APP_HEADER_HEIGHT, AppIcon, GlassQuickAction, ProfileCompletionRing, FindGamesFilterModal, FIND_GAMES_DISTANCE_STEPS, FIND_GAMES_SKILL_RANGES, ShimmerOverlay, type AppIconName } from '@/components';
 import { DraggableQuickActions } from '@/components/DraggableQuickActions';
 import { useSession } from '@/hooks/useSession';
@@ -384,10 +382,10 @@ function FeaturedCard({ item }: { item: typeof FEATURED[0] }) {
 }
 
 const fc = StyleSheet.create({
-  card: { height: 336, borderRadius: 20, overflow: 'hidden', marginRight: 12 },
+  card: { height: 336, borderRadius: shape.card, overflow: 'hidden', marginRight: 12 },
   featuredBadge: {
     position: 'absolute', top: 14, left: 14, zIndex: 2,
-    backgroundColor: L.gold, borderRadius: 6,
+    backgroundColor: L.gold, borderRadius: shape.badge,
     paddingHorizontal: 10, paddingVertical: 4,
   },
   featuredText: { color: L.navy, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
@@ -397,29 +395,29 @@ const fc = StyleSheet.create({
   // wrap added a line and pushed the heading out of view. The height is fixed on
   // purpose (cards sit in a horizontal carousel and must match), so the fix is to
   // stop the variable-length rows growing — every meta line is numberOfLines={1}.
-  content:      {
+  content: {
     position: 'absolute', top: 58, bottom: 0, left: 0, right: 0, padding: 16,
     justifyContent: 'flex-end', overflow: 'hidden',
   },
-  titleRow:     { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
-  name:         { color: '#FFFFFF', fontSize: 26, lineHeight: 30, fontWeight: '800', letterSpacing: 0.5, flexShrink: 1 },
-  metaRow:      { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3 },
-  metaText:     { color: 'rgba(255,255,255,0.88)', fontSize: 12, fontWeight: '500', flexShrink: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
+  name: { color: '#FFFFFF', fontSize: text.heroTitle.size, lineHeight: 30, fontWeight: '800', letterSpacing: 0.5, flexShrink: 1 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3 },
+  metaText: { color: 'rgba(255,255,255,0.88)', fontSize: text.caption.size, fontWeight: '500', flexShrink: 1 },
   statsRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: shape.panel,
     paddingHorizontal: 12, paddingVertical: 10,
   },
-  stat:      { flex: 1, alignItems: 'center', gap: 2 },
-  statNum:   { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  stat: { flex: 1, alignItems: 'center', gap: 2 },
+  statNum: { color: '#FFFFFF', fontSize: text.action.size, fontWeight: '800' },
   statLabel: { color: 'rgba(255,255,255,0.65)', fontSize: 9, fontWeight: '500' },
   viewBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#FFFFFF', borderRadius: 10,
+    backgroundColor: '#FFFFFF', borderRadius: shape.cta,
     paddingHorizontal: 12, paddingVertical: 10,
     marginTop: 8,
   },
-  viewBtnText: { color: L.navy, fontSize: 13, fontWeight: '800' },
+  viewBtnText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 });
 
 // ─── Trending tournament card (full-width horizontal) ────────────────────────
@@ -504,7 +502,7 @@ function CommunityCard({ item, saved, onSave }: { item: CommunityCardData; saved
 const cl = StyleSheet.create({
   card: {
     backgroundColor: L.bg,
-    borderRadius: 16, borderWidth: 1, borderColor: L.border,
+    borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
     padding: 16, marginBottom: 10,
   },
   topRow: {
@@ -514,24 +512,26 @@ const cl = StyleSheet.create({
   typeTag: {
     alignSelf: 'flex-start',
   },
-  typeText: { color: L.gold, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
+  typeText: { color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   distChip: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     backgroundColor: L.page, borderWidth: 1, borderColor: L.border,
-    borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: shape.pill, paddingHorizontal: 8, paddingVertical: 3,
   },
   distText: { color: L.textSub, fontSize: 11, fontWeight: '600' },
   statusBadge: {
-    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3,
+    borderRadius: shape.pill, paddingHorizontal: 10, paddingVertical: 3,
   },
-  statusText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.4 },
+  statusText: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   name: {
-    color: L.navy, fontSize: 22, fontWeight: '800', lineHeight: 26,
+    color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800', lineHeight: 26,
     textTransform: 'uppercase', marginBottom: 12,
   },
-  meta:     { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  metaText: { color: '#000000', fontSize: 15, fontWeight: '500', flex: 1 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  // Decision 3: meta rows are navy. Pure black was the reference's one
+  // off-palette value, and this was the last place it survived.
+  metaText: { color: L.navy, fontSize: text.body.size, fontWeight: '500', flex: 1 },
   divider: {
     height: StyleSheet.hairlineWidth, backgroundColor: L.border,
     marginTop: 6, marginBottom: 12,
@@ -541,14 +541,14 @@ const cl = StyleSheet.create({
   },
   bottomLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
   countGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  countText:  { color: L.navy, fontSize: 15, fontWeight: '800' },
-  gameTypePill: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
-  gameTypePillText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.4 },
+  countText: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
+  gameTypePill: { borderRadius: shape.pill, paddingHorizontal: 10, paddingVertical: 3 },
+  gameTypePillText: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   joinBtn: {
-    backgroundColor: L.navy, borderRadius: 10,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingHorizontal: 18, paddingVertical: 9,
   },
-  joinText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  joinText: { color: '#FFFFFF', fontSize: text.action.size, fontWeight: '800' },
   joinedBtn: { backgroundColor: colors.successBg, borderWidth: 1.5, borderColor: colors.success },
   joinedText: { color: colors.success },
 });
@@ -1095,8 +1095,8 @@ const s = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 6,
   },
-  headerLogoText: { color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 1, lineHeight: 15 },
-  headerLogoPb:   { color: L.gold, fontSize: 13, fontWeight: '900', letterSpacing: 1, lineHeight: 15 },
+  headerLogoText: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, lineHeight: 15 },
+  headerLogoPb: { color: L.gold, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, lineHeight: 15 },
 
   // Scroll
   scroll: { paddingTop: 0 },
@@ -1123,7 +1123,7 @@ const s = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     marginHorizontal: 16, marginBottom: 4,
-    borderWidth: 1, borderColor: L.border, borderRadius: 16,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.card,
     backgroundColor: L.bg,
     elevation: 4,
     shadowColor: '#0A1228',
@@ -1135,10 +1135,10 @@ const s = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 16, paddingHorizontal: 16,
   },
-  statCellLeft:  { flex: 1 },
-  statCellNum:   { color: L.navy, fontSize: 26, fontWeight: '900' },
-  statCellLabel: { color: L.textMuted, fontSize: 12, fontWeight: '500', marginTop: 2 },
-  statIconWrap:  { position: 'relative', flexShrink: 0 },
+  statCellLeft: { flex: 1 },
+  statCellNum: { color: L.navy, fontSize: text.statNumber.size, fontWeight: '900' },
+  statCellLabel: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+  statIconWrap: { position: 'relative', flexShrink: 0 },
   statIconCircle: {
     width: 48, height: 48, borderRadius: 24,
     borderWidth: 1.5, borderColor: L.border,
@@ -1150,15 +1150,15 @@ const s = StyleSheet.create({
     backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 4, borderWidth: 1.5, borderColor: L.bg,
   },
-  notifText:     { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
-  statDivider:   { width: 1, backgroundColor: L.border },
+  notifText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
+  statDivider: { width: 1, backgroundColor: L.border },
 
   // Carousel
   carouselRow: { paddingHorizontal: 16, gap: 12 },
 
   // Dots
-  dotsRow:   { flexDirection: 'row', justifyContent: 'center', gap: 6, marginBottom: 18 },
-  dot:       { width: 6, height: 6, borderRadius: 3, backgroundColor: L.border },
+  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginBottom: 18 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: L.border },
   dotActive: { width: 20, height: 6, borderRadius: 3, backgroundColor: L.gold },
 
   // Filter pills
@@ -1166,11 +1166,11 @@ const s = StyleSheet.create({
   filterPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 14, paddingVertical: 9,
-    borderRadius: 24, borderWidth: 1.5, borderColor: L.border,
+    borderRadius: shape.pill, borderWidth: 1.5, borderColor: L.border,
     backgroundColor: L.bg,
   },
-  filterPillActive:  { backgroundColor: L.navy, borderColor: L.navy },
-  filterLabel:       { color: L.textSub, fontSize: 13, fontWeight: '600' },
+  filterPillActive: { backgroundColor: L.navy, borderColor: L.navy },
+  filterLabel: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   filterLabelActive: { color: '#FFFFFF' },
 
   // Section header
@@ -1178,9 +1178,9 @@ const s = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 16, marginBottom: 14,
   },
-  sectionTitle:      { color: L.navy, fontSize: 17, fontWeight: '900' },
-  viewAllBtn:        { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  viewAllText:       { color: L.gold, fontSize: 13, fontWeight: '700' },
+  sectionTitle: { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
+  viewAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  viewAllText: { color: L.gold, fontSize: text.link.size, fontWeight: '700' },
   filterActiveDot: {
     position: 'absolute', top: -2, right: -2,
     width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success,
@@ -1191,7 +1191,7 @@ const s = StyleSheet.create({
     marginHorizontal: 16,
   },
   communityEmptyText: {
-    color: L.textMuted, fontSize: 13, textAlign: 'center',
+    color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center',
     paddingVertical: 24,
   },
 
@@ -1203,17 +1203,17 @@ const sg = StyleSheet.create({
   // ── Collapsed banner (original navy design) ──
   banner: {
     marginHorizontal: 16, marginTop: 16, marginBottom: 4,
-    backgroundColor: L.navy, borderRadius: 20,
+    backgroundColor: L.navy, borderRadius: shape.card,
     overflow: 'hidden',
   },
   greetRow: {
     flexDirection: 'row', alignItems: 'flex-end',
     paddingLeft: 20, paddingTop: 18, paddingRight: 0,
   },
-  greetLeft:  { flex: 1, paddingBottom: 14 },
-  greetLabel: { color: L.gold, fontSize: 11, fontWeight: '700', letterSpacing: 1.5, marginBottom: 4, textTransform: 'uppercase' },
-  greetName:  { color: '#FFFFFF', fontSize: 34, fontWeight: '900', lineHeight: 36, textTransform: 'uppercase' },
-  greetRating: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontWeight: '600', letterSpacing: 0.5, marginTop: 4, textTransform: 'uppercase' },
+  greetLeft: { flex: 1, paddingBottom: 14 },
+  greetLabel: { color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, marginBottom: 4, textTransform: 'uppercase' },
+  greetName: { color: '#FFFFFF', fontSize: 34, fontWeight: '900', lineHeight: 36, textTransform: 'uppercase' },
+  greetRating: { color: 'rgba(255,255,255,0.55)', fontSize: text.caption.size, fontWeight: '500', letterSpacing: 0.5, marginTop: 4, textTransform: 'uppercase' },
   avatarRing: {
     alignSelf: 'flex-end',
     marginRight: 16, marginBottom: 10,
@@ -1233,13 +1233,13 @@ const sg = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.07)',
     paddingHorizontal: 20, paddingVertical: 12,
   },
-  setupLeft:  { flex: 1 },
+  setupLeft: { flex: 1 },
   setupLabel: { color: L.gold, fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 2 },
-  setupTask:  { color: '#FFFFFF', fontSize: 14, fontWeight: '700', textTransform: 'uppercase' },
+  setupTask: { color: '#FFFFFF', fontSize: text.rowTitle.size, fontWeight: '700', textTransform: 'uppercase' },
   setupRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dot:        { width: 12, height: 12, borderRadius: 6 },
-  dotGold:    { backgroundColor: L.gold },
-  dotGray:    { backgroundColor: 'rgba(255,255,255,0.25)' },
+  dot: { width: 12, height: 12, borderRadius: 6 },
+  dotGold: { backgroundColor: L.gold },
+  dotGray: { backgroundColor: 'rgba(255,255,255,0.25)' },
 
   // ── Expanded checklist ──
   checklist: {
@@ -1265,16 +1265,16 @@ const sg = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
     backgroundColor: '#FAFCFF',
   },
-  taskContent:   { flex: 1 },
-  taskLabel:     { color: L.navy, fontSize: 15, fontWeight: '700' },
+  taskContent: { flex: 1 },
+  taskLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
   taskLabelDone: { color: L.textSub },
-  taskDesc:      { color: L.textMuted, fontSize: 12, lineHeight: 17, marginTop: 2 },
+  taskDesc: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17, marginTop: 2 },
   hideRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 14,
     borderTopWidth: 1, borderTopColor: '#F0F4FA',
   },
-  hideText: { color: L.textSub, fontSize: 14, fontWeight: '700' },
+  hideText: { color: L.textSub, fontSize: text.rowTitle.size, fontWeight: '700' },
 });
 
 

@@ -298,6 +298,28 @@ if (missing.length) {
   process.exit(1);
 }
 
+// A file may already import from @shared/tokens and still be missing a name it
+// now needs. Home was partially migrated months earlier and imported only
+// `text`; a full pass gave it twelve `shape.` references and no `shape` import,
+// and the whole `if (!src.includes(...))` guard below skipped silently. tsc
+// caught it, but the tool should not be able to emit an unresolved identifier.
+{
+  const m = /^import \{([^}]*)\} from '@shared\/tokens';$/m.exec(src);
+  if (m) {
+    const names = m[1].split(",").map((x) => x.trim()).filter(Boolean);
+    const need = [];
+    if (/\bshape\.\w+/.test(src) && !names.some((n) => n.endsWith("as shape"))) {
+      need.push("radius as shape");
+    }
+    if (/\btext\.\w+\.(?:size|letterSpacing)/.test(src) && !names.includes("text")) {
+      need.push("text");
+    }
+    if (need.length) {
+      src = src.replace(m[0], `import { ${[...need, ...names].join(", ")} } from '@shared/tokens';`);
+    }
+  }
+}
+
 if (!src.includes("@shared/tokens")) {
   // Either quote style. ContextMenu.tsx uses double quotes, and a single-quote
   // anchor made it look like a file with no @/theme import at all — which would
