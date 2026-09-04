@@ -2,6 +2,13 @@
 
 
 import { useEffect, useState, useRef } from "react";
+import { AvailabilityGrid } from "@/components/shared/availability-grid";
+import {
+  normalizeSchedule,
+  summarizeSchedule,
+  isScheduleEmpty,
+  type AvailabilitySchedule,
+} from "@shared/availability";
 import {
   Trophy, Users, MapPin, Calendar, Star,
   PencilSimple, Medal, Check, Camera,
@@ -12,27 +19,28 @@ import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/client";
+import { PLAY_STYLE_KEYS, playStyleLabel } from "@shared/play-profile";
 import { getUserId } from "@/lib/dev-user";
 import { ensureFreshSession } from "@/lib/ensure-session";
 import { toast } from "sonner";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
-import { playerStats, matchPartners, recentMatches as mockMatches, tournaments as mockTournaments } from "@/data/mock-data";
-import type { Tables } from "@/lib/supabase/database.types";
+import type { Tables } from "@shared/database.types";
 
 type Profile = Pick<
   Tables<"profiles">,
-  | "id" | "full_name" | "handle" | "dupr" | "skill_level"
+  | "id" | "full_name" | "handle" | "dupr" | "skill_level" | "self_rating"
   | "location_city" | "location_state" | "avatar_url" | "cover_url" | "bio"
-  | "play_style" | "availability" | "hand" | "created_at" | "role" | "director_status"
+  | "play_style" | "availability" | "availability_schedule" | "hand" | "created_at" | "role" | "director_status"
 >;
 
 type EditFields = {
   bio: string;
   play_style: string[];
-  availability: string[];
+  availability_schedule: AvailabilitySchedule;
   hand: string;
   skill_level: string;
+  self_rating: string;
   location_city: string;
   location_state: string;
 };
@@ -91,8 +99,10 @@ const COVER_PRESETS = [
 ];
 
 const SKILL_LEVELS = ["2.5-3.0", "3.0-3.5", "3.5-4.0", "4.0-4.5", "4.5+"];
-const PLAY_STYLES = ["Aggressive baseliner", "Soft-game specialist", "Counter-puncher", "All-court", "Bangers + transition", "Dink master"];
-const AVAILABILITY_OPTIONS = ["Weekends", "Weeknights", "Weekends + Tue evenings", "Sat / Sun mornings", "Flexible", "Weekdays only"];
+// Keys, not labels. `profiles.play_style` is a text[] constrained to this
+// exact set, so storing the display string would now be rejected outright.
+// Rendered through playStyleLabel().
+const PLAY_STYLES = PLAY_STYLE_KEYS;
 const HAND_OPTIONS = ["right", "left", "ambidextrous"];
 
 function formatDate(iso: string) {
@@ -236,7 +246,7 @@ function TournamentsTab({ entries, bookmarks, loading }: { entries: TournamentEn
 export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [fields, setFields] = useState<EditFields>({ bio: "", play_style: [], availability: [], hand: "", skill_level: "", location_city: "", location_state: "" });
+  const [fields, setFields] = useState<EditFields>({ bio: "", play_style: [], availability_schedule: {}, hand: "", skill_level: "", self_rating: "", location_city: "", location_state: "" });
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
@@ -279,17 +289,18 @@ export default function ProfilePage() {
 
       const { data: prof } = await supabase
         .from("profiles")
-        .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,cover_url,bio,play_style,availability,hand,created_at,role,director_status")
+        .select("id,full_name,handle,dupr,skill_level,self_rating,location_city,location_state,avatar_url,cover_url,bio,play_style,availability,availability_schedule,hand,created_at,role,director_status")
         .eq("id", user.id)
         .single();
       if (prof) {
         setProfile(prof);
         setFields({
           bio: prof.bio ?? "",
-          play_style: prof.play_style ? prof.play_style.split(",").map((s) => s.trim()).filter(Boolean) : [],
-          availability: prof.availability ? prof.availability.split(",").map((s) => s.trim()).filter(Boolean) : [],
+          play_style: prof.play_style ?? [],
+          availability_schedule: normalizeSchedule(prof.availability_schedule),
           hand: prof.hand ?? "",
           skill_level: prof.skill_level ?? "",
+          self_rating: prof.self_rating ?? "",
           location_city: prof.location_city ?? "",
           location_state: prof.location_state ?? "",
         });
@@ -334,8 +345,9 @@ export default function ProfilePage() {
         setMatches(processed);
         setStats((s) => ({ ...s, wins: processed.filter((m) => m.result === "W").length, losses: processed.filter((m) => m.result === "L").length }));
       } else {
-        setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
-        setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments });
+        // No completed matches is a real state, not a hole to fill. The tab
+        // renders its own "NO MATCHES YET" panel and the W-L tile renders "—".
+        setMatches([]);
       }
 
       // Tournament registrations
@@ -394,18 +406,23 @@ export default function ProfilePage() {
       if (mutual && mutual.length > 0) {
         const ids = mutual.map((m) => m.user_a === user.id ? m.user_b : m.user_a).filter(Boolean) as string[];
         const { data: pp } = await supabase.from("profiles").select("id,full_name,avatar_url,dupr,skill_level,location_city,location_state,play_style").in("id", ids);
-        setPartners((pp ?? []).map((p) => ({ id: p.id, name: p.full_name, avatar: p.avatar_url, dupr: p.dupr, skill_level: p.skill_level, location: [p.location_city, p.location_state].filter(Boolean).join(", ") || "—", badges: [p.play_style].filter(Boolean) as string[] })));
+        setPartners((pp ?? []).map((p) => ({ id: p.id, name: p.full_name, avatar: p.avatar_url, dupr: p.dupr, skill_level: p.skill_level, location: [p.location_city, p.location_state].filter(Boolean).join(", ") || "—", badges: (p.play_style ?? []).map(playStyleLabel) })));
       } else {
-        setPartners(matchPartners.slice(0, 4).map((p) => ({ id: p.id, name: p.name, avatar: p.img, dupr: p.dupr, skill_level: null, location: p.location, badges: p.badges })));
+        // Ditto: the Partners tab has its own "NO PARTNERS YET" panel.
+        setPartners([]);
       }
 
       setLoading(false);
     }
 
-    load().catch(() => {
-      setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
-      setPartners(matchPartners.slice(0, 4).map((p) => ({ id: p.id, name: p.name, avatar: p.img, dupr: p.dupr, skill_level: null, location: p.location, badges: p.badges })));
-      setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments });
+    load().catch((err) => {
+      // A failed load used to render an invented 38-14 record and four
+      // fabricated opponents, which is indistinguishable from a real profile.
+      // Say the load failed and show nothing instead.
+      console.error("[profile] failed to load profile data", err);
+      toast.error("Could not load your profile data. Please refresh the page.");
+      setMatches([]);
+      setPartners([]);
       setLoading(false);
     });
   }, []);
@@ -538,10 +555,16 @@ export default function ProfilePage() {
     const supabase = createClient();
     const { data, error } = await supabase.from("profiles").update({
       bio: fields.bio || null,
-      play_style: fields.play_style.length > 0 ? fields.play_style.join(", ") : null,
-      availability: fields.availability.length > 0 ? fields.availability.join(", ") : null,
+      play_style: fields.play_style.length > 0 ? fields.play_style : null,
+      // Schedule is canonical; the text is derived by the shared summarizer
+      // so web and mobile produce identical strings for the same schedule.
+      availability_schedule: fields.availability_schedule,
+      availability: isScheduleEmpty(fields.availability_schedule)
+        ? null
+        : summarizeSchedule(fields.availability_schedule),
       hand: (fields.hand as "right" | "left" | "ambidextrous") || null,
       skill_level: fields.skill_level || null,
+      self_rating: fields.self_rating || null,
       location_city: fields.location_city || null,
       location_state: fields.location_state || null,
     }).eq("id", profile.id).select("id");
@@ -551,7 +574,7 @@ export default function ProfilePage() {
       toast.error("Couldn't save — your session may have expired. Please sign out and back in.");
       return;
     }
-    setProfile((p) => p ? { ...p, bio: fields.bio || null, skill_level: fields.skill_level || null, hand: (fields.hand as "right" | "left" | "ambidextrous") || null, play_style: fields.play_style.join(", ") || null, availability: fields.availability.join(", ") || null, location_city: fields.location_city || null, location_state: fields.location_state || null } : p);
+    setProfile((p) => p ? { ...p, bio: fields.bio || null, skill_level: fields.skill_level || null, self_rating: fields.self_rating || null, hand: (fields.hand as "right" | "left" | "ambidextrous") || null, play_style: fields.play_style.length > 0 ? fields.play_style : null, availability: isScheduleEmpty(fields.availability_schedule) ? null : summarizeSchedule(fields.availability_schedule), location_city: fields.location_city || null, location_state: fields.location_state || null } : p);
     setEditing(false);
     toast.success("Profile saved.");
   };
@@ -559,10 +582,11 @@ export default function ProfilePage() {
   const cancelEdit = () => {
     if (profile) setFields({
       bio: profile.bio ?? "",
-      play_style: profile.play_style ? profile.play_style.split(",").map((s) => s.trim()).filter(Boolean) : [],
-      availability: profile.availability ? profile.availability.split(",").map((s) => s.trim()).filter(Boolean) : [],
+      play_style: profile.play_style ?? [],
+      availability_schedule: normalizeSchedule(profile.availability_schedule),
       hand: profile.hand ?? "",
       skill_level: profile.skill_level ?? "",
+      self_rating: profile.self_rating ?? "",
       location_city: profile.location_city ?? "",
       location_state: profile.location_state ?? "",
     });
@@ -749,7 +773,11 @@ export default function ProfilePage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-6 border-b border-border">
           {[
             { label: "WIN RATE", value: winRate > 0 ? `${winRate}%` : "—", icon: Trophy },
-            { label: profile?.dupr ? "DUPR" : "SELF-RATED", value: profile?.dupr ?? profile?.skill_level?.replace("-", " – ") ?? "—", icon: Star },
+            {
+              label: profile?.dupr ? "DUPR" : profile?.self_rating ? "SELF RATED" : profile?.skill_level ? "SKILL LEVEL" : "NOT RATED",
+              value: profile?.dupr ? `${profile.dupr}` : profile?.self_rating ?? profile?.skill_level?.replace("-", " – ") ?? "—",
+              icon: Star,
+            },
             { label: "TOURNAMENTS", value: stats.tournaments > 0 ? stats.tournaments : "—", icon: Medal },
             { label: "W – L", value: stats.wins + stats.losses > 0 ? `${stats.wins} – ${stats.losses}` : "—", icon: Users },
           ].map((s) => (
@@ -956,6 +984,18 @@ export default function ProfilePage() {
                       </div>
                     </div>
 
+                    {/* Self rating */}
+                    <div>
+                      <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">SELF RATING <span className="text-muted-foreground/60">(numeric, e.g. 4.0)</span></label>
+                      <input
+                        type="text"
+                        value={fields.self_rating}
+                        onChange={(e) => setFields((f) => ({ ...f, self_rating: e.target.value }))}
+                        placeholder="e.g. 4.0"
+                        className="w-full sm:w-48 h-10 bg-secondary border border-border rounded-xl px-4 text-sm outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+
                     {/* Hand */}
                     <div>
                       <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-2">DOMINANT HAND</label>
@@ -974,7 +1014,7 @@ export default function ProfilePage() {
                       <div className="flex flex-wrap gap-2">
                         {PLAY_STYLES.map((s) => (
                           <button key={s} type="button" onClick={() => setFields((f) => ({ ...f, play_style: f.play_style.includes(s) ? f.play_style.filter((x) => x !== s) : [...f.play_style, s] }))} className={`px-4 h-9 rounded-full text-xs font-mono border transition-colors ${fields.play_style.includes(s) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/50"}`}>
-                            {s}
+                            {playStyleLabel(s)}
                           </button>
                         ))}
                       </div>
@@ -983,13 +1023,10 @@ export default function ProfilePage() {
                     {/* Availability */}
                     <div>
                       <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-2">AVAILABILITY</label>
-                      <div className="flex flex-wrap gap-2">
-                        {AVAILABILITY_OPTIONS.map((a) => (
-                          <button key={a} type="button" onClick={() => setFields((f) => ({ ...f, availability: f.availability.includes(a) ? f.availability.filter((x) => x !== a) : [...f.availability, a] }))} className={`px-4 h-9 rounded-full text-xs font-mono border transition-colors ${fields.availability.includes(a) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/50"}`}>
-                            {a}
-                          </button>
-                        ))}
-                      </div>
+                      <AvailabilityGrid
+                        value={fields.availability_schedule}
+                        onChange={(next) => setFields((f) => ({ ...f, availability_schedule: next }))}
+                      />
                     </div>
 
                     {/* Save */}
@@ -1009,10 +1046,11 @@ export default function ProfilePage() {
                     </p>
                     <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border">
                       {[
-                        { label: "SELF-RATED LEVEL", value: profile?.skill_level?.replace("-", " – ") || "—" },
+                        { label: "SKILL LEVEL", value: profile?.skill_level?.replace("-", " – ") || "—" },
+                        { label: "SELF RATING", value: profile?.self_rating || "—" },
                         { label: "DUPR", value: profile?.dupr ? `${profile.dupr}` : "Not set" },
                         { label: "PLAY STYLE", value: fields.play_style.length > 0 ? fields.play_style.join(", ") : profile?.play_style || "—" },
-                        { label: "AVAILABILITY", value: fields.availability.length > 0 ? fields.availability.join(", ") : profile?.availability || "—" },
+                        { label: "AVAILABILITY", value: isScheduleEmpty(fields.availability_schedule) ? (profile?.availability || "—") : summarizeSchedule(fields.availability_schedule) },
                         { label: "DOMINANT HAND", value: profile?.hand ? profile.hand.charAt(0).toUpperCase() + profile.hand.slice(1) : "—" },
                         { label: "TOURNAMENTS", value: stats.tournaments > 0 ? `${stats.tournaments} this season` : "—" },
                       ].map((d) => (

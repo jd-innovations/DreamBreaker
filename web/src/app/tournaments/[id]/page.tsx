@@ -13,18 +13,17 @@ import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { HoldMySpotDialog, type HoldTournament } from "@/components/shared/hold-my-spot-dialog";
-import { DreamBreakerInsights } from "@/components/shared/dreambreaker-insights";
+import { PickleballAppInsights } from "@/components/shared/pickleball-app-insights";
 import { BookmarkButton } from "@/components/shared/bookmark-button";
 import { ShareButton } from "@/components/shared/share-button";
 import { createClient } from "@/lib/supabase/client";
-import { computeInsight, buildMockInsightInput, type InsightResult } from "@/lib/insights";
-import { tournaments as mockTournaments, matchPartners } from "@/data/mock-data";
+import { computeInsight, type InsightResult } from "@/lib/insights";
 import { getUserId } from "@/lib/dev-user";
 
 // ── FAQ data ──────────────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
   { q: "Can I change my partner after registering?", a: "Yes — partner substitutions are allowed up to 72 hours before first match. Contact the director to make the change." },
-  { q: "What happens if my partner drops out?", a: "You may find a replacement partner or request a refund up to 7 days before the event date. Inside 7 days, hold fees are non-refundable." },
+  { q: "What happens if my partner drops out?", a: "You may find a replacement partner, or contact the tournament director about your entry. Hold My Spot deposits are non-refundable." },
   { q: "Is there a waitlist if the tournament fills?", a: "Yes. Once the draw is full you'll be placed on a waitlist automatically. We'll notify you if a spot opens." },
   { q: "What rating verification is required?", a: "DUPR rating is verified at registration. Self-rated players are welcome but may be re-rated post-event if scores warrant it." },
   { q: "Are there age restrictions?", a: "This is an open-age event. Juniors under 18 require a guardian signature on the waiver." },
@@ -124,39 +123,6 @@ type LiveTournament = {
   } | null;
 };
 
-// Normalise mock tournament to the same display shape
-function mockToLive(t: typeof mockTournaments[0]) {
-  const [city, state] = t.location.split(", ");
-  return {
-    id: t.id,
-    name: t.name,
-    city: city ?? t.location,
-    state: state ?? "",
-    venue_name: t.venue,
-    venue_address: null,
-    cover_img_url: t.img,
-    format: t.format.split("·")[0].trim(),
-    bracket_type: "single_elim",
-    skill_min: null,
-    skill_max: null,
-    draw_size: t.spots,
-    spots_filled: t.filled,
-    entry_fee_cents: t.entryFee * 100,
-    hold_fee_cents: t.holdFee * 100,
-    hold_duration_hours: 72,
-    hold_cutoff_days: 7,
-    prize_pool_cents: parseInt(t.prize.replace(/[^0-9]/g, ""), 10) * 100,
-    event_date: t.dateISO,
-    registration_opens_at: null,
-    registration_closes_at: new Date(Date.now() + 3 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 14 * 86400000).toISOString(),
-    status: t.status.toLowerCase().replace(/ /g, "_"),
-    description: null,
-    rules: null,
-    director: { id: "mock", full_name: t.director, director_events_hosted: 8, director_rating: 4.6 },
-  } satisfies LiveTournament;
-}
-
 // ── Page ───────────────────────────────────────────────────────────────────────
 // ── DivisionCard ──────────────────────────────────────────────────────────────
 function DivisionHoldExpiry({ expiry }: { expiry: Date | null }) {
@@ -210,9 +176,16 @@ function DivisionCard({
         <div className="text-[10px] font-mono text-primary tracking-widest">✓ REGISTERED</div>
       ) : isHeld ? (
         <div className="flex gap-2">
-          <button onClick={onComplete} disabled={completing} className="flex-1 h-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50">
-            <Lightning size={12} weight="fill" /> {completing ? "CONFIRMING…" : `CONFIRM · $${fee - hold}`}
-          </button>
+          {/* A balance means payment, and payment happens in the app (D1). */}
+          {fee - hold > 0 ? (
+            <div className="flex-1 h-9 rounded-full border border-amber-500/40 bg-amber-500/5 text-[10px] font-mono tracking-wider text-muted-foreground flex items-center justify-center px-3 text-center">
+              ${(fee - hold).toFixed(2)} DUE · PAY IN THE APP
+            </div>
+          ) : (
+            <button onClick={onComplete} disabled={completing} className="flex-1 h-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50">
+              <Lightning size={12} weight="fill" /> {completing ? "CONFIRMING…" : "CONFIRM"}
+            </button>
+          )}
           <button onClick={onCancel} disabled={cancelling} className="h-9 px-3 rounded-full border border-border hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive font-mono text-[10px] transition-colors disabled:opacity-50">
             {cancelling ? "…" : "CANCEL"}
           </button>
@@ -245,6 +218,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const { id } = use(params);
 
   const [tournament, setTournament] = useState<LiveTournament | null>(null);
+  const [loadError, setLoadError] = useState<"not_found" | "error" | null>(null);
   const [insight, setInsight] = useState<InsightResult | null>(null);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [divisions, setDivisions] = useState<Division[]>([]);
@@ -259,6 +233,8 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [allUsers, setAllUsers] = useState<MessagingUserProfile[]>([]);
   const [messagingTarget, setMessagingTarget] = useState<{ id: string; name: string } | null>(null);
+  const [joiningWaitlist, setJoiningWaitlist] = useState(false);
+  const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
 
   // Legacy single-format helpers
   const legacyReg = myRegs.get("legacy") ?? null;
@@ -284,29 +260,25 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
         .eq("id", id)
         .single();
 
-      let t: LiveTournament;
-      let regDates: string[] = [];
-
-      if (live) {
-        t = live as unknown as LiveTournament;
-
-        // Registration timestamps for velocity signal
-        const { data: regs } = await supabase
-          .from("registrations")
-          .select("created_at")
-          .eq("tournament_id", id)
-          .in("status", ["held", "registered", "checked_in"])
-          .order("created_at", { ascending: false });
-
-        regDates = (regs ?? []).map((r) => r.created_at);
-      } else {
-        // Fall back to mock
-        const mock = mockTournaments.find((x) => x.id === id) ?? mockTournaments[0];
-        t = mockToLive(mock);
-        // Build synthetic registration dates from mock data
-        const mockInput = buildMockInsightInput(mock);
-        regDates = mockInput.recentRegistrationDates;
+      // "No such tournament" is a real answer. This used to substitute a
+      // different, invented tournament — so a dead link rendered a convincing
+      // event page with an entry fee and a Register button (item 6.1).
+      if (!live) {
+        setLoadError("not_found");
+        return;
       }
+
+      const t = live as unknown as LiveTournament;
+
+      // Registration timestamps for velocity signal
+      const { data: regs } = await supabase
+        .from("registrations")
+        .select("created_at")
+        .eq("tournament_id", id)
+        .in("status", ["held", "registered", "checked_in"])
+        .order("created_at", { ascending: false });
+
+      const regDates = (regs ?? []).map((r) => r.created_at);
 
       setTournament(t);
       setSpotsFilled(t.spots_filled);
@@ -397,21 +369,9 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
         });
       }
 
-      if (liveAttendees.length > 0) {
-        setAttendees(liveAttendees);
-      } else {
-        // Mock fallback: first 4 matchPartners as attendees
-        setAttendees(
-          matchPartners.slice(0, 5).map((p, i) => ({
-            id: p.id,
-            name: p.name,
-            avatar: p.img,
-            ratingLabel: `${p.dupr} DUPR`,
-            kind: (["going", "going", "holding", "interested", "going"] as Attendee["kind"][])[i],
-            isFriend: i < 2,
-          })),
-        );
-      }
+      // An event with no attendees yet shows none. It used to show five
+      // invented players, two of them labelled as the viewer's friends.
+      setAttendees(liveAttendees);
 
       // Only show insights banner for open/filling events
       const showInsights = ["open", "filling_fast"].includes(t.status);
@@ -435,22 +395,12 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       }
     }
 
-    load().catch(() => {
-      // Network failure — show mock data so the page never hangs
-      const mock = mockTournaments.find((x) => x.id === id) ?? mockTournaments[0];
-      setTournament(mockToLive(mock));
-      const mockInput = buildMockInsightInput(mock);
-      setInsight(computeInsight(mockInput));
-      setAttendees(
-        matchPartners.slice(0, 5).map((p, i) => ({
-          id: p.id,
-          name: p.name,
-          avatar: p.img,
-          ratingLabel: `${p.dupr} DUPR`,
-          kind: (["going", "going", "holding", "interested", "going"] as Attendee["kind"][])[i],
-          isFriend: i < 2,
-        })),
-      );
+    load().catch((err) => {
+      // A network failure used to render a mock tournament "so the page never
+      // hangs" — which meant the page showed a plausible event, and a
+      // Register button, for something that may not exist.
+      console.error("[tournament] failed to load tournament", err);
+      setLoadError("error");
     });
   }, [id]);
 
@@ -465,8 +415,34 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     : null;
   const holdCountdown = useCountdown(holdExpireDate);
 
+  // Web does not take entry fees (alignment decision D1, 2026-08-26). This
+  // action converts a hold to a registration and writes entry_fee_paid_cents: 0,
+  // which is only truthful when nothing is owed.
+  //
+  // It used to run for every event, behind a button labelled with the balance
+  // due — so a player on web completed a paid registration without being
+  // charged, and the row left behind was indistinguishable from the phantom
+  // revenue cleared under TODO 1.1 item 6.1. Paid events now hand off to the
+  // mobile app, which takes payment through PaymentSheet and the Stripe webhook.
+  //
+  // The UI already hides the button when a balance is owed; this is the guard
+  // behind it, so a stale render or a direct call cannot slip through.
+  const balanceOwedCents = (divisionId: string | null) => {
+    const div = divisionId ? divisions.find((d) => d.id === divisionId) : null;
+    const feeCents = div?.entry_fee_cents ?? tournament?.entry_fee_cents ?? 0;
+    return Math.max(0, feeCents - (tournament?.hold_fee_cents ?? 0));
+  };
+
   const completeRegistration = async (divisionId: string | null) => {
     const key = divisionId ?? "legacy";
+
+    if (balanceOwedCents(divisionId) > 0) {
+      toast.error("Finish this registration in the app", {
+        description: "There's a balance to pay, and payments are handled in the Pickleball App.",
+      });
+      return;
+    }
+
     setCompleting(key);
     try {
       const userId = await getUserId();
@@ -516,9 +492,6 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     toast.info("Hold cancelled. Your spot has been released.");
   };
 
-  const [joiningWaitlist, setJoiningWaitlist] = useState(false);
-  const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
-
   const joinWaitlist = async (divisionId: string | null) => {
     const userId = await getUserId();
     if (!userId) { toast.error("Sign in to join the waitlist."); return; }
@@ -557,12 +530,35 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       description: `You're in for ${tournament?.name ?? "this tournament"}. Bracket releases 48h before play.`,
     });
 
-  const contactDirector = () =>
-    toast.info(`Message sent to ${tournament?.director?.full_name ?? "the director"}`, {
-      description: "They'll reply in the app within 24 hours.",
-    });
+  const contactDirector = () => {
+    if (!tournament?.director) {
+      toast.error("This tournament has no assigned director yet.");
+      return;
+    }
+    setMessagingTarget({ id: tournament.director.id, name: tournament.director.full_name });
+  };
 
   // Loading skeleton
+  if (loadError) {
+    return (
+      <PageShell>
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+          <h1 className="font-display text-4xl tracking-wide mb-3">
+            {loadError === "not_found" ? "TOURNAMENT NOT FOUND" : "COULDN'T LOAD THIS TOURNAMENT"}
+          </h1>
+          <p className="text-muted-foreground mb-8">
+            {loadError === "not_found"
+              ? "This event may have been removed, or the link may be wrong."
+              : "Something went wrong on our end. Please try again."}
+          </p>
+          <Link href="/tournaments" className="font-display tracking-[0.2em] text-sm text-primary hover:underline">
+            BROWSE ALL TOURNAMENTS
+          </Link>
+        </div>
+      </PageShell>
+    );
+  }
+
   if (!tournament) {
     return (
       <PageShell>
@@ -583,6 +579,13 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const holdCutoffDate = new Date(t.event_date);
   holdCutoffDate.setDate(holdCutoffDate.getDate() - (t.hold_cutoff_days ?? 7));
   const holdWindowClosed = new Date() >= holdCutoffDate;
+  // Registration open date gate
+  const now = new Date();
+  const regNotOpenYet = t.registration_opens_at != null && now < new Date(t.registration_opens_at);
+  const regClosed = t.registration_closes_at != null && now > new Date(t.registration_closes_at);
+  const regOpensLabel = t.registration_opens_at
+    ? new Date(t.registration_opens_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : "";
   const prizeDisplay = t.prize_pool_cents
     ? `$${(t.prize_pool_cents / 100).toLocaleString()}`
     : "—";
@@ -645,7 +648,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               {formatDisplay.toUpperCase()}
             </span>
           </div>
-          <h1 className="font-display text-5xl sm:text-7xl lg:text-8xl tracking-wide leading-[0.9] max-w-4xl">
+          <h1 className="font-display text-5xl sm:text-7xl lg:text-8xl tracking-tight leading-[0.85] max-w-4xl">
             {t.name.toUpperCase()}
           </h1>
           <div className="flex flex-wrap gap-6 mt-6 text-sm">
@@ -670,10 +673,10 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
         </div>
       </section>
 
-      {/* ── DreamBreaker Insights banner ─────────────────────────── */}
+      {/* ── Pickleball App Insights banner ─────────────────────────── */}
       {insight && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-          <DreamBreakerInsights insight={insight} />
+          <PickleballAppInsights insight={insight} />
         </div>
       )}
 
@@ -695,7 +698,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               <div className="border border-border rounded-2xl p-6 bg-card">
                 <h3 className="font-display text-2xl tracking-wide mb-3">ABOUT THIS EVENT</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">
-                  {t.description ?? `The ${t.name} is part of the Compete Pickleball Pro Circuit. ${formatDisplay} with players from across the region competing for ${prizeDisplay} in cash + sponsor prizes. Pool play seeds into a knockout bracket. Live scoring on every court.`}
+                  {t.description ?? `The ${t.name} is part of the Pickleball App Pro Circuit. ${formatDisplay} with players from across the region competing for ${prizeDisplay} in cash + sponsor prizes. Pool play seeds into a knockout bracket. Live scoring on every court.`}
                 </p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -703,7 +706,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                   { label: "ENTRY FEE", value: `$${entryFee}`, onClick: undefined },
                   { label: "FORMAT", value: formatDisplay, onClick: undefined },
                   { label: "DRAW SIZE", value: String(t.draw_size), onClick: undefined },
-                  { label: "DIRECTOR", value: t.director?.full_name?.split(" ")[0] ?? "—", onClick: contactDirector },
+                  { label: "DIRECTOR", value: t.director?.full_name?.split(" ")[0]?.toUpperCase() ?? "—", onClick: contactDirector },
                 ].map((s) =>
                   s.onClick ? (
                     <button
@@ -771,7 +774,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                     <p>· USAPA official rules. Rally scoring to 11, win by 2.</p>
                     <p>· Players must check in 30 minutes prior to first match.</p>
                     <p>· DUPR rating verified at registration. Sandbagging results in disqualification.</p>
-                    <p>· Hold My Spot fees are refundable up to 7 days before play.</p>
+                    <p>· Hold My Spot deposits are non-refundable and count toward your entry fee.</p>
                     <p>· Tournament director&apos;s decisions are final.</p>
                   </>
                 }
@@ -904,6 +907,15 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
             {/* CTAs — per-division if divisions exist, legacy single-format otherwise */}
             <div className="space-y-3">
+              {/* Registration opens date gate — shown above all CTAs when applicable */}
+              {(regNotOpenYet || regClosed) && (
+                <div className="rounded-xl border border-border bg-secondary/30 px-4 py-3 flex items-center gap-2">
+                  <Clock size={14} weight="fill" className="text-muted-foreground flex-shrink-0" />
+                  <span className="font-mono text-[11px] text-muted-foreground">
+                    {regNotOpenYet ? `REGISTRATION OPENS ${regOpensLabel.toUpperCase()}` : "REGISTRATION CLOSED"}
+                  </span>
+                </div>
+              )}
               {divisions.length > 0 ? (
                 <>
                   <div className="font-mono text-[9px] tracking-[0.3em] text-muted-foreground">EVENTS</div>
@@ -928,7 +940,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                         completing={completing === key}
                         cancelling={cancelling === key}
                         isFull={isFull}
-                        holdWindowClosed={holdWindowClosed}
+                        holdWindowClosed={holdWindowClosed || regNotOpenYet || regClosed}
                         onHold={() => { setActiveDivision(div); setHoldOpen(true); }}
                         onComplete={() => completeRegistration(div.id)}
                         onCancel={() => cancelHold(div.id)}
@@ -962,9 +974,16 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                       )}
                     </div>
                     {holdCountdown && (
-                      <button onClick={() => completeRegistration(null)} disabled={completing !== null} className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors disabled:opacity-50" data-testid="complete-registration-btn">
-                        <Lightning size={16} weight="fill" /> {completing ? "CONFIRMING…" : `COMPLETE · $${entryFee - holdFee}`}
-                      </button>
+                      entryFee - holdFee > 0 ? (
+                        /* Balance due — payment lives in the app (D1). */
+                        <div className="w-full h-12 rounded-full border border-amber-500/40 bg-amber-500/5 flex items-center justify-center px-4 text-center font-mono text-xs tracking-widest text-muted-foreground" data-testid="complete-registration-handoff">
+                          ${(entryFee - holdFee).toFixed(2)} DUE · FINISH IN THE APP
+                        </div>
+                      ) : (
+                        <button onClick={() => completeRegistration(null)} disabled={completing !== null} className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors disabled:opacity-50" data-testid="complete-registration-btn">
+                          <Lightning size={16} weight="fill" /> {completing ? "CONFIRMING…" : "COMPLETE REGISTRATION"}
+                        </button>
+                      )
                     )}
                     <button onClick={() => cancelHold(null)} className="w-full h-10 rounded-full border border-border hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive font-mono text-xs tracking-widest transition-colors" data-testid="cancel-hold-btn">
                       CANCEL HOLD
@@ -993,7 +1012,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                   >
                     <Clock size={17} weight="fill" /> {joiningWaitlist ? "JOINING…" : "JOIN WAITLIST"}
                   </button>
-                ) : (
+                ) : regNotOpenYet || regClosed ? null : (
                   <>
                     {!holdWindowClosed && (
                       <button onClick={() => { setActiveDivision(null); setHoldOpen(true); }} className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] flex items-center justify-center gap-2 transition-colors" data-testid="hold-spot-trigger-btn">
@@ -1013,7 +1032,9 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
             {/* Trust badges */}
             <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border text-center">
-              <div className="text-[10px] font-mono text-muted-foreground"><ShieldCheck size={14} weight="bold" className="mx-auto mb-1 text-primary" /> REFUNDABLE</div>
+              {/* Was "REFUNDABLE" — a trust badge directly beside the Hold My
+                  Spot CTA promising the opposite of the actual policy. */}
+              <div className="text-[10px] font-mono text-muted-foreground"><ShieldCheck size={14} weight="bold" className="mx-auto mb-1 text-primary" /> COUNTS TO ENTRY</div>
               <div className="text-[10px] font-mono text-muted-foreground"><Clock size={14} weight="bold" className="mx-auto mb-1 text-primary" /> {t.hold_duration_hours}H HOLD</div>
               <div className="text-[10px] font-mono text-muted-foreground"><CurrencyDollar size={14} weight="bold" className="mx-auto mb-1 text-primary" /> SECURE</div>
             </div>
@@ -1023,7 +1044,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               <BookmarkButton tournamentId={t.id} className="flex-1 w-auto rounded-xl" />
               <ShareButton
                 title={t.name}
-                text={`Check out ${t.name} on Compete Pickleball — ${t.city}, ${t.state}`}
+                text={`Check out ${t.name} on Pickleball App — ${t.city}, ${t.state}`}
                 url={typeof window !== "undefined" ? window.location.href : `/tournaments/${t.id}`}
                 className="flex-1"
               />

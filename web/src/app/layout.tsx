@@ -3,6 +3,8 @@ import { Bebas_Neue, Manrope, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/theme-provider";
+import { OnboardingNudgeHost } from "@/components/onboarding/onboarding-nudge-host";
+import { AnalyticsProvider } from "@/components/layout/analytics-provider";
 import { Toaster } from "sonner";
 
 const manrope = Manrope({
@@ -33,7 +35,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Compete Pickleball — Pickleball Tournaments",
+  title: "Pickleball App — Pickleball Tournaments",
   description:
     "Compete in elite pickleball tournaments. Find partners. Hold your spot. Earn your rank.",
 };
@@ -52,8 +54,25 @@ export default function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">{`(function(){try{var t=localStorage.getItem('dbpb-theme');document.documentElement.classList.add(t||'dark');}catch(e){}})();`}</Script>
         {/* Runtime config — read server env vars into the DOM so client bundles don't need build-time baking */}
         <script id="app-config" type="application/json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "", supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "" }) }} />
+        {/* Analytics starts here, not in PageShell: /dashboard and /admin roll
+            their own shells, and partial coverage makes funnel holes that read
+            as user drop-off. No-op when no PostHog key is configured. */}
+        {/* The env vars are read HERE, in a server component, and passed down.
+            Read inside the analytics module they compiled to a runtime lookup
+            against a process polyfill and silently resolved to undefined —
+            see web/src/lib/analytics/env.ts. */}
+        <AnalyticsProvider
+          posthogKey={process.env.NEXT_PUBLIC_POSTHOG_KEY}
+          posthogHost={process.env.NEXT_PUBLIC_POSTHOG_HOST}
+        />
         <ThemeProvider>
           {children}
+          {/* Flushes an onboarding draft once a session exists (email signup has
+              none while the flow runs), and nudges thin profiles. Mounted here
+              rather than in PageShell because /dashboard and /admin roll their
+              own layouts and would miss it. It renders nothing unless it has
+              something to do. */}
+          <OnboardingNudgeHost />
           <Toaster position="top-right" richColors closeButton />
         </ThemeProvider>
       </body>

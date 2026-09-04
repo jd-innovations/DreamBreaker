@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { playStyleLabel } from "@shared/play-profile";
 import {
   X, Heart, XCircle, Plug, MapPin, Star, Trophy,
   Users, Calendar, CheckCircle, Medal, ShieldStar,
@@ -15,7 +16,8 @@ interface SheetPartner {
   location: string;
   distance: string | null;
   availability: string | null;
-  play_style: string | null;
+  /** Keys, not labels — rendered through playStyleLabel(). */
+  play_style: string[] | null;
   img: string;
   bio: string | null;
   matchPct: number;
@@ -172,12 +174,14 @@ export function PlayerProfileSheet({ partner, onClose, onPass, onLike, onSuperCo
                     <div className="text-sm font-semibold leading-tight">{partner.availability}</div>
                   </div>
                 )}
-                {partner.play_style && (
+                {partner.play_style?.length ? (
                   <div className="bg-card border border-border rounded-xl px-3 py-2.5">
                     <div className="font-mono text-[9px] tracking-[0.2em] text-muted-foreground mb-0.5">PLAY STYLE</div>
-                    <div className="text-sm font-semibold leading-tight">{partner.play_style}</div>
+                    <div className="text-sm font-semibold leading-tight">
+                      {partner.play_style.map(playStyleLabel).join(", ")}
+                    </div>
                   </div>
-                )}
+                ) : null}
               </div>
             )}
 

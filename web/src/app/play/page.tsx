@@ -46,7 +46,7 @@ function EventCard({ e }: { e: EventWithCount }) {
           <StatusBadge status={e.status} />
         </div>
 
-        <h3 className="font-display text-xl tracking-wide leading-tight mb-2 group-hover:text-primary transition-colors line-clamp-2">
+        <h3 className="font-display text-xl tracking-tight leading-[0.85] mb-2 group-hover:text-primary transition-colors line-clamp-2">
           {e.name}
         </h3>
 

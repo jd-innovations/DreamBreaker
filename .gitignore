@@ -88,3 +88,14 @@ credentials.json
 .credentials
 frontend/node_modules/.cache/default-development/0.pack
 frontend/node_modules/.cache/default-development/2.pack
+
+# Email asset review sheet — regenerate with:
+#   node scripts/build-email-assets.mjs --contact-sheet
+supabase/email-assets/_contact-sheet.png
+
+# Supabase CLI local state. These are version caches the CLI rewrites on every
+# self-update or project upgrade (cli-latest, *-version, pooler-url), so they
+# show up as spurious diffs. project-ref is deliberately still tracked, so a
+# fresh clone stays linked to the project without running `supabase link`.
+supabase/.temp/*
+!supabase/.temp/project-ref

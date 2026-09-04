@@ -17,12 +17,13 @@ import {
 import { Logo } from "@/components/layout/logo";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
+import { toast } from "sonner";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile, MatchSummary } from "@/components/messaging/panel";
 import { NotificationBell } from "@/components/notifications/bell";
 import { MatchSettingsPanel } from "@/components/shared/match-settings-panel";
 import { ProfileSettings } from "@/components/dashboard/profile-settings";
-import { playerStats, tournaments as mockTournaments, recentMatches as mockMatches, COURT_IMG } from "@/data/mock-data";
+import { COURT_IMG } from "@/lib/stock-images";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Profile = {
@@ -62,6 +63,7 @@ type UpcomingEvent = {
   hold_expires_at?: string | null;
   director_id?: string | null;
   cancellation_policy?: string | null;
+  refund_cutoff_days?: number | null;
   entry_fee_cents?: number | null;
 };
 
@@ -273,6 +275,7 @@ export default function DashboardPage() {
   const [matches, setMatches] = useState<DisplayMatch[]>([]);
   const [stats, setStats] = useState({ wins: 0, losses: 0, tournaments: 0, duprDelta: 0 });
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [navSection, setNavSection] = useState<NavSection>("dashboard");
 
   // Open a specific section when linked with ?section= (e.g. from the mobile nav).
@@ -292,7 +295,34 @@ export default function DashboardPage() {
   // Captured once at mount; used to decide whether holds are still active.
   const [now] = useState(() => Date.now());
   const [cancelTarget, setCancelTarget] = useState<UpcomingEvent | null>(null);
+  // The authoritative refund breakdown for the open cancel dialog, fetched from
+  // compute_registration_refund. Never computed here: the browser knows the
+  // tournament's list price, not what this player actually paid, and those
+  // differ whenever a non-refundable Hold My Spot deposit was involved.
+  const [cancelQuote, setCancelQuote] = useState<{
+    registrationId: string;
+    eligible: boolean; refundable_cents: number; non_refundable_cents: number;
+    cutoff_days: number; days_until_event: number; ineligible_reason: string | null;
+  } | null>(null);
   const [cancelConfirming, setCancelConfirming] = useState(false);
+
+  useEffect(() => {
+    let stale = false;
+    (async () => {
+      if (!cancelTarget) return;
+      const registrationId = cancelTarget.registration_id;
+      const supabase = createClient();
+      const { data } = await supabase.rpc("compute_registration_refund", {
+        p_registration_id: registrationId,
+      });
+      const row = Array.isArray(data) ? data[0] : data;
+      // Tagged with the registration it describes. The dialog only uses a quote
+      // whose id matches the row it is showing, so reopening it for a different
+      // registration cannot briefly display the previous one's refund amount.
+      if (!stale && row) setCancelQuote({ registrationId, ...row });
+    })();
+    return () => { stale = true; };
+  }, [cancelTarget]);
   const [dmDirectorId, setDmDirectorId] = useState<string | null>(null);
   const [removingBookmarkId, setRemovingBookmarkId] = useState<string | null>(null);
   const [registerTarget, setRegisterTarget] = useState<SavedTournament | null>(null);
@@ -306,14 +336,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function load() {
+      // Misconfigured environment used to render a fully populated dashboard
+      // from sample data. Fail visibly instead (item 6.1).
       if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        setUpcoming(mockTournaments.slice(0, 2).map((t, i) => { const [city, state] = t.location.split(", "); return { id: t.id, registration_id: `mock-reg-${i}`, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" }; }));
-        setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
-        setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments, duprDelta: playerStats.duprDelta });
-        setRecommended(mockTournaments.slice(2).map((t) => {
-          const [city, state] = t.location.split(", ");
-          return { id: t.id, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, format: t.format.split(" · ")[0].toLowerCase().replace(/ /g, "_"), entry_fee_cents: t.entryFee * 100, capacity: t.spots, venue_name: t.venue, skill_min: null, skill_max: null, registeredCount: t.filled, partnerSeekers: 0, proximityScore: 3 };
-        }));
+        console.error("[dashboard] Supabase environment variables are missing");
+        setLoadFailed(true);
         setLoading(false);
         return;
       }
@@ -349,24 +376,23 @@ export default function DashboardPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: regs } = await (supabase as any)
         .from("registrations")
-        .select("id, status, hold_expires_at, tournament:tournaments!tournament_id(id, name, city, state, event_date, status, director_id, cancellation_policy, entry_fee_cents)")
+        .select("id, status, hold_expires_at, tournament:tournaments!tournament_id(id, name, city, state, event_date, status, director_id, cancellation_policy, refund_cutoff_days, entry_fee_cents)")
         .eq("player_id", user.id)
         .in("status", ["held", "registered", "checked_in"])
         .order("created_at", { ascending: false })
         .limit(10);
 
       const liveUpcoming: UpcomingEvent[] = (regs ?? [])
-        .map((r: { id: string; status: string; hold_expires_at?: string | null; tournament: { id: string; name: string; city: string; state: string; event_date: string; status: string; director_id?: string | null; cancellation_policy?: string | null; entry_fee_cents?: number | null } | null }) => {
+        .map((r: { id: string; status: string; hold_expires_at?: string | null; tournament: { id: string; name: string; city: string; state: string; event_date: string; status: string; director_id?: string | null; cancellation_policy?: string | null; refund_cutoff_days?: number | null; entry_fee_cents?: number | null } | null }) => {
           const t = r.tournament;
           if (!t) return null;
-          return { id: t.id, registration_id: r.id, name: t.name, city: t.city, state: t.state, event_date: t.event_date, status: r.status, hold_expires_at: r.hold_expires_at, director_id: t.director_id, cancellation_policy: t.cancellation_policy, entry_fee_cents: t.entry_fee_cents };
+          return { id: t.id, registration_id: r.id, name: t.name, city: t.city, state: t.state, event_date: t.event_date, status: r.status, hold_expires_at: r.hold_expires_at, director_id: t.director_id, cancellation_policy: t.cancellation_policy, refund_cutoff_days: t.refund_cutoff_days, entry_fee_cents: t.entry_fee_cents };
         })
         .filter(Boolean) as UpcomingEvent[];
 
-      setUpcoming(liveUpcoming.length > 0 ? liveUpcoming : mockTournaments.slice(0, 2).map((t, i) => {
-        const [city, state] = t.location.split(", ");
-        return { id: t.id, registration_id: `mock-reg-${i}`, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" };
-      }));
+      // A player with no upcoming events sees none. This used to invent two
+      // registrations they never made.
+      setUpcoming(liveUpcoming);
 
       const { data: matchRows } = await supabase
         .from("bracket_matches")
@@ -381,8 +407,7 @@ export default function DashboardPage() {
         setMatches(processed);
         setStats((s) => ({ ...s, wins: processed.filter((m) => m.result === "W").length, losses: processed.filter((m) => m.result === "L").length }));
       } else {
-        setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
-        setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments, duprDelta: playerStats.duprDelta });
+        setMatches([]);
       }
 
       const { count } = await supabase.from("registrations").select("tournament_id", { count: "exact", head: true }).eq("player_id", user.id).in("status", ["registered", "checked_in"]);
@@ -399,11 +424,16 @@ export default function DashboardPage() {
 
       // Recommended tournaments — ordered by proximity then date
       {
-        const validRegisteredIds = liveUpcoming.filter((e) => !e.id.startsWith("mock-")).map((e) => e.id);
+        const validRegisteredIds = liveUpcoming.map((e) => e.id);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let recQuery = (supabase as any)
           .from("tournaments")
-          .select("id, name, city, state, event_date, format, entry_fee_cents, capacity, venue_name, skill_min, skill_max")
+          // capacity:draw_size -- there is no tournaments.capacity column. This
+          // selected a column that does not exist, so PostgREST returned 400 and
+          // the recommended strip rendered empty in production. The mock path
+          // below supplies `capacity` directly, which is why it looked fine
+          // locally. Aliased rather than renamed so the display code is untouched.
+          .select("id, name, city, state, event_date, format, entry_fee_cents, capacity:draw_size, venue_name, skill_min, skill_max")
           .neq("status", "draft")
           .order("event_date")
           .limit(12);
@@ -437,11 +467,10 @@ export default function DashboardPage() {
             );
           setRecommended(rec);
         } else {
-          // No live tournaments yet — show mock data so the section is always visible
-          setRecommended(mockTournaments.slice(2).map((t) => {
-            const [city, state] = t.location.split(", ");
-            return { id: t.id, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, format: t.format.split(" · ")[0].toLowerCase().replace(/ /g, "_"), entry_fee_cents: t.entryFee * 100, capacity: t.spots, venue_name: t.venue, skill_min: null, skill_max: null, registeredCount: t.filled, partnerSeekers: 0, proximityScore: 3 };
-          }));
+          // Was: "show mock data so the section is always visible". A section
+          // that is always visible because it invents its contents is worse
+          // than one that hides when there is nothing to recommend.
+          setRecommended([]);
         }
       }
 
@@ -474,14 +503,12 @@ export default function DashboardPage() {
       setLoading(false);
     }
 
-    load().catch(() => {
-      setUpcoming(mockTournaments.slice(0, 2).map((t, i) => { const [city, state] = t.location.split(", "); return { id: t.id, registration_id: `mock-reg-${i}`, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, status: "registered" }; }));
-      setMatches(mockMatches.map((m, i) => ({ id: `mock-${i}`, opp: m.opponent.split(" / ")[0], result: m.result as "W" | "L", score: m.score, event: m.event, date: m.date })));
-      setStats({ wins: playerStats.wins, losses: playerStats.losses, tournaments: playerStats.tournaments, duprDelta: playerStats.duprDelta });
-      setRecommended(mockTournaments.slice(2).map((t) => {
-        const [city, state] = t.location.split(", ");
-        return { id: t.id, name: t.name, city: city ?? "", state: state ?? "", event_date: t.dateISO, format: t.format.split(" · ")[0].toLowerCase().replace(/ /g, "_"), entry_fee_cents: t.entryFee * 100, capacity: t.spots, venue_name: t.venue, skill_min: null, skill_max: null, registeredCount: t.filled, partnerSeekers: 0, proximityScore: 3 };
-      }));
+    load().catch((err) => {
+      console.error("[dashboard] failed to load dashboard", err);
+      setUpcoming([]);
+      setMatches([]);
+      setRecommended([]);
+      setLoadFailed(true);
       setLoading(false);
     });
   }, []);
@@ -634,6 +661,16 @@ export default function DashboardPage() {
                   {stats.tournaments > 0 ? ` · ${stats.tournaments} tournament${stats.tournaments > 1 ? "s" : ""} this season` : ""}
                 </p>
               </div>
+
+              {loadFailed && (
+                <div className="border border-destructive/40 bg-destructive/10 rounded-2xl px-5 py-4 text-sm">
+                  <span className="font-semibold">We couldn&apos;t load your dashboard.</span>{" "}
+                  <span className="text-muted-foreground">
+                    The figures below are incomplete, not zero.{" "}
+                    <button onClick={() => window.location.reload()} className="text-primary hover:underline">Try again</button>.
+                  </span>
+                </div>
+              )}
 
               {/* Stat cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1163,16 +1200,38 @@ export default function DashboardPage() {
     {/* ── Cancel Registration Lightbox ───────────────────────────────────── */}
     {cancelTarget && (() => {
       const eventDate = new Date(cancelTarget.event_date);
-      const daysUntil = Math.ceil((eventDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-      const feeCents = cancelTarget.entry_fee_cents ?? 0;
-      const refundTier = daysUntil >= 7 ? "full" : daysUntil >= 3 ? "half" : "none";
-      const refundLabel = refundTier === "full"
-        ? feeCents > 0 ? `Full refund — $${(feeCents / 100).toFixed(2)}` : "Full refund eligible"
-        : refundTier === "half"
-          ? feeCents > 0 ? `50% refund — $${(feeCents / 200).toFixed(2)}` : "50% refund eligible"
-          : "No refund (within 72 hours)";
-      const refundColor = refundTier === "full" ? "text-emerald-400" : refundTier === "half" ? "text-amber-400" : "text-destructive";
-      const policy = cancelTarget.cancellation_policy ?? "Full refund if cancelled 7 or more days before the event. 50% refund if cancelled 3–6 days before. No refund within 72 hours of the event start.";
+      const daysUntil = Math.ceil((eventDate.getTime() - now) / (1000 * 60 * 60 * 24));
+      // Everything below prefers the server quote and only falls back to local
+      // arithmetic while it is still loading. The fallback deliberately shows
+      // no dollar figure: entry_fee_cents is the tournament's LIST price, and a
+      // player who paid a $10 deposit plus a $110 balance is owed $110, not
+      // $120. Quoting the wrong number is worse than quoting none.
+      const quote = cancelQuote?.registrationId === cancelTarget.registration_id ? cancelQuote : null;
+      const cutoffDays = quote?.cutoff_days ?? cancelTarget.refund_cutoff_days ?? 15;
+      const refundEligible = quote ? quote.eligible : daysUntil >= cutoffDays;
+      const refundableCents = quote?.refundable_cents ?? 0;
+      const depositCents = quote?.non_refundable_cents ?? 0;
+
+      const refundLabel = !quote
+        ? "Checking your refund eligibility…"
+        : refundEligible
+          ? refundableCents > 0
+            ? `Full refund — $${(refundableCents / 100).toFixed(2)} back to your original payment method`
+            : "Eligible for a full refund"
+          : quote.ineligible_reason === "already_refunded"
+            ? "Already refunded"
+            : quote.ineligible_reason === "no_entry_payment"
+              ? "No payment on file for this registration"
+              : `Not eligible for a refund (within ${cutoffDays} days of the event)`;
+
+      // Named explicitly rather than silently deducted. Someone who paid a
+      // deposit should see why they are getting back less than they paid.
+      const depositNote = depositCents > 0 && refundEligible
+        ? `Your $${(depositCents / 100).toFixed(2)} Hold My Spot deposit is non-refundable and is not included.`
+        : null;
+      const refundColor = refundEligible ? "text-emerald-400" : "text-destructive";
+      const policy = cancelTarget.cancellation_policy
+        ?? `Full refund if cancelled ${cutoffDays} or more days before the event. No refund inside ${cutoffDays} days. Hold My Spot deposits are non-refundable and count toward your entry fee.`;
 
       return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
@@ -1198,8 +1257,11 @@ export default function DashboardPage() {
                 <div>
                   <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mb-0.5">REFUND STATUS</p>
                   <p className={`font-semibold text-sm ${refundColor}`}>{refundLabel}</p>
+                  {depositNote && (
+                    <p className="text-xs text-muted-foreground mt-1">{depositNote}</p>
+                  )}
                 </div>
-                <div className={`text-xs font-mono px-3 py-1.5 rounded-full border ${refundTier === "full" ? "border-emerald-400/40 text-emerald-400 bg-emerald-400/10" : refundTier === "half" ? "border-amber-400/40 text-amber-400 bg-amber-400/10" : "border-destructive/40 text-destructive bg-destructive/10"}`}>
+                <div className={`text-xs font-mono px-3 py-1.5 rounded-full border ${refundEligible ? "border-emerald-400/40 text-emerald-400 bg-emerald-400/10" : "border-destructive/40 text-destructive bg-destructive/10"}`}>
                   {daysUntil > 0 ? `${daysUntil}d away` : "Today"}
                 </div>
               </div>
@@ -1242,18 +1304,52 @@ export default function DashboardPage() {
               <button
                 disabled={cancelConfirming}
                 onClick={async () => {
-                  if (cancelTarget.registration_id.startsWith("mock-")) {
-                    setUpcoming((prev) => prev.filter((e) => e.id !== cancelTarget.id));
-                    setCancelTarget(null);
-                    return;
-                  }
                   setCancelConfirming(true);
                   const supabase = createClient();
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  await (supabase as any).from("registrations").update({ status: "cancelled" }).eq("id", cancelTarget.registration_id);
+                  // Goes through the cancel-registration edge function rather
+                  // than updating the row directly. Cancelling is no longer a
+                  // single write: it also decides and issues any refund owed,
+                  // and promotes the next waitlisted player. None of that can
+                  // happen from the client -- the refund amount must be derived
+                  // server-side from what was actually paid, and RLS rightly
+                  // forbids a browser writing to refunds or promoting anyone.
+                  const { data: result, error: fnError } = await supabase.functions.invoke(
+                    "cancel-registration",
+                    // No reason sent: the audit row's "cancelled by" is derived
+                    // server-side from who authorised the call. This used to
+                    // pass a hardcoded "Cancelled by player", which the
+                    // director-side caller sent too.
+                    { body: { registrationIds: [cancelTarget.registration_id] } },
+                  );
+                  setCancelConfirming(false);
+
+                  const outcome = (result as { outcomes?: Array<{
+                    cancelled: boolean; refundStatus: string; refundedCents: number; error?: string;
+                  }> } | null)?.outcomes?.[0];
+
+                  if (fnError || !outcome || !outcome.cancelled) {
+                    toast.error(
+                      outcome?.error === "not_authorized"
+                        ? "You are not able to cancel this registration."
+                        : "Could not cancel your registration. Please try again or contact support.",
+                    );
+                    return;
+                  }
+
+                  // Reports what actually happened, not what was predicted. A
+                  // refund can fail after the cancellation succeeds -- the
+                  // refunds row records it for retry -- and telling someone
+                  // their money is on the way when it is not is the failure
+                  // this whole flow exists to avoid.
+                  toast.success(
+                    outcome.refundStatus === "submitted"
+                      ? `Registration cancelled. $${(outcome.refundedCents / 100).toFixed(2)} has been refunded to your original payment method.`
+                      : outcome.refundStatus === "failed"
+                        ? "Registration cancelled. Your refund could not be processed automatically — support has been notified."
+                        : "Registration cancelled.",
+                  );
                   setUpcoming((prev) => prev.filter((e) => e.id !== cancelTarget.id));
                   setCancelTarget(null);
-                  setCancelConfirming(false);
                 }}
                 className="flex-1 h-9 rounded-full bg-destructive text-white text-sm font-display tracking-[0.15em] border border-white/20 hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >

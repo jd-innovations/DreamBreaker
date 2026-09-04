@@ -2,8 +2,9 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { ArrowRight, Plus, Heart, Lightning, Trophy, Users, MapPin, Calendar } from "@phosphor-icons/react/dist/ssr";
 import { PageShell } from "@/components/layout/page-shell";
-import { tournaments, HERO_IMG } from "@/data/mock-data";
+import { HERO_IMG } from "@/lib/stock-images";
 import { createClient } from "@/lib/supabase/server";
+import { getPlatformStats } from "@/lib/platform-stats";
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&q=80";
 
@@ -61,28 +62,37 @@ async function getFeaturedTournaments(): Promise<FeaturedCard[]> {
   }
 }
 
-const stats = [
-  { label: "ACTIVE PLAYERS", value: "12,480" },
-  { label: "LIVE TOURNAMENTS", value: "184" },
-  { label: "PARTNERS MATCHED", value: "3,210" },
-  { label: "PRIZE PAID '25", value: "$1.2M" },
-];
+// Landing-page presentation of the shared counts. The query itself lives in
+// lib/platform-stats.ts so the auth page renders the same numbers rather than
+// its own copy — the fabricated figures existed in both files, and 6.1
+// originally only fixed this one.
+//
+// "PRIZE PAID '25" is gone rather than zeroed: no payouts table exists in this
+// schema at all, so a hardcoded "$0" would be just as invented as "$1.2M", and
+// would silently stay $0 after payouts ship.
+async function getStatTiles(): Promise<{ label: string; value: string }[]> {
+  const stats = await getPlatformStats();
+  const fmt = (n: number | undefined) => (n === undefined ? "—" : n.toLocaleString());
+
+  return [
+    { label: "ACTIVE PLAYERS", value: fmt(stats?.activePlayers) },
+    { label: "LIVE TOURNAMENTS", value: fmt(stats?.liveTournaments) },
+    { label: "PARTNERS MATCHED", value: fmt(stats?.partnersMatched) },
+  ];
+}
 
 const features = [
-  { icon: Lightning, tag: "HOLD MY SPOT", title: "Reserve your slot in seconds", body: "Pay a small refundable fee to lock your tournament entry. Confirm later, no scramble." },
+  { icon: Lightning, tag: "HOLD MY SPOT", title: "Reserve your slot in seconds", body: "Pay a small non-refundable deposit to lock your tournament entry. It counts toward your entry fee. Confirm later, no scramble." },
   { icon: Heart, tag: "MATCHMAKING", title: "Tinder-style partner finder", body: "Swipe through verified players by DUPR, distance and play style. Match. Compete." },
   { icon: Trophy, tag: "BRACKETS", title: "Live brackets & rankings", body: "Auto-generated draws. Real-time scoring. Auto-updated DUPR after every event." },
 ];
 
 export default async function LandingPage() {
-  const dbFeatured = await getFeaturedTournaments();
-  // Fall back to mock data only when no real tournaments are open yet.
-  const featuredList: FeaturedCard[] = dbFeatured.length > 0
-    ? dbFeatured
-    : tournaments.slice(0, 3).map((t) => ({
-        id: t.id, name: t.name, img: t.img, location: t.location, date: t.date,
-        filled: t.filled, spots: t.spots, prize: t.prize, status: t.status, featured: false,
-      }));
+  const stats = await getStatTiles();
+  // Real open tournaments only. This used to fall back to three invented
+  // events, complete with entry fees, prize pools and director names, on a
+  // public marketing page (item 6.1).
+  const featuredList: FeaturedCard[] = await getFeaturedTournaments();
 
   return (
     <PageShell>
@@ -90,6 +100,7 @@ export default async function LandingPage() {
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0">
           <img src={HERO_IMG} alt="" className="h-full w-full object-cover object-center opacity-50 dark:opacity-60" />
+          <div className="absolute inset-0 bg-black/50" />
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/20 dark:from-background dark:via-background/70 dark:to-transparent" />
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
@@ -123,7 +134,7 @@ export default async function LandingPage() {
 
       {/* STATS */}
       <section className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-2 lg:grid-cols-4 gap-y-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-2 lg:grid-cols-3 gap-y-8">
           {stats.map((s) => (
             <div key={s.label} className="border-l-2 border-primary pl-4">
               <div className="font-display text-4xl lg:text-5xl tracking-wide">{s.value}</div>
@@ -170,6 +181,13 @@ export default async function LandingPage() {
               VIEW ALL <ArrowRight size={16} weight="bold" />
             </Link>
           </div>
+          {featuredList.length === 0 ? (
+            <div className="border border-dashed border-border rounded-2xl p-12 text-center text-muted-foreground">
+              <Trophy size={32} weight="duotone" className="mx-auto mb-3 text-primary" />
+              <div className="font-display text-xl tracking-wide mb-1">NO OPEN EVENTS RIGHT NOW</div>
+              <p className="text-sm">New tournaments are added regularly — check back soon.</p>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {featuredList.map((t) => (
               <Link key={t.id} href={`/tournaments/${t.id}`} data-testid={`featured-tournament-${t.id}`} className="group border border-border rounded-2xl overflow-hidden bg-card hover:border-primary transition-all">
@@ -180,7 +198,7 @@ export default async function LandingPage() {
                     <span className="px-2.5 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-mono tracking-widest font-bold">{(t.status === "filling_fast" ? "Filling Fast" : t.status).toUpperCase()}</span>
                     {t.featured && <span className="px-2.5 py-1 rounded-full bg-amber-400 text-black text-[10px] font-mono tracking-widest font-bold flex items-center gap-1"><Trophy size={9} weight="fill" /> FEATURED</span>}
                   </div>
-                  <div className="absolute bottom-3 left-3 right-3"><div className="font-display text-2xl text-white tracking-wide">{t.name}</div></div>
+                  <div className="absolute bottom-3 left-3 right-3"><div className="font-display text-2xl text-white tracking-tight leading-[0.85]">{t.name}</div></div>
                 </div>
                 <div className="p-5 space-y-2">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground"><MapPin size={14} weight="bold" /><span>{t.location}</span></div>
@@ -194,6 +212,7 @@ export default async function LandingPage() {
               </Link>
             ))}
           </div>
+          )}
         </div>
       </section>
 

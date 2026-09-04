@@ -1,23 +1,33 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AvailabilityGrid } from "@/components/shared/availability-grid";
+import {
+  normalizeSchedule,
+  summarizeSchedule,
+  isScheduleEmpty,
+  type AvailabilitySchedule,
+} from "@shared/availability";
 import Link from "next/link";
 import { Camera, Check, UserCircle } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { PLAY_STYLE_KEYS, playStyleLabel } from "@shared/play-profile";
 import { ensureFreshSession } from "@/lib/ensure-session";
-import type { Tables } from "@/lib/supabase/database.types";
+import type { Tables } from "@shared/database.types";
 
 type Profile = Pick<
   Tables<"profiles">,
-  | "id" | "full_name" | "handle" | "dupr" | "skill_level"
+  | "id" | "full_name" | "handle" | "dupr" | "skill_level" | "self_rating"
   | "location_city" | "location_state" | "avatar_url" | "bio"
   | "play_style" | "availability" | "hand"
 >;
 
 const SKILL_LEVELS = ["2.5-3.0", "3.0-3.5", "3.5-4.0", "4.0-4.5", "4.5+"];
-const PLAY_STYLES = ["Aggressive baseliner", "Soft-game specialist", "Counter-puncher", "All-court", "Bangers + transition", "Dink master"];
-const AVAILABILITY_OPTIONS = ["Weekends", "Weeknights", "Weekends + Tue evenings", "Sat / Sun mornings", "Flexible", "Weekdays only"];
+// Keys, not labels. `profiles.play_style` is a text[] constrained to this
+// exact set, so storing the display string would now be rejected outright.
+// Rendered through playStyleLabel().
+const PLAY_STYLES = PLAY_STYLE_KEYS;
 const HAND_OPTIONS = ["right", "left", "ambidextrous"];
 const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop";
 
@@ -37,16 +47,17 @@ export function ProfileSettings({ userId }: { userId: string }) {
   const [state, setState] = useState("");
   const [bio, setBio] = useState("");
   const [skill, setSkill] = useState("");
+  const [selfRating, setSelfRating] = useState("");
   const [hand, setHand] = useState("");
   const [playStyle, setPlayStyle] = useState<string[]>([]);
-  const [availability, setAvailability] = useState<string[]>([]);
+  const [schedule, setSchedule] = useState<AvailabilitySchedule>({});
 
   useEffect(() => {
     const supabase = createClient();
     async function load() {
       const { data: prof } = await supabase
         .from("profiles")
-        .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,hand")
+        .select("id,full_name,handle,dupr,skill_level,self_rating,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule,hand")
         .eq("id", userId)
         .single();
       if (prof) {
@@ -56,9 +67,10 @@ export function ProfileSettings({ userId }: { userId: string }) {
         setState(prof.location_state ?? "");
         setBio(prof.bio ?? "");
         setSkill(prof.skill_level ?? "");
+        setSelfRating(prof.self_rating ?? "");
         setHand(prof.hand ?? "");
-        setPlayStyle(prof.play_style ? prof.play_style.split(",").map((s) => s.trim()).filter(Boolean) : []);
-        setAvailability(prof.availability ? prof.availability.split(",").map((s) => s.trim()).filter(Boolean) : []);
+        setPlayStyle(prof.play_style ?? []);
+        setSchedule(normalizeSchedule(prof.availability_schedule));
       }
       setLoading(false);
     }
@@ -127,8 +139,12 @@ export function ProfileSettings({ userId }: { userId: string }) {
         bio: bio.trim() || null,
         skill_level: skill || null,
         hand: (hand as "right" | "left" | "ambidextrous") || null,
-        play_style: playStyle.length > 0 ? playStyle.join(", ") : null,
-        availability: availability.length > 0 ? availability.join(", ") : null,
+        self_rating: selfRating.trim() || null,
+        play_style: playStyle.length > 0 ? playStyle : null,
+        // The schedule is the source of truth; the text is derived from it by
+        // the shared summarizer so web and mobile produce identical strings.
+        availability_schedule: schedule,
+        availability: isScheduleEmpty(schedule) ? null : summarizeSchedule(schedule),
       })
       .eq("id", profile.id)
       .select("id");
@@ -168,7 +184,7 @@ export function ProfileSettings({ userId }: { userId: string }) {
       <div className="flex items-center justify-between gap-3 sticky top-0 z-10 -mx-6 -mt-6 px-6 py-4 bg-card/95 backdrop-blur border-b border-border rounded-t-2xl">
         <div>
           <p className="font-display text-lg tracking-wide">EDIT PROFILE</p>
-          <p className="text-xs text-muted-foreground">Your photo and details across DreamBreaker</p>
+          <p className="text-xs text-muted-foreground">Your photo and details across Pickleball App</p>
         </div>
         <button
           onClick={save}
@@ -257,6 +273,18 @@ export function ProfileSettings({ userId }: { userId: string }) {
         </div>
       </div>
 
+      {/* Self rating */}
+      <div>
+        <label className={labelCls}>SELF RATING <span className="text-muted-foreground/60">(numeric, e.g. 4.0)</span></label>
+        <input
+          type="text"
+          value={selfRating}
+          onChange={(e) => setSelfRating(e.target.value)}
+          placeholder="e.g. 4.0"
+          className={`${inputCls} w-full sm:w-48`}
+        />
+      </div>
+
       {/* Hand */}
       <div>
         <label className={labelCls}>DOMINANT HAND</label>
@@ -275,7 +303,7 @@ export function ProfileSettings({ userId }: { userId: string }) {
         <div className="flex flex-wrap gap-2">
           {PLAY_STYLES.map((s) => (
             <button key={s} type="button" onClick={() => toggle(playStyle, setPlayStyle, s)} className={`px-4 h-9 rounded-full text-xs font-mono border transition-colors ${playStyle.includes(s) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/50"}`}>
-              {s}
+              {playStyleLabel(s)}
             </button>
           ))}
         </div>
@@ -284,13 +312,7 @@ export function ProfileSettings({ userId }: { userId: string }) {
       {/* Availability */}
       <div>
         <label className={labelCls}>AVAILABILITY</label>
-        <div className="flex flex-wrap gap-2">
-          {AVAILABILITY_OPTIONS.map((a) => (
-            <button key={a} type="button" onClick={() => toggle(availability, setAvailability, a)} className={`px-4 h-9 rounded-full text-xs font-mono border transition-colors ${availability.includes(a) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/50"}`}>
-              {a}
-            </button>
-          ))}
-        </div>
+        <AvailabilityGrid value={schedule} onChange={setSchedule} />
       </div>
 
       {/* Save */}

@@ -1,0 +1,731 @@
+blocked_users|blocked_id|"uuid" NOT NULL
+blocked_users|blocker_id|"uuid" NOT NULL
+blocked_users|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+blocked_users|id|"uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL
+bracket_matches|completed_at|timestamp with time zone
+bracket_matches|court|"text"
+bracket_matches|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+bracket_matches|division_id|"uuid"
+bracket_matches|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+bracket_matches|match_number|integer NOT NULL
+bracket_matches|next_match_id|"uuid"
+bracket_matches|next_match_slot|integer
+bracket_matches|round|"public"."round_label" NOT NULL
+bracket_matches|scheduled_at|timestamp with time zone
+bracket_matches|score_entered_at|timestamp with time zone
+bracket_matches|score_entered_by|"uuid"
+bracket_matches|score_team1|integer[] DEFAULT '{}'::integer[]
+bracket_matches|score_team2|integer[] DEFAULT '{}'::integer[]
+bracket_matches|started_at|timestamp with time zone
+bracket_matches|team1_player_a|"uuid"
+bracket_matches|team1_player_b|"uuid"
+bracket_matches|team2_player_a|"uuid"
+bracket_matches|team2_player_b|"uuid"
+bracket_matches|tournament_id|"uuid" NOT NULL
+bracket_matches|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+bracket_matches|winner|integer
+bracket_seeds|created_at|timestamp with time zone DEFAULT "now"()
+bracket_seeds|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+bracket_seeds|locked|boolean DEFAULT false
+bracket_seeds|player_id|"uuid" NOT NULL
+bracket_seeds|pool_letter|"text"
+bracket_seeds|seed_number|integer NOT NULL
+bracket_seeds|tournament_id|"uuid" NOT NULL
+conversation_participant_settings|archived_at|timestamp with time zone
+conversation_participant_settings|conversation_id|"uuid" NOT NULL
+conversation_participant_settings|hidden_at|timestamp with time zone
+conversation_participant_settings|muted_until|timestamp with time zone
+conversation_participant_settings|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+conversation_participant_settings|user_id|"uuid" NOT NULL
+conversation_participants|conversation_id|"uuid" NOT NULL
+conversation_participants|joined_at|timestamp with time zone DEFAULT "now"() NOT NULL
+conversation_participants|role|"text" DEFAULT 'member'::"text" NOT NULL
+conversation_participants|user_id|"uuid" NOT NULL
+conversations|conversation_type|"text" DEFAULT 'direct'::"text" NOT NULL
+conversations|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+conversations|created_by|"uuid"
+conversations|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+conversations|last_message_at|timestamp with time zone
+conversations|participant_a|"uuid"
+conversations|participant_b|"uuid"
+conversations|related_play_event_id|"uuid"
+conversations|related_tournament_id|"uuid"
+conversations|title|"text"
+court_assignments|completed_at|timestamp with time zone
+court_assignments|court_number|integer NOT NULL
+court_assignments|created_at|timestamp with time zone DEFAULT "now"()
+court_assignments|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+court_assignments|match_id|"uuid"
+court_assignments|player_a|"text"
+court_assignments|player_b|"text"
+court_assignments|round_label|"text"
+court_assignments|score_a|integer
+court_assignments|score_b|integer
+court_assignments|status|"text" DEFAULT 'active'::"text"
+court_assignments|tournament_id|"uuid" NOT NULL
+court_assignments|winner|"text"
+divisions|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+divisions|draw_size|integer NOT NULL
+divisions|entry_fee_cents|integer
+divisions|format|"public"."tournament_format" NOT NULL
+divisions|gender_category|"text" DEFAULT 'open'::"text"
+divisions|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+divisions|name|"text" NOT NULL
+divisions|skill_max|numeric(3,2)
+divisions|skill_min|numeric(3,2)
+divisions|spots_filled|integer DEFAULT 0 NOT NULL
+divisions|tournament_id|"uuid" NOT NULL
+dupr_history|delta|numeric(4,2) GENERATED ALWAYS AS (("rating_after" - "rating_before")) STORED
+dupr_history|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+dupr_history|player_id|"uuid" NOT NULL
+dupr_history|rating_after|numeric(4,2) NOT NULL
+dupr_history|rating_before|numeric(4,2)
+dupr_history|recorded_at|timestamp with time zone DEFAULT "now"() NOT NULL
+dupr_history|tournament_id|"uuid"
+dynamic_stories|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+dynamic_stories|cta_label|"text"
+dynamic_stories|cta_route|"text"
+dynamic_stories|expires_at|timestamp with time zone NOT NULL
+dynamic_stories|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+dynamic_stories|priority_score|numeric DEFAULT 0 NOT NULL
+dynamic_stories|slides|"jsonb" NOT NULL
+dynamic_stories|source_id|"uuid"
+dynamic_stories|source_type|"text"
+dynamic_stories|story_type|"text" NOT NULL
+dynamic_stories|subtitle|"text"
+dynamic_stories|title|"text" NOT NULL
+email_log|error|"text"
+email_log|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+email_log|provider_id|"text"
+email_log|sent_at|timestamp with time zone DEFAULT "now"() NOT NULL
+email_log|status|"text" DEFAULT 'sent'::"text" NOT NULL
+email_log|subject|"text"
+email_log|to_email|"text" NOT NULL
+email_sponsors|active|boolean DEFAULT true NOT NULL
+email_sponsors|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+email_sponsors|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+email_sponsors|link|"text"
+email_sponsors|logo_url|"text" NOT NULL
+email_sponsors|name|"text" NOT NULL
+email_sponsors|sort_order|integer DEFAULT 0 NOT NULL
+email_templates|enabled|boolean DEFAULT true NOT NULL
+email_templates|html_body|"text" NOT NULL
+email_templates|key|"text" NOT NULL
+email_templates|name|"text" NOT NULL
+email_templates|subject|"text" NOT NULL
+email_templates|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+email_templates|updated_by|"uuid"
+email_templates|variables|"text"[] DEFAULT '{}'::"text"[] NOT NULL
+facilities|address_line_2|"text"
+facilities|address|"text" NOT NULL
+facilities|amenities|"text"[] DEFAULT '{}'::"text"[] NOT NULL
+facilities|bookable_by_public|boolean DEFAULT false NOT NULL
+facilities|booking_url|"text"
+facilities|business_status|"text"
+facilities|city|"text" NOT NULL
+facilities|claim_status|"text" DEFAULT 'unclaimed'::"text" NOT NULL
+facilities|coords|"public"."geography"(Point,4326)
+facilities|country|"text" DEFAULT 'US'::"text" NOT NULL
+facilities|court_count|integer DEFAULT 0 NOT NULL
+facilities|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+facilities|created_by|"uuid"
+facilities|data_confidence|integer
+facilities|data_source|"text" DEFAULT 'manual'::"text" NOT NULL
+facilities|description|"text"
+facilities|facility_type|"text"
+facilities|fee_type|"text"
+facilities|google_maps_uri|"text"
+facilities|google_place_id|"text"
+facilities|google_rating_count|integer
+facilities|google_rating|numeric(2,1)
+facilities|google_types|"text"[] DEFAULT '{}'::"text"[] NOT NULL
+facilities|hours_summary|"text"
+facilities|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+facilities|import_batch_id|"uuid"
+facilities|indoor_courts|integer DEFAULT 0 NOT NULL
+facilities|last_verified_date|timestamp with time zone
+facilities|latitude|numeric(9,6) NOT NULL
+facilities|lessons_available|boolean DEFAULT false NOT NULL
+facilities|lighting|boolean DEFAULT false NOT NULL
+facilities|longitude|numeric(9,6) NOT NULL
+facilities|membership_required|boolean DEFAULT false NOT NULL
+facilities|name|"text" NOT NULL
+facilities|notes|"text"
+facilities|open_play_available|boolean DEFAULT false NOT NULL
+facilities|outdoor_courts|integer DEFAULT 0 NOT NULL
+facilities|owner_user_id|"uuid"
+facilities|parking|boolean DEFAULT false NOT NULL
+facilities|phone|"text"
+facilities|postal_code|"text"
+facilities|price_level|integer
+facilities|pro_shop|boolean DEFAULT false NOT NULL
+facilities|public_access|boolean DEFAULT true NOT NULL
+facilities|reservation_required|boolean DEFAULT false NOT NULL
+facilities|restrooms|boolean DEFAULT false NOT NULL
+facilities|skill_levels|"text"[] DEFAULT '{}'::"text"[] NOT NULL
+facilities|slug|"text"
+facilities|source_url|"text"
+facilities|state|"text" NOT NULL
+facilities|status|"text"
+facilities|surface_type|"text"
+facilities|tags|"text"[] DEFAULT '{}'::"text"[] NOT NULL
+facilities|typical_fee|"text"
+facilities|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+facilities|verified|boolean DEFAULT false NOT NULL
+facilities|water|boolean DEFAULT false NOT NULL
+facilities|website|"text"
+facilities|wheelchair_accessible|boolean
+facility_photos|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+facility_photos|facility_id|"uuid" NOT NULL
+facility_photos|google_photo_name|"text"
+facility_photos|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+facility_photos|is_primary|boolean DEFAULT false NOT NULL
+facility_photos|uploaded_by|"uuid"
+facility_photos|url|"text" NOT NULL
+group_invites|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+group_invites|group_id|"uuid" NOT NULL
+group_invites|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+group_invites|invitee_id|"uuid" NOT NULL
+group_invites|inviter_id|"uuid" NOT NULL
+group_invites|responded_at|timestamp with time zone
+group_invites|status|"text" DEFAULT 'pending'::"text" NOT NULL
+group_members|group_id|"uuid" NOT NULL
+group_members|joined_at|timestamp with time zone DEFAULT "now"() NOT NULL
+group_members|role|"text" DEFAULT 'member'::"text" NOT NULL
+group_members|status|"text" DEFAULT 'active'::"text" NOT NULL
+group_members|user_id|"uuid" NOT NULL
+group_photos|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+group_photos|group_id|"uuid" NOT NULL
+group_photos|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+group_photos|post_id|"uuid"
+group_photos|uploaded_by|"uuid" NOT NULL
+group_photos|url|"text" NOT NULL
+group_poll_options|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+group_poll_options|label|"text" NOT NULL
+group_poll_options|position|smallint DEFAULT 0 NOT NULL
+group_poll_options|post_id|"uuid" NOT NULL
+group_poll_votes|option_id|"uuid" NOT NULL
+group_poll_votes|user_id|"uuid" NOT NULL
+group_post_comments|author_id|"uuid" NOT NULL
+group_post_comments|body|"text" NOT NULL
+group_post_comments|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+group_post_comments|edited_at|timestamp with time zone
+group_post_comments|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+group_post_comments|parent_comment_id|"uuid"
+group_post_comments|post_id|"uuid" NOT NULL
+group_post_likes|post_id|"uuid" NOT NULL
+group_post_likes|user_id|"uuid" NOT NULL
+group_post_reports|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+group_post_reports|group_id|"uuid" NOT NULL
+group_post_reports|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+group_post_reports|notes|"text"
+group_post_reports|reason|"public"."report_reason" DEFAULT 'spam_or_inappropriate'::"public"."report_reason" NOT NULL
+group_post_reports|reported_user_id|"uuid" NOT NULL
+group_post_reports|reporter_id|"uuid" NOT NULL
+group_post_reports|reviewed_at|timestamp with time zone
+group_post_reports|reviewed_by|"uuid"
+group_post_reports|status|"public"."report_status" DEFAULT 'pending'::"public"."report_status" NOT NULL
+group_post_reports|target_id|"uuid" NOT NULL
+group_post_reports|target_type|"text" NOT NULL
+group_posts|author_id|"uuid" NOT NULL
+group_posts|body|"text"
+group_posts|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+group_posts|edited_at|timestamp with time zone
+group_posts|group_id|"uuid" NOT NULL
+group_posts|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+group_posts|image_url|"text"
+group_posts|kind|"text" DEFAULT 'post'::"text" NOT NULL
+group_posts|related_play_event_id|"uuid"
+groups|allow_invites|boolean DEFAULT true NOT NULL
+groups|allow_posts|boolean DEFAULT true NOT NULL
+groups|conversation_id|"uuid"
+groups|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+groups|description|"text"
+groups|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+groups|image_url|"text"
+groups|location|"text"
+groups|name|"text" NOT NULL
+groups|organizer_id|"uuid" NOT NULL
+groups|privacy|"text" DEFAULT 'private'::"text" NOT NULL
+groups|skill|"text"
+groups|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+location_settings|allow_distance_matching|boolean DEFAULT true NOT NULL
+location_settings|community_radius|"text" DEFAULT '25 mi'::"text" NOT NULL
+location_settings|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+location_settings|local_events|boolean DEFAULT true NOT NULL
+location_settings|major_events|boolean DEFAULT true NOT NULL
+location_settings|marketplace_radius|"text" DEFAULT '50 mi'::"text" NOT NULL
+location_settings|national_events|boolean DEFAULT false NOT NULL
+location_settings|partner_radius|"text" DEFAULT '50 mi'::"text" NOT NULL
+location_settings|regional_events|boolean DEFAULT true NOT NULL
+location_settings|show_city|boolean DEFAULT true NOT NULL
+location_settings|show_exact_location|boolean DEFAULT false NOT NULL
+location_settings|tournament_radius|"text" DEFAULT '50 mi'::"text" NOT NULL
+location_settings|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+location_settings|user_id|"uuid" NOT NULL
+location_settings|willing_to_ship|boolean DEFAULT true NOT NULL
+matchmaking_swipes|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+matchmaking_swipes|direction|"public"."match_direction" NOT NULL
+matchmaking_swipes|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+matchmaking_swipes|requester_id|"uuid" NOT NULL
+matchmaking_swipes|target_id|"uuid" NOT NULL
+message_reactions|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+message_reactions|emoji|"text" NOT NULL
+message_reactions|message_id|"uuid" NOT NULL
+message_reactions|user_id|"uuid" NOT NULL
+messages|attachment_name|"text"
+messages|attachment_type|"text"
+messages|attachment_url|"text"
+messages|body|"text"
+messages|conversation_id|"uuid" NOT NULL
+messages|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+messages|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+messages|read_at|timestamp with time zone
+messages|sender_id|"uuid" NOT NULL
+notifications|body|"text"
+notifications|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+notifications|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+notifications|link|"text"
+notifications|read_at|timestamp with time zone
+notifications|title|"text" NOT NULL
+notifications|type|"text" NOT NULL
+notifications|user_id|"uuid" NOT NULL
+par_algorithm_versions|activated_at|timestamp with time zone
+par_algorithm_versions|configuration|"jsonb" DEFAULT '{}'::"jsonb" NOT NULL
+par_algorithm_versions|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+par_algorithm_versions|description|"text"
+par_algorithm_versions|is_active|boolean DEFAULT false NOT NULL
+par_algorithm_versions|name|"text" NOT NULL
+par_algorithm_versions|retired_at|timestamp with time zone
+par_algorithm_versions|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+par_algorithm_versions|version|"text" NOT NULL
+par_game_processing|algorithm_version|"text"
+par_game_processing|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+par_game_processing|eligibility_reason|"text"
+par_game_processing|error_message|"text"
+par_game_processing|game_id|"uuid" NOT NULL
+par_game_processing|last_evaluated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+par_game_processing|processed_at|timestamp with time zone
+par_game_processing|session_id|"uuid" NOT NULL
+par_game_processing|status|"text" DEFAULT 'pending'::"text" NOT NULL
+par_game_processing|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+par_game_processing|verification_level|"text"
+par_rating_events|actual_result|numeric(4,2) NOT NULL
+par_rating_events|algorithm_version|"text" NOT NULL
+par_rating_events|confidence_after|numeric(5,2) NOT NULL
+par_rating_events|confidence_before|numeric(5,2) NOT NULL
+par_rating_events|confidence_change|numeric(6,2) NOT NULL
+par_rating_events|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+par_rating_events|event_type|"text" DEFAULT 'game_processed'::"text" NOT NULL
+par_rating_events|expected_result|numeric(6,4) NOT NULL
+par_rating_events|explanation_code|"text" NOT NULL
+par_rating_events|explanation_data|"jsonb" DEFAULT '{}'::"jsonb" NOT NULL
+par_rating_events|game_id|"uuid" NOT NULL
+par_rating_events|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+par_rating_events|opponent_strength|numeric(6,4) NOT NULL
+par_rating_events|par_after|numeric(6,4) NOT NULL
+par_rating_events|par_before|numeric(6,4) NOT NULL
+par_rating_events|par_change|numeric(7,4) NOT NULL
+par_rating_events|partner_strength|numeric(6,4)
+par_rating_events|processed_at|timestamp with time zone DEFAULT "now"() NOT NULL
+par_rating_events|profile_id|"uuid" NOT NULL
+par_rating_events|reversal_event_id|"uuid"
+par_rating_events|reversed_at|timestamp with time zone
+par_rating_events|score_margin|integer NOT NULL
+par_rating_events|session_id|"uuid" NOT NULL
+par_rating_events|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+par_rating_events|verification_level|"text" NOT NULL
+par_rating_events|weight|numeric(6,4) NOT NULL
+partner_likes|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+partner_likes|from_user_id|"uuid" NOT NULL
+partner_likes|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+partner_likes|kind|"text" NOT NULL
+partner_likes|to_user_id|"uuid" NOT NULL
+partner_matches|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+partner_matches|matched_at|timestamp with time zone DEFAULT "now"() NOT NULL
+partner_matches|user_a|"uuid" NOT NULL
+partner_matches|user_b|"uuid" NOT NULL
+partner_preferences|actively_looking|boolean DEFAULT true NOT NULL
+partner_preferences|age_preference|"text" DEFAULT 'No Preference'::"text" NOT NULL
+partner_preferences|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+partner_preferences|distance_idx|smallint DEFAULT 1 NOT NULL
+partner_preferences|game_types|"text"[] DEFAULT '{}'::"text"[] NOT NULL
+partner_preferences|gender_preference|"text" DEFAULT 'No Preference'::"text" NOT NULL
+partner_preferences|preferred_days|"text"[] DEFAULT '{}'::"text"[] NOT NULL
+partner_preferences|preferred_times|"text"[] DEFAULT '{}'::"text"[] NOT NULL
+partner_preferences|skill_ranges|"text"[] DEFAULT '{}'::"text"[] NOT NULL
+partner_preferences|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+partner_preferences|user_id|"uuid" NOT NULL
+personal_game_participants|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+personal_game_participants|game_id|"uuid" NOT NULL
+personal_game_participants|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+personal_game_participants|position|integer NOT NULL
+personal_game_participants|session_participant_id|"uuid" NOT NULL
+personal_game_participants|team_number|integer NOT NULL
+personal_game_participants|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+personal_games|completed_at|timestamp with time zone
+personal_games|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+personal_games|game_number|integer NOT NULL
+personal_games|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+personal_games|session_id|"uuid" NOT NULL
+personal_games|status|"text" DEFAULT 'draft'::"text" NOT NULL
+personal_games|team_one_score|integer
+personal_games|team_two_score|integer
+personal_games|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+personal_games|winning_team|integer
+personal_guest_players|age_group|"text"
+personal_guest_players|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+personal_guest_players|created_by|"uuid" NOT NULL
+personal_guest_players|display_name|"text" NOT NULL
+personal_guest_players|email|"text"
+personal_guest_players|estimated_skill|"text"
+personal_guest_players|gender|"text"
+personal_guest_players|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+personal_guest_players|phone|"text"
+personal_guest_players|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+personal_guest_shares|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+personal_guest_shares|created_by|"uuid" NOT NULL
+personal_guest_shares|guest_player_id|"uuid" NOT NULL
+personal_guest_shares|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+personal_guest_shares|session_id|"uuid" NOT NULL
+personal_guest_shares|session_participant_id|"uuid" NOT NULL
+personal_guest_shares|share_channel|"text" DEFAULT 'sms'::"text" NOT NULL
+personal_guest_shares|share_initiated_at|timestamp with time zone
+personal_guest_shares|share_status|"text" DEFAULT 'not_shared'::"text" NOT NULL
+personal_guest_shares|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+personal_match_claims|claimed_at|timestamp with time zone
+personal_match_claims|claimed_by_profile_id|"uuid"
+personal_match_claims|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+personal_match_claims|created_by|"uuid" NOT NULL
+personal_match_claims|expires_at|timestamp with time zone NOT NULL
+personal_match_claims|guest_player_id|"uuid" NOT NULL
+personal_match_claims|guest_share_id|"uuid" NOT NULL
+personal_match_claims|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+personal_match_claims|revoked_at|timestamp with time zone
+personal_match_claims|session_id|"uuid" NOT NULL
+personal_match_claims|session_participant_id|"uuid" NOT NULL
+personal_match_claims|status|"text" DEFAULT 'pending'::"text" NOT NULL
+personal_match_claims|token_hash|"text" NOT NULL
+personal_match_claims|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+personal_session_participants|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+personal_session_participants|created_by|"uuid" NOT NULL
+personal_session_participants|display_name_snapshot|"text" NOT NULL
+personal_session_participants|estimated_skill|"text"
+personal_session_participants|guest_player_id|"uuid"
+personal_session_participants|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+personal_session_participants|profile_id|"uuid"
+personal_session_participants|session_id|"uuid" NOT NULL
+personal_session_participants|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+personal_sessions|completed_at|timestamp with time zone
+personal_sessions|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+personal_sessions|created_by|"uuid" NOT NULL
+personal_sessions|facility_id|"uuid"
+personal_sessions|format|"text" NOT NULL
+personal_sessions|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+personal_sessions|indoor_outdoor|"text"
+personal_sessions|notes|"text"
+personal_sessions|played_at|timestamp with time zone DEFAULT "now"() NOT NULL
+personal_sessions|status|"text" DEFAULT 'draft'::"text" NOT NULL
+personal_sessions|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+platform_settings|description|"text"
+platform_settings|key|"text" NOT NULL
+platform_settings|label|"text" NOT NULL
+platform_settings|options|"text"[]
+platform_settings|sort_order|integer DEFAULT 0 NOT NULL
+platform_settings|unit|"text"
+platform_settings|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+platform_settings|value_type|"text" DEFAULT 'text'::"text" NOT NULL
+platform_settings|value|"text" DEFAULT ''::"text" NOT NULL
+play_event_invites|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+play_event_invites|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+play_event_invites|invitee_id|"uuid" NOT NULL
+play_event_invites|inviter_id|"uuid" NOT NULL
+play_event_invites|play_event_id|"uuid" NOT NULL
+play_event_invites|responded_at|timestamp with time zone
+play_event_invites|status|"text" DEFAULT 'pending'::"text" NOT NULL
+play_events|city|"text"
+play_events|cover_url|"text"
+play_events|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+play_events|duration_minutes|integer
+play_events|event_date|"date" NOT NULL
+play_events|event_type|"public"."play_event_type" DEFAULT 'round_robin'::"public"."play_event_type" NOT NULL
+play_events|facility_id|"uuid"
+play_events|format|"text"
+play_events|group_id|"uuid"
+play_events|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+play_events|instructor_id|"uuid"
+play_events|location|"text" NOT NULL
+play_events|max_players|integer NOT NULL
+play_events|name|"text" NOT NULL
+play_events|notes|"text"
+play_events|organizer_id|"uuid" NOT NULL
+play_events|skill_max|numeric(3,2)
+play_events|skill_min|numeric(3,2)
+play_events|slug|"text"
+play_events|start_time|time without time zone
+play_events|state|"text"
+play_events|status|"public"."play_event_status" DEFAULT 'open'::"public"."play_event_status" NOT NULL
+play_events|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+play_events|venue_name|"text"
+play_matches|court|integer
+play_matches|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+play_matches|event_id|"uuid" NOT NULL
+play_matches|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+play_matches|match_number|integer
+play_matches|player_a_id|"uuid"
+play_matches|player_a2_id|"uuid"
+play_matches|player_b_id|"uuid"
+play_matches|player_b2_id|"uuid"
+play_matches|round|integer NOT NULL
+play_matches|score_a|integer
+play_matches|score_b|integer
+play_matches|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+play_matches|winner|integer
+play_participants|added_by_organizer|boolean DEFAULT false NOT NULL
+play_participants|claimed_by|"uuid"
+play_participants|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+play_participants|email|"text" NOT NULL
+play_participants|event_id|"uuid" NOT NULL
+play_participants|first_name|"text" NOT NULL
+play_participants|gender|"text"
+play_participants|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+play_participants|last_initial|"text"
+play_participants|phone|"text"
+play_participants|self_rating|"text"
+player_par_profiles|algorithm_version|"text" NOT NULL
+player_par_profiles|confidence_band|"text" DEFAULT 'low'::"text" NOT NULL
+player_par_profiles|confidence_score|numeric(5,2) DEFAULT 0 NOT NULL
+player_par_profiles|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+player_par_profiles|current_par|numeric(6,4) NOT NULL
+player_par_profiles|eligible_games_count|integer DEFAULT 0 NOT NULL
+player_par_profiles|initial_par|numeric(6,4) NOT NULL
+player_par_profiles|initialization_source|"text" NOT NULL
+player_par_profiles|initialized_at|timestamp with time zone DEFAULT "now"() NOT NULL
+player_par_profiles|last_processed_game_id|"uuid"
+player_par_profiles|last_rated_at|timestamp with time zone
+player_par_profiles|profile_id|"uuid" NOT NULL
+player_par_profiles|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+profile_hidden_matches|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+profile_hidden_matches|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+profile_hidden_matches|match_id|"uuid" NOT NULL
+profile_hidden_matches|player_id|"uuid" NOT NULL
+profiles|availability_schedule|"jsonb" DEFAULT '{}'::"jsonb" NOT NULL
+profiles|availability|"text"
+profiles|avatar_url|"text"
+profiles|bio|"text"
+profiles|cover_url|"text"
+profiles|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+profiles|date_of_birth|"date"
+profiles|director_approved_at|timestamp with time zone
+profiles|director_approved_by|"uuid"
+profiles|director_events_hosted|integer DEFAULT 0 NOT NULL
+profiles|director_rating|numeric(2,1)
+profiles|director_status|"public"."director_status"
+profiles|dupr_verified|boolean DEFAULT false NOT NULL
+profiles|dupr|numeric(4,2)
+profiles|email|"text" NOT NULL
+profiles|full_name|"text" NOT NULL
+profiles|hand|"text"
+profiles|handle|"text"
+profiles|home_court_id|"uuid"
+profiles|id|"uuid" NOT NULL
+profiles|is_director|boolean DEFAULT false NOT NULL
+profiles|is_discoverable|boolean DEFAULT true NOT NULL
+profiles|location_city|"text"
+profiles|location_coords|"public"."geography"(Point,4326)
+profiles|location_lat|double precision
+profiles|location_lng|double precision
+profiles|location_state|"text"
+profiles|looking_status|"text" DEFAULT 'actively_looking'::"text" NOT NULL
+profiles|notif_hold_expiry|boolean DEFAULT true NOT NULL
+profiles|notif_liked_you|boolean DEFAULT true NOT NULL
+profiles|notif_new_match|boolean DEFAULT true NOT NULL
+profiles|notif_tournaments|boolean DEFAULT true NOT NULL
+profiles|paddle|"text"
+profiles|play_style|"text"
+profiles|role|"public"."user_role" DEFAULT 'player'::"public"."user_role" NOT NULL
+profiles|self_rating|"text"
+profiles|skill_level|"text"
+profiles|story_radius_miles|integer DEFAULT 25 NOT NULL
+profiles|stripe_connect_account_id|"text"
+profiles|stripe_connect_onboarded_at|timestamp with time zone
+profiles|stripe_customer_id|"text"
+profiles|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+push_tokens|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+push_tokens|expo_push_token|"text" NOT NULL
+push_tokens|platform|"text" DEFAULT 'unknown'::"text" NOT NULL
+push_tokens|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+push_tokens|user_id|"uuid" NOT NULL
+registrations|added_by_director_id|"uuid"
+registrations|checked_in_at|timestamp with time zone
+registrations|checked_in_by|"uuid"
+registrations|converted_at|timestamp with time zone
+registrations|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+registrations|director_added|boolean DEFAULT false NOT NULL
+registrations|division_id|"uuid"
+registrations|entry_fee_paid_cents|integer DEFAULT 0 NOT NULL
+registrations|hold_expired_at|timestamp with time zone
+registrations|hold_expires_at|timestamp with time zone
+registrations|hold_fee_paid_cents|integer DEFAULT 0 NOT NULL
+registrations|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+registrations|needs_partner|boolean DEFAULT false NOT NULL
+registrations|partner_id|"uuid"
+registrations|player_id|"uuid" NOT NULL
+registrations|replaces_registration_id|"uuid"
+registrations|status|"public"."registration_status" DEFAULT 'held'::"public"."registration_status" NOT NULL
+registrations|stripe_entry_intent_id|"text"
+registrations|stripe_hold_intent_id|"text"
+registrations|tournament_id|"uuid" NOT NULL
+registrations|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+registrations|waitlist_offer_expires_at|timestamp with time zone
+registrations|waitlist_position|integer
+registrations|waiver_accepted_at|timestamp with time zone
+saved_play_events|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+saved_play_events|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+saved_play_events|play_event_id|"uuid" NOT NULL
+saved_play_events|player_id|"uuid" NOT NULL
+story_views|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+story_views|story_id|"uuid" NOT NULL
+story_views|user_id|"uuid" NOT NULL
+story_views|viewed_at|timestamp with time zone DEFAULT "now"() NOT NULL
+tournament_bookmarks|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+tournament_bookmarks|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+tournament_bookmarks|player_id|"uuid" NOT NULL
+tournament_bookmarks|tournament_id|"uuid" NOT NULL
+tournament_sponsors|created_at|timestamp with time zone DEFAULT "now"()
+tournament_sponsors|display_order|integer DEFAULT 0 NOT NULL
+tournament_sponsors|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+tournament_sponsors|logo_url|"text"
+tournament_sponsors|name|"text" NOT NULL
+tournament_sponsors|tier|"text" DEFAULT 'standard'::"text" NOT NULL
+tournament_sponsors|tournament_id|"uuid" NOT NULL
+tournament_sponsors|website_url|"text"
+tournaments|approved_at|timestamp with time zone
+tournaments|approved_by|"uuid"
+tournaments|bracket_type|"public"."bracket_type" DEFAULT 'single_elim'::"public"."bracket_type" NOT NULL
+tournaments|cancellation_policy|"text" DEFAULT 'Full refund if cancelled 7 or more days before the event. 50% refund if cancelled 3–6 days before. No refund within 72 hours of the event start.'::"text"
+tournaments|checkin_closes_at|timestamp with time zone
+tournaments|checkin_opens_at|timestamp with time zone
+tournaments|city|"text" NOT NULL
+tournaments|cover_img_url|"text"
+tournaments|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+tournaments|description|"text"
+tournaments|director_id|"uuid" NOT NULL
+tournaments|draw_size|integer NOT NULL
+tournaments|entry_fee_cents|integer NOT NULL
+tournaments|event_date|"date" NOT NULL
+tournaments|facility_id|"uuid"
+tournaments|featured|boolean DEFAULT false NOT NULL
+tournaments|format|"public"."tournament_format" NOT NULL
+tournaments|formats|"text"[] DEFAULT '{}'::"text"[]
+tournaments|hold_cutoff_days|integer DEFAULT 7 NOT NULL
+tournaments|hold_duration_hours|integer DEFAULT 72 NOT NULL
+tournaments|hold_fee_cents|integer NOT NULL
+tournaments|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+tournaments|name|"text" NOT NULL
+tournaments|pool_count|integer DEFAULT 4
+tournaments|prize_pool_cents|integer
+tournaments|registration_closes_at|timestamp with time zone
+tournaments|registration_opens_at|timestamp with time zone
+tournaments|rejected_reason|"text"
+tournaments|rejection_reason|"text"
+tournaments|rules|"text"
+tournaments|skill_max|numeric(3,2)
+tournaments|skill_min|numeric(3,2)
+tournaments|slug|"text"
+tournaments|spots_filled|integer DEFAULT 0 NOT NULL
+tournaments|state|"text" NOT NULL
+tournaments|status|"public"."tournament_status" DEFAULT 'draft'::"public"."tournament_status" NOT NULL
+tournaments|submitted_for_approval_at|timestamp with time zone
+tournaments|tournament_format|"text" DEFAULT 'single_elim'::"text"
+tournaments|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+tournaments|venue_address|"text"
+tournaments|venue_name|"text"
+tournaments|zip_code|"text"
+transactions|amount_cents|integer NOT NULL
+transactions|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+transactions|failure_reason|"text"
+transactions|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+transactions|player_id|"uuid" NOT NULL
+transactions|registration_id|"uuid"
+transactions|status|"public"."transaction_status" DEFAULT 'pending'::"public"."transaction_status" NOT NULL
+transactions|stripe_id|"text"
+transactions|tournament_id|"uuid"
+transactions|type|"public"."transaction_type" NOT NULL
+transactions|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+user_reports|conversation_id|"uuid"
+user_reports|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+user_reports|id|"uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL
+user_reports|notes|"text"
+user_reports|reason|"public"."report_reason" DEFAULT 'spam_or_inappropriate'::"public"."report_reason" NOT NULL
+user_reports|reported_id|"uuid" NOT NULL
+user_reports|reporter_id|"uuid" NOT NULL
+user_reports|reviewed_at|timestamp with time zone
+user_reports|reviewed_by|"uuid"
+user_reports|status|"public"."report_status" DEFAULT 'pending'::"public"."report_status" NOT NULL
+wallet_activity|amount|numeric(12,2)
+wallet_activity|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+wallet_activity|currency_code|"text"
+wallet_activity|description|"text"
+wallet_activity|event_type|"text" NOT NULL
+wallet_activity|external_reference_id|"text"
+wallet_activity|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+wallet_activity|metadata|"jsonb" DEFAULT '{}'::"jsonb" NOT NULL
+wallet_activity|title|"text" NOT NULL
+wallet_activity|user_id|"uuid" NOT NULL
+wallet_activity|wallet_item_id|"uuid" NOT NULL
+wallet_items|action_label|"text"
+wallet_items|action_type|"text" DEFAULT 'none'::"text" NOT NULL
+wallet_items|action_url|"text"
+wallet_items|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+wallet_items|currency_code|"text" DEFAULT 'USD'::"text" NOT NULL
+wallet_items|description|"text"
+wallet_items|expires_at|timestamp with time zone
+wallet_items|external_account_id|"text"
+wallet_items|external_customer_id|"text"
+wallet_items|external_reference_id|"text"
+wallet_items|external_system|"text"
+wallet_items|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+wallet_items|is_seen|boolean DEFAULT false NOT NULL
+wallet_items|metadata|"jsonb" DEFAULT '{}'::"jsonb" NOT NULL
+wallet_items|original_value_amount|numeric(12,2)
+wallet_items|partner_id|"uuid"
+wallet_items|redeemed_at|timestamp with time zone
+wallet_items|remaining_value_amount|numeric(12,2)
+wallet_items|seen_at|timestamp with time zone
+wallet_items|source_id|"text"
+wallet_items|source_type|"text"
+wallet_items|starts_at|timestamp with time zone
+wallet_items|status|"text" DEFAULT 'processing'::"text" NOT NULL
+wallet_items|subtitle|"text"
+wallet_items|title|"text" NOT NULL
+wallet_items|type|"text" NOT NULL
+wallet_items|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+wallet_items|user_id|"uuid" NOT NULL
+wallet_items|value_amount|numeric(12,2)
+wallet_items|value_label|"text"
+wallet_partners|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+wallet_partners|description|"text"
+wallet_partners|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+wallet_partners|is_active|boolean DEFAULT true NOT NULL
+wallet_partners|logo_url|"text"
+wallet_partners|metadata|"jsonb" DEFAULT '{}'::"jsonb" NOT NULL
+wallet_partners|name|"text" NOT NULL
+wallet_partners|slug|"text" NOT NULL
+wallet_partners|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+wallet_partners|website_url|"text"
+wallet_redemptions|amount|numeric(12,2)
+wallet_redemptions|completed_at|timestamp with time zone
+wallet_redemptions|created_at|timestamp with time zone DEFAULT "now"() NOT NULL
+wallet_redemptions|currency_code|"text"
+wallet_redemptions|external_order_id|"text"
+wallet_redemptions|external_reference_id|"text"
+wallet_redemptions|failed_at|timestamp with time zone
+wallet_redemptions|failure_reason|"text"
+wallet_redemptions|id|"uuid" DEFAULT "gen_random_uuid"() NOT NULL
+wallet_redemptions|metadata|"jsonb" DEFAULT '{}'::"jsonb" NOT NULL
+wallet_redemptions|started_at|timestamp with time zone DEFAULT "now"() NOT NULL
+wallet_redemptions|status|"text" DEFAULT 'pending'::"text" NOT NULL
+wallet_redemptions|updated_at|timestamp with time zone DEFAULT "now"() NOT NULL
+wallet_redemptions|user_id|"uuid" NOT NULL
+wallet_redemptions|wallet_item_id|"uuid" NOT NULL

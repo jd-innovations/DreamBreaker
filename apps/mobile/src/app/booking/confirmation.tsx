@@ -1,0 +1,316 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Linking } from 'react-native';
+import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
+import { goBack } from '@/lib/navigation';
+import { useSession } from '@/hooks/useSession';
+import { StatusChip, AddToCalendarButton, AppIcon, type StatusVariant, type AppIconName } from '@/components';
+import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilities';
+import {
+  fetchReservationById, fetchReservationPlayersWithProfiles, occupiedSlots, playersNeeded, parseTstzrange,
+  fetchMyReservationSeat,
+  type MyReservationSeat,
+  type Reservation,
+} from '@/lib/supabase/reservations';
+import {
+  fetchReservationPayment, reservationPaymentStatusLabel, type ReservationPaymentStatus,
+} from '@/lib/payments/reservationPaymentIntent';
+import { getBookingFacility, getBookingSelection, getBookingReservationId } from '@/lib/bookingStore';
+import type { CalendarEventInput } from '@/lib/calendarEvents';
+
+const PAYMENT_STATUS_VARIANT: Record<string, StatusVariant> = {
+  succeeded: 'green', requires_confirmation: 'gold', processing: 'gold',
+  failed: 'red', canceled: 'gray', refunded: 'gray', partially_refunded: 'gray',
+};
+
+const L = {
+  bg: colors.bg, page: colors.page, navy: colors.navy, gold: colors.gold,
+  goldBg: colors.goldBg, text: colors.text, textSub: colors.textSub, border: colors.border,
+  white: colors.white, success: colors.success,
+};
+
+function formatDateTimeRange(startsAt: string, endsAt: string): { date: string; time: string } {
+  const start = new Date(startsAt);
+  const end = new Date(endsAt);
+  const date = start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const time = `${start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} – ${end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+  return { date, time };
+}
+
+function formatCents(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+export default function ConfirmationScreen() {
+  const insets = useSafeAreaInsets();
+  const { user } = useSession();
+  const facilityCtx = getBookingFacility();
+  const selection = getBookingSelection();
+  const reservationId = getBookingReservationId();
+
+  const [reservation, setReservation] = useState<Reservation | null>(null);
+  const [currentPlayers, setCurrentPlayers] = useState(0);
+  const [facility, setFacility] = useState<FacilityDetail | null>(null);
+  const [payment, setPayment] = useState<ReservationPaymentStatus | null>(null);
+  const [seat, setSeat] = useState<MyReservationSeat | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      if (!reservationId) { setError('No confirmed reservation to show. Go back and choose a time.'); setLoading(false); return; }
+      setLoading(true);
+      setError(null);
+      try {
+        const [res, roster, fac, pay, mySeat] = await Promise.all([
+          fetchReservationById(reservationId),
+          fetchReservationPlayersWithProfiles(reservationId),
+          facilityCtx.facilityId ? fetchFacilityById(facilityCtx.facilityId) : Promise.resolve(null),
+          fetchReservationPayment(reservationId),
+          fetchMyReservationSeat(reservationId),
+        ]);
+        if (cancelled) return;
+        if (!res) { setError('This reservation no longer exists.'); return; }
+        setReservation(res);
+        setCurrentPlayers(occupiedSlots(roster));
+        setFacility(fac);
+        setPayment(pay);
+        setSeat(mySeat);
+      } catch (e: unknown) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load your reservation.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, [reservationId, facilityCtx.facilityId]);
+
+  function handleDirections() {
+    if (!facility) return;
+    const q = encodeURIComponent(`${facility.address}, ${facility.city}, ${facility.state}`);
+    Linking.openURL(`https://maps.apple.com/?q=${q}`).catch(() =>
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${q}`),
+    );
+  }
+
+  function handleViewGameStatus() {
+    router.push('/booking/game-status' as never);
+  }
+
+  if (loading) {
+    return (
+      <View style={[s.center, { paddingTop: insets.top }]}>
+        <StatusBar style="dark" />
+        <ActivityIndicator size="large" color={L.navy} />
+      </View>
+    );
+  }
+
+  if (error || !reservation) {
+    return (
+      <View style={[s.center, { paddingTop: insets.top }]}>
+        <StatusBar style="dark" />
+        <Ionicons name="alert-circle-outline" size={36} color={L.border} />
+        <Text style={s.errorText}>{error ?? 'Something went wrong.'}</Text>
+        <TouchableOpacity onPress={() => goBack()} style={s.errorBackBtn}>
+          <Text style={s.errorBackText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const isBallMachine = reservation.asset_type === 'ball_machine';
+  const max = reservation.max_players;
+  const needed = playersNeeded(currentPlayers, max);
+  const hasDeal = reservation.flash_deal_discount_percent != null;
+
+  // What THIS person owes, from their own seat -- never the reservation's
+  // totals. Those are a sum across every confirmed seat, so once other players
+  // join and pay, a reservation-level figure would report the group's money
+  // as the organizer's. Booking three slots makes three slots your bill; it
+  // does not make everyone else's share yours.
+  //
+  // Falls back to the payment actually taken, which is the same number by
+  // construction and survives a seat row that has not loaded.
+  const amountPaidCents = seat?.totalCents ?? payment?.amountCents ?? 0;
+  const startsAt = selection.startsAt ?? reservation.created_at;
+  const endsAt = selection.endsAt ?? reservation.created_at;
+  const { date, time } = formatDateTimeRange(startsAt, endsAt);
+  const isOrganizer = user?.id === reservation.organizer_id;
+  const showFindPlayers = isOrganizer && !isBallMachine && needed > 0;
+
+  // Add to Calendar uses the reservation's own time_range (a real tstzrange
+  // -- an absolute UTC instant, not just a locally-formatted display string)
+  // rather than the session-local `selection` used above, since bookingStore
+  // may be empty if the user returns to this screen later. Only offered for
+  // an active booking -- not cancelled/expired (Phase 6 Step 21).
+  const canAddToCalendar = reservation.status === 'held' || reservation.status === 'confirmed';
+  let calendarEvent: CalendarEventInput | null = null;
+  if (canAddToCalendar) {
+    const range = parseTstzrange(reservation.time_range as string);
+    const assetLabel = isBallMachine ? 'Ball Machine' : (selection.assetName ?? 'Court');
+    const facilityName = facility?.name ?? facilityCtx.facilityName ?? 'Facility';
+    const locationParts = facility
+      ? [facility.address, facility.address_line_2, [facility.city, facility.state, facility.postal_code].filter(Boolean).join(', ')]
+        .filter((p): p is string => !!p)
+      : [];
+    calendarEvent = {
+      title: `Pickleball ${isBallMachine ? '' : 'Court'} — ${facilityName}`.replace(/\s+/g, ' ').trim(),
+      startDate: new Date(range.startsAt),
+      endDate: new Date(range.endsAt),
+      location: [facilityName, ...locationParts].join('\n'),
+      notes: `${assetLabel}. Booking details available in pickleballapp.`,
+    };
+  }
+
+  const playerStatus = needed === 0
+    ? `${currentPlayers} of ${max} · Game Complete`
+    : `${currentPlayers} of ${max} · Looking for ${needed}`;
+
+  return (
+    <View style={[s.root, { paddingTop: insets.top }]}>
+      <StatusBar style="dark" />
+
+      <View style={s.header}>
+        <TouchableOpacity style={s.iconBtn} onPress={() => router.replace('/(tabs)' as never)} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Close">
+          <Ionicons name="close" size={20} color={L.navy} />
+        </TouchableOpacity>
+        <Text style={s.title}>Confirmation</Text>
+        <View style={{ width: 36 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.screenH, paddingBottom: insets.bottom + 32 }}>
+        <View style={s.successBanner}>
+          <Ionicons name="checkmark-circle" size={40} color={L.success} />
+          <Text style={s.successTitle}>Booking Confirmed</Text>
+        </View>
+
+        <View style={s.card}>
+          <Row icon="business-outline" label="Facility" value={facilityCtx.facilityName ?? '—'} />
+          <Row
+            icon={isBallMachine ? 'disc-outline' : 'pickleball'}
+            label={isBallMachine ? 'Ball Machine' : 'Court'}
+            value={selection.assetName ?? '—'}
+          />
+          <Row icon="calendar-outline" label="Date" value={date} />
+          <Row icon="time-outline" label="Time" value={time} />
+          {!isBallMachine && (
+            <Row icon="people-outline" label="Game Format" value={reservation.game_format === 'doubles' ? 'Doubles' : 'Singles'} />
+          )}
+          {!isBallMachine && <Row icon="person-add-outline" label="Players" value={playerStatus} />}
+        </View>
+
+        <View style={s.card}>
+          <View style={s.priceRow}>
+            <Text style={s.priceLabel}>You paid</Text>
+            <Text style={s.priceValue}>{formatCents(amountPaidCents)}</Text>
+          </View>
+          <View style={{ marginTop: 8, alignSelf: 'flex-start' }}>
+            <StatusChip
+              label={reservationPaymentStatusLabel(payment)}
+              variant={payment ? (PAYMENT_STATUS_VARIANT[payment.status] ?? 'gray') : 'gray'}
+            />
+          </View>
+          {hasDeal && (
+            <Text style={s.dealSavedText}>
+              <Ionicons name="flash" size={12} color={L.gold} /> You saved {formatCents(reservation.base_price_cents - reservation.final_price_cents)} ({reservation.flash_deal_discount_percent}% off with Flash Deal)
+            </Text>
+          )}
+        </View>
+
+        {showFindPlayers && (
+          <TouchableOpacity style={s.primaryBtn} activeOpacity={0.88} onPress={() => router.push('/booking/players' as never)}>
+            <Ionicons name="people-outline" size={18} color={L.white} />
+            <Text style={s.primaryBtnText}>Find / Invite Players</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity style={s.secondaryBtn} activeOpacity={0.85} onPress={handleViewGameStatus}>
+          <Ionicons name="stats-chart-outline" size={18} color={L.navy} />
+          <Text style={s.secondaryBtnText}>View Game Status</Text>
+        </TouchableOpacity>
+
+        {calendarEvent && (
+          <AddToCalendarButton event={calendarEvent} style={{ marginTop: spacing.sm }} />
+        )}
+
+        {facility && (
+          <TouchableOpacity style={s.secondaryBtn} activeOpacity={0.85} onPress={handleDirections}>
+            <Ionicons name="navigate-outline" size={18} color={L.navy} />
+            <Text style={s.secondaryBtnText}>Directions</Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+// AppIcon rather than Ionicons: 'pickleball' is not an Ionicons glyph, so the
+// court row rendered the missing-glyph "?" until this went through AppIcon.
+// Typing icon as AppIconName also means a bad name is a type error at the call
+// site instead of needing an `as never` cast to compile.
+function Row({ icon, label, value }: { icon: AppIconName; label: string; value: string }) {
+  return (
+    <View style={rw.row}>
+      <AppIcon name={icon} size={16} color={L.gold} />
+      <Text style={rw.label}>{label}</Text>
+      <Text style={rw.value} numberOfLines={1}>{value}</Text>
+    </View>
+  );
+}
+const rw = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  label: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', width: 100 },
+  value: { flex: 1, color: L.text, fontSize: text.rowValue.size, fontWeight: '800', textAlign: 'right' },
+});
+
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: L.page },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: L.bg, paddingHorizontal: 32 },
+
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: spacing.screenH, paddingVertical: spacing.screenV, backgroundColor: L.bg,
+  },
+  iconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  title:   { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
+
+  successBanner: { alignItems: 'center', gap: 8, paddingVertical: spacing.xl },
+  successTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+
+  card: {
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
+    padding: spacing.lg, marginTop: spacing.md,
+  },
+
+  priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  priceLabel: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  priceValue: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  dealSavedText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 8 },
+
+  primaryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 15, marginTop: spacing.xl,
+  },
+  primaryBtnText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
+
+  secondaryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: L.bg, borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
+    paddingVertical: 14, marginTop: spacing.sm,
+  },
+  secondaryBtnText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
+
+  errorText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center' },
+  errorBackBtn: { marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: shape.cta, backgroundColor: L.navy },
+  errorBackText: { color: L.white, fontSize: text.action.size, fontWeight: '800' },
+});

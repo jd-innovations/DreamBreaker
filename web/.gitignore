@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the template, which is useless if it never leaves this machine.
+# Matches the one exact filename, so no file that can hold a real value is
+# un-ignored. See PRODUCTION_CONFIG.md for the full inventory.
+!.env.local.example
 
 # vercel
 .vercel
