@@ -36,8 +36,14 @@ export function useTournamentDirector(tournamentId: string | null | undefined) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // `profileLoading` is deliberately NOT checked in here any more. It used to
+  // early-return while the profile was still loading, which left `loading` at
+  // its initial `true` and depended on this callback being re-created and the
+  // effect re-firing once the profile settled. When that did not happen the
+  // guard sat on "Checking permissions…" forever — profile ready, tournament
+  // loading, and no request ever sent. Waiting is now the effect's job, so
+  // there is no path that leaves `loading` true without starting a fetch.
   const refresh = useCallback(async () => {
-    if (profileLoading) return;
     if (!user?.id || !tournamentId) {
       setDirectorId(null);
       setLoading(false);
@@ -57,9 +63,13 @@ export function useTournamentDirector(tournamentId: string | null | undefined) {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, tournamentId, profileLoading]);
+  }, [user?.id, tournamentId]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  // Run once the profile is settled, and run again if it settles later.
+  useEffect(() => {
+    if (profileLoading) return;
+    void refresh();
+  }, [refresh, profileLoading]);
 
   const resolving = loading || profileLoading;
 
