@@ -480,7 +480,7 @@ that last touched each.
 | `app/(tabs)/chat.tsx` | `fb47edb` |
 | `app/(tabs)/finder.tsx` | `05efd8b` |
 | `app/(tabs)/games.tsx` | `34a8eeb` |
-| `app/(tabs)/index.tsx` | `2d52fa5` |
+| `app/(tabs)/index.tsx` | `5b34a7a` |
 | `app/(tabs)/landing.tsx` | `55a4e5d` |
 | `app/(tabs)/marketplace.tsx` | `fb47edb` |
 | `app/(tabs)/nearby.tsx` | `e7927f3` |
@@ -694,7 +694,7 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 | | Occurrences | Files |
 | --- | ---: | ---: |
 | Files importing `@shared/tokens` (migrated) | — | **200 of 219** (91%) |
-| Raw `fontSize: N` remaining | 445 | 117 |
+| Raw `fontSize: N` remaining | 420 | 117 |
 | `borderRadius: radius.*` from `@/theme` remaining | 25 | 6 |
 | `borderRadius: 30` → `shape.cta` | 4 | 4 |
 | `borderRadius: 999` → `shape.cta` | 14 | 6 |
