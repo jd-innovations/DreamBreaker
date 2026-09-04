@@ -9,7 +9,9 @@ import { IS_INTERNAL_BUILD } from '@/lib/featureFlags';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, spacing, radius } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components/StatusChip';
 import { PickleballIcon } from '@/components';
 import { getRoundRobin } from '@/lib/roundRobinStore';
@@ -193,7 +195,7 @@ function MatchCard({
 const mc = StyleSheet.create({
   card: {
     backgroundColor: L.bg,
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
     padding: spacing.md,
     gap: 12,
@@ -202,18 +204,18 @@ const mc = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   courtBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: L.goldBg, borderRadius: radius.chip,
+    backgroundColor: L.goldBg, borderRadius: shape.pill,
     paddingHorizontal: 8, paddingVertical: 3,
     borderWidth: 1, borderColor: L.goldBorder,
   },
-  courtText: { fontSize: 11, fontWeight: '700', color: L.navy },
+  courtText: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, color: L.navy },
   timeBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: L.page, borderRadius: radius.chip,
+    backgroundColor: L.page, borderRadius: shape.pill,
     paddingHorizontal: 8, paddingVertical: 3,
     borderWidth: 1, borderColor: L.border,
   },
-  timeText: { fontSize: 11, fontWeight: '600', color: L.textSub },
+  timeText: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, color: L.textSub },
 
   playersRow: {
     flexDirection: 'row', alignItems: 'center',
@@ -229,15 +231,15 @@ const mc = StyleSheet.create({
   },
   avatarText: { fontSize: 11, fontWeight: '800', color: L.navy },
   playerInfo: { flex: 1 },
-  playerName: { fontSize: 13, fontWeight: '700', color: L.navy },
+  playerName: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.navy },
   playerNameRight: { textAlign: 'right' },
-  playerDupr: { fontSize: 11, color: L.textSub, marginTop: 1 },
+  playerDupr: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, marginTop: 1 },
   playerDuprRight: { textAlign: 'right' },
   vsDivider: {
     paddingHorizontal: 10,
     alignItems: 'center',
   },
-  vsText: { fontSize: 12, fontWeight: '900', color: L.textSub, letterSpacing: 0.5 },
+  vsText: { fontSize: text.chipValue.size, fontWeight: '800', color: L.textSub, letterSpacing: 0.5 },
 
   // Completed card accent
   cardCompleted: { borderColor: colors.successBg },
@@ -260,17 +262,17 @@ const mc = StyleSheet.create({
     height: StyleSheet.hairlineWidth, backgroundColor: L.border, marginVertical: 2,
   },
   resultScore: {
-    fontSize: 22, fontWeight: '900', minWidth: 30, textAlign: 'right',
+    fontSize: text.cardTitle.size, fontWeight: '800', minWidth: 30, textAlign: 'right',
   },
   resultScoreWinner: { color: L.navy },
-  resultScoreLoser:  { color: L.textSub },
+  resultScoreLoser: { color: L.textSub },
 
   enterBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     borderWidth: 1.5, borderColor: L.border,
-    borderRadius: radius.sm, paddingVertical: 9,
+    borderRadius: shape.cta, paddingVertical: 9,
   },
-  enterBtnText: { fontSize: 13, fontWeight: '700', color: L.navy },
+  enterBtnText: { fontSize: text.action.size, fontWeight: '800', color: L.navy },
 });
 
 // ─── BYE Row ──────────────────────────────────────────────────────────────────
@@ -288,12 +290,12 @@ const br = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: L.page,
-    borderRadius: radius.sm,
+    borderRadius: shape.cta,
     borderWidth: 1, borderColor: L.border,
     paddingHorizontal: 12, paddingVertical: 9,
     marginBottom: 10,
   },
-  text: { fontSize: 12, color: L.textSub, fontStyle: 'italic' },
+  text: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, fontStyle: 'italic' },
 });
 
 // ─── Round Section ────────────────────────────────────────────────────────────
@@ -337,15 +339,15 @@ const rs = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: 10,
   },
-  title: { fontSize: 16, fontWeight: '900', color: L.navy },
-  sub:   { fontSize: 12, color: L.textSub },
+  title: { fontSize: text.titleSm.size, fontWeight: '800', color: L.navy },
+  sub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub },
   completeBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: colors.successBg,
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     paddingHorizontal: 8, paddingVertical: 3,
   },
-  completeBadgeText: { fontSize: 11, fontWeight: '700', color: L.success },
+  completeBadgeText: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, color: L.success },
 });
 
 // ─── Context Menu ─────────────────────────────────────────────────────────────
@@ -689,10 +691,10 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   headerBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, minWidth: 60 },
-  backText:  { fontSize: 17, color: '#007AFF', fontWeight: '400' },
+  backText: { fontSize: text.link.size, color: '#007AFF', fontWeight: '700' },
   headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle:  { fontSize: 15, fontWeight: '800', color: L.navy },
-  headerSub:    { fontSize: 11, color: L.textSub, marginTop: 1 },
+  headerTitle: { fontSize: text.titleSm.size, fontWeight: '800', color: L.navy },
+  headerSub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, marginTop: 1 },
   headerActions: { flexDirection: 'row', gap: 4, minWidth: 60, justifyContent: 'flex-end' },
   headerIconBtn: {
     width: 36, height: 36, borderRadius: 18,
@@ -705,22 +707,22 @@ const s = StyleSheet.create({
   // Summary card
   summaryCard: {
     backgroundColor: L.bg,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: spacing.md,
     gap: 8,
   },
-  summaryTitle: { fontSize: 18, fontWeight: '900', color: L.navy },
-  summaryRow:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  summaryMeta:  { fontSize: 12, color: L.textSub, flex: 1 },
+  summaryTitle: { fontSize: text.titleSm.size, fontWeight: '800', color: L.navy },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  summaryMeta: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, flex: 1 },
   summaryPills: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: L.page, borderRadius: radius.sm,
+    backgroundColor: L.page, borderRadius: shape.cta,
     padding: 12, marginTop: 4,
   },
   summaryPill: { flex: 1, alignItems: 'center' },
-  summaryPillValue: { fontSize: 22, fontWeight: '900', color: L.navy },
-  summaryPillLabel: { fontSize: 11, color: L.textSub, marginTop: 2 },
+  summaryPillValue: { fontSize: text.cardTitle.size, fontWeight: '800', color: L.navy },
+  summaryPillLabel: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, marginTop: 2 },
   summaryPillDivider: { width: 1, height: 28, backgroundColor: L.border },
 
   // Round filters
@@ -728,12 +730,12 @@ const s = StyleSheet.create({
   filterScroll: { paddingHorizontal: spacing.screenH, gap: 8 },
   filterChip: {
     paddingHorizontal: 16, paddingVertical: 8,
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     borderWidth: 1.5, borderColor: L.border,
     backgroundColor: L.bg,
   },
   filterChipActive: { backgroundColor: L.navy, borderColor: L.navy },
-  filterChipText:       { fontSize: 13, fontWeight: '700', color: L.navy },
+  filterChipText: { fontSize: text.controlLabel.size, fontWeight: '700', color: L.navy },
   filterChipTextActive: { color: L.white },
 
   // Schedule body
@@ -744,8 +746,8 @@ const s = StyleSheet.create({
     alignItems: 'center', gap: 8,
     paddingVertical: 48,
   },
-  emptyText: { fontSize: 15, fontWeight: '700', color: L.textSub },
-  emptySub:  { fontSize: 13, color: L.textSub, textAlign: 'center', lineHeight: 18, paddingHorizontal: 32 },
+  emptyText: { fontSize: text.titleSm.size, fontWeight: '800', color: L.textSub },
+  emptySub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, textAlign: 'center', lineHeight: 18, paddingHorizontal: 32 },
 });
 
 // ─── Context menu styles ──────────────────────────────────────────────────────
@@ -760,7 +762,7 @@ const mm = StyleSheet.create({
     position: 'absolute',
     width: 256,
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
+    borderRadius: shape.card,
     paddingVertical: 5,
     zIndex: 31,
     shadowColor: '#000',
@@ -779,15 +781,15 @@ const mm = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: 8, marginHorizontal: 5,
-    borderRadius: 11, height: 50,
+    borderRadius: shape.pill, height: 50,
   },
   rowFirst: { marginTop: 4 },
   iconWrap: {
-    width: 32, height: 32, borderRadius: 9,
+    width: 32, height: 32, borderRadius: shape.cta,
     backgroundColor: '#F3F6FC',
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  rowLabel:       { color: L.navy, fontSize: 14, fontWeight: '500' },
+  rowLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
   rowLabelDanger: { color: L.danger },
   divider: {
     height: StyleSheet.hairlineWidth,
