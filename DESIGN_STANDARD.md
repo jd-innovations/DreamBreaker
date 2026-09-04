@@ -542,7 +542,7 @@ that last touched each.
 | `components/FileAttachmentRow.tsx` | `0af9ba0` |
 | `components/FindGamesFilterModal.tsx` | `8aed181` |
 | `components/InfoTooltip.tsx` | `0af9ba0` |
-| `components/JoinCelebration.tsx` | `0af9ba0` |
+| `components/JoinCelebration.tsx` | `f7318c4` |
 | `components/LocationCard.tsx` | `0af9ba0` |
 | `components/ManageEventSheet.tsx` | `0af9ba0` |
 | `components/OperatingHoursEditor.tsx` | `0af9ba0` |
