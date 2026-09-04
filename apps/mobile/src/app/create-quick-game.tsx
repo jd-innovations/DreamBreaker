@@ -10,7 +10,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, spacing, radius, iconCircle } from '@/theme';
+import { colors, spacing, iconCircle } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { PickleballIcon } from '@/components';
 import { useSession } from '@/hooks/useSession';
@@ -66,8 +68,8 @@ function CardHeader({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; lab
   );
 }
 const ch = StyleSheet.create({
-  row:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  label: { fontSize: 15, fontWeight: '800', color: L.navy, letterSpacing: 0.1 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  label: { fontSize: text.body.size, fontWeight: '500', color: L.navy, letterSpacing: 0.1 },
 });
 
 function Divider() {
@@ -581,7 +583,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  backBtn:  { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   backText: { fontSize: 17, color: '#007AFF', fontWeight: '400' },
   headerIcon: {
     width: iconCircle.small, height: iconCircle.small,
@@ -590,8 +592,8 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: L.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  title:    { fontSize: 26, fontWeight: '900', color: L.navy, lineHeight: 30, marginTop: 4 },
-  subtitle: { fontSize: 14, color: L.textSub, fontWeight: '400', marginTop: 4 },
+  title: { fontSize: text.heroTitle.size, fontWeight: '800', color: L.navy, lineHeight: 30, marginTop: 4 },
+  subtitle: { fontSize: text.caption.size, color: L.textSub, fontWeight: '500', marginTop: 4 },
 
   // Scroll
   scroll: { paddingHorizontal: spacing.screenH, paddingTop: spacing.md, gap: 14 },
@@ -599,17 +601,17 @@ const s = StyleSheet.create({
   // Card
   card: {
     backgroundColor: L.bg,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: spacing.lg,
   },
-  cardSub:     { fontSize: 13, color: L.textSub, fontWeight: '400', marginBottom: 14, marginTop: -8 },
-  optionalTag: { fontSize: 13, color: L.textSub, fontWeight: '500' },
+  cardSub: { fontSize: text.caption.size, color: L.textSub, fontWeight: '500', marginBottom: 14, marginTop: -8 },
+  optionalTag: { fontSize: text.caption.size, color: L.textSub, fontWeight: '500' },
 
   // Photo
-  photoRow:        { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  photoPreviewWrap:{ flex: 1, borderRadius: radius.sm, overflow: 'hidden', aspectRatio: 16 / 9 },
-  photoPreview:    { width: '100%', height: '100%' },
+  photoRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  photoPreviewWrap: { flex: 1, borderRadius: shape.cta, overflow: 'hidden', aspectRatio: 16 / 9 },
+  photoPreview: { width: '100%', height: '100%' },
   cameraBtn: {
     position: 'absolute', bottom: 8, right: 8,
     width: 34, height: 34, borderRadius: 17,
@@ -621,7 +623,7 @@ const s = StyleSheet.create({
   uploadTile: {
     flex: 1,
     borderWidth: 1.5, borderColor: L.border, borderStyle: 'dashed',
-    borderRadius: radius.sm,
+    borderRadius: shape.cta,
     alignItems: 'center', justifyContent: 'center',
     padding: 12, gap: 6,
   },
@@ -629,26 +631,26 @@ const s = StyleSheet.create({
     borderColor: colors.success, borderStyle: 'solid',
     backgroundColor: colors.successBg,
   },
-  uploadTitle:  { fontSize: 13, fontWeight: '700', color: L.navy },
-  uploadSub:    { fontSize: 11, color: L.textSub, textAlign: 'center', lineHeight: 16 },
-  photoHelper:  { fontSize: 11, color: L.textSub, textAlign: 'center', marginTop: 4 },
+  uploadTitle: { fontSize: text.fieldLabel.size, fontWeight: '800', color: L.navy },
+  uploadSub: { fontSize: 11, color: L.textSub, textAlign: 'center', lineHeight: 16 },
+  photoHelper: { fontSize: 11, color: L.textSub, textAlign: 'center', marginTop: 4 },
 
   // Input
   inputWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderWidth: 1.5, borderColor: L.border,
-    borderRadius: radius.sm, paddingHorizontal: 12, height: 46,
+    borderRadius: shape.cta, paddingHorizontal: 12, height: 46,
     backgroundColor: L.bg,
   },
-  input: { flex: 1, fontSize: 14, color: L.text, fontWeight: '400' },
+  input: { flex: 1, fontSize: text.body.size, color: L.text, fontWeight: '500' },
 
   // Date/Time row
-  dtRow:  { flexDirection: 'row', gap: 10 },
+  dtRow: { flexDirection: 'row', gap: 10 },
   dtCell: { flex: 1 },
   dtBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     borderWidth: 1.5, borderColor: L.border,
-    borderRadius: radius.sm, paddingHorizontal: 8, height: 40,
+    borderRadius: shape.cta, paddingHorizontal: 8, height: 40,
     backgroundColor: L.bg,
   },
   dtBtnText: { flex: 1, fontSize: 11, fontWeight: '600', color: L.navy },
@@ -657,22 +659,22 @@ const s = StyleSheet.create({
   locationBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     borderWidth: 1.5, borderColor: L.border,
-    borderRadius: radius.sm, height: 44, marginTop: 10,
+    borderRadius: shape.cta, height: 44, marginTop: 10,
   },
-  locationBtnText: { fontSize: 14, fontWeight: '600', color: L.navy },
+  locationBtnText: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.navy },
 
   // Skill pills
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 10 },
   pill: {
     paddingHorizontal: 18, paddingVertical: 10,
-    borderRadius: radius.chip, borderWidth: 1.5, borderColor: L.border,
+    borderRadius: shape.pill, borderWidth: 1.5, borderColor: L.border,
     backgroundColor: L.bg,
   },
-  pillActive:     { backgroundColor: L.gold, borderColor: L.gold },
-  pillText:       { fontSize: 13, fontWeight: '700', color: L.navy },
+  pillActive: { backgroundColor: L.gold, borderColor: L.gold },
+  pillText: { fontSize: text.controlLabel.size, fontWeight: '700', color: L.navy },
   pillTextActive: { color: L.white },
 
-  helperText: { fontSize: 12, color: L.textSub, fontWeight: '400' },
+  helperText: { fontSize: text.caption.size, color: L.textSub, fontWeight: '500' },
 
   // Stepper
   stepperRow: {
@@ -691,7 +693,7 @@ const s = StyleSheet.create({
   radioOption: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     borderWidth: 1.5, borderColor: L.border,
-    borderRadius: radius.sm, padding: 14,
+    borderRadius: shape.cta, padding: 14,
     backgroundColor: L.bg,
   },
   radioOptionActive: { borderColor: L.gold, backgroundColor: L.goldLight },
@@ -706,25 +708,25 @@ const s = StyleSheet.create({
     width: 11, height: 11, borderRadius: 6,
     backgroundColor: L.gold,
   },
-  radioBody:  { flex: 1 },
-  radioLabel: { fontSize: 14, fontWeight: '700', color: L.navy },
-  radioSub:   { fontSize: 12, color: L.textSub, marginTop: 2 },
+  radioBody: { flex: 1 },
+  radioLabel: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.navy },
+  radioSub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, marginTop: 2 },
 
   // Notes
   notesInput: {
-    borderWidth: 1.5, borderColor: L.border, borderRadius: radius.sm,
-    padding: 12, fontSize: 14, color: L.text, minHeight: 100,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
+    padding: 12, fontSize: text.body.size, fontWeight: '500', color: L.text, minHeight: 100,
     marginTop: 6,
   },
   charCounter: { fontSize: 11, color: L.textSub, textAlign: 'right', marginTop: 6 },
 
   // Invite Later
-  inviteRow:    { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  inviteRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   inviteIconWrap: { flexShrink: 0 },
-  inviteBody:   { flex: 1 },
-  inviteTitle:  { fontSize: 13, fontWeight: '600', color: L.navy, lineHeight: 18 },
-  inviteSub:    { fontSize: 12, color: L.textSub, marginTop: 2 },
-  inviteLink:   { fontSize: 13, fontWeight: '700', color: L.gold },
+  inviteBody: { flex: 1 },
+  inviteTitle: { fontSize: text.caption.size, fontWeight: '500', color: L.navy, lineHeight: 18 },
+  inviteSub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, marginTop: 2 },
+  inviteLink: { fontSize: text.link.size, fontWeight: '700', color: L.gold },
 
   // CTA
   ctaWrap: {
@@ -734,7 +736,7 @@ const s = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border,
     gap: 8,
   },
-  ctaHelper:   { fontSize: 12, color: L.textSub, textAlign: 'center' },
-  savingRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 48 },
-  savingText:  { fontSize: 15, fontWeight: '700', color: L.navy },
+  ctaHelper: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, textAlign: 'center' },
+  savingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 48 },
+  savingText: { fontSize: text.body.size, fontWeight: '500', color: L.navy },
 });

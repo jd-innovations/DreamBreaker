@@ -10,7 +10,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, spacing, radius, iconCircle } from '@/theme';
+import { colors, spacing, iconCircle } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { AppIcon, PickleballIcon, type AppIconName } from '@/components';
 import { useSession } from '@/hooks/useSession';
@@ -71,8 +73,8 @@ function CardHeader({ icon, label }: { icon: AppIconName; label: string }) {
   );
 }
 const ch = StyleSheet.create({
-  row:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  label: { fontSize: 15, fontWeight: '800', color: L.navy, letterSpacing: 0.1 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  label: { fontSize: text.body.size, fontWeight: '500', color: L.navy, letterSpacing: 0.1 },
 });
 
 function Divider() {
@@ -106,10 +108,10 @@ const db = StyleSheet.create({
   btn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     borderWidth: 1.5, borderColor: L.border,
-    borderRadius: radius.sm, paddingHorizontal: 12, height: 46,
+    borderRadius: shape.cta, paddingHorizontal: 12, height: 46,
     backgroundColor: L.bg,
   },
-  text: { flex: 1, fontSize: 14, color: L.navy, fontWeight: '500' },
+  text: { flex: 1, fontSize: text.controlLabel.size, color: L.navy, fontWeight: '700' },
 });
 
 function Stepper({
@@ -144,10 +146,10 @@ function Stepper({
   );
 }
 const st = StyleSheet.create({
-  row:        { flexDirection: 'row', alignItems: 'center', gap: 20 },
-  btn:        { width: 40, height: 40, borderRadius: 10, borderWidth: 1.5, borderColor: L.border, alignItems: 'center', justifyContent: 'center' },
-  btnDisabled:{ opacity: 0.35 },
-  value:      { fontSize: 28, fontWeight: '900', color: L.navy, minWidth: 36, textAlign: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+  btn: { width: 40, height: 40, borderRadius: shape.cta, borderWidth: 1.5, borderColor: L.border, alignItems: 'center', justifyContent: 'center' },
+  btnDisabled: { opacity: 0.35 },
+  value: { fontSize: 28, fontWeight: '900', color: L.navy, minWidth: 36, textAlign: 'center' },
 });
 
 function StepDots({ current }: { current: 1 | 2 }) {
@@ -159,9 +161,9 @@ function StepDots({ current }: { current: 1 | 2 }) {
   );
 }
 const sd = StyleSheet.create({
-  row:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
-  dot:      { width: 8, height: 8, borderRadius: 4 },
-  active:   { backgroundColor: L.gold },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  active: { backgroundColor: L.gold },
   inactive: { backgroundColor: L.border },
 });
 
@@ -696,7 +698,7 @@ const s = StyleSheet.create({
     height: 44,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  backBtn:  { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   backText: { fontSize: 17, color: '#007AFF', fontWeight: '400' },
   headerIcon: {
     width: iconCircle.small, height: iconCircle.small,
@@ -704,8 +706,8 @@ const s = StyleSheet.create({
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  title:    { fontSize: 26, fontWeight: '900', color: L.navy, lineHeight: 30, marginTop: 2 },
-  subtitle: { fontSize: 13, color: L.textSub, fontWeight: '400', marginTop: 3 },
+  title: { fontSize: text.heroTitle.size, fontWeight: '800', color: L.navy, lineHeight: 30, marginTop: 2 },
+  subtitle: { fontSize: text.caption.size, color: L.textSub, fontWeight: '500', marginTop: 3 },
 
   // Scroll
   scroll: { paddingHorizontal: spacing.screenH, paddingTop: spacing.md, gap: 14 },
@@ -713,17 +715,17 @@ const s = StyleSheet.create({
   // Card
   card: {
     backgroundColor: L.bg,
-    borderRadius: radius.card,
+    borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: spacing.lg,
   },
-  cardSub:  { fontSize: 13, color: L.textSub, marginBottom: 14, marginTop: -8 },
-  optional: { fontSize: 13, color: L.textSub, fontWeight: '500' },
+  cardSub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, marginBottom: 14, marginTop: -8 },
+  optional: { fontSize: text.caption.size, color: L.textSub, fontWeight: '500' },
 
   // Photo
-  photoRow:        { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  photoPreviewWrap:{ flex: 1, borderRadius: radius.sm, overflow: 'hidden', aspectRatio: 16 / 9 },
-  photoPreview:    { width: '100%', height: '100%' },
+  photoRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  photoPreviewWrap: { flex: 1, borderRadius: shape.cta, overflow: 'hidden', aspectRatio: 16 / 9 },
+  photoPreview: { width: '100%', height: '100%' },
   cameraBtn: {
     position: 'absolute', bottom: 8, right: 8,
     width: 32, height: 32, borderRadius: 16,
@@ -733,56 +735,56 @@ const s = StyleSheet.create({
   },
   uploadTile: {
     flex: 1, borderWidth: 1.5, borderColor: L.border, borderStyle: 'dashed',
-    borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center',
+    borderRadius: shape.cta, alignItems: 'center', justifyContent: 'center',
     padding: 10, gap: 5,
   },
-  uploadTitle: { fontSize: 13, fontWeight: '700', color: L.navy },
-  uploadSub:   { fontSize: 11, color: L.textSub, textAlign: 'center', lineHeight: 15 },
+  uploadTitle: { fontSize: text.fieldLabel.size, fontWeight: '800', color: L.navy },
+  uploadSub: { fontSize: 11, color: L.textSub, textAlign: 'center', lineHeight: 15 },
   photoHelper: { fontSize: 11, color: L.textSub, textAlign: 'center', marginTop: 4 },
 
   // Input
   inputWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderWidth: 1.5, borderColor: L.border,
-    borderRadius: radius.sm, paddingHorizontal: 12, height: 46,
+    borderRadius: shape.cta, paddingHorizontal: 12, height: 46,
   },
-  input: { flex: 1, fontSize: 14, color: L.text },
+  input: { flex: 1, fontSize: text.body.size, fontWeight: '500', color: L.text },
 
   // Date / time row
-  dtRow:  { flexDirection: 'row', gap: 10 },
+  dtRow: { flexDirection: 'row', gap: 10 },
   dtCell: { flex: 1 },
   dtBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     borderWidth: 1.5, borderColor: L.border,
-    borderRadius: radius.sm, paddingHorizontal: 9, height: 40,
+    borderRadius: shape.cta, paddingHorizontal: 9, height: 40,
   },
   dtText: { flex: 1, fontSize: 11, fontWeight: '600', color: L.navy },
 
   // Location
   locationBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    borderWidth: 1.5, borderColor: L.border, borderRadius: radius.sm,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
     height: 44, marginTop: 10,
   },
-  locationBtnText: { fontSize: 14, fontWeight: '600', color: L.navy },
+  locationBtnText: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.navy },
 
   // Skill pills
-  pillRow:      { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 10 },
-  pill:         { paddingHorizontal: 18, paddingVertical: 10, borderRadius: radius.chip, borderWidth: 1.5, borderColor: L.border, backgroundColor: L.bg },
-  pillActive:   { backgroundColor: L.gold, borderColor: L.gold },
-  pillText:     { fontSize: 13, fontWeight: '700', color: L.navy },
-  pillTextActive:{ color: L.white },
+  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 10 },
+  pill: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: shape.pill, borderWidth: 1.5, borderColor: L.border, backgroundColor: L.bg },
+  pillActive: { backgroundColor: L.gold, borderColor: L.gold },
+  pillText: { fontSize: text.controlLabel.size, fontWeight: '700', color: L.navy },
+  pillTextActive: { color: L.white },
 
-  helperText: { fontSize: 12, color: L.textSub },
+  helperText: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub },
 
   // Players grid (step 2)
   playersGrid: { flexDirection: 'row', gap: 24 },
-  playersCol:  { flex: 1, gap: 10 },
+  playersCol: { flex: 1, gap: 10 },
 
   // Radio (step 2)
   radioOption: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    borderWidth: 1.5, borderColor: L.border, borderRadius: radius.sm,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
     padding: 14, backgroundColor: L.bg,
   },
   radioOptionActive: { borderColor: L.gold, backgroundColor: L.goldLight },
@@ -792,15 +794,15 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   radioCircleActive: { borderColor: L.gold },
-  radioInner:  { width: 11, height: 11, borderRadius: 6, backgroundColor: L.gold },
-  radioBody:   { flex: 1 },
-  radioLabel:  { fontSize: 14, fontWeight: '700', color: L.navy },
-  radioSub:    { fontSize: 12, color: L.textSub, marginTop: 2 },
+  radioInner: { width: 11, height: 11, borderRadius: 6, backgroundColor: L.gold },
+  radioBody: { flex: 1 },
+  radioLabel: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.navy },
+  radioSub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, marginTop: 2 },
 
   // Notes (step 2)
   notesInput: {
-    borderWidth: 1.5, borderColor: L.border, borderRadius: radius.sm,
-    padding: 12, fontSize: 14, color: L.text, minHeight: 100,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
+    padding: 12, fontSize: text.body.size, fontWeight: '500', color: L.text, minHeight: 100,
     marginTop: 6,
   },
   charCounter: { fontSize: 11, color: L.textSub, textAlign: 'right', marginTop: 6 },
@@ -811,6 +813,6 @@ const s = StyleSheet.create({
     backgroundColor: L.page,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border,
   },
-  savingRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 48 },
-  savingText: { fontSize: 15, fontWeight: '700', color: L.navy },
+  savingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 48 },
+  savingText: { fontSize: text.body.size, fontWeight: '500', color: L.navy },
 });

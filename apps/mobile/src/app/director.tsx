@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components';
 import { type Tournament } from '@/lib/tournamentTypes';
 import { getAllBrackets } from '@/lib/directorBracketStore';
@@ -96,10 +98,10 @@ function SummaryCard({
 const sc = StyleSheet.create({
   card: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderRadius: radius.card,
+    borderWidth: 1, borderRadius: shape.card,
     paddingVertical: 12, paddingHorizontal: 4, gap: 3, minHeight: 70,
   },
-  value: { fontSize: 22, fontWeight: '900' },
+  value: { fontSize: text.cardTitle.size, fontWeight: '800' },
   label: { color: L.textSub, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, textAlign: 'center' },
 });
 
@@ -141,12 +143,12 @@ const qa = StyleSheet.create({
   btn: {
     flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, paddingVertical: 14, paddingHorizontal: 4,
+    borderRadius: shape.card, paddingVertical: 14, paddingHorizontal: 4,
     minWidth: 72, minHeight: 76,
   },
-  btnAccent:   { backgroundColor: L.navy, borderColor: L.navy },
+  btnAccent: { backgroundColor: L.navy, borderColor: L.navy },
   btnDisabled: { opacity: 0.5 },
-  label:       { color: L.navy, fontSize: 11, fontWeight: '700', textAlign: 'center' },
+  label: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, textAlign: 'center' },
   labelAccent: { color: L.bg },
   labelDisabled: { color: L.textSub },
 });
@@ -271,18 +273,18 @@ function TournamentCard({
 const tc = StyleSheet.create({
   card: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, marginBottom: 12, overflow: 'hidden',
+    borderRadius: shape.card, marginBottom: 12, overflow: 'hidden',
   },
   cardHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: 14, paddingTop: 14, paddingBottom: 10,
   },
   logoBox: {
-    width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+    width: 40, height: 40, borderRadius: shape.cta, flexShrink: 0,
     backgroundColor: L.goldBg, alignItems: 'center', justifyContent: 'center',
   },
-  name: { color: L.navy, fontSize: 17, fontWeight: '800', lineHeight: 22, marginBottom: 2 },
-  sub:  { color: L.textSub, fontSize: 11 },
+  name: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', lineHeight: 22, marginBottom: 2 },
+  sub: { color: L.textSub, fontSize: 11 },
 
   healthRow: {
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border,
@@ -293,7 +295,7 @@ const tc = StyleSheet.create({
   },
   healthCell: { alignItems: 'center', gap: 2, minWidth: 58 },
   healthDivider: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: L.border },
-  healthValue: { color: L.navy, fontSize: 14, fontWeight: '800' },
+  healthValue: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
   healthLabel: { color: L.textSub, fontSize: 9, fontWeight: '600', letterSpacing: 0.3 },
 
   fillSection: {
@@ -301,9 +303,9 @@ const tc = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border,
     paddingTop: 10,
   },
-  fillRow:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  fillRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   fillTrack: { flex: 1, height: 5, backgroundColor: L.page, borderRadius: 3, overflow: 'hidden' },
-  fillBar:   { height: '100%', borderRadius: 3 },
+  fillBar: { height: '100%', borderRadius: 3 },
   fillLabel: { color: L.textSub, fontSize: 10, fontWeight: '700', minWidth: 40, textAlign: 'right' },
 
   actions: {
@@ -313,10 +315,10 @@ const tc = StyleSheet.create({
   actionBtn: {
     flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: L.page, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.button, paddingVertical: 12, minHeight: 64,
+    borderRadius: shape.cta, paddingVertical: 12, minHeight: 64,
   },
   actionBtnPrimary: { backgroundColor: L.navy, borderColor: L.navy },
-  actionLabel:        { color: L.navy,    fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
+  actionLabel: { color: L.navy,    fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
   actionLabelPrimary: { color: L.bg },
 });
 
@@ -334,10 +336,10 @@ function SectionHeader({ title, count }: { title: string; count: number }) {
 }
 
 const sh = StyleSheet.create({
-  row:       { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  title:     { color: L.navy, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
-  badge:     { backgroundColor: L.goldBg, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
-  badgeText: { color: L.gold, fontSize: 11, fontWeight: '800' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  title: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  badge: { backgroundColor: L.goldBg, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
+  badgeText: { color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 });
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
@@ -365,19 +367,19 @@ function EmptyState() {
 }
 
 const es = StyleSheet.create({
-  root:    { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32, gap: 12 },
-  iconWrap:{
+  root: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32, gap: 12 },
+  iconWrap: {
     width: 80, height: 80, borderRadius: 40, backgroundColor: L.page,
     alignItems: 'center', justifyContent: 'center', marginBottom: 4,
   },
-  title:   { color: L.navy, fontSize: 20, fontWeight: '900', textAlign: 'center' },
-  sub:     { color: L.textSub, fontSize: 14, lineHeight: 21, textAlign: 'center' },
+  title: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900', textAlign: 'center' },
+  sub: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', lineHeight: 21, textAlign: 'center' },
   cta: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: L.navy, borderRadius: radius.button,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingHorizontal: 20, paddingVertical: 12, marginTop: 8,
   },
-  ctaText: { color: L.bg, fontSize: 13, fontWeight: '800' },
+  ctaText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 });
 
 // ─── Not-a-director / pending states ──────────────────────────────────────────
@@ -387,13 +389,13 @@ const notDirector = StyleSheet.create({
     flex: 1, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 32, gap: 12,
   },
-  title:   { color: L.navy, fontSize: 18, fontWeight: '900', textAlign: 'center', marginTop: 4 },
-  sub:     { color: L.textSub, fontSize: 14, lineHeight: 21, textAlign: 'center' },
+  title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', textAlign: 'center', marginTop: 4 },
+  sub: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', lineHeight: 21, textAlign: 'center' },
   cta: {
-    backgroundColor: L.navy, borderRadius: radius.button,
+    backgroundColor: L.navy, borderRadius: shape.cta,
     paddingHorizontal: 20, paddingVertical: 12, marginTop: 8,
   },
-  ctaText: { color: L.bg, fontSize: 13, fontWeight: '800' },
+  ctaText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 });
 
 // ─── Snapshot type (avoids re-computing on every render) ─────────────────────
@@ -684,18 +686,18 @@ export default function DirectorDashboard() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12, backgroundColor: L.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   directorPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: L.goldBg, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 4,
+    backgroundColor: L.goldBg, borderRadius: shape.panel, paddingHorizontal: 9, paddingVertical: 4,
     borderWidth: 1, borderColor: L.goldBorder,
   },
   directorPillText: { color: L.gold, fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
@@ -705,27 +707,27 @@ const s = StyleSheet.create({
   identityCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, padding: 14, marginBottom: 16,
+    borderRadius: shape.card, padding: 14, marginBottom: 16,
   },
   avatar: {
     width: 48, height: 48, borderRadius: 24, flexShrink: 0,
     backgroundColor: L.navy, alignItems: 'center', justifyContent: 'center',
   },
-  avatarImg:     { width: 48, height: 48, borderRadius: 24, flexShrink: 0 },
-  avatarText:    { color: L.bg, fontSize: 16, fontWeight: '800' },
-  directorName:  { color: L.navy, fontSize: 15, fontWeight: '800', marginBottom: 2, letterSpacing: 0.3 },
-  directorSub:   { color: L.textSub, fontSize: 12 },
+  avatarImg: { width: 48, height: 48, borderRadius: 24, flexShrink: 0 },
+  avatarText: { color: L.bg, fontSize: 16, fontWeight: '800' },
+  directorName: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 2, letterSpacing: 0.3 },
+  directorSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  verifiedText:  { color: '#3B82F6', fontSize: 11, fontWeight: '700' },
+  verifiedText: { color: '#3B82F6', fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 
   summaryRow: {
     flexDirection: 'row', gap: 8, marginBottom: 20,
   },
 
-  section:      { marginBottom: 20 },
+  section: { marginBottom: 20 },
   sectionTitle: {
-    color: L.navy, fontSize: 11, fontWeight: '900',
-    letterSpacing: 0.8, marginBottom: 10,
+    color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800',
+    letterSpacing: text.cardLabel.letterSpacing, marginBottom: 10,
   },
   actionsRow: { flexDirection: 'row', gap: 8 },
 });
