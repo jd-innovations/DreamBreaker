@@ -12,6 +12,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import {
   fetchGroup, getMembership, joinGroup, leaveGroup, deleteGroup,
@@ -152,11 +154,11 @@ const rs = StyleSheet.create({
   },
   grabber: { width: 40, height: 4, borderRadius: 2, backgroundColor: L.border, alignSelf: 'center', marginBottom: 12 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  title: { color: L.navy, fontSize: 17, fontWeight: '900' },
-  sectionLabel: { color: L.textSub, fontSize: 12, fontWeight: '700', letterSpacing: 0.5, marginBottom: 6 },
+  title: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900' },
+  sectionLabel: { color: L.textSub, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginBottom: 6 },
   reasonRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
   reasonRowBorder: { borderTopWidth: 1, borderTopColor: L.border },
-  reasonLabel: { color: L.text, fontSize: 14 },
+  reasonLabel: { color: L.text, fontSize: text.body.size, fontWeight: '500' },
   radio: {
     width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: L.border,
     alignItems: 'center', justifyContent: 'center',
@@ -164,12 +166,12 @@ const rs = StyleSheet.create({
   radioActive: { borderColor: L.danger },
   radioDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: L.danger },
   notesInput: {
-    borderWidth: 1, borderColor: L.border, borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 10, color: L.text, fontSize: 14,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
+    paddingHorizontal: 12, paddingVertical: 10, color: L.text, fontSize: text.body.size, fontWeight: '500',
     minHeight: 60, marginTop: 12, marginBottom: 16,
   },
-  submitBtn: { backgroundColor: L.danger, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
-  submitText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  submitBtn: { backgroundColor: L.danger, borderRadius: shape.cta, paddingVertical: 14, alignItems: 'center' },
+  submitText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 });
 
 // ─── Feed tab ─────────────────────────────────────────────────────────────────
@@ -783,32 +785,32 @@ const ft = StyleSheet.create({
   loading: { paddingTop: 60, alignItems: 'center' },
   scroll: { paddingVertical: 12, gap: 12, paddingBottom: 100 },
   compose: {
-    backgroundColor: L.bg, borderRadius: 16,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border, padding: 14, gap: 10,
   },
-  composeInput: { color: L.text, fontSize: 15, minHeight: 40, paddingHorizontal: 4 },
+  composeInput: { color: L.text, fontSize: text.body.size, fontWeight: '500', minHeight: 40, paddingHorizontal: 4 },
   composeActions: { flexDirection: 'row', gap: 16, borderTopWidth: 1, borderTopColor: L.border, paddingTop: 10 },
   composeAction: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   composeActionDisabled: { opacity: 0.6 },
-  composeActionText: { color: L.textSub, fontSize: 13, fontWeight: '600' },
+  composeActionText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   pollComposer: {
-    backgroundColor: L.bg, borderRadius: 16, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
     padding: 14, gap: 8,
   },
-  photoComposerPreview: { width: '100%', height: 200, borderRadius: 12 },
+  photoComposerPreview: { width: '100%', height: 200, borderRadius: shape.panel },
   pollComposerInput: {
-    borderWidth: 1, borderColor: L.border, borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 10, color: L.text, fontSize: 14,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
+    paddingHorizontal: 12, paddingVertical: 10, color: L.text, fontSize: text.body.size, fontWeight: '500',
   },
-  pollComposerAdd: { color: L.gold, fontSize: 13, fontWeight: '700' },
+  pollComposerAdd: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
   pollComposerActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 16, marginTop: 4 },
-  pollComposerCancel: { color: L.textSub, fontSize: 14, fontWeight: '600' },
-  pollComposerSubmit: { color: L.gold, fontSize: 14, fontWeight: '800' },
+  pollComposerCancel: { color: L.textSub, fontSize: text.action.size, fontWeight: '800' },
+  pollComposerSubmit: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
 });
 
 const fp = StyleSheet.create({
   card: {
-    backgroundColor: L.bg, borderRadius: 16,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border, padding: 14, gap: 10,
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -818,31 +820,31 @@ const fp = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
   },
   authorInfo: { flex: 1 },
-  author: { color: L.navy, fontSize: 14, fontWeight: '800' },
-  meta: { color: L.textSub, fontSize: 12 },
-  content: { color: L.text, fontSize: 14, lineHeight: 21 },
-  postImage: { width: '100%', height: 220, borderRadius: 12 },
+  author: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  meta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  content: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 21 },
+  postImage: { width: '100%', height: 220, borderRadius: shape.panel },
   editWrap: { gap: 8 },
   editInput: {
-    borderWidth: 1, borderColor: L.border, borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 10, color: L.text, fontSize: 14, minHeight: 60,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
+    paddingHorizontal: 12, paddingVertical: 10, color: L.text, fontSize: text.body.size, fontWeight: '500', minHeight: 60,
   },
   editActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 16 },
 
-  eventCard: { borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: L.border },
+  eventCard: { borderRadius: shape.panel, overflow: 'hidden', borderWidth: 1, borderColor: L.border },
   eventImage: { width: '100%', height: 120 },
   eventBody: { padding: 12, gap: 5 },
-  eventTitle: { color: L.navy, fontSize: 15, fontWeight: '800' },
+  eventTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   eventRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  eventMeta: { color: L.textSub, fontSize: 12 },
+  eventMeta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   pollCard: { gap: 10 },
-  pollQuestion: { color: L.navy, fontSize: 14, fontWeight: '700', lineHeight: 20 },
+  pollQuestion: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', lineHeight: 20 },
   pollOptions: { gap: 6 },
   pollOption: {
     position: 'relative', flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between',
-    height: 40, borderRadius: 10,
+    height: 40, borderRadius: shape.cta,
     borderWidth: 1.5, borderColor: L.border,
     paddingHorizontal: 12, overflow: 'hidden',
     backgroundColor: L.bg,
@@ -850,35 +852,35 @@ const fp = StyleSheet.create({
   pollOptionVoted: { borderColor: L.gold },
   pollFill: {
     position: 'absolute', left: 0, top: 0, bottom: 0,
-    backgroundColor: L.goldLight, borderRadius: 10,
+    backgroundColor: L.goldLight, borderRadius: shape.cta,
   },
-  pollLabel: { color: L.navy, fontSize: 13, fontWeight: '600', zIndex: 1 },
+  pollLabel: { color: L.navy, fontSize: text.caption.size, fontWeight: '500', zIndex: 1 },
   pollLabelVoted: { color: L.gold },
-  pollPct: { color: L.textSub, fontSize: 12, fontWeight: '600', zIndex: 1 },
-  pollMeta: { color: L.textSub, fontSize: 11 },
+  pollPct: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', zIndex: 1 },
+  pollMeta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   footer: { flexDirection: 'row', gap: 20, borderTopWidth: 1, borderTopColor: L.border, paddingTop: 10 },
   footerBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  footerText: { color: L.textSub, fontSize: 13, fontWeight: '600' },
+  footerText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   commentsWrap: { gap: 8, borderTopWidth: 1, borderTopColor: L.border, paddingTop: 10 },
   commentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   commentBubble: { flex: 1, flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-  commentAuthor: { color: L.navy, fontSize: 13, fontWeight: '700' },
-  commentBody: { color: L.text, fontSize: 13, flexShrink: 1 },
-  commentEdited: { color: L.textSub, fontSize: 11, fontStyle: 'italic' },
+  commentAuthor: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  commentBody: { color: L.text, fontSize: text.caption.size, fontWeight: '500', flexShrink: 1 },
+  commentEdited: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', fontStyle: 'italic' },
   commentCol: { gap: 2 },
   commentColReply: { marginLeft: 28 },
-  commentReplyLink: { color: L.textSub, fontSize: 12, fontWeight: '700', marginLeft: 4 },
+  commentReplyLink: { color: L.textSub, fontSize: text.link.size, fontWeight: '700', marginLeft: 4 },
   replyingToRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: L.page, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6,
+    backgroundColor: L.page, borderRadius: shape.cta, paddingHorizontal: 10, paddingVertical: 6,
   },
-  replyingToText: { color: L.textSub, fontSize: 12, fontWeight: '600' },
+  replyingToText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   commentInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   commentInput: {
-    flex: 1, borderWidth: 1, borderColor: L.border, borderRadius: 18,
-    paddingHorizontal: 12, paddingVertical: 8, color: L.text, fontSize: 13,
+    flex: 1, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
+    paddingHorizontal: 12, paddingVertical: 8, color: L.text, fontSize: text.body.size, fontWeight: '500',
   },
 });
 
@@ -969,31 +971,31 @@ function EventsTab({ groupId }: { groupId: string }) {
 const et = StyleSheet.create({
   createBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: 14,
+    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta,
     paddingVertical: 12, paddingHorizontal: 16, backgroundColor: L.goldLight,
   },
-  createBtnText: { color: L.gold, fontSize: 14, fontWeight: '700' },
+  createBtnText: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
   card: {
-    backgroundColor: L.bg, borderRadius: 16,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border, overflow: 'hidden',
   },
   image: { width: '100%', height: 130 },
   body: { padding: 14, gap: 6 },
   tagRow: { flexDirection: 'row' },
-  tag: { backgroundColor: L.goldLight, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  tag: { backgroundColor: L.goldLight, borderRadius: shape.badge, paddingHorizontal: 8, paddingVertical: 3 },
   tagTournament: { backgroundColor: colors.navy + '18' },
-  tagText: { color: L.gold, fontSize: 11, fontWeight: '700' },
+  tagText: { color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   tagTextTournament: { color: L.navy },
-  title: { color: L.navy, fontSize: 18, fontWeight: '800' },
+  title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  meta: { color: L.textSub, fontSize: 13 },
+  meta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   empty: {
-    backgroundColor: L.bg, borderRadius: 16,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: 28, alignItems: 'center', gap: 8,
   },
-  emptyTitle: { color: L.navy, fontSize: 15, fontWeight: '800' },
-  emptySub: { color: L.textSub, fontSize: 13, textAlign: 'center' },
+  emptyTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  emptySub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center' },
 });
 
 // ─── Members tab ──────────────────────────────────────────────────────────────
@@ -1207,25 +1209,25 @@ function MembersTab({ groupId, myUserId, isAdmin }: { groupId: string; myUserId:
 const mt = StyleSheet.create({
   filterRow: { flexDirection: 'row', gap: 8 },
   filterChip: {
-    borderRadius: 20, borderWidth: 1.5, borderColor: L.border,
+    borderRadius: shape.pill, borderWidth: 1.5, borderColor: L.border,
     paddingHorizontal: 14, paddingVertical: 7,
   },
   filterChipActive: { backgroundColor: L.navy, borderColor: L.navy },
-  filterText: { color: L.textSub, fontSize: 13, fontWeight: '600' },
+  filterText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   filterTextActive: { color: '#FFFFFF' },
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: L.bg, borderRadius: 14,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border, padding: 12,
   },
   avatar: { width: 46, height: 46, borderRadius: 23 },
   avatarFallback: { backgroundColor: L.page, alignItems: 'center', justifyContent: 'center' },
   info: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 3 },
-  name: { color: L.navy, fontSize: 14, fontWeight: '800' },
-  adminBadge: { backgroundColor: L.goldLight, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  name: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  adminBadge: { backgroundColor: L.goldLight, borderRadius: shape.badge, paddingHorizontal: 6, paddingVertical: 2 },
   adminText: { color: L.gold, fontSize: 10, fontWeight: '700' },
-  meta: { color: L.textSub, fontSize: 12 },
+  meta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   actions: { flexDirection: 'row', gap: 4 },
   actionBtn: {
     width: 36, height: 36, borderRadius: 18,
@@ -1234,16 +1236,16 @@ const mt = StyleSheet.create({
   },
   connectedActionBtn: { backgroundColor: L.successBg, borderColor: L.success },
   pendingSection: {
-    backgroundColor: L.goldLight, borderRadius: 14, padding: 12, gap: 8,
+    backgroundColor: L.goldLight, borderRadius: shape.card, padding: 12, gap: 8,
   },
-  pendingTitle: { color: L.navy, fontSize: 13, fontWeight: '800' },
+  pendingTitle: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing },
   pendingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  pendingName: { color: L.text, fontSize: 13, flex: 1 },
+  pendingName: { color: L.text, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
   pendingActions: { flexDirection: 'row', gap: 8 },
-  pendingApprove: { backgroundColor: L.gold, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6 },
-  pendingApproveText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  pendingDecline: { borderWidth: 1, borderColor: L.border, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6 },
-  pendingDeclineText: { color: L.textSub, fontSize: 12, fontWeight: '700' },
+  pendingApprove: { backgroundColor: L.gold, borderRadius: shape.cta, paddingHorizontal: 10, paddingVertical: 6 },
+  pendingApproveText: { color: '#FFFFFF', fontSize: text.action.size, fontWeight: '800' },
+  pendingDecline: { borderWidth: 1, borderColor: L.border, borderRadius: shape.cta, paddingHorizontal: 10, paddingVertical: 6 },
+  pendingDeclineText: { color: L.textSub, fontSize: text.action.size, fontWeight: '800' },
 });
 
 // ─── Photos tab ───────────────────────────────────────────────────────────────
@@ -1323,7 +1325,7 @@ function PhotosTab({ groupId, userId }: { groupId: string; userId: string }) {
 
 const ph = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  cell: { width: PHOTO_SIZE, height: PHOTO_SIZE, borderRadius: 8, overflow: 'hidden' },
+  cell: { width: PHOTO_SIZE, height: PHOTO_SIZE, borderRadius: shape.badge, overflow: 'hidden' },
   photo: { width: '100%', height: '100%' },
 });
 
@@ -1722,9 +1724,9 @@ const im = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingBottom: 16,
   },
-  title: { color: L.navy, fontSize: 22, fontWeight: '900' },
-  subtitle: { color: L.textSub, fontSize: 13, marginTop: 3 },
-  feedback: { fontSize: 12, fontWeight: '800', marginTop: 8 },
+  title: { color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800' },
+  subtitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 3 },
+  feedback: { fontSize: text.chipValue.size, fontWeight: '800', marginTop: 8 },
   feedbackSuccess: { color: L.success },
   feedbackError: { color: L.danger },
   closeBtn: {
@@ -1735,27 +1737,27 @@ const im = StyleSheet.create({
   list: { gap: 10, paddingBottom: 24 },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: L.bg, borderRadius: 14,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: 12,
   },
   avatar: { width: 44, height: 44, borderRadius: 22 },
   avatarFallback: { backgroundColor: L.page, alignItems: 'center', justifyContent: 'center' },
   info: { flex: 1, minWidth: 0 },
-  name: { color: L.navy, fontSize: 14, fontWeight: '800' },
-  meta: { color: L.textSub, fontSize: 12, marginTop: 3 },
+  name: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  meta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 3 },
   inviteBtn: {
-    minWidth: 74, height: 36, borderRadius: 18,
+    minWidth: 74, height: 36, borderRadius: shape.cta,
     backgroundColor: L.gold,
     alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 14,
   },
   invitedBtn: { backgroundColor: 'rgba(36, 176, 96, 0.13)', borderWidth: 1, borderColor: L.success },
-  inviteText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  inviteText: { color: '#FFFFFF', fontSize: text.action.size, fontWeight: '800' },
   invitedText: { color: L.success },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 24 },
-  emptyTitle: { color: L.navy, fontSize: 18, fontWeight: '900', textAlign: 'center' },
-  emptyText: { color: L.textSub, fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  emptyTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', textAlign: 'center' },
+  emptyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 20, textAlign: 'center' },
 });
 // ─── Shared context menu styles ───────────────────────────────────────────────
 
@@ -1781,20 +1783,20 @@ const s = StyleSheet.create({
     position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: 16, gap: 6,
   },
-  groupName: { color: '#FFFFFF', fontSize: 22, fontWeight: '900' },
+  groupName: { color: '#FFFFFF', fontSize: text.cardTitle.size, fontWeight: '800' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metaText: { color: 'rgba(255,255,255,0.85)', fontSize: 12 },
-  metaDot: { color: 'rgba(255,255,255,0.5)', fontSize: 12 },
-  desc: { color: 'rgba(255,255,255,0.80)', fontSize: 13, lineHeight: 18 },
+  metaText: { color: 'rgba(255,255,255,0.85)', fontSize: text.caption.size, fontWeight: '500' },
+  metaDot: { color: 'rgba(255,255,255,0.5)', fontSize: text.caption.size, fontWeight: '500' },
+  desc: { color: 'rgba(255,255,255,0.80)', fontSize: text.caption.size, fontWeight: '500', lineHeight: 18 },
 
   actionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
 
   joinBtn: {
-    backgroundColor: L.gold, borderRadius: 20,
+    backgroundColor: L.gold, borderRadius: shape.pill,
     paddingHorizontal: 18, paddingVertical: 9, minWidth: 90, alignItems: 'center',
   },
   joinedBtn: { backgroundColor: 'rgba(255,255,255,0.22)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.6)' },
-  joinBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  joinBtnText: { color: '#FFFFFF', fontSize: text.action.size, fontWeight: '800' },
   joinedBtnText: { color: '#FFFFFF' },
   chatBtn: {
     width: 38, height: 38, borderRadius: 19,
@@ -1804,13 +1806,13 @@ const s = StyleSheet.create({
 
   tabBar: { flexDirection: 'row', backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border },
   tabItem: { flex: 1, alignItems: 'center', paddingVertical: 13, position: 'relative' },
-  tabText: { color: L.textSub, fontSize: 14, fontWeight: '600' },
+  tabText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   tabTextActive: { color: L.gold, fontWeight: '800' },
   tabUnderline: {
     position: 'absolute', bottom: 0, left: 8, right: 8,
     height: 2.5, borderRadius: 2, backgroundColor: L.gold,
   },
 
-  content: { flex: 1 },
+  content: { fontSize: text.body.size, fontWeight: '500', flex: 1 },
   tabContentPad: { flex: 1, paddingHorizontal: 16 },
 });

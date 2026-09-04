@@ -10,6 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import EmojiPicker from 'rn-emoji-keyboard';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import { fetchGroup, fetchGroupEvents, type Group } from '@/lib/groupService';
 import { setPendingGroupId } from '@/lib/pendingGroupLink';
@@ -112,19 +114,19 @@ const es = StyleSheet.create({
   },
   grabber: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 12 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  title: { color: colors.navy, fontSize: 17, fontWeight: '900' },
+  title: { color: colors.navy, fontSize: text.modalTitle.size, fontWeight: '900' },
   loading: { paddingVertical: 40, alignItems: 'center' },
   empty: { paddingVertical: 40, alignItems: 'center', gap: 8 },
-  emptyTitle: { color: colors.navy, fontSize: 14, fontWeight: '700' },
+  emptyTitle: { color: colors.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   list: { gap: 10, paddingBottom: 12 },
   card: {
-    flexDirection: 'row', gap: 12, backgroundColor: colors.page, borderRadius: 14,
+    flexDirection: 'row', gap: 12, backgroundColor: colors.page, borderRadius: shape.card,
     borderWidth: 1, borderColor: colors.border, overflow: 'hidden', padding: 8,
   },
-  cardImage: { width: 64, height: 64, borderRadius: 10 },
+  cardImage: { width: 64, height: 64, borderRadius: shape.cta },
   cardBody: { flex: 1, justifyContent: 'center', gap: 3 },
-  cardTitle: { color: colors.navy, fontSize: 14, fontWeight: '800' },
-  cardMeta: { color: colors.textSub, fontSize: 12 },
+  cardTitle: { color: colors.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  cardMeta: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500' },
 });
 
 const L = {
@@ -178,16 +180,16 @@ const tm = StyleSheet.create({
   col: { maxWidth: '78%', gap: 3 },
   colMe: { alignItems: 'flex-end' },
   bubble: {
-    backgroundColor: L.bg, borderRadius: 14, borderTopLeftRadius: 4,
+    backgroundColor: L.bg, borderRadius: shape.cta, borderTopLeftRadius: 4,
     borderWidth: 1, borderColor: L.border,
     paddingHorizontal: 12, paddingVertical: 10,
   },
   bubbleMe: { backgroundColor: L.navy, borderColor: L.navy, borderTopLeftRadius: 14, borderTopRightRadius: 4 },
-  bubblePhoto: { borderRadius: 14, overflow: 'hidden' },
+  bubblePhoto: { borderRadius: shape.cta, overflow: 'hidden' },
   photo: { width: 220, height: 220, backgroundColor: L.page },
-  text: { color: L.text, fontSize: 14, lineHeight: 20 },
+  text: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 20 },
   textMe: { color: '#FFFFFF' },
-  time: { color: L.textSub, fontSize: 11, marginLeft: 4 },
+  time: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginLeft: 4 },
   timeMe: { marginLeft: 0, marginRight: 4 },
 });
 
@@ -488,8 +490,8 @@ const s = StyleSheet.create({
   },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle: { color: L.navy, fontSize: 16, fontWeight: '900' },
-  headerSub: { color: L.textSub, fontSize: 12 },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  headerSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   headerBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
 
@@ -497,8 +499,8 @@ const s = StyleSheet.create({
   messageContent: { padding: 12, gap: 2, paddingBottom: 20 },
 
   empty: { alignItems: 'center', gap: 8, paddingTop: 60 },
-  emptyTitle: { color: L.navy, fontSize: 15, fontWeight: '800' },
-  emptySub: { color: L.textSub, fontSize: 13 },
+  emptyTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  emptySub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   composer: { backgroundColor: L.bg, borderTopWidth: 1, borderTopColor: L.border, paddingTop: 8 },
   quickActions: { flexDirection: 'row', paddingHorizontal: 12, gap: 16, paddingBottom: 10 },
@@ -513,11 +515,11 @@ const s = StyleSheet.create({
   cameraBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   inputWrap: {
     flex: 1, flexDirection: 'row', alignItems: 'flex-end',
-    backgroundColor: L.page, borderRadius: 22,
+    backgroundColor: L.page, borderRadius: shape.pill,
     borderWidth: 1, borderColor: L.border,
     paddingHorizontal: 14, paddingVertical: 8, gap: 6,
   },
-  input: { flex: 1, color: L.text, fontSize: 15, maxHeight: 80, padding: 0 },
+  input: { flex: 1, color: L.text, fontSize: text.body.size, fontWeight: '500', maxHeight: 80, padding: 0 },
   sendBtn: {
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: L.gold, alignItems: 'center', justifyContent: 'center',

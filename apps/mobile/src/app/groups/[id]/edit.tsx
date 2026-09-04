@@ -9,6 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import { fetchGroup, updateGroup, uploadGroupBanner, type Group, type GroupPrivacy } from '@/lib/groupService';
 
@@ -37,8 +39,8 @@ function CardSection({ title, children }: { title: string; children: React.React
 }
 const cs = StyleSheet.create({
   wrap: { marginBottom: 24 },
-  title: { color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.5, marginBottom: 10, marginLeft: 2 },
-  card: { backgroundColor: L.bg, borderRadius: 16, borderWidth: 1, borderColor: L.border, overflow: 'hidden' },
+  title: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginBottom: 10, marginLeft: 2 },
+  card: { backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border, overflow: 'hidden' },
 });
 
 export default function EditGroupScreen() {
@@ -258,7 +260,7 @@ const s = StyleSheet.create({
   },
   backBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '900' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   scroll: { padding: spacing.screenH, paddingTop: 20 },
   cta: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -267,31 +269,31 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: -3 },
     elevation: 8,
   },
-  ctaBtn: { backgroundColor: L.gold, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  ctaBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  ctaBtn: { backgroundColor: L.gold, borderRadius: shape.cta, paddingVertical: 16, alignItems: 'center' },
+  ctaBtnText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 });
 
 const ph = StyleSheet.create({
   uploadTile: {
-    minHeight: 140, borderRadius: 12,
+    minHeight: 140, borderRadius: shape.panel,
     borderWidth: 2, borderColor: L.border, borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center', gap: 4,
     backgroundColor: L.page, margin: 14, overflow: 'hidden',
   },
   preview: { width: '100%', height: 140 },
-  uploadText: { color: L.navy, fontSize: 13, fontWeight: '700' },
+  uploadText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 });
 
 const gd = StyleSheet.create({
   field: { paddingHorizontal: 16, paddingVertical: 12 },
   fieldBorder: { borderTopWidth: 1, borderTopColor: L.border },
-  fieldLabel: { color: L.textSub, fontSize: 12, fontWeight: '600', marginBottom: 6 },
-  input: { color: L.text, fontSize: 15, padding: 0 },
+  fieldLabel: { color: L.textSub, fontSize: text.fieldLabel.size, fontWeight: '800', marginBottom: 6 },
+  input: { color: L.text, fontSize: text.body.size, fontWeight: '500', padding: 0 },
   textArea: { minHeight: 72, lineHeight: 22 },
   skillRow: { gap: 8, paddingVertical: 4 },
-  skillChip: { borderRadius: 20, borderWidth: 1.5, borderColor: L.border, paddingHorizontal: 14, paddingVertical: 7 },
+  skillChip: { borderRadius: shape.pill, borderWidth: 1.5, borderColor: L.border, paddingHorizontal: 14, paddingVertical: 7 },
   skillChipActive: { backgroundColor: L.navy, borderColor: L.navy },
-  skillText: { color: L.textSub, fontSize: 13, fontWeight: '600' },
+  skillText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   skillTextActive: { color: '#FFFFFF' },
 });
 
@@ -302,9 +304,9 @@ const prv = StyleSheet.create({
   iconCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: L.page, alignItems: 'center', justifyContent: 'center' },
   iconCircleActive: { backgroundColor: colors.goldBg },
   body: { flex: 1 },
-  label: { color: L.navy, fontSize: 14, fontWeight: '700', marginBottom: 2 },
+  label: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 2 },
   labelActive: { color: L.navy },
-  desc: { color: L.textSub, fontSize: 12, lineHeight: 17 },
+  desc: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17 },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: L.border, alignItems: 'center', justifyContent: 'center' },
   radioActive: { borderColor: L.gold },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: L.gold },
@@ -314,6 +316,6 @@ const st = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
   rowBorder: { borderTopWidth: 1, borderTopColor: L.border },
   body: { flex: 1 },
-  label: { color: L.navy, fontSize: 14, fontWeight: '700', marginBottom: 2 },
-  sub: { color: L.textSub, fontSize: 12 },
+  label: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 2 },
+  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 });
