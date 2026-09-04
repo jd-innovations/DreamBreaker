@@ -29,7 +29,9 @@ import {
   StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors as L } from "@/theme";
+import { colors as L } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { text } from '@shared/tokens';
 
 export type MenuItem = { icon: string; label: string; danger?: boolean };
 
@@ -198,7 +200,7 @@ const cm = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   iconWrapDanger: { backgroundColor: L.dangerBg },
-  label: { color: L.navy, fontSize: 14, fontWeight: '500' },
+  label: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
   labelDanger: { color: L.danger },
   divider: {
     height: StyleSheet.hairlineWidth,

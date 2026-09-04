@@ -110,7 +110,26 @@ if (!file || !mappingPath) {
 const cfg = JSON.parse(readFileSync(mappingPath, "utf8"));
 const typeMap = cfg.type ?? {};
 const shapeMap = cfg.shape ?? {};
+const expand = new Set(cfg.expand ?? []);
 const allow = (cfg.allow ?? []).map(String).sort();
+
+// The legacy `typography` presets, read from their source rather than copied
+// here, so this cannot drift from what the app actually renders.
+//
+// Why the tool needs them: a style that stays exempt — below the 11pt floor,
+// or a decision-14 display size — has no role to swap the spread for, but the
+// tool refuses to leave `typography.` behind. That combination is a dead end
+// the tool used to hand back, and writing those values out by hand took four
+// rounds on PlayerCredentialCard. `expand` resolves it in the tool instead.
+const LEGACY = (() => {
+  const src = readFileSync(new URL("../apps/mobile/src/theme/typography.ts", import.meta.url), "utf8");
+  const body = /export const typography = \{([\s\S]*?)\n\} as const;/.exec(src);
+  const out = {};
+  for (const m of body[1].matchAll(/(\w+):\s*\{\s*fontSize:\s*(\d+),\s*fontWeight:\s*'(\d+)'/g)) {
+    out[m[1]] = { size: Number(m[2]), weight: m[3] };
+  }
+  return out;
+})();
 
 let src = readFileSync(file, "utf8");
 const sheets = sheetsOf(src);
@@ -203,6 +222,23 @@ function applyRoles(name, props, offset) {
     }
   }
 
+  // An exempt style keeps its own size but must not keep the spread. Write out
+  // only what the spread actually contributed: these styles routinely set
+  // fontSize (and sometimes fontWeight) right after it, in which case the
+  // preset supplied nothing and expanding it would duplicate a key.
+  if (!role && expand.has(name) && /\.\.\.typography\.(\w+)/.test(out)) {
+    const preset = LEGACY[/\.\.\.typography\.(\w+)/.exec(out)[1]];
+    if (!preset) {
+      console.error(`[migrate-styles] ${name}: unknown typography preset`);
+      process.exit(1);
+    }
+    const add = [];
+    if (!/fontSize:/.test(out)) add.push(`fontSize: ${preset.size}`);
+    if (!/fontWeight:/.test(out)) add.push(`fontWeight: '${preset.weight}'`);
+    out = out.replace(/\.\.\.typography\.\w+,?\s*/, add.length ? `${add.join(", ")}, ` : "");
+    seen.add(name);
+  }
+
   const shape = lookup(shapeMap, sheet, name);
   if (shape) {
     out = out.replace(/borderRadius:\s*(?:radius\.\w+|[\d.]+)/, `borderRadius: shape.${shape}`);
@@ -238,7 +274,10 @@ if (missing.length) {
 }
 
 if (!src.includes("@shared/tokens")) {
-  const m = /^import \{([^}]*)\} from '@\/theme';$/m.exec(src);
+  // Either quote style. ContextMenu.tsx uses double quotes, and a single-quote
+  // anchor made it look like a file with no @/theme import at all — which would
+  // have been "fixed" by adding one by hand.
+  const m = /^import \{([^}]*)\} from ["']@\/theme["'];$/m.exec(src);
   if (!m) {
     console.error(`[migrate-styles] ${file}: no @/theme import to anchor onto`);
     process.exit(1);

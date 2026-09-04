@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { AppIcon, type AppIconName } from '@/components/AppIcon';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import type { ParConfidenceBand } from '@/lib/supabase/par';
 
 // Exported so sibling elements (e.g. the profile avatar) can be sized to match.
@@ -131,7 +133,7 @@ const styles = StyleSheet.create({
     right: 0,
     width: 200,
     backgroundColor: colors.playerDarkBg,
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     borderWidth: 1,
     borderColor: colors.goldBorder,
     paddingHorizontal: spacing.md,
@@ -144,11 +146,10 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   tooltipText: {
-    ...typography.metadata,
     color: colors.white,
-    fontSize: 11,
+    fontSize: text.caption.size,
     lineHeight: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   ringBox: {
     alignItems: 'center',
@@ -158,7 +159,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   yourPar: {
-    ...typography.metadata,
     color: colors.playerCredentialMuted,
     fontSize: 10,
     fontWeight: '700',
@@ -175,7 +175,6 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   estimated: {
-    ...typography.metadata,
     color: colors.playerCredentialMuted,
     fontSize: 9,
     fontWeight: '700',
@@ -183,9 +182,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   stageLabel: {
-    ...typography.cardTitle,
     color: colors.playerCredentialText,
-    fontSize: 14,
+    fontSize: text.rowTitle.size, fontWeight: '700',
     textAlign: 'center',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
