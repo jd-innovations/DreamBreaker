@@ -8,6 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
 import { useSupportContext } from '@/lib/support/supportContext';
 import type { Connection } from '@/lib/connectionStore';
@@ -99,16 +101,16 @@ function ConnectionCard({ conn, onRemove }: { conn: Connection; onRemove: () => 
 const cc = StyleSheet.create({
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: L.bg, borderRadius: 14,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
     paddingVertical: 12, paddingHorizontal: 12,
   },
-  info:      { flex: 1, minWidth: 0, gap: 3 },
-  name:      { color: L.navy, fontSize: 15, lineHeight: 18, fontWeight: '800' },
+  info: { flex: 1, minWidth: 0, gap: 3 },
+  name: { color: L.navy, fontSize: text.body.size, lineHeight: 18, fontWeight: '500' },
   duprBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' },
-  duprText:  { color: L.gold, fontSize: 11, fontWeight: '700' },
-  meta:      { color: L.textSub, fontSize: 12 },
-  actions:   { flexDirection: 'row', gap: 5, alignItems: 'center', flexShrink: 0 },
+  duprText: { color: L.gold, fontSize: 11, fontWeight: '700' },
+  meta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  actions: { flexDirection: 'row', gap: 5, alignItems: 'center', flexShrink: 0 },
   actionBtn: {
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: L.page, borderWidth: 1.5, borderColor: L.border,
@@ -257,27 +259,27 @@ export default function MyConnectionsScreen() {
 }
 
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.screenH, paddingVertical: 12,
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
   },
-  backBtn:      { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, alignItems: 'center' },
-  title:        { color: L.navy, fontSize: 20, fontWeight: '900' },
-  subtitle:     { color: L.textSub, fontSize: 12 },
-  tabBar:    { backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border, maxHeight: 50, flexGrow: 0 },
-  tabStrip:  { paddingHorizontal: spacing.screenH, paddingVertical: 8, gap: 8 },
-  tabChip:      { borderRadius: 20, borderWidth: 1.5, borderColor: L.border, paddingHorizontal: 14, paddingVertical: 6, backgroundColor: L.bg },
-  tabChipActive:{ backgroundColor: L.navy, borderColor: L.navy },
-  tabText:      { color: L.textSub, fontSize: 13, fontWeight: '600' },
-  tabTextActive:{ color: '#FFFFFF' },
+  title: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900' },
+  subtitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  tabBar: { backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border, maxHeight: 50, flexGrow: 0 },
+  tabStrip: { paddingHorizontal: spacing.screenH, paddingVertical: 8, gap: 8 },
+  tabChip: { borderRadius: shape.pill, borderWidth: 1.5, borderColor: L.border, paddingHorizontal: 14, paddingVertical: 6, backgroundColor: L.bg },
+  tabChipActive: { backgroundColor: L.navy, borderColor: L.navy },
+  tabText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
+  tabTextActive: { color: '#FFFFFF' },
   scroll: { paddingHorizontal: spacing.screenH, paddingTop: 16 },
-  list:   { gap: 10 },
-  empty:      { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyTitle: { color: L.navy, fontSize: 18, fontWeight: '800' },
-  emptySub:   { color: L.textSub, fontSize: 14, textAlign: 'center', lineHeight: 20, maxWidth: 280 },
-  emptyBtn:   { backgroundColor: L.gold, borderRadius: 14, paddingHorizontal: 28, paddingVertical: 13, marginTop: 8 },
-  emptyBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  list: { gap: 10 },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
+  emptyTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  emptySub: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center', lineHeight: 20, maxWidth: 280 },
+  emptyBtn: { backgroundColor: L.gold, borderRadius: shape.cta, paddingHorizontal: 28, paddingVertical: 13, marginTop: 8 },
+  emptyBtnText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 });

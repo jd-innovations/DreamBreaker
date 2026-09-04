@@ -8,6 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
 import { useSupportContext } from '@/lib/support/supportContext';
 import type { ConnectionRequest } from '@/lib/connectionStore';
@@ -102,36 +104,36 @@ function IncomingCard({ req, onAccept, onDecline }: {
 
 const ic = StyleSheet.create({
   card: {
-    backgroundColor: L.bg, borderRadius: 16,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border, padding: 14, gap: 12,
   },
-  topRow:    { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  info:      { flex: 1, gap: 3 },
-  nameRow:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name:      { color: L.navy, fontSize: 15, fontWeight: '800' },
+  topRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  info: { flex: 1, gap: 3 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  name: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
   duprBadge: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  duprText:  { color: L.gold, fontSize: 11, fontWeight: '700' },
-  metaRow:   { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  meta:      { color: L.textSub, fontSize: 12 },
-  time:      { color: L.textSub, fontSize: 11 },
+  duprText: { color: L.gold, fontSize: 11, fontWeight: '700' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  meta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  time: { color: L.textSub, fontSize: 11 },
   profileBtn: {
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: L.page, borderWidth: 1.5, borderColor: L.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  bubble:     { backgroundColor: L.page, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: L.border },
-  bubbleText: { color: L.text, fontSize: 13, lineHeight: 18 },
-  actions:    { flexDirection: 'row', gap: 10 },
+  bubble: { backgroundColor: L.page, borderRadius: shape.panel, padding: 12, borderWidth: 1, borderColor: L.border },
+  bubbleText: { color: L.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18 },
+  actions: { flexDirection: 'row', gap: 10 },
   declineBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 1.5, borderColor: L.dangerBg, borderRadius: 12, paddingVertical: 10, backgroundColor: L.dangerBg,
+    borderWidth: 1.5, borderColor: L.dangerBg, borderRadius: shape.cta, paddingVertical: 10, backgroundColor: L.dangerBg,
   },
-  declineText: { color: L.danger, fontSize: 14, fontWeight: '700' },
-  acceptBtn:   {
+  declineText: { color: L.danger, fontSize: text.rowTitle.size, fontWeight: '700' },
+  acceptBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: L.navy, borderRadius: 12, paddingVertical: 10,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 10,
   },
-  acceptText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  acceptText: { color: '#FFFFFF', fontSize: text.rowTitle.size, fontWeight: '700' },
 });
 
 function OutgoingCard({ req, onCancel }: { req: ConnectionRequest; onCancel: () => void }) {
@@ -171,23 +173,23 @@ function OutgoingCard({ req, onCancel }: { req: ConnectionRequest; onCancel: () 
 const oc = StyleSheet.create({
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: L.bg, borderRadius: 14,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
     paddingVertical: 12, paddingHorizontal: 14,
   },
-  info:      { flex: 1, gap: 4 },
-  nameRow:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name:      { color: L.navy, fontSize: 15, fontWeight: '800' },
+  info: { flex: 1, gap: 4 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  name: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
   duprBadge: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  duprText:  { color: L.gold, fontSize: 11, fontWeight: '700' },
-  sent:      { color: L.textSub, fontSize: 12 },
+  duprText: { color: L.gold, fontSize: 11, fontWeight: '700' },
+  sent: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   statusBadge: { alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  statusText:  { fontSize: 11, fontWeight: '700' },
+  statusText: { fontSize: 11, fontWeight: '700' },
   cancelBtn: {
-    borderWidth: 1.5, borderColor: L.border, borderRadius: 10,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
     paddingHorizontal: 12, paddingVertical: 7,
   },
-  cancelText: { color: L.textSub, fontSize: 12, fontWeight: '600' },
+  cancelText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   profileBtn: {
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: L.page, borderWidth: 1.5, borderColor: L.border,
@@ -412,31 +414,31 @@ export default function MatchRequestsScreen() {
 }
 
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.screenH, paddingVertical: 12,
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
   },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title:   { flex: 1, color: L.navy, fontSize: 20, fontWeight: '900', textAlign: 'center' },
+  title: { flex: 1, color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900', textAlign: 'center' },
   segWrap: {
     backgroundColor: L.bg, paddingHorizontal: spacing.screenH,
     paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: L.border,
   },
-  segControl:    { flexDirection: 'row', backgroundColor: L.page, borderRadius: 12, padding: 4, gap: 4 },
-  segBtn:        { flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center' },
-  segBtnActive:  { backgroundColor: L.bg, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
-  segText:       { color: L.textSub, fontSize: 14, fontWeight: '600' },
+  segControl: { flexDirection: 'row', backgroundColor: L.page, borderRadius: shape.panel, padding: 4, gap: 4 },
+  segBtn: { flex: 1, paddingVertical: 9, borderRadius: shape.cta, alignItems: 'center' },
+  segBtnActive: { backgroundColor: L.bg, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+  segText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   segTextActive: { color: L.navy, fontWeight: '800' },
   scroll: { paddingHorizontal: spacing.screenH, paddingTop: 16 },
-  list:   { gap: 12 },
-  empty:      { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyTitle: { color: L.navy, fontSize: 18, fontWeight: '800' },
-  emptySub:   { color: L.textSub, fontSize: 14, textAlign: 'center', lineHeight: 20, maxWidth: 280 },
-  emptyBtn:   {
-    backgroundColor: L.gold, borderRadius: 14,
+  list: { gap: 12 },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
+  emptyTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  emptySub: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center', lineHeight: 20, maxWidth: 280 },
+  emptyBtn: {
+    backgroundColor: L.gold, borderRadius: shape.cta,
     paddingHorizontal: 28, paddingVertical: 13, marginTop: 8,
   },
-  emptyBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  emptyBtnText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 });

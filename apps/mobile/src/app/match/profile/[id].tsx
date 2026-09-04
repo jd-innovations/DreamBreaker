@@ -9,6 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateConversation } from '@/lib/conversationService';
 import { computeMatch } from '@/lib/computeMatch';
@@ -52,8 +54,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 const sec = StyleSheet.create({
-  wrap:  { marginBottom: 24 },
-  title: { color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.5, marginBottom: 10 },
+  wrap: { marginBottom: 24 },
+  title: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginBottom: 10 },
 });
 
 export default function PartnerProfileScreen() {
@@ -464,7 +466,7 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.page },
 
   photoDots: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 5 },
-  dot:       { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.35)' },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.35)' },
   dotActive: { backgroundColor: L.gold, width: 18 },
 
   heroTopBar: {
@@ -482,14 +484,14 @@ const s = StyleSheet.create({
     paddingHorizontal: 20, paddingBottom: 20, paddingTop: 40,
   },
   heroNameRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
-  heroName:    { color: '#FFFFFF', fontSize: 34, fontWeight: '900', letterSpacing: -0.5 },
-  heroMeta:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
-  heroMetaChip:{ flexDirection: 'row', alignItems: 'center', gap: 4 },
-  heroMetaText:{ color: 'rgba(255,255,255,0.88)', fontSize: 13, fontWeight: '500' },
-  heroPills:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  heroName: { color: '#FFFFFF', fontSize: 34, fontWeight: '900', letterSpacing: -0.5 },
+  heroMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  heroMetaChip: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  heroMetaText: { color: 'rgba(255,255,255,0.88)', fontSize: text.caption.size, fontWeight: '500' },
+  heroPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   heroPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: shape.pill,
     paddingHorizontal: 10, paddingVertical: 5,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.20)',
   },
@@ -499,22 +501,22 @@ const s = StyleSheet.create({
     flexDirection: 'row', backgroundColor: L.bg,
     borderBottomWidth: 1, borderBottomColor: L.border,
   },
-  statCell:       { flex: 1, alignItems: 'center', paddingVertical: 14 },
+  statCell: { flex: 1, alignItems: 'center', paddingVertical: 14 },
   statCellBorder: { borderRightWidth: 1, borderRightColor: L.border },
-  statVal:  { color: L.navy, fontSize: 22, fontWeight: '900' },
-  statLabel:{ color: L.textSub, fontSize: 12, marginTop: 2 },
+  statVal: { color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800' },
+  statLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
 
   body: { padding: spacing.screenH, paddingTop: 20 },
 
   card: {
-    backgroundColor: L.bg, borderRadius: 14,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border, overflow: 'hidden',
   },
-  bioText: { color: L.text, fontSize: 14, lineHeight: 21, padding: 14, paddingBottom: 8 },
+  bioText: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 21, padding: 14, paddingBottom: 8 },
   bioMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, padding: 14, paddingTop: 0 },
-  bioMetaChip: { color: L.gold, fontSize: 13, fontWeight: '700' },
+  bioMetaChip: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
 
-  listRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  listRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
   listRowBorder: { borderTopWidth: 1, borderTopColor: L.border },
   eventIcon: {
     width: 38, height: 38, borderRadius: 19,
@@ -525,8 +527,8 @@ const s = StyleSheet.create({
     backgroundColor: L.page, alignItems: 'center', justifyContent: 'center',
   },
   eventInfo: { flex: 1 },
-  eventName: { color: L.navy, fontSize: 14, fontWeight: '700' },
-  eventMeta: { color: L.textSub, fontSize: 12, marginTop: 2 },
+  eventName: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  eventMeta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
 
   cta: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -543,10 +545,10 @@ const s = StyleSheet.create({
   },
   connectBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.gold, borderRadius: 14, paddingVertical: 14,
+    backgroundColor: L.gold, borderRadius: shape.cta, paddingVertical: 14,
   },
   connectBtnDone: { backgroundColor: colors.success },
-  connectText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  connectText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
   msgBtn: {
     width: 52, height: 52, borderRadius: 26,
     backgroundColor: L.page, borderWidth: 1.5, borderColor: L.border,

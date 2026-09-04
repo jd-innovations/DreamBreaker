@@ -8,6 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
 import { useSupportContext } from '@/lib/support/supportContext';
 
@@ -30,7 +32,7 @@ function SectionLabel({ label }: { label: string }) {
   return <Text style={sl.label}>{label}</Text>;
 }
 const sl = StyleSheet.create({
-  label: { color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.5, marginBottom: 10, marginTop: 4 },
+  label: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginBottom: 10, marginTop: 4 },
 });
 
 function ChipGroup({ options, selected, onToggle, multi = true }: {
@@ -61,11 +63,11 @@ const cg = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    borderRadius: 20, borderWidth: 1.5, borderColor: L.border,
+    borderRadius: shape.pill, borderWidth: 1.5, borderColor: L.border,
     paddingHorizontal: 14, paddingVertical: 8, backgroundColor: L.bg,
   },
   chipActive: { backgroundColor: L.navy, borderColor: L.navy },
-  text:       { color: L.textSub, fontSize: 13, fontWeight: '600' },
+  text: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   textActive: { color: '#FFFFFF' },
 });
 
@@ -327,13 +329,13 @@ const s = StyleSheet.create({
   },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1 },
-  title:    { color: L.navy, fontSize: 20, fontWeight: '900' },
-  subtitle: { color: L.textSub, fontSize: 13, marginTop: 2 },
+  title: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900' },
+  subtitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
 
   scroll: { padding: spacing.screenH, paddingTop: 20 },
 
   card: {
-    backgroundColor: L.bg, borderRadius: 14,
+    backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border, marginBottom: 4,
     overflow: 'hidden',
   },
@@ -343,22 +345,22 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 14,
     padding: 16,
   },
-  switchInfo:     { flex: 1, gap: 3 },
+  switchInfo: { flex: 1, gap: 3 },
   switchLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statusDot:      { width: 8, height: 8, borderRadius: 4 },
-  switchLabel:    { color: L.navy, fontSize: 15, fontWeight: '800' },
-  switchSub:      { color: L.textSub, fontSize: 12, lineHeight: 17 },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  switchLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
+  switchSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17 },
 
-  distRow:     { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  distRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   distStep: {
-    flex: 1, borderRadius: 10, borderWidth: 1.5, borderColor: L.border,
+    flex: 1, borderRadius: shape.cta, borderWidth: 1.5, borderColor: L.border,
     paddingVertical: 8, alignItems: 'center', backgroundColor: L.page,
   },
   distStepActive: { backgroundColor: L.navy, borderColor: L.navy },
-  distText:       { color: L.textSub, fontSize: 13, fontWeight: '600' },
+  distText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   distTextActive: { color: '#FFFFFF' },
-  distBar:   { height: 4, backgroundColor: L.page, borderRadius: 2, overflow: 'hidden' },
-  distFill:  { height: '100%', backgroundColor: L.gold, borderRadius: 2 },
+  distBar: { height: 4, backgroundColor: L.page, borderRadius: 2, overflow: 'hidden' },
+  distFill: { height: '100%', backgroundColor: L.gold, borderRadius: 2 },
 
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -367,8 +369,8 @@ const s = StyleSheet.create({
   },
   saveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.navy, borderRadius: 14, paddingVertical: 16,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 16,
   },
-  saveBtnDone:  { backgroundColor: L.success },
-  saveBtnText:  { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  saveBtnDone: { backgroundColor: L.success },
+  saveBtnText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 });

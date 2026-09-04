@@ -8,6 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
 import { useSupportContext } from '@/lib/support/supportContext';
 import type { SavedPlayer } from '@/lib/connectionStore';
@@ -94,32 +96,32 @@ function PlayerCard({ sp, onRemove }: { sp: SavedPlayer; onRemove: () => void })
 
 const pc = StyleSheet.create({
   card: {
-    backgroundColor: L.bg, borderRadius: 16,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border,
     padding: 14, gap: 12,
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  topRow:    { flexDirection: 'row', gap: 12 },
-  info:      { flex: 1, gap: 3 },
-  nameRow:   { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  name:      { color: L.navy, fontSize: 15, fontWeight: '800' },
+  topRow: { flexDirection: 'row', gap: 12 },
+  info: { flex: 1, gap: 3 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  name: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
   duprBadge: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  duprText:  { color: L.gold, fontSize: 12, fontWeight: '700' },
-  metaRow:   { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  meta:      { color: L.textSub, fontSize: 12 },
-  detail:    { color: L.textSub, fontSize: 12 },
+  duprText: { color: L.gold, fontSize: text.chipValue.size, fontWeight: '800' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  meta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  detail: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   detailVal: { color: L.text, fontWeight: '600' },
-  actions:   { flexDirection: 'row', gap: 8 },
+  actions: { flexDirection: 'row', gap: 8 },
   actionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 1.5, borderColor: L.border, borderRadius: 12, paddingVertical: 9,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, paddingVertical: 9,
   },
   actionBtnGold: { backgroundColor: L.gold, borderColor: L.gold },
-  actionText:    { color: L.navy, fontSize: 13, fontWeight: '700' },
+  actionText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
   removeBtn: {
     width: 42, borderWidth: 1.5, borderColor: colors.dangerBg,
-    borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+    borderRadius: shape.cta, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.dangerBg,
   },
 });
@@ -313,42 +315,42 @@ export default function SavedPlayersScreen() {
 }
 
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
   header: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 4,
     paddingHorizontal: spacing.screenH, paddingVertical: 12,
     backgroundColor: L.bg, borderBottomWidth: 1, borderBottomColor: L.border,
   },
-  backBtn:      { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   headerCenter: { flex: 1 },
-  title:        { color: L.navy, fontSize: 22, fontWeight: '900' },
-  subtitle:     { color: L.textSub, fontSize: 13, marginTop: 2 },
+  title: { color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800' },
+  subtitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
   statsRow: {
     flexDirection: 'row', backgroundColor: L.bg,
     borderBottomWidth: 1, borderBottomColor: L.border,
   },
-  statCell:       { flex: 1, alignItems: 'center', paddingVertical: 12 },
+  statCell: { flex: 1, alignItems: 'center', paddingVertical: 12 },
   statCellBorder: { borderRightWidth: 1, borderRightColor: L.border },
-  statVal:        { color: L.navy, fontSize: 22, fontWeight: '900' },
-  statLabel:      { color: L.textSub, fontSize: 12, marginTop: 2 },
-  scroll:   { paddingHorizontal: spacing.screenH, paddingTop: 16, gap: 4 },
+  statVal: { color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800' },
+  statLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+  scroll: { paddingHorizontal: spacing.screenH, paddingTop: 16, gap: 4 },
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: L.bg, borderRadius: 14, borderWidth: 1.5, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.panel, borderWidth: 1.5, borderColor: L.border,
     paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12,
   },
-  searchInput: { flex: 1, color: L.text, fontSize: 15, padding: 0 },
-  filterRow:   { gap: 8, paddingBottom: 16 },
-  filterChip:       { borderRadius: 20, borderWidth: 1.5, borderColor: L.border, paddingHorizontal: 14, paddingVertical: 7, backgroundColor: L.bg },
+  searchInput: { flex: 1, color: L.text, fontSize: text.body.size, fontWeight: '500', padding: 0 },
+  filterRow: { gap: 8, paddingBottom: 16 },
+  filterChip: { borderRadius: shape.pill, borderWidth: 1.5, borderColor: L.border, paddingHorizontal: 14, paddingVertical: 7, backgroundColor: L.bg },
   filterChipActive: { backgroundColor: L.navy, borderColor: L.navy },
-  filterText:       { color: L.textSub, fontSize: 13, fontWeight: '600' },
+  filterText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   filterTextActive: { color: '#FFFFFF' },
-  list:   { gap: 12 },
-  empty:      { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyTitle: { color: L.navy, fontSize: 18, fontWeight: '800' },
-  emptySub:   { color: L.textSub, fontSize: 14, textAlign: 'center', lineHeight: 20 },
-  emptyBtn:   { backgroundColor: L.gold, borderRadius: 14, paddingHorizontal: 28, paddingVertical: 13, marginTop: 8 },
-  emptyBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  list: { gap: 12 },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
+  emptyTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  emptySub: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textAlign: 'center', lineHeight: 20 },
+  emptyBtn: { backgroundColor: L.gold, borderRadius: shape.cta, paddingHorizontal: 28, paddingVertical: 13, marginTop: 8 },
+  emptyBtnText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
   footerBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: L.bg, borderTopWidth: 1, borderTopColor: L.border,
@@ -356,7 +358,7 @@ const s = StyleSheet.create({
   },
   findMoreBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.navy, borderRadius: 14, paddingVertical: 15,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 15,
   },
-  findMoreText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  findMoreText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 });
