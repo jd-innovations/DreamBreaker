@@ -252,6 +252,33 @@ they could cost a day of rework. The measurement should have come first.
 Coverage turned out to be roughly right — about 18 distinct jobs against 20
 roles — and this was the one value clearly chosen from too small a sample.
 
+## OPEN — deferred 2026-09-03, revisit before finishing round-robin
+
+**16 (proposed). The scale has a floor but no ceiling.** Decision 10 says sizes
+below 11 have no role and stay until one is proposed. Nothing says the same at
+the top. `round-robin/[id]/score-entry` has a score input at **36/900**, a
+success score at **48/900** and a dash at **32/400**; the largest role is
+`statNumber` 26/900, so forcing them would shrink a 48pt score to 26.
+
+They are currently left raw on the reasoning that decision 10's logic applies
+in both directions. **That reasoning is not yet a decision.** Either confirm it,
+or say those numerals map to `statNumber`, or add a display-numeral role.
+
+Until it is settled, `round-robin/[id]/results.tsx` and `roster.tsx` are not
+migrated — results carries the same large score display and would need the same
+call.
+
+**Also open, and the reason those three screens are committed but not
+published:** "Back" was 17/400 and takes `link` 13/700 on schedule, standings
+and score-entry. It is a text navigation link, so `link` is the job match, but
+it is four points smaller and heavier on a back button that appears on every
+round-robin screen. Worth looking at on device before it spreads.
+
+Its colour is `#007AFF`, the iOS system blue `DESIGN_TOKENS_2.md` counts 24
+times. Colour is out of scope for this document and was not touched.
+
+---
+
 **14. Avatar initials are exempt.** Text drawn to fit an avatar circle is sized
 to its container, not from the type scale — the same reasoning that leaves a
 36px circle's `borderRadius: 18` alone. Four instances so far: `booking/players`
