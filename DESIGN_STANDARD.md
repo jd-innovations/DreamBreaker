@@ -421,7 +421,7 @@ exemptions declared in the mapping — rule 12, enforced rather than remembered.
 
 <!-- BEGIN GENERATED: migration-log — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-42 files migrated, listed from the tree with the sha of the commit
+50 files migrated, listed from the tree with the sha of the commit
 that last touched each.
 
 | File | Last commit |
@@ -444,7 +444,15 @@ that last touched each.
 | `app/booking/players.tsx` | `f1c1ebd` |
 | `app/booking/results.tsx` | `54ff028` |
 | `app/booking/review.tsx` | `abb9086` |
+| `app/coach/[id].tsx` | `2638ed9` |
+| `app/coach/index.tsx` | `2638ed9` |
+| `app/coach/offers/[id]/edit.tsx` | `2638ed9` |
+| `app/coach/offers/create.tsx` | `2638ed9` |
+| `app/coach/offers/index.tsx` | `2638ed9` |
+| `app/coach/redeem.tsx` | `2638ed9` |
 | `app/facility/[id].tsx` | `22a4dd3` |
+| `app/lessons/[id].tsx` | `2638ed9` |
+| `app/lessons/index.tsx` | `2638ed9` |
 | `app/tournament/[id].tsx` | `16871ec` |
 | `app/tournament/[id]/add-registration.tsx` | `9564031` |
 | `app/tournament/[id]/brackets.tsx` | `9933f30` |
@@ -485,11 +493,11 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 
 | | Occurrences | Files |
 | --- | ---: | ---: |
-| Files importing `@shared/tokens` (migrated) | — | **42 of 218** (19%) |
-| Raw `fontSize: N` remaining | 1954 | 191 |
-| `borderRadius: radius.*` from `@/theme` remaining | 411 | 98 |
-| `borderRadius: 30` → `shape.cta` | 14 | 11 |
-| `borderRadius: 999` → `shape.cta` | 18 | 10 |
+| Files importing `@shared/tokens` (migrated) | — | **50 of 218** (23%) |
+| Raw `fontSize: N` remaining | 1869 | 187 |
+| `borderRadius: radius.*` from `@/theme` remaining | 388 | 90 |
+| `borderRadius: 30` → `shape.cta` | 10 | 9 |
+| `borderRadius: 999` → `shape.cta` | 16 | 8 |
 
 Raw sizes include the deliberate exemptions (below the 11pt floor, and
 avatar initials sized to their container), so the remaining count will not
