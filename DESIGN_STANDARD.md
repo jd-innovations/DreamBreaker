@@ -468,7 +468,7 @@ exemptions declared in the mapping — rule 12, enforced rather than remembered.
 
 <!-- BEGIN GENERATED: migration-log — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-116 files migrated, listed from the tree with the sha of the commit
+143 files migrated, listed from the tree with the sha of the commit
 that last touched each.
 
 | File | Last commit |
@@ -483,6 +483,9 @@ that last touched each.
 | `app/(tabs)/partner.tsx` | `fb47edb` |
 | `app/(tabs)/stats.tsx` | `5bc03cb` |
 | `app/(tabs)/tournaments.tsx` | `fb47edb` |
+| `app/account-settings.tsx` | `250cb8b` |
+| `app/apply-director.tsx` | `d32883a` |
+| `app/blocked-accounts.tsx` | `250cb8b` |
 | `app/booking/choose-time.tsx` | `22414dd` |
 | `app/booking/confirmation.tsx` | `13c2178` |
 | `app/booking/game-status.tsx` | `ae4b5b3` |
@@ -497,17 +500,31 @@ that last touched each.
 | `app/coach/offers/create.tsx` | `2638ed9` |
 | `app/coach/offers/index.tsx` | `2638ed9` |
 | `app/coach/redeem.tsx` | `2638ed9` |
+| `app/communication-settings.tsx` | `250cb8b` |
+| `app/delete-account.tsx` | `250cb8b` |
+| `app/edit-profile.tsx` | `d32883a` |
 | `app/facility/[id].tsx` | `22a4dd3` |
+| `app/forgot-password.tsx` | `d32883a` |
 | `app/groups/[id].tsx` | `81d23cd` |
 | `app/groups/[id]/chat.tsx` | `81d23cd` |
 | `app/groups/[id]/edit.tsx` | `81d23cd` |
 | `app/groups/create.tsx` | `81d23cd` |
+| `app/help-support.tsx` | `d32883a` |
+| `app/index.tsx` | `d32883a` |
+| `app/invite-accepted.tsx` | `d32883a` |
+| `app/invite-detail.tsx` | `d32883a` |
+| `app/invites.tsx` | `d32883a` |
 | `app/lessons/[id].tsx` | `2638ed9` |
 | `app/lessons/index.tsx` | `2638ed9` |
+| `app/location-settings.tsx` | `250cb8b` |
 | `app/marketplace/[id].tsx` | `d9a0909` |
 | `app/marketplace/create/index.tsx` | `d9a0909` |
 | `app/marketplace/edit/[id].tsx` | `d9a0909` |
 | `app/marketplace/my-listings.tsx` | `d9a0909` |
+| `app/membership-settings.tsx` | `250cb8b` |
+| `app/my-tournaments.tsx` | `d32883a` |
+| `app/new-message.tsx` | `d32883a` |
+| `app/notifications-settings.tsx` | `250cb8b` |
 | `app/onboarding/_layout.tsx` | `482b612` |
 | `app/onboarding/all-set.tsx` | `482b612` |
 | `app/onboarding/area-recommendations.tsx` | `482b612` |
@@ -526,9 +543,18 @@ that last touched each.
 | `app/onboarding/self-rating.tsx` | `482b612` |
 | `app/onboarding/welcome.tsx` | `482b612` |
 | `app/onboarding/your-name.tsx` | `482b612` |
+| `app/payments-settings.tsx` | `250cb8b` |
+| `app/payout-settings.tsx` | `250cb8b` |
+| `app/permissions-settings.tsx` | `250cb8b` |
+| `app/play-pickleball.tsx` | `d32883a` |
+| `app/rating-settings.tsx` | `250cb8b` |
+| `app/reset-password.tsx` | `d32883a` |
 | `app/round-robin/[id]/schedule.tsx` | `2c78032` |
 | `app/round-robin/[id]/score-entry.tsx` | `2c78032` |
 | `app/round-robin/[id]/standings.tsx` | `2c78032` |
+| `app/saved-events.tsx` | `d32883a` |
+| `app/sign-in.tsx` | `d32883a` |
+| `app/sign-up.tsx` | `d32883a` |
 | `app/tournament/[id].tsx` | `16871ec` |
 | `app/tournament/[id]/add-registration.tsx` | `9564031` |
 | `app/tournament/[id]/brackets.tsx` | `9933f30` |
@@ -549,6 +575,7 @@ that last touched each.
 | `app/tournament/[id]/results.tsx` | `0a7395d` |
 | `app/tournament/[id]/select-division.tsx` | `9564031` |
 | `app/tournament/[id]/workspace.tsx` | `c4cd45b` |
+| `app/wallet.tsx` | `d32883a` |
 | `components/AmenityPicker.tsx` | `0af9ba0` |
 | `components/AttachmentOptionsSheet.tsx` | `0af9ba0` |
 | `components/ContextMenu.tsx` | `a068e67` |
@@ -606,11 +633,11 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 
 | | Occurrences | Files |
 | --- | ---: | ---: |
-| Files importing `@shared/tokens` (migrated) | — | **116 of 218** (53%) |
-| Raw `fontSize: N` remaining | 1428 | 139 |
-| `borderRadius: radius.*` from `@/theme` remaining | 302 | 58 |
-| `borderRadius: 30` → `shape.cta` | 10 | 9 |
-| `borderRadius: 999` → `shape.cta` | 15 | 7 |
+| Files importing `@shared/tokens` (migrated) | — | **143 of 218** (66%) |
+| Raw `fontSize: N` remaining | 1174 | 128 |
+| `borderRadius: radius.*` from `@/theme` remaining | 280 | 47 |
+| `borderRadius: 30` → `shape.cta` | 9 | 8 |
+| `borderRadius: 999` → `shape.cta` | 14 | 6 |
 
 Raw sizes include the deliberate exemptions (below the 11pt floor, and
 avatar initials sized to their container), so the remaining count will not
