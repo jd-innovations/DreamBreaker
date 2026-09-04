@@ -7,7 +7,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+import { LoadingState } from '@/components/states/ScreenState';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components/StatusChip';
@@ -151,8 +152,7 @@ export default function ScoreEntryScreen() {
     return (
       <View style={[s.root, s.center]}>
         <StatusBar style="dark" />
-        <ActivityIndicator size="large" color={colors.gold} />
-        <Text style={{ marginTop: 12, fontSize: 14, color: colors.textSub }}>Loading match…</Text>
+        <LoadingState inline label="Loading match…" />
       </View>
     );
   }

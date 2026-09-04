@@ -1,15 +1,15 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, Alert, Share, Dimensions, ActivityIndicator,
-  Modal, TextInput, KeyboardAvoidingView, Platform,
+  Image, Alert, Share, Dimensions, Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, spacing, iconCircle } from '@/theme';
+import { colors, spacing, iconCircle } from '@/theme';
+import { EmptyState, LoadingState } from '@/components/states/ScreenState';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
@@ -325,8 +325,7 @@ export default function QuickGameCreatedScreen() {
   if (loadingEvt) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.page }}>
-        <ActivityIndicator size="large" color={colors.gold} />
-        <Text style={{ marginTop: 12, fontSize: 14, color: colors.textSub }}>Loading your game…</Text>
+        <LoadingState inline label="Loading your game…" />
       </View>
     );
   }
@@ -335,16 +334,13 @@ export default function QuickGameCreatedScreen() {
   if (id && notFound) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.page, padding: 32 }}>
-        <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
-        <Text style={{ fontSize: 18, fontWeight: '800', color: colors.navy, marginTop: 16, textAlign: 'center' }}>
-          Game not found
-        </Text>
-        <Text style={{ fontSize: 14, color: colors.textSub, marginTop: 8, textAlign: 'center' }}>
-          This game may have been removed or the link is invalid.
-        </Text>
-        <TouchableOpacity onPress={() => router.replace('/(tabs)/games' as never)} style={{ marginTop: 24 }}>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: colors.gold }}>Go to My Games</Text>
-        </TouchableOpacity>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Game not found"
+          message="This game may have been removed or the link is invalid."
+          inline
+          action={{ label: 'Go to My Games', onPress: () => router.replace('/(tabs)/games' as never) }}
+        />
       </View>
     );
   }

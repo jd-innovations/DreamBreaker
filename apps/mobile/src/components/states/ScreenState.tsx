@@ -130,6 +130,17 @@ export function ErrorState({
   message,
   onRetry,
   retryLabel = 'Retry',
+  /**
+   * A way out that is not a retry — "Go Back" when the thing cannot be
+   * re-fetched from here. Added 2026-09-04 adopting this component in
+   * `community/[id]`, whose error state offers only navigation. Without it the
+   * choice was to misname a back-navigation as `onRetry` or to drop the
+   * button, and dropping a CTA is not a refactor.
+   *
+   * Prefer `onRetry` when a retry is genuinely possible. If both are given,
+   * retry is offered first.
+   */
+  action,
   inline = false,
   style,
 }: {
@@ -137,6 +148,7 @@ export function ErrorState({
   message?: string;
   onRetry?: () => void;
   retryLabel?: string;
+  action?: ScreenStateAction;
   inline?: boolean;
   style?: ViewStyle;
 }) {
@@ -148,6 +160,10 @@ export function ErrorState({
       {onRetry ? (
         <TouchableOpacity onPress={onRetry} style={s.action} activeOpacity={0.7}>
           <Text style={s.actionText}>{retryLabel}</Text>
+        </TouchableOpacity>
+      ) : action ? (
+        <TouchableOpacity onPress={action.onPress} style={s.action} activeOpacity={0.7}>
+          <Text style={s.actionText}>{action.label}</Text>
         </TouchableOpacity>
       ) : null}
     </View>

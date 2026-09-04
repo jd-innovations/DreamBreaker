@@ -10,7 +10,8 @@ import { IS_INTERNAL_BUILD } from '@/lib/featureFlags';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, spacing, iconCircle } from '@/theme';
+import { colors, spacing, iconCircle } from '@/theme';
+import { EmptyState, LoadingState } from '@/components/states/ScreenState';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components/StatusChip';
@@ -573,8 +574,7 @@ export default function MiniTournamentCreatedScreen() {
   if (loadingEvt) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.page }}>
-        <ActivityIndicator size="large" color={colors.gold} />
-        <Text style={{ marginTop: 12, fontSize: 14, color: colors.textSub }}>Loading your tournament…</Text>
+        <LoadingState inline label="Loading your tournament…" />
       </View>
     );
   }
@@ -582,13 +582,12 @@ export default function MiniTournamentCreatedScreen() {
   if (isSupabase && notFound) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.page, padding: 32 }}>
-        <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
-        <Text style={{ fontSize: 18, fontWeight: '800', color: colors.navy, marginTop: 16, textAlign: 'center' }}>
-          Tournament not found
-        </Text>
-        <TouchableOpacity onPress={() => router.replace('/(tabs)/games' as never)} style={{ marginTop: 24 }}>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: colors.gold }}>Go to My Games</Text>
-        </TouchableOpacity>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Tournament not found"
+          inline
+          action={{ label: 'Go to My Games', onPress: () => router.replace('/(tabs)/games' as never) }}
+        />
       </View>
     );
   }

@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing } from '@/theme';
+import { FieldLabel } from '@/components/FieldLabel';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import {
@@ -62,9 +63,6 @@ const cs = StyleSheet.create({
   card: { backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border, overflow: 'hidden' },
 });
 
-function FieldLabel({ children }: { children: string }) {
-  return <Text style={{ fontSize: 12, fontWeight: '700', color: L.textSub, marginBottom: spacing.xs, letterSpacing: 0.3 }}>{children}</Text>;
-}
 
 export default function EditEventScreen() {
   const insets = useSafeAreaInsets();

@@ -10,6 +10,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/theme';
+import { EmptyState } from '@/components/states/ScreenState';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
@@ -397,11 +398,12 @@ export default function PlayerProfileScreen() {
     return (
       <View style={[s.root, { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }]}>
         <StatusBar style="dark" />
-        <Ionicons name="person-outline" size={52} color={L.textSub} />
-        <Text style={{ color: L.navy, fontSize: 18, fontWeight: '800', marginTop: 12 }}>Profile not found</Text>
-        <TouchableOpacity onPress={() => goBack()} style={{ marginTop: 16 }}>
-          <Text style={{ color: L.gold, fontWeight: '700' }}>Go back</Text>
-        </TouchableOpacity>
+        <EmptyState
+          icon="person-outline"
+          title="Profile not found"
+          inline
+          action={{ label: 'Go back', onPress: () => goBack() }}
+        />
       </View>
     );
   }

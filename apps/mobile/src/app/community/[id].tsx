@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing } from '@/theme';
+import { ErrorState } from '@/components/states/ScreenState';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
@@ -1570,13 +1571,11 @@ export default function CommunityEventScreen() {
     return (
       <View style={[s.root, { alignItems: 'center', justifyContent: 'center', padding: spacing.xxxl }]}>
         <StatusBar style="light" />
-        <Ionicons name="alert-circle-outline" size={44} color={L.textMuted} />
-        <Text style={{ color: L.textSub, fontSize: 15, fontWeight: '600', marginTop: spacing.md, textAlign: 'center' }}>
-          {pageError}
-        </Text>
-        <TouchableOpacity onPress={() => goBack()} style={{ marginTop: spacing.xl }}>
-          <Text style={{ color: L.gold, fontWeight: '700' }}>Go Back</Text>
-        </TouchableOpacity>
+        <ErrorState
+          title={pageError}
+          inline
+          action={{ label: 'Go Back', onPress: () => goBack() }}
+        />
       </View>
     );
   }

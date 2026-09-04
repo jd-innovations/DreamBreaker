@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing, iconCircle } from '@/theme';
+import { FieldLabel } from '@/components/FieldLabel';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -86,13 +87,6 @@ function Divider() {
   return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: L.border, marginVertical: 12 }} />;
 }
 
-function FieldLabel({ children }: { children: string }) {
-  return (
-    <Text style={{ fontSize: 12, fontWeight: '700', color: L.textSub, marginBottom: 6, letterSpacing: 0.3 }}>
-      {children}
-    </Text>
-  );
-}
 
 function DropdownBtn({
   icon, value, onPress,
