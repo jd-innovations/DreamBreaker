@@ -448,7 +448,7 @@ exemptions declared in the mapping — rule 12, enforced rather than remembered.
 
 <!-- BEGIN GENERATED: migration-log — edit packages/shared/src/tokens.ts, then run scripts/gen-design-standard.mjs -->
 
-73 files migrated, listed from the tree with the sha of the commit
+98 files migrated, listed from the tree with the sha of the commit
 that last touched each.
 
 | File | Last commit |
@@ -511,21 +511,46 @@ that last touched each.
 | `app/tournament/[id]/results.tsx` | `0a7395d` |
 | `app/tournament/[id]/select-division.tsx` | `9564031` |
 | `app/tournament/[id]/workspace.tsx` | `c4cd45b` |
+| `components/AmenityPicker.tsx` | `0af9ba0` |
+| `components/AttachmentOptionsSheet.tsx` | `0af9ba0` |
+| `components/ContextMenu.tsx` | `a068e67` |
+| `components/DirectorOnly.tsx` | `0af9ba0` |
 | `components/EventWeatherCard.tsx` | `8aed181` |
+| `components/ExploreMap.web.tsx` | `0af9ba0` |
 | `components/FacilityCard.tsx` | `8aed181` |
 | `components/FacilityPicker.tsx` | `8aed181` |
+| `components/FileAttachmentRow.tsx` | `0af9ba0` |
 | `components/FindGamesFilterModal.tsx` | `8aed181` |
+| `components/InfoTooltip.tsx` | `0af9ba0` |
+| `components/JoinCelebration.tsx` | `0af9ba0` |
+| `components/LocationCard.tsx` | `0af9ba0` |
+| `components/ManageEventSheet.tsx` | `0af9ba0` |
+| `components/OperatingHoursEditor.tsx` | `0af9ba0` |
 | `components/PrimaryButton.tsx` | `f4469e9` |
+| `components/QRScanner.native.tsx` | `0af9ba0` |
+| `components/QRScanner.web.tsx` | `0af9ba0` |
+| `components/ReactionPills.tsx` | `0af9ba0` |
 | `components/SecondaryButton.tsx` | `f4469e9` |
+| `components/SectionCard.tsx` | `0af9ba0` |
+| `components/SettingsRow.tsx` | `0af9ba0` |
 | `components/SlideMenu/SlideMenuProvider.tsx` | `8aed181` |
 | `components/StatusChip.tsx` | `b0fd68d` |
 | `components/TournamentTrendingCard.tsx` | `8aed181` |
+| `components/VenueMapCard.web.tsx` | `0af9ba0` |
 | `components/safety/ReportUserSheet.tsx` | `8aed181` |
+| `components/states/OfflineBanner.tsx` | `0af9ba0` |
+| `components/states/ScreenState.tsx` | `0af9ba0` |
+| `components/stats/ParGauge.tsx` | `a068e67` |
 | `components/stats/PlayerCredentialCard.tsx` | `8aed181` |
+| `components/stats/PlayerStatTile.tsx` | `0af9ba0` |
 | `components/support/ReportProblemForm.tsx` | `8aed181` |
+| `components/support/SupportConfirmation.tsx` | `0af9ba0` |
+| `components/support/SupportSheet.tsx` | `0af9ba0` |
 | `components/wallet/WalletActivityRow.tsx` | `65f1a6d` |
 | `components/wallet/WalletCard.tsx` | `8aed181` |
+| `components/wallet/WalletEmptyState.tsx` | `0af9ba0` |
 | `components/wallet/WalletRedeemSheet.tsx` | `8aed181` |
+| `components/wallet/WalletSection.tsx` | `0af9ba0` |
 
 <!-- END GENERATED: migration-log -->
 
@@ -543,9 +568,9 @@ under `apps/mobile/src` carry a `fontSize` or `borderRadius`.
 
 | | Occurrences | Files |
 | --- | ---: | ---: |
-| Files importing `@shared/tokens` (migrated) | — | **73 of 218** (33%) |
-| Raw `fontSize: N` remaining | 1558 | 175 |
-| `borderRadius: radius.*` from `@/theme` remaining | 337 | 80 |
+| Files importing `@shared/tokens` (migrated) | — | **98 of 218** (45%) |
+| Raw `fontSize: N` remaining | 1510 | 156 |
+| `borderRadius: radius.*` from `@/theme` remaining | 327 | 74 |
 | `borderRadius: 30` → `shape.cta` | 10 | 9 |
 | `borderRadius: 999` → `shape.cta` | 15 | 7 |
 
