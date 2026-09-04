@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, useTheme, useThemedStyles, type ThemeRoles } from '@/theme';
 import { ErrorState } from '@/components/states/ScreenState';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -44,25 +44,6 @@ import { VenueMapCard } from '@/components/VenueMapCard';
 import { useSession } from '@/hooks/useSession';
 import { useSupportContext } from '@/lib/support/supportContext';
 
-// Theme-backed alias — brand values resolve from @/theme.
-const L = {
-  bg:          colors.bg,
-  page:        colors.page,
-  navy:        colors.navy,
-  gold:        colors.gold,
-  goldLight:   colors.goldLight,
-  goldBg:      colors.goldBg,
-  goldBorder:  colors.goldBorder,
-  text:        colors.text,
-  textSub:     colors.textSub,
-  textMuted:   colors.textSub,
-  border:      colors.border,
-  green:       colors.success,
-  greenBg:     colors.successBg,
-  greenBorder: '#BBF7D0',
-  danger:      colors.danger,
-  dangerBg:    colors.dangerBg,
-};
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -107,7 +88,7 @@ const EMPTY_EVENT: EventShape = {
   players: 0, maxPlayers: 0, spots: 0, pctFilled: 0,
   heroPhoto: '',
   format: '', skillLevel: '', courtType: '', fee: '',
-  organizer: { name: '', initials: '', bg: L.navy, rating: '', events: 0, userId: null },
+  organizer: { name: '', initials: '', bg: colors.navy, rating: '', events: 0, userId: null },
   about: '',
   participants: [],
   weather: { temp: 0, high: 0, low: 0, condition: '', icon: 'help-outline', wind: 0, humidity: 0 },
@@ -195,7 +176,7 @@ function mapPlayEvent(data: PlayEventWithOrganizer, participantCount: number): E
     organizer: {
       name: orgName,
       initials,
-      bg: L.navy,
+      bg: colors.navy,
       rating: '',
       events: 0,
       userId: data.organizer_id,
@@ -212,7 +193,7 @@ function mapPlayEvent(data: PlayEventWithOrganizer, participantCount: number): E
 // ─── Mock: accepted players ───────────────────────────────────────────────────
 
 const INITIAL_ACCEPTED = [
-  { id: 'a1', name: 'John D.',   initials: 'JD', bg: L.navy, rating: '4.1 DUPR', level: 'Competitive',  userId: null as string | null },
+  { id: 'a1', name: 'John D.',   initials: 'JD', bg: colors.navy, rating: '4.1 DUPR', level: 'Competitive',  userId: null as string | null },
   { id: 'a2', name: 'Sarah M.',  initials: 'SM', bg: '#4A8C6F', rating: '3.8 DUPR', level: 'Competitive',  userId: null as string | null },
   { id: 'a3', name: 'Jake R.',   initials: 'JR', bg: '#3A6B9A', rating: '4.0 DUPR', level: 'Competitive',  userId: null as string | null },
   { id: 'a4', name: 'Maria K.',  initials: 'MK', bg: '#7A4F3A', rating: '3.6 DUPR', level: 'Recreational', userId: null as string | null },
@@ -230,7 +211,7 @@ const INITIAL_PENDING = [
 
 const INITIAL_MESSAGES = [
   { id: 'm1', sender: 'Anna Rodriguez', initials: 'AR', bg: '#4A8C6F', time: '2:15 PM', message: 'Looking forward to another great round robin tonight! 🎾', isMe: false },
-  { id: 'm2', sender: 'John D.',        initials: 'JD', bg: L.navy, time: '2:18 PM', message: 'Same! Will courts 3 and 4 be open again?', isMe: false },
+  { id: 'm2', sender: 'John D.',        initials: 'JD', bg: colors.navy, time: '2:18 PM', message: 'Same! Will courts 3 and 4 be open again?', isMe: false },
   { id: 'm3', sender: 'Anna Rodriguez', initials: 'AR', bg: '#4A8C6F', time: '2:20 PM', message: 'Yes, all 4 courts reserved for us from 6 to 8:30 PM.', isMe: false },
   { id: 'm4', sender: 'Sarah M.',       initials: 'SM', bg: '#4A8C6F', time: '3:05 PM', message: "Can't wait! See everyone tonight 👋", isMe: false },
 ];
@@ -238,7 +219,7 @@ const INITIAL_MESSAGES = [
 // ─── Participant roster helpers ───────────────────────────────────────────────
 
 const PARTICIPANT_COLORS = [
-  L.navy, '#4A8C6F', '#3A6B9A', '#7A4F3A',
+  colors.navy, '#4A8C6F', '#3A6B9A', '#7A4F3A',
   '#2D5A3D', '#5A3A7A', '#6B4A2D', '#2D4A6B',
 ];
 
@@ -278,10 +259,12 @@ function toParticipantRow(
 function InfoRow({ icon, label, value, valueColor }: {
   icon: AppIconName; label: string; value: string; valueColor?: string;
 }) {
+  const ir = useThemedStyles(irStyles);
+  const { roles: t } = useTheme();
   return (
     <View style={ir.row}>
       <View style={ir.iconWrap}>
-        <AppIcon name={icon} size={18} color={L.gold} />
+        <AppIcon name={icon} size={18} color={t.accent} />
       </View>
       <View style={ir.text}>
         <Text style={ir.label}>{label}</Text>
@@ -291,12 +274,12 @@ function InfoRow({ icon, label, value, valueColor }: {
   );
 }
 
-const ir = StyleSheet.create({
+const irStyles = (t: ThemeRoles) => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
-  iconWrap: { width: 36, height: 36, borderRadius: shape.cta, backgroundColor: L.goldLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  iconWrap: { width: 36, height: 36, borderRadius: shape.cta, backgroundColor: t.accentBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   text: { flex: 1 },
-  label: { color: L.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 0.3, marginBottom: spacing.xs },
-  value: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', lineHeight: 20 },
+  label: { color: t.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 0.3, marginBottom: spacing.xs },
+  value: { color: t.textPrimary, fontSize: text.rowTitle.size, fontWeight: '700', lineHeight: 20 },
 });
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -315,6 +298,7 @@ const TAB_LABEL: Record<Tab, string> = {
 // fades in once the inline one scrolls away. Shared so the two copies cannot
 // drift apart.
 function TabRow({ active, onSelect }: { active: Tab; onSelect: (t: Tab) => void }) {
+  const tb = useThemedStyles(tbStyles);
   return (
     <View style={tb.bar}>
       {(['overview', 'players', 'chat'] as Tab[]).map(tab => (
@@ -335,6 +319,12 @@ function TabRow({ active, onSelect }: { active: Tab; onSelect: (t: Tab) => void 
 }
 
 export default function CommunityEventScreen() {
+  const s  = useThemedStyles(sStyles);
+  const ir = useThemedStyles(irStyles);
+  const pl = useThemedStyles(plStyles);
+  const gf = useThemedStyles(gfStyles);
+  const ch = useThemedStyles(chStyles);
+  const { roles: t, statusBarStyle } = useTheme();
   const { id, tab: initialTabParam } = useLocalSearchParams<{ id: string; tab?: Tab }>();
   const insets   = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
@@ -667,13 +657,13 @@ export default function CommunityEventScreen() {
 
   // Resolve a sender_id to display name/initials/colour from known participants.
   const senderMeta = useCallback((senderId: string) => {
-    if (user && senderId === user.id) return { name: 'You', initials: 'ME', bg: L.gold };
+    if (user && senderId === user.id) return { name: 'You', initials: 'ME', bg: colors.gold };
     if (liveEvent && senderId === liveEvent.organizer.userId) {
-      return { name: liveEvent.organizer.name, initials: liveEvent.organizer.initials, bg: L.navy };
+      return { name: liveEvent.organizer.name, initials: liveEvent.organizer.initials, bg: colors.navy };
     }
     const p = liveParticipants.find(lp => lp.userId === senderId);
     if (p) return { name: p.name, initials: p.initials, bg: p.bg };
-    return { name: 'Player', initials: '··', bg: L.textMuted };
+    return { name: 'Player', initials: '··', bg: colors.textSub };
   }, [user, liveEvent, liveParticipants]);
 
   // Unified render shape: real DB messages for UUID events, mock list otherwise.
@@ -709,8 +699,8 @@ export default function CommunityEventScreen() {
       setMsgingId(null);
     }
   }, []);
-  const fillColor = event.badgeGold ? L.gold : L.green;
-  const fillBg    = event.badgeGold ? L.goldLight : L.greenBg;
+  const fillColor = event.badgeGold ? t.accent : t.success;
+  const fillBg    = event.badgeGold ? t.accentBg : t.successBg;
 
   async function submitGuestJoin() {
     const firstName = guestName.trim();
@@ -884,7 +874,7 @@ export default function CommunityEventScreen() {
       setSpotsLeft(s => s - 1);
       setAccepted(prev => [
         ...prev,
-        { id: 'me', name: 'You', initials: 'ME', bg: L.gold, rating: '3.5 DUPR', level: 'Recreational', userId: null },
+        { id: 'me', name: 'You', initials: 'ME', bg: colors.gold, rating: '3.5 DUPR', level: 'Recreational', userId: null },
       ]);
     } else if (userStatus === 'invited') {
       setUserStatus('joined');
@@ -893,11 +883,11 @@ export default function CommunityEventScreen() {
       setSpotsLeft(s => s - 1);
       setAccepted(prev => [
         ...prev,
-        { id: 'me', name: 'You', initials: 'ME', bg: L.gold, rating: '3.5 DUPR', level: 'Recreational', userId: null },
+        { id: 'me', name: 'You', initials: 'ME', bg: colors.gold, rating: '3.5 DUPR', level: 'Recreational', userId: null },
       ]);
       setPending(prev => prev.filter(p => p.id !== 'me-pending'));
       setMessages(prev => [...prev, {
-        id: `sys-${Date.now()}`, sender: 'You', initials: 'ME', bg: L.gold,
+        id: `sys-${Date.now()}`, sender: 'You', initials: 'ME', bg: colors.gold,
         time: 'Just now', message: 'Just accepted the invite! Looking forward to playing 🎾', isMe: true,
       }]);
     } else if (userStatus === 'joined') {
@@ -932,7 +922,7 @@ export default function CommunityEventScreen() {
 
     // Mock path (non-UUID demo events) — unchanged behaviour.
     setMessages(prev => [...prev, {
-      id: `m${Date.now()}`, sender: 'You', initials: 'ME', bg: L.gold,
+      id: `m${Date.now()}`, sender: 'You', initials: 'ME', bg: colors.gold,
       time: 'Just now', message: body, isMe: true,
     }]);
     setChatMsg('');
@@ -966,20 +956,20 @@ export default function CommunityEventScreen() {
             activeOpacity={0.8}
             onPress={() => router.push(`/mini-tournament/${event.id}/bracket` as never)}
           >
-            <Ionicons name="git-network-outline" size={16} color={L.gold} />
+            <Ionicons name="git-network-outline" size={16} color={t.accent} />
             <Text style={s.bracketBannerText}>View Bracket</Text>
-            <Ionicons name="chevron-forward" size={14} color={L.textSub} />
+            <Ionicons name="chevron-forward" size={14} color={t.textSecondary} />
           </TouchableOpacity>
         )}
 
         {/* Stat pills + fill bar */}
         <View style={s.statPills}>
           <View style={s.statPill}>
-            <Ionicons name="time-outline" size={13} color={L.gold} />
+            <Ionicons name="time-outline" size={13} color={t.accent} />
             <Text style={s.statPillText}>{event.time}</Text>
           </View>
           <View style={s.statPill}>
-            <Ionicons name="speedometer-outline" size={13} color={L.gold} />
+            <Ionicons name="speedometer-outline" size={13} color={t.accent} />
             <Text style={s.statPillText}>{event.skillLevel}</Text>
           </View>
           <View style={[s.statPill, { borderColor: fillColor, backgroundColor: fillBg }]}>
@@ -1017,7 +1007,7 @@ export default function CommunityEventScreen() {
           <View style={s.divider} />
           <View style={ir.row}>
             <View style={ir.iconWrap}>
-              <AppIcon name="location-outline" size={18} color={L.gold} />
+              <AppIcon name="location-outline" size={18} color={t.accent} />
             </View>
             <View style={ir.text}>
               <Text style={ir.label}>VENUE</Text>
@@ -1025,7 +1015,7 @@ export default function CommunityEventScreen() {
                 disabled={!facilityDetail}
                 onPress={() => facilityDetail && router.push(`/facility/${facilityDetail.id}` as never)}
               >
-                <Text style={[ir.value, facilityDetail && { color: L.gold, textDecorationLine: 'underline' }]}>
+                <Text style={[ir.value, facilityDetail && { color: t.accent, textDecorationLine: 'underline' }]}>
                   {venueName}
                 </Text>
               </TouchableOpacity>
@@ -1040,7 +1030,7 @@ export default function CommunityEventScreen() {
           <InfoRow icon="grid-outline"       label="COURT TYPE"  value={event.courtType} />
           <View style={s.divider} />
           <InfoRow icon="cash-outline"       label="ENTRY FEE"   value={event.fee}
-            valueColor={event.fee === 'Free' ? L.green : L.text} />
+            valueColor={event.fee === 'Free' ? t.success : t.textPrimary} />
         </View>
 
         {/* Players joined preview */}
@@ -1071,7 +1061,7 @@ export default function CommunityEventScreen() {
           <View style={s.orgInfo}>
             <Text style={s.orgName}>{event.organizer.name}</Text>
             <View style={s.orgMeta}>
-              <Ionicons name="trophy-outline" size={12} color={L.textMuted} />
+              <Ionicons name="trophy-outline" size={12} color={t.textMuted} />
               <Text style={s.orgMetaText}>{event.organizer.rating}</Text>
               <Text style={s.orgDot}>·</Text>
               <Text style={s.orgMetaText}>{event.organizer.events} events hosted</Text>
@@ -1095,8 +1085,8 @@ export default function CommunityEventScreen() {
           }}
         >
           {msgingId === 'organizer'
-            ? <ActivityIndicator size="small" color={L.navy} />
-            : <Ionicons name="chatbubble-outline" size={15} color={L.navy} />}
+            ? <ActivityIndicator size="small" color={t.textPrimary} />
+            : <Ionicons name="chatbubble-outline" size={15} color={t.textPrimary} />}
           <Text style={s.msgOrgText}>Message Organizer</Text>
         </TouchableOpacity>
 
@@ -1112,7 +1102,7 @@ export default function CommunityEventScreen() {
               />
             ) : (
               <>
-                <Ionicons name="map-outline" size={36} color={L.textMuted} />
+                <Ionicons name="map-outline" size={36} color={t.textMuted} />
                 <Text style={s.mapText}>Map preview</Text>
               </>
             )}
@@ -1152,7 +1142,7 @@ export default function CommunityEventScreen() {
                   );
                 }}
               >
-                <Ionicons name="navigate-outline" size={14} color={L.gold} />
+                <Ionicons name="navigate-outline" size={14} color={t.accent} />
                 <Text style={s.directionsBtnText}>Get Directions</Text>
               </TouchableOpacity>
               {facilityDetail && (
@@ -1160,7 +1150,7 @@ export default function CommunityEventScreen() {
                   style={s.viewFacilityBtn}
                   onPress={() => router.push(`/facility/${facilityDetail.id}` as never)}
                 >
-                  <Ionicons name="business-outline" size={14} color={L.gold} />
+                  <Ionicons name="business-outline" size={14} color={t.accent} />
                   <Text style={s.viewFacilityBtnText}>View Facility</Text>
                 </TouchableOpacity>
               )}
@@ -1212,7 +1202,7 @@ export default function CommunityEventScreen() {
               </View>
             </View>
             <View style={s.orgMeta}>
-              <Ionicons name="trophy-outline" size={12} color={L.textMuted} />
+              <Ionicons name="trophy-outline" size={12} color={t.textMuted} />
               <Text style={s.orgMetaText}>{event.organizer.rating}</Text>
               <Text style={s.orgDot}>·</Text>
               <Text style={s.orgMetaText}>{event.organizer.events} events hosted</Text>
@@ -1227,12 +1217,12 @@ export default function CommunityEventScreen() {
               <Text style={s.sectionTitle}>Accepted Players</Text>
               <TouchableOpacity style={pl.viewAllBtn} activeOpacity={0.75}>
                 <Text style={pl.viewAllText}>View All</Text>
-                <Ionicons name="chevron-forward" size={14} color={L.gold} />
+                <Ionicons name="chevron-forward" size={14} color={t.accent} />
               </TouchableOpacity>
             </View>
             {participantsLoading && isUUID ? (
               <View style={[pl.listCard, pl.emptyWrap]}>
-                <ActivityIndicator size="small" color={L.gold} />
+                <ActivityIndicator size="small" color={t.accent} />
               </View>
             ) : participantsError && isUUID ? (
               <View style={[pl.listCard, pl.emptyWrap]}>
@@ -1277,17 +1267,17 @@ export default function CommunityEventScreen() {
                             onPress={() => openDM(player.userId!, player.userId!)}
                           >
                             {msgingId === player.userId
-                              ? <ActivityIndicator size="small" color={L.navy} />
-                              : <Ionicons name="chatbubble-outline" size={16} color={L.navy} />}
+                              ? <ActivityIndicator size="small" color={t.textPrimary} />
+                              : <Ionicons name="chatbubble-outline" size={16} color={t.textPrimary} />}
                           </TouchableOpacity>
                         ) : isUUID && !pr.isClaimed ? (
                           <View style={pl.acceptedChip}>
-                            <Ionicons name="person-outline" size={14} color={L.textMuted} />
-                            <Text style={[pl.acceptedText, { color: L.textMuted }]}>Guest</Text>
+                            <Ionicons name="person-outline" size={14} color={t.textMuted} />
+                            <Text style={[pl.acceptedText, { color: t.textMuted }]}>Guest</Text>
                           </View>
                         ) : (
                           <View style={pl.acceptedChip}>
-                            <Ionicons name="checkmark-circle" size={14} color={L.green} />
+                            <Ionicons name="checkmark-circle" size={14} color={t.success} />
                             <Text style={pl.acceptedText}>Accepted</Text>
                           </View>
                         )}
@@ -1335,7 +1325,7 @@ export default function CommunityEventScreen() {
           <>
             <Text style={s.sectionTitle}>Waitlist</Text>
             <View style={[pl.listCard, pl.emptyWrap]}>
-              <Ionicons name="time-outline" size={28} color={L.textMuted} />
+              <Ionicons name="time-outline" size={28} color={t.textMuted} />
               <Text style={pl.emptyText}>No one on the waitlist</Text>
             </View>
           </>
@@ -1346,7 +1336,7 @@ export default function CommunityEventScreen() {
           <>
             {isPastEvent && (
               <View style={pl.pastNotice}>
-                <Ionicons name="time-outline" size={13} color={L.textMuted} />
+                <Ionicons name="time-outline" size={13} color={t.textMuted} />
                 <Text style={pl.pastNoticeText}>
                   {event.badge === 'CANCELLED' ? 'This event was cancelled — invites are closed.' : 'This event has ended — invites are closed.'}
                 </Text>
@@ -1361,7 +1351,7 @@ export default function CommunityEventScreen() {
                 params: { id },
               } as never)}
             >
-              <Ionicons name="person-add-outline" size={18} color={isPastEvent ? L.textMuted : L.navy} />
+              <Ionicons name="person-add-outline" size={18} color={isPastEvent ? t.textMuted : t.textPrimary} />
               <Text style={[pl.inviteBtnText, isPastEvent && pl.inviteBtnTextDisabled]}>Invite Players</Text>
             </TouchableOpacity>
           </>
@@ -1384,26 +1374,26 @@ export default function CommunityEventScreen() {
             <Text style={ch.headerTitle}>{event.name}</Text>
             <Text style={ch.headerSub}>{memberCount} Members</Text>
           </View>
-          <Ionicons name="chatbubbles-outline" size={22} color={L.textMuted} />
+          <Ionicons name="chatbubbles-outline" size={22} color={t.textMuted} />
         </View>
 
         {isUUID && chatLoading && chatMessages.length === 0 ? (
           <View style={ch.emptyWrap}>
-            <ActivityIndicator size="small" color={L.gold} />
+            <ActivityIndicator size="small" color={t.accent} />
           </View>
         ) : isUUID && chatError ? (
           <View style={ch.emptyWrap}>
-            <Ionicons name="alert-circle-outline" size={36} color={L.textMuted} />
+            <Ionicons name="alert-circle-outline" size={36} color={t.textMuted} />
             <Text style={ch.emptyText}>{chatError}</Text>
           </View>
         ) : !isUUID && !hasEnoughPlayers ? (
           <View style={ch.emptyWrap}>
-            <Ionicons name="chatbubble-ellipses-outline" size={36} color={L.textMuted} />
+            <Ionicons name="chatbubble-ellipses-outline" size={36} color={t.textMuted} />
             <Text style={ch.emptyText}>Chat becomes available once another player joins.</Text>
           </View>
         ) : chatMessages.length === 0 ? (
           <View style={ch.emptyWrap}>
-            <Ionicons name="chatbubble-ellipses-outline" size={36} color={L.textMuted} />
+            <Ionicons name="chatbubble-ellipses-outline" size={36} color={t.textMuted} />
             <Text style={ch.emptyText}>No messages yet. Say hello! 👋</Text>
           </View>
         ) : (
@@ -1447,7 +1437,7 @@ export default function CommunityEventScreen() {
             value={chatMsg}
             onChangeText={setChatMsg}
             placeholder="Message the group…"
-            placeholderTextColor={L.textMuted}
+            placeholderTextColor={t.textMuted}
             returnKeyType="send"
             onSubmitEditing={sendMessage}
             onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80)}
@@ -1482,8 +1472,8 @@ export default function CommunityEventScreen() {
               disabled={joiningEvent}
             >
               {joiningEvent
-                ? <ActivityIndicator size="small" color={L.navy} />
-                : <PickleballIcon size={18} color={L.navy} />}
+                ? <ActivityIndicator size="small" color={t.textPrimary} />
+                : <PickleballIcon size={18} color={t.textPrimary} />}
               <Text style={s.joinBtnText}>{joiningEvent ? 'Joining…' : 'Join Event'}</Text>
             </TouchableOpacity>
           </>
@@ -1496,7 +1486,7 @@ export default function CommunityEventScreen() {
               <Text style={s.bottomPlayers}>{joinedCount}/{event.maxPlayers} players joined</Text>
             </View>
             <TouchableOpacity style={s.joinBtn} onPress={handleCTAPress} activeOpacity={0.88}>
-              <Ionicons name="checkmark-circle-outline" size={18} color={L.navy} />
+              <Ionicons name="checkmark-circle-outline" size={18} color={t.textPrimary} />
               <Text style={s.joinBtnText}>Accept Invite</Text>
             </TouchableOpacity>
           </>
@@ -1506,7 +1496,7 @@ export default function CommunityEventScreen() {
           <View style={s.joinedRow}>
             <View style={s.joinedStatus}>
               <View style={s.joinedCheck}>
-                <Ionicons name="checkmark" size={14} color={L.green} />
+                <Ionicons name="checkmark" size={14} color={t.success} />
               </View>
               <View>
                 <Text style={s.joinedLabel}>You're In! ✓</Text>
@@ -1515,12 +1505,12 @@ export default function CommunityEventScreen() {
             </View>
             <View style={s.joinedActions}>
               <TouchableOpacity
-                style={[s.joinBtn, { flex: 1, justifyContent: 'center', backgroundColor: L.greenBg, borderWidth: 1.5, borderColor: L.green }]}
+                style={[s.joinBtn, { flex: 1, justifyContent: 'center', backgroundColor: t.successBg, borderWidth: 1.5, borderColor: t.success }]}
                 onPress={handleCTAPress}
                 activeOpacity={0.85}
               >
-                <Ionicons name="people-outline" size={18} color={L.green} />
-                <Text style={[s.joinBtnText, { color: L.green }]}>View Players</Text>
+                <Ionicons name="people-outline" size={18} color={t.success} />
+                <Text style={[s.joinBtnText, { color: t.success }]}>View Players</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={s.leaveBtn}
@@ -1529,10 +1519,10 @@ export default function CommunityEventScreen() {
                 disabled={leaving}
               >
                 {leaving ? (
-                  <ActivityIndicator size="small" color={L.danger} />
+                  <ActivityIndicator size="small" color={t.danger} />
                 ) : (
                   <>
-                    <Ionicons name="exit-outline" size={18} color={L.danger} />
+                    <Ionicons name="exit-outline" size={18} color={t.danger} />
                     <Text style={s.leaveBtnText}>Leave</Text>
                   </>
                 )}
@@ -1548,7 +1538,7 @@ export default function CommunityEventScreen() {
               <Text style={s.bottomPlayers}>{joinedCount}/{event.maxPlayers} players joined</Text>
             </View>
             <TouchableOpacity style={s.joinBtn} onPress={handleCTAPress} activeOpacity={0.88}>
-              <Ionicons name="settings-outline" size={18} color={L.navy} />
+              <Ionicons name="settings-outline" size={18} color={t.textPrimary} />
               <Text style={s.joinBtnText}>Manage Event</Text>
             </TouchableOpacity>
           </>
@@ -1561,8 +1551,8 @@ export default function CommunityEventScreen() {
   if (pageLoading) {
     return (
       <View style={[s.root, { alignItems: 'center', justifyContent: 'center' }]}>
-        <StatusBar style="light" />
-        <ActivityIndicator size="large" color={L.gold} />
+        <StatusBar style={statusBarStyle} />
+        <ActivityIndicator size="large" color={t.accent} />
       </View>
     );
   }
@@ -1570,7 +1560,7 @@ export default function CommunityEventScreen() {
   if (pageError) {
     return (
       <View style={[s.root, { alignItems: 'center', justifyContent: 'center', padding: spacing.xxxl }]}>
-        <StatusBar style="light" />
+        <StatusBar style={statusBarStyle} />
         <ErrorState
           title={pageError}
           inline
@@ -1629,7 +1619,7 @@ export default function CommunityEventScreen() {
                 <Ionicons name="share-outline" size={20} color={colors.white} />
               </TouchableOpacity>
               <TouchableOpacity style={s.circleBtn} onPress={() => setSaved(v => !v)} activeOpacity={0.85}>
-                <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? L.gold : colors.white} />
+                <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? t.accent : colors.white} />
               </TouchableOpacity>
               {communityCalendarEvent && (
                 <AddToCalendarButton
@@ -1650,7 +1640,7 @@ export default function CommunityEventScreen() {
           </View>
           <View style={s.heroContent}>
             <View style={[s.badge, { backgroundColor: fillColor }]}>
-              <Text style={[s.badgeText, { color: event.badgeGold ? L.navy : colors.white }]}>{event.badge}</Text>
+              <Text style={[s.badgeText, { color: event.badgeGold ? t.textPrimary : colors.white }]}>{event.badge}</Text>
             </View>
             <Text style={s.heroTitle}>{event.name}</Text>
             <View style={s.heroMeta}>
@@ -1713,7 +1703,7 @@ export default function CommunityEventScreen() {
                 <TextInput
                   style={gf.input}
                   placeholder="First name"
-                  placeholderTextColor={L.textMuted}
+                  placeholderTextColor={t.textMuted}
                   value={guestName}
                   onChangeText={setGuestName}
                   autoCapitalize="words"
@@ -1725,7 +1715,7 @@ export default function CommunityEventScreen() {
                 <TextInput
                   style={gf.input}
                   placeholder="e.g. D"
-                  placeholderTextColor={L.textMuted}
+                  placeholderTextColor={t.textMuted}
                   value={guestInitial}
                   onChangeText={v => setGuestInitial(v.slice(0, 1).toUpperCase())}
                   autoCapitalize="characters"
@@ -1738,7 +1728,7 @@ export default function CommunityEventScreen() {
                 <TextInput
                   style={gf.input}
                   placeholder="your@email.com"
-                  placeholderTextColor={L.textMuted}
+                  placeholderTextColor={t.textMuted}
                   value={guestEmail}
                   onChangeText={setGuestEmail}
                   keyboardType="email-address"
@@ -1754,8 +1744,8 @@ export default function CommunityEventScreen() {
                 onPress={submitGuestJoin}
               >
                 {guestJoining
-                  ? <ActivityIndicator size="small" color={L.navy} />
-                  : <PickleballIcon size={18} color={L.navy} />}
+                  ? <ActivityIndicator size="small" color={t.textPrimary} />
+                  : <PickleballIcon size={18} color={t.textPrimary} />}
                 <Text style={gf.submitText}>{guestJoining ? 'Joining…' : 'Join as Guest'}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={gf.signInLink} onPress={() => { setShowGuestForm(false); router.push('/auth/login' as never); }}>
@@ -1783,12 +1773,12 @@ export default function CommunityEventScreen() {
 
 // ─── Tab bar styles ───────────────────────────────────────────────────────────
 
-const tb = StyleSheet.create({
+const tbStyles = (t: ThemeRoles) => StyleSheet.create({
   bar: {
     flexDirection: 'row',
-    backgroundColor: L.bg,
+    backgroundColor: t.surface,
     borderBottomWidth: 1,
-    borderBottomColor: L.border,
+    borderBottomColor: t.border,
   },
   tab: {
     flex: 1,
@@ -1797,13 +1787,13 @@ const tb = StyleSheet.create({
     position: 'relative',
   },
   label: {
-    color: L.textMuted,
+    color: t.textMuted,
     fontSize: text.controlLabel.size,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
   labelActive: {
-    color: L.navy,
+    color: t.textPrimary,
     fontWeight: '700',
   },
   underline: {
@@ -1813,16 +1803,16 @@ const tb = StyleSheet.create({
     right: '25%',
     height: 2.5,
     borderRadius: 2,
-    backgroundColor: L.gold,
+    backgroundColor: t.accent,
   },
 });
 
 // ─── Players tab styles ───────────────────────────────────────────────────────
 
-const pl = StyleSheet.create({
+const plStyles = (t: ThemeRoles) => StyleSheet.create({
   segWrap: {
     flexDirection: 'row',
-    backgroundColor: '#EEF2F9',
+    backgroundColor: t.surfaceElevated,
     borderRadius: shape.panel,
     padding: spacing.xs,
     marginBottom: spacing.xxl,
@@ -1834,7 +1824,7 @@ const pl = StyleSheet.create({
     borderRadius: shape.cta,
   },
   segActive: {
-    backgroundColor: L.bg,
+    backgroundColor: t.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
@@ -1844,10 +1834,10 @@ const pl = StyleSheet.create({
   segLabel: {
     fontSize: text.controlLabel.size,
     fontWeight: '700',
-    color: L.textMuted,
+    color: t.textMuted,
   },
   segLabelActive: {
-    color: L.navy,
+    color: t.textPrimary,
     fontWeight: '700',
   },
 
@@ -1855,9 +1845,9 @@ const pl = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: L.bg,
+    backgroundColor: t.surface,
     borderWidth: 1,
-    borderColor: L.border,
+    borderColor: t.border,
     borderRadius: shape.card,
     padding: spacing.md,
     marginBottom: spacing.xxl,
@@ -1869,15 +1859,15 @@ const pl = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   orgBadge: {
-    backgroundColor: L.goldLight,
+    backgroundColor: t.accentBg,
     borderWidth: 1,
-    borderColor: L.gold,
+    borderColor: t.accent,
     borderRadius: shape.badge,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
   orgBadgeText: {
-    color: L.gold,
+    color: t.accent,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.3,
@@ -1895,15 +1885,15 @@ const pl = StyleSheet.create({
     gap: spacing.xs,
   },
   viewAllText: {
-    color: L.gold,
+    color: t.accent,
     fontSize: text.link.size,
     fontWeight: '700',
   },
 
   listCard: {
-    backgroundColor: L.bg,
+    backgroundColor: t.surface,
     borderWidth: 1,
-    borderColor: L.border,
+    borderColor: t.border,
     borderRadius: shape.card,
     overflow: 'hidden',
     marginBottom: spacing.xxl,
@@ -1930,38 +1920,38 @@ const pl = StyleSheet.create({
   },
   playerInfo: { flex: 1 },
   playerNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
-  playerName: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
-  playerRating: { color: L.gold, fontSize: text.chipValue.size, fontWeight: '800' },
-  playerMeta: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  playerName: { color: t.textPrimary, fontSize: text.body.size, fontWeight: '500' },
+  playerRating: { color: t.accent, fontSize: text.chipValue.size, fontWeight: '800' },
+  playerMeta: { color: t.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   acceptedChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: L.greenBg,
+    backgroundColor: t.successBg,
     borderWidth: 1,
-    borderColor: L.greenBorder,
+    borderColor: t.successBorder,
     borderRadius: shape.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  acceptedText: { color: L.green, fontSize: 11, fontWeight: '700' },
+  acceptedText: { color: t.success, fontSize: 11, fontWeight: '700' },
 
   msgBtn: {
     width: 34, height: 34, borderRadius: 17,
-    backgroundColor: L.goldLight, borderWidth: 1, borderColor: L.gold,
+    backgroundColor: t.accentBg, borderWidth: 1, borderColor: t.accent,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
 
   pendingChip: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: t.warningBg,
     borderWidth: 1,
-    borderColor: '#FED7AA',
+    borderColor: t.warningBorder,
     borderRadius: shape.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  pendingText: { color: '#EA580C', fontSize: 11, fontWeight: '700' },
+  pendingText: { color: t.warning, fontSize: 11, fontWeight: '700' },
 
   emptyWrap: {
     alignItems: 'center',
@@ -1969,7 +1959,7 @@ const pl = StyleSheet.create({
     paddingVertical: spacing.xxxl,
     gap: spacing.sm,
   },
-  emptyText: { color: L.textMuted, fontSize: text.body.size, fontWeight: '500', textAlign: 'center' },
+  emptyText: { color: t.textMuted, fontSize: text.body.size, fontWeight: '500', textAlign: 'center' },
 
   inviteBtn: {
     flexDirection: 'row',
@@ -1977,57 +1967,57 @@ const pl = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     borderWidth: 1.5,
-    borderColor: L.gold,
+    borderColor: t.accent,
     borderRadius: shape.cta,
     paddingVertical: spacing.md,
-    backgroundColor: L.bg,
+    backgroundColor: t.surface,
     marginBottom: spacing.sm,
   },
-  inviteBtnText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
-  inviteBtnDisabled: { opacity: 0.5, borderColor: L.border },
-  inviteBtnTextDisabled: { color: L.textMuted },
+  inviteBtnText: { color: t.textPrimary, fontSize: text.actionLarge.size, fontWeight: '800' },
+  inviteBtnDisabled: { opacity: 0.5, borderColor: t.border },
+  inviteBtnTextDisabled: { color: t.textMuted },
   pastNotice: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     marginBottom: spacing.sm,
   },
-  pastNoticeText: { fontSize: text.caption.size, fontWeight: '500', color: L.textMuted, flex: 1 },
+  pastNoticeText: { fontSize: text.caption.size, fontWeight: '500', color: t.textMuted, flex: 1 },
 });
 
 // ─── Chat tab styles ──────────────────────────────────────────────────────────
 
-const gf = StyleSheet.create({
+const gfStyles = (t: ThemeRoles) => StyleSheet.create({
   backdrop: {
     flex: 1, backgroundColor: 'rgba(10,18,40,0.50)',
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: L.bg,
+    backgroundColor: t.surface,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: spacing.xxl, paddingTop: 0,
   },
   handle: {
-    width: 36, height: 4, borderRadius: 2, backgroundColor: L.border,
+    width: 36, height: 4, borderRadius: 2, backgroundColor: t.border,
     alignSelf: 'center', marginVertical: spacing.md,
   },
-  title: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900', marginBottom: spacing.xs },
-  sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: spacing.xl },
+  title: { color: t.textPrimary, fontSize: text.modalTitle.size, fontWeight: '900', marginBottom: spacing.xs },
+  sub: { color: t.textSecondary, fontSize: text.caption.size, fontWeight: '500', marginBottom: spacing.xl },
   fieldWrap: { marginBottom: spacing.md },
-  label: { color: L.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 0.3, marginBottom: spacing.xs },
+  label: { color: t.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 0.3, marginBottom: spacing.xs },
   input: {
-    borderWidth: 1, borderColor: L.border, borderRadius: shape.panel,
+    borderWidth: 1, borderColor: t.border, borderRadius: shape.panel,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    fontSize: text.body.size, fontWeight: '500', color: L.navy, backgroundColor: L.bg,
+    fontSize: text.body.size, fontWeight: '500', color: t.textPrimary, backgroundColor: t.surface,
   },
   submitBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: L.gold, borderRadius: shape.cta, paddingVertical: spacing.md, marginTop: spacing.xs,
+    backgroundColor: t.accent, borderRadius: shape.cta, paddingVertical: spacing.md, marginTop: spacing.xs,
   },
-  submitText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
+  submitText: { color: t.textPrimary, fontSize: text.actionLarge.size, fontWeight: '800' },
   signInLink: { alignItems: 'center', marginTop: spacing.lg },
-  signInText: { color: L.gold, fontSize: text.caption.size, fontWeight: '500' },
+  signInText: { color: t.accent, fontSize: text.caption.size, fontWeight: '500' },
 });
 
-const ch = StyleSheet.create({
+const chStyles = (t: ThemeRoles) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2035,11 +2025,11 @@ const ch = StyleSheet.create({
     marginBottom: spacing.xl,
     paddingBottom: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: L.border,
+    borderBottomColor: t.border,
   },
   headerLeft: {},
-  headerTitle: { color: L.navy, fontSize: text.sectionTitle.size, fontWeight: '900' },
-  headerSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: spacing.xs },
+  headerTitle: { color: t.textPrimary, fontSize: text.sectionTitle.size, fontWeight: '900' },
+  headerSub: { color: t.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: spacing.xs },
 
   emptyWrap: {
     alignItems: 'center',
@@ -2047,7 +2037,7 @@ const ch = StyleSheet.create({
     gap: spacing.md,
   },
   emptyText: {
-    color: L.textMuted,
+    color: t.textMuted,
     fontSize: text.body.size,
     fontWeight: '500',
     textAlign: 'center',
@@ -2091,24 +2081,24 @@ const ch = StyleSheet.create({
     gap: spacing.xs,
   },
   bubbleThem: {
-    backgroundColor: L.bg,
+    backgroundColor: t.surface,
     borderWidth: 1,
-    borderColor: L.border,
+    borderColor: t.border,
     borderBottomLeftRadius: 4,
   },
   bubbleMe: {
-    backgroundColor: L.navy,
+    backgroundColor: t.primary,
     borderBottomRightRadius: 4,
   },
 
   senderName: {
-    color: L.gold,
+    color: t.accent,
     fontSize: 11,
     fontWeight: '700',
     marginBottom: spacing.xs,
   },
   messageText: {
-    color: L.navy,
+    color: t.textPrimary,
     fontSize: text.body.size,
     lineHeight: 20,
     fontWeight: '500',
@@ -2117,7 +2107,7 @@ const ch = StyleSheet.create({
     color: colors.white,
   },
   timestamp: {
-    color: L.textMuted,
+    color: t.textMuted,
     fontSize: 10,
     fontWeight: '500',
     marginTop: spacing.xs,
@@ -2130,14 +2120,14 @@ const ch = StyleSheet.create({
 
 // ─── Main screen styles ───────────────────────────────────────────────────────
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: L.page },
+const sStyles = (t: ThemeRoles) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: t.background },
 
   // Pinned tab bar. Opaque so the content passing underneath does not show
   // through, and elevated so Android keeps it above the ScrollView.
   stickyTabs: {
     position: 'absolute', top: 0, left: 0, right: 0,
-    backgroundColor: L.bg,
+    backgroundColor: t.surface,
     zIndex: 20, elevation: 4,
   },
 
@@ -2176,29 +2166,29 @@ const s = StyleSheet.create({
   // Stat pills
   bracketBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta,
+    borderWidth: 1.5, borderColor: t.accent, borderRadius: shape.cta,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     marginBottom: spacing.md,
   },
-  bracketBannerText: { flex: 1, color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
+  bracketBannerText: { flex: 1, color: t.textPrimary, fontSize: text.rowValue.size, fontWeight: '800' },
   statPills: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap', marginBottom: spacing.md, justifyContent: 'center' },
   statPill: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1, borderColor: L.border, borderRadius: shape.pill,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.xs, backgroundColor: L.bg,
+    borderWidth: 1, borderColor: t.border, borderRadius: shape.pill,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs, backgroundColor: t.surface,
   },
-  statPillText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  statPillText: { color: t.textSecondary, fontSize: text.caption.size, fontWeight: '500' },
 
   // Fill bar
   fillBarRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxl },
-  fillBarBg: { flex: 1, height: 6, borderRadius: 3, backgroundColor: L.border },
+  fillBarBg: { flex: 1, height: 6, borderRadius: 3, backgroundColor: t.border },
   fillBarFill: { height: 6, borderRadius: 3 },
-  fillPct: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  fillPct: { color: t.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Section title
   // Matches the tournament detail screen's sectionTitle (13 / 900 / 0.8) so
   // headings read the same across both screens. Margins are this screen's own.
-  sectionTitle: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginBottom: spacing.md, marginTop: spacing.xs },
+  sectionTitle: { color: t.textPrimary, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginBottom: spacing.md, marginTop: spacing.xs },
   // Overview-tab headings only. sectionTitle is shared with the Players tab
   // (Accepted Players, Pending Invites, Waitlist), which stays title case.
   sectionTitleUpper: { textTransform: 'uppercase' as const },
@@ -2206,86 +2196,86 @@ const s = StyleSheet.create({
   // Organizer
   organizerCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: shape.card,
+    backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, borderRadius: shape.card,
     padding: spacing.md, marginBottom: spacing.xxl,
   },
   orgInfo: { flex: 1 },
-  orgName: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: spacing.xs },
+  orgName: { color: t.textPrimary, fontSize: text.body.size, fontWeight: '500', marginBottom: spacing.xs },
   orgMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  orgMetaText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
-  orgDot: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  orgMetaText: { color: t.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  orgDot: { color: t.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   followBtn: {
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta,
+    borderWidth: 1.5, borderColor: t.accent, borderRadius: shape.cta,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
-  followBtnText: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
+  followBtnText: { color: t.accent, fontSize: text.action.size, fontWeight: '800' },
 
   msgOrgBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
     marginTop: spacing.md,
     marginBottom: spacing.xxl,
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta,
-    paddingVertical: spacing.sm, backgroundColor: L.page,
+    borderWidth: 1.5, borderColor: t.accent, borderRadius: shape.cta,
+    paddingVertical: spacing.sm, backgroundColor: t.background,
   },
-  msgOrgText: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  msgOrgText: { color: t.textPrimary, fontSize: text.rowTitle.size, fontWeight: '700' },
 
   // About
   // Matches the tournament detail screen's `description` (text / 14 / 22 / 400).
   // Only the colour differed — this was textSub, which read as muted next to
   // the tournament copy. paddingHorizontal is deliberately not copied across:
   // that screen's description sits in an unpadded container, this one doesn't.
-  aboutText: { color: L.text, fontSize: text.body.size, lineHeight: 22, fontWeight: '500', marginBottom: spacing.xxl },
+  aboutText: { color: t.textPrimary, fontSize: text.body.size, lineHeight: 22, fontWeight: '500', marginBottom: spacing.xxl },
 
   // Details card
   detailsCard: {
-    backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
+    backgroundColor: t.surface, borderWidth: 1, borderColor: t.border,
     borderRadius: shape.card, overflow: 'hidden', marginBottom: spacing.xxl,
   },
-  divider: { height: 1, backgroundColor: L.border },
+  divider: { height: 1, backgroundColor: t.border },
 
   // Players preview
   playersRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xxl },
   playerAvatarWrap: {
     width: 38, height: 38, borderRadius: 19,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2.5, borderColor: L.page, marginRight: -8,
+    borderWidth: 2.5, borderColor: t.background, marginRight: -8,
   },
-  playerMore: { backgroundColor: L.border },
-  playerMoreText: { color: L.textSub, fontSize: 11, fontWeight: '800' },
-  playersLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginLeft: spacing.xl },
+  playerMore: { backgroundColor: t.border },
+  playerMoreText: { color: t.textSecondary, fontSize: 11, fontWeight: '800' },
+  playersLabel: { color: t.textSecondary, fontSize: text.caption.size, fontWeight: '500', marginLeft: spacing.xl },
 
   // Location
   locationCard: {
-    backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
+    backgroundColor: t.surface, borderWidth: 1, borderColor: t.border,
     borderRadius: shape.card, overflow: 'hidden', marginBottom: spacing.xxl,
   },
   mapPlaceholder: {
-    height: 130, backgroundColor: '#F0F4FA',
+    height: 130, backgroundColor: t.surfaceElevated,
     alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
   },
-  mapText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  mapText: { color: t.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   locationInfo: { padding: spacing.md, gap: spacing.xs },
   locationTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
-  locationVenue: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
+  locationVenue: { color: t.textPrimary, fontSize: text.body.size, fontWeight: '500' },
   locationVerifiedBadge: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     backgroundColor: '#DBEAFE', borderRadius: shape.pill, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
   },
   locationVerifiedText: { fontSize: 9, fontWeight: '800', color: '#2563EB', letterSpacing: 0.4 },
-  locationAddr: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  locationAddr: { color: t.textSecondary, fontSize: text.caption.size, fontWeight: '500' },
   locationBtnRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, justifyContent: 'center' },
   directionsBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta, alignSelf: 'flex-start',
+    borderWidth: 1.5, borderColor: t.accent, borderRadius: shape.cta, alignSelf: 'flex-start',
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
-  directionsBtnText: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
+  directionsBtnText: { color: t.accent, fontSize: text.action.size, fontWeight: '800' },
   viewFacilityBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta, alignSelf: 'flex-start',
+    borderWidth: 1.5, borderColor: t.accent, borderRadius: shape.cta, alignSelf: 'flex-start',
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
-  viewFacilityBtnText: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
+  viewFacilityBtnText: { color: t.accent, fontSize: text.action.size, fontWeight: '800' },
 
   // Joined state — stacked so the status message always gets full width
   // (a single row was squeezing it against the action buttons and truncating it).
@@ -2293,57 +2283,57 @@ const s = StyleSheet.create({
   joinedStatus: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   joinedCheck: {
     width: 30, height: 30, borderRadius: 15,
-    backgroundColor: L.greenBg, borderWidth: 1.5, borderColor: L.green,
+    backgroundColor: t.successBg, borderWidth: 1.5, borderColor: t.success,
     alignItems: 'center', justifyContent: 'center',
   },
-  joinedLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
-  joinedSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: spacing.xs },
+  joinedLabel: { color: t.textPrimary, fontSize: text.body.size, fontWeight: '500' },
+  joinedSub: { color: t.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: spacing.xs },
   joinedActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
 
   // Bottom bar
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: L.bg, paddingHorizontal: spacing.screenH, paddingTop: spacing.md,
-    borderTopWidth: 1, borderTopColor: L.border,
+    backgroundColor: t.surface, paddingHorizontal: spacing.screenH, paddingTop: spacing.md,
+    borderTopWidth: 1, borderTopColor: t.border,
     gap: spacing.sm,
   },
-  bottomSpots: { color: L.navy, fontSize: text.body.size, fontWeight: '500' },
-  bottomPlayers: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  bottomSpots: { color: t.textPrimary, fontSize: text.body.size, fontWeight: '500' },
+  bottomPlayers: { color: t.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   joinBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: L.gold, borderRadius: shape.cta,
+    backgroundColor: t.accent, borderRadius: shape.cta,
     paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
   },
-  joinBtnText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
+  joinBtnText: { color: t.textPrimary, fontSize: text.actionLarge.size, fontWeight: '800' },
   viewPlayersBtn: { flexShrink: 1, paddingHorizontal: spacing.md },
   leaveBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     borderRadius: shape.cta, paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    borderWidth: 1.5, borderColor: L.danger, backgroundColor: L.dangerBg,
+    borderWidth: 1.5, borderColor: t.danger, backgroundColor: t.dangerBg,
   },
-  leaveBtnText: { color: L.danger, fontSize: text.rowValue.size, fontWeight: '800' },
+  leaveBtnText: { color: t.danger, fontSize: text.rowValue.size, fontWeight: '800' },
 
   // Chat input (in bottom bar when on chat tab)
   chatInput: {
     flex: 1,
-    backgroundColor: L.page,
+    backgroundColor: t.background,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: L.border,
+    borderColor: t.border,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     fontSize: text.body.size, fontWeight: '500',
-    color: L.navy,
+    color: t.textPrimary,
     maxHeight: 42,
   },
   sendBtn: {
     width: 42, height: 42, borderRadius: 21,
-    backgroundColor: L.navy,
+    backgroundColor: t.primary,
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   },
   sendBtnDisabled: {
-    backgroundColor: L.textMuted,
+    backgroundColor: t.textMuted,
   },
 });
