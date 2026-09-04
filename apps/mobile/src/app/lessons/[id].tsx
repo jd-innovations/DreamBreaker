@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIn
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { fetchCoachOfferBrowseDetail, type CoachOfferBrowseCard } from '@/lib/coach/offers';
 import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent } from '@/lib/coach/constants';
 import { useSession } from '@/hooks/useSession';
@@ -267,8 +269,8 @@ const dr = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   rowLast: { borderBottomWidth: 0 },
-  label: { color: colors.textSub, fontSize: 12, fontWeight: '600', width: 120, paddingTop: 1 },
-  value: { color: colors.text, fontSize: 13, fontWeight: '600', flex: 1 },
+  label: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', width: 120, paddingTop: 1 },
+  value: { color: colors.text, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
 });
 
 const s = StyleSheet.create({
@@ -277,22 +279,22 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingTop: 12, gap: 10,
   },
   qtyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  qtyLabel: { color: L.navy, fontSize: 14, fontWeight: '700' },
+  qtyLabel: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   stepBtn: {
     width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: L.border,
     alignItems: 'center', justifyContent: 'center',
   },
   stepBtnDisabled: { opacity: 0.4 },
-  qtyValue: { color: L.navy, fontSize: 16, fontWeight: '800', minWidth: 20, textAlign: 'center' },
+  qtyValue: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', minWidth: 20, textAlign: 'center' },
   bookBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.navy, borderRadius: 30, paddingVertical: 15, minHeight: 52,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 15, minHeight: 52,
   },
   bookBtnDisabled: { opacity: 0.45 },
-  bookBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
-  bookBtnPrice: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', opacity: 0.85 },
-  feeNote: { color: L.textSub, fontSize: 11, textAlign: 'center' },
+  bookBtnText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
+  bookBtnPrice: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800', opacity: 0.85 },
+  feeNote: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center' },
   root: { flex: 1, backgroundColor: L.page },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -300,33 +302,33 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 15, fontWeight: '800', flex: 1, textAlign: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', flex: 1, textAlign: 'center' },
 
   scroll: { paddingHorizontal: 20, paddingTop: 16 },
-  hero: { width: '100%', height: 180, borderRadius: radius.card, marginBottom: 12 },
+  hero: { width: '100%', height: 180, borderRadius: shape.card, marginBottom: 12 },
 
-  premiumBadge: { alignSelf: 'flex-start', backgroundColor: L.navy, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 8 },
+  premiumBadge: { alignSelf: 'flex-start', backgroundColor: L.navy, borderRadius: shape.badge, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 8 },
   premiumBadgeText: { color: L.bg, fontSize: 10, fontWeight: '800' },
 
-  title: { color: L.navy, fontSize: 20, fontWeight: '800', marginBottom: 8 },
+  title: { color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800', marginBottom: 8 },
 
   coachRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
   coachAvatar: { width: 28, height: 28, borderRadius: 14 },
   coachAvatarPlaceholder: { backgroundColor: L.goldBg, alignItems: 'center', justifyContent: 'center' },
-  coachName: { color: L.text, fontSize: 13, fontWeight: '600' },
+  coachName: { color: L.text, fontSize: text.caption.size, fontWeight: '500' },
 
-  priceCard: { backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: radius.card, padding: 14, marginBottom: 16 },
+  priceCard: { backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: shape.card, padding: 14, marginBottom: 16 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  priceStrike: { color: L.textSub, fontSize: 14, textDecorationLine: 'line-through' },
-  priceNow: { color: L.navy, fontSize: 20, fontWeight: '800' },
-  pctOff: { color: colors.gold, fontSize: 12, fontWeight: '700' },
-  premiumPriceHint: { color: L.textSub, fontSize: 12, marginTop: 6 },
+  priceStrike: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textDecorationLine: 'line-through' },
+  priceNow: { color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800' },
+  pctOff: { color: colors.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  premiumPriceHint: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 6 },
 
-  description: { color: L.text, fontSize: 14, lineHeight: 21, marginBottom: 16 },
+  description: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 21, marginBottom: 16 },
 
-  detailsCard: { backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: radius.card, marginBottom: 16 },
+  detailsCard: { backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: shape.card, marginBottom: 16 },
 
-  sectionLabel: { color: L.navy, fontSize: 13, fontWeight: '700', marginBottom: 6 },
-  terms: { color: L.textSub, fontSize: 13, lineHeight: 19, marginBottom: 16 },
+  sectionLabel: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginBottom: 6 },
+  terms: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19, marginBottom: 16 },
 
 });

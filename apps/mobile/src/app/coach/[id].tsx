@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIn
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { appLinks } from '@/lib/appLinks';
 import { InfoTooltip } from '@/components/InfoTooltip';
@@ -256,11 +258,11 @@ export default function CoachProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  root:     { flex: 1, backgroundColor: L.page },
+  root: { flex: 1, backgroundColor: L.page },
   centered: { alignItems: 'center', justifyContent: 'center', gap: 10 },
 
-  cover:         { height: COVER_H, width: '100%', position: 'relative', overflow: 'hidden' },
-  coverImage:    { position: 'absolute', top: 0, left: 0, width: '100%', height: COVER_H },
+  cover: { height: COVER_H, width: '100%', position: 'relative', overflow: 'hidden' },
+  coverImage: { position: 'absolute', top: 0, left: 0, width: '100%', height: COVER_H },
   coverFallback: { backgroundColor: L.navy },
   coverControls: {
     position: 'absolute', top: 0, left: 16, right: 16,
@@ -271,59 +273,59 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
 
-  identity:      { alignItems: 'center', marginTop: -(AVATAR / 2), paddingHorizontal: 20, gap: 8 },
-  avatarWrap:    { borderRadius: AVATAR / 2, borderWidth: 4, borderColor: L.page, backgroundColor: L.page },
-  avatar:        { width: AVATAR, height: AVATAR, borderRadius: AVATAR / 2 },
-  avatarFallback:{ backgroundColor: L.bg, alignItems: 'center', justifyContent: 'center' },
-  name:          { color: L.navy, fontSize: 22, fontWeight: '900', textAlign: 'center' },
-  certification: { color: L.textSub, fontSize: 13, fontWeight: '700', textAlign: 'center' },
-  socialRow:     { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 4 },
+  identity: { alignItems: 'center', marginTop: -(AVATAR / 2), paddingHorizontal: 20, gap: 8 },
+  avatarWrap: { borderRadius: AVATAR / 2, borderWidth: 4, borderColor: L.page, backgroundColor: L.page },
+  avatar: { width: AVATAR, height: AVATAR, borderRadius: AVATAR / 2 },
+  avatarFallback: { backgroundColor: L.bg, alignItems: 'center', justifyContent: 'center' },
+  name: { color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800', textAlign: 'center' },
+  certification: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center' },
+  socialRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 4 },
   socialBtn: {
-    width: 40, height: 40, borderRadius: 12,
+    width: 40, height: 40, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border, backgroundColor: L.bg,
     alignItems: 'center', justifyContent: 'center',
   },
 
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1,
+    borderRadius: shape.pill, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1,
   },
-  badgeOn:      { backgroundColor: '#DBEAFE', borderColor: '#BFDBFE' },
-  badgeOff:     { backgroundColor: L.bg, borderColor: L.border },
-  badgeText:    { fontSize: 12, fontWeight: '800' },
-  badgeTextOn:  { color: '#2563EB' },
+  badgeOn: { backgroundColor: '#DBEAFE', borderColor: '#BFDBFE' },
+  badgeOff: { backgroundColor: L.bg, borderColor: L.border },
+  badgeText: { fontSize: text.chipValue.size, fontWeight: '800' },
+  badgeTextOn: { color: '#2563EB' },
   badgeTextOff: { color: L.textSub },
 
-  locationRow:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  locationText: { color: L.textSub, fontSize: 13, fontWeight: '600' },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  locationText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
-  section:      { paddingHorizontal: 16, marginTop: 22, gap: 10 },
-  sectionTitle: { color: L.navy, fontSize: 13, fontWeight: '900', letterSpacing: 0.8 },
+  section: { paddingHorizontal: 16, marginTop: 22, gap: 10 },
+  sectionTitle: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing },
 
   offerCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: L.bg, borderRadius: radius.card,
+    backgroundColor: L.bg, borderRadius: shape.card,
     borderWidth: 1, borderColor: L.border, padding: 10,
   },
-  offerImage:  { width: 76, height: 60, borderRadius: 10 },
-  offerBody:   { flex: 1, gap: 2 },
-  offerType:   { color: L.gold, fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
-  offerTitle:  { color: L.navy, fontSize: 14, fontWeight: '800' },
+  offerImage: { width: 76, height: 60, borderRadius: shape.cta },
+  offerBody: { flex: 1, gap: 2 },
+  offerType: { color: L.gold, fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
+  offerTitle: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
   offerFooter: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
-  offerPrice:  { color: L.navy, fontSize: 14, fontWeight: '900' },
-  offerSpots:  { color: L.textSub, fontSize: 11, fontWeight: '700' },
+  offerPrice: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
+  offerSpots: { color: L.textSub, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 
-  bio:      { color: L.text, fontSize: 14, lineHeight: 21 },
-  readMore: { color: L.gold, fontSize: 13, fontWeight: '800' },
+  bio: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 21 },
+  readMore: { color: L.gold, fontSize: text.link.size, fontWeight: '700' },
 
   emptyCard: {
     alignItems: 'center', gap: 8, paddingVertical: 26,
-    backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
   },
-  emptyCardText: { color: L.textSub, fontSize: 13, fontWeight: '600' },
+  emptyCardText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
-  emptyTitle:   { color: L.navy, fontSize: 18, fontWeight: '800' },
-  emptyBody:    { color: L.textSub, fontSize: 14, textAlign: 'center' },
-  emptyBtn:     { marginTop: 6, borderRadius: 24, borderWidth: 1.5, borderColor: L.gold, paddingHorizontal: 20, paddingVertical: 10 },
-  emptyBtnText: { color: L.gold, fontSize: 14, fontWeight: '800' },
+  emptyTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  emptyBody: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center' },
+  emptyBtn: { marginTop: 6, borderRadius: shape.cta, borderWidth: 1.5, borderColor: L.gold, paddingHorizontal: 20, paddingVertical: 10 },
+  emptyBtnText: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
 });

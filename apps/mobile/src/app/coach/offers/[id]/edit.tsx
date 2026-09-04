@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import {
   fetchCoachOfferDetail, updateCoachOffer, publishCoachOffer, pauseCoachOffer,
   resumeCoachOffer, archiveCoachOffer, type CoachOfferWithImages,
@@ -220,17 +222,17 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   scroll: { paddingHorizontal: 20, paddingTop: 16 },
-  typeLabel: { color: L.textSub, fontSize: 12, fontWeight: '700', marginBottom: 12 },
-  hero: { width: '100%', height: 140, borderRadius: radius.card, marginBottom: 12 },
-  sectionLabel: { color: L.navy, fontSize: 13, fontWeight: '700', marginTop: 14, marginBottom: 6 },
-  discountHint: { color: colors.gold, fontSize: 12, fontWeight: '600', marginTop: 6, lineHeight: 17 },
+  typeLabel: { color: L.textSub, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, marginBottom: 12 },
+  hero: { width: '100%', height: 140, borderRadius: shape.card, marginBottom: 12 },
+  sectionLabel: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginTop: 14, marginBottom: 6 },
+  discountHint: { color: colors.gold, fontSize: text.caption.size, fontWeight: '500', marginTop: 6, lineHeight: 17 },
 
   input: {
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.button,
-    paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: L.text, backgroundColor: L.bg,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
+    paddingHorizontal: 14, paddingVertical: 12, fontSize: text.body.size, fontWeight: '500', color: L.text, backgroundColor: L.bg,
   },
   textArea: { minHeight: 70, textAlignVertical: 'top' },
   row2: { flexDirection: 'row', gap: 12 },
@@ -242,16 +244,16 @@ const s = StyleSheet.create({
   },
   footerRow: { flexDirection: 'row', gap: 10 },
   secondaryBtn: {
-    flex: 1, borderRadius: radius.button, borderWidth: 1, borderColor: L.navy,
+    flex: 1, borderRadius: shape.cta, borderWidth: 1, borderColor: L.navy,
     paddingVertical: 14, alignItems: 'center', justifyContent: 'center',
   },
-  secondaryBtnText: { color: L.navy, fontSize: 14, fontWeight: '800' },
+  secondaryBtnText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
   primaryBtn: {
-    flex: 1, borderRadius: radius.button, backgroundColor: L.navy,
+    flex: 1, borderRadius: shape.cta, backgroundColor: L.navy,
     paddingVertical: 14, alignItems: 'center', justifyContent: 'center',
   },
-  primaryBtnText: { color: L.bg, fontSize: 14, fontWeight: '800' },
+  primaryBtnText: { color: L.bg, fontSize: text.actionLarge.size, fontWeight: '800' },
   archiveBtn: { alignItems: 'center', paddingVertical: 8 },
-  archiveBtnText: { color: L.danger, fontSize: 13, fontWeight: '700' },
+  archiveBtnText: { color: L.danger, fontSize: text.action.size, fontWeight: '800' },
   btnDisabled: { opacity: 0.5 },
 });

@@ -4,7 +4,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LoadingState, ErrorState } from '@/components';
 import { router, useFocusEffect } from 'expo-router';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import {
   fetchCoachOffers, pauseCoachOffer, resumeCoachOffer, duplicateCoachOffer,
@@ -168,29 +170,29 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  addBtn:  { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  addBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 },
-  emptyTitle: { color: L.textSub, fontSize: 14, fontWeight: '600' },
-  createBtn: { backgroundColor: L.navy, borderRadius: radius.button, paddingVertical: 12, paddingHorizontal: 20, marginTop: 8 },
-  createBtnText: { color: L.bg, fontSize: 14, fontWeight: '800' },
+  emptyTitle: { color: L.textSub, fontSize: text.titleSm.size, fontWeight: '800' },
+  createBtn: { backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 12, paddingHorizontal: 20, marginTop: 8 },
+  createBtnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
 
-  card: { backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1, borderColor: L.border, padding: 12 },
+  card: { backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border, padding: 12 },
   cardRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  thumb: { width: 56, height: 56, borderRadius: 10 },
+  thumb: { width: 56, height: 56, borderRadius: shape.cta },
   thumbPlaceholder: { backgroundColor: L.page, alignItems: 'center', justifyContent: 'center' },
-  cardTitle: { color: L.navy, fontSize: 14, fontWeight: '700' },
-  cardSub: { color: L.textSub, fontSize: 12, marginTop: 2 },
+  cardTitle: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  cardSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  priceStrike: { color: L.textSub, fontSize: 12, textDecorationLine: 'line-through' },
-  priceNow: { color: L.navy, fontSize: 13, fontWeight: '800' },
-  pctOff: { color: colors.gold, fontSize: 11, fontWeight: '700' },
+  priceStrike: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textDecorationLine: 'line-through' },
+  priceNow: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
+  pctOff: { color: colors.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 
-  statusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, borderWidth: 1 },
+  statusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: shape.pill, borderWidth: 1 },
   statusText: { fontSize: 10, fontWeight: '800' },
 
   actionsRow: { flexDirection: 'row', gap: 8, marginTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border, paddingTop: 10 },
-  actionBtn: { flex: 1, paddingVertical: 8, borderRadius: radius.button, borderWidth: 1, borderColor: L.border, alignItems: 'center' },
-  actionText: { color: L.navy, fontSize: 12, fontWeight: '700' },
+  actionBtn: { flex: 1, paddingVertical: 8, borderRadius: shape.cta, borderWidth: 1, borderColor: L.border, alignItems: 'center' },
+  actionText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 });

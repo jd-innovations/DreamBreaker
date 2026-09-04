@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius, displayText } from '@/theme';
+import { colors, displayText } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useProfile } from '@/hooks/useProfile';
 import { activateCoachMode } from '@/lib/supabase/coach';
 import { notifyProfileUpdated } from '@/lib/profileEvents';
@@ -188,8 +190,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, backgroundColor: L.bg,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   scroll: { paddingHorizontal: 20, paddingTop: 24, alignItems: 'center' },
 
@@ -197,42 +199,42 @@ const s = StyleSheet.create({
     width: 72, height: 72, borderRadius: 36, backgroundColor: L.goldBg,
     alignItems: 'center', justifyContent: 'center', marginBottom: 16,
   },
-  title:    { ...displayText(22, { color: L.navy }), textAlign: 'center', marginBottom: 8 },
-  subtitle: { color: L.textSub, fontSize: 14, lineHeight: 21, textAlign: 'center', marginBottom: 24 },
+  title: { ...displayText(22, { color: L.navy }), textAlign: 'center', marginBottom: 8 },
+  subtitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 21, textAlign: 'center', marginBottom: 24 },
 
   benefits: {
     width: '100%', backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, marginBottom: 24,
+    borderRadius: shape.card, marginBottom: 24,
   },
   benefitRow: {
     flexDirection: 'row', gap: 12, alignItems: 'flex-start',
     padding: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   benefitIcon: {
-    width: 36, height: 36, borderRadius: 10, backgroundColor: L.goldLight,
+    width: 36, height: 36, borderRadius: shape.cta, backgroundColor: L.goldLight,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  benefitTitle: { color: L.navy, fontSize: 14, fontWeight: '700', marginBottom: 2 },
-  benefitSub:   { color: L.textSub, fontSize: 12, lineHeight: 17 },
+  benefitTitle: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 2 },
+  benefitSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17 },
 
   applyBtn: {
-    width: '100%', backgroundColor: L.navy, borderRadius: radius.button,
+    width: '100%', backgroundColor: L.navy, borderRadius: shape.cta,
     paddingVertical: 15, alignItems: 'center', justifyContent: 'center',
   },
-  applyBtnText: { color: L.bg, fontSize: 15, fontWeight: '800' },
+  applyBtnText: { color: L.bg, fontSize: text.actionLarge.size, fontWeight: '800' },
 
   statusCard: {
     width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: L.goldLight, borderWidth: 1, borderColor: L.goldBorder,
-    borderRadius: radius.card, padding: 14,
+    borderRadius: shape.card, padding: 14,
   },
-  statusLink: { color: L.gold, fontSize: 13, fontWeight: '800', textDecorationLine: 'underline' },
-  statusText: { color: L.gold, fontSize: 13, fontWeight: '700', flex: 1 },
+  statusLink: { color: L.gold, fontSize: text.link.size, fontWeight: '700', textDecorationLine: 'underline' },
+  statusText: { color: L.gold, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
 
   offersLink: {
     width: '100%', flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
-    borderRadius: radius.card, padding: 14, marginBottom: 16,
+    borderRadius: shape.card, padding: 14, marginBottom: 16,
   },
-  offersLinkText: { flex: 1, color: L.navy, fontSize: 14, fontWeight: '700' },
+  offersLinkText: { flex: 1, color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
 });

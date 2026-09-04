@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import { FacilityPicker, type FacilityPickerValue } from '@/components/FacilityPicker';
 import { draftCoachOfferId, uploadCoachOfferPhoto, cleanupAbandonedCoachOfferPhotos } from '@/lib/coach/offerPhotos';
@@ -278,16 +280,16 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   scroll: { paddingHorizontal: 20, paddingTop: 16 },
-  sectionLabel: { color: L.navy, fontSize: 13, fontWeight: '700', marginTop: 16, marginBottom: 6 },
-  hint: { color: L.textSub, fontSize: 11, marginTop: 4, lineHeight: 16 },
-  discountHint: { color: colors.gold, fontSize: 12, fontWeight: '600', marginTop: 6 },
+  sectionLabel: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginTop: 16, marginBottom: 6 },
+  hint: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 4, lineHeight: 16 },
+  discountHint: { color: colors.gold, fontSize: text.caption.size, fontWeight: '500', marginTop: 6 },
 
   input: {
-    borderWidth: 1, borderColor: L.border, borderRadius: radius.button,
-    paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: L.text, backgroundColor: L.bg,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
+    paddingHorizontal: 14, paddingVertical: 12, fontSize: text.body.size, fontWeight: '500', color: L.text, backgroundColor: L.bg,
   },
   textArea: { minHeight: 80, textAlignVertical: 'top' },
 
@@ -296,22 +298,22 @@ const s = StyleSheet.create({
 
   typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   typeChip: {
-    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999,
+    paddingHorizontal: 14, paddingVertical: 9, borderRadius: shape.pill,
     borderWidth: 1, borderColor: L.border, backgroundColor: L.bg,
   },
   typeChipActive: { backgroundColor: L.navy, borderColor: L.navy },
-  typeChipText: { color: L.text, fontSize: 13, fontWeight: '600' },
+  typeChipText: { color: L.text, fontSize: text.controlLabel.size, fontWeight: '700' },
   typeChipTextActive: { color: L.bg },
 
   photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  photoWrap: { width: 84, height: 84, borderRadius: radius.card, overflow: 'hidden' },
+  photoWrap: { width: 84, height: 84, borderRadius: shape.card, overflow: 'hidden' },
   photo: { width: '100%', height: '100%' },
   photoRemove: {
     position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10,
     backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center',
   },
   photoAdd: {
-    width: 84, height: 84, borderRadius: radius.card, borderWidth: 1, borderStyle: 'dashed',
+    width: 84, height: 84, borderRadius: shape.card, borderWidth: 1, borderStyle: 'dashed',
     borderColor: L.gold, alignItems: 'center', justifyContent: 'center',
   },
 
@@ -322,14 +324,14 @@ const s = StyleSheet.create({
     backgroundColor: L.bg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border,
   },
   draftBtn: {
-    flex: 1, borderRadius: radius.button, borderWidth: 1, borderColor: L.navy,
+    flex: 1, borderRadius: shape.cta, borderWidth: 1, borderColor: L.navy,
     paddingVertical: 14, alignItems: 'center', justifyContent: 'center',
   },
-  draftBtnText: { color: L.navy, fontSize: 14, fontWeight: '800' },
+  draftBtnText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
   publishBtn: {
-    flex: 1, borderRadius: radius.button, backgroundColor: L.navy,
+    flex: 1, borderRadius: shape.cta, backgroundColor: L.navy,
     paddingVertical: 14, alignItems: 'center', justifyContent: 'center',
   },
-  publishBtnText: { color: L.bg, fontSize: 14, fontWeight: '800' },
+  publishBtnText: { color: L.bg, fontSize: text.actionLarge.size, fontWeight: '800' },
   btnDisabled: { opacity: 0.5 },
 });

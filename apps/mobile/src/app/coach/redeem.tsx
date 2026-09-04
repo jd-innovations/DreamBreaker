@@ -5,7 +5,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { haptics } from '@/lib/haptics';
 import { isOnlineNow } from '@/lib/network';
@@ -209,46 +211,46 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   switchBtn: {
     position: 'absolute', alignSelf: 'center',
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: L.white, borderRadius: 30,
+    backgroundColor: L.white, borderRadius: shape.cta,
     paddingHorizontal: 20, paddingVertical: 12,
   },
-  switchBtnText: { color: L.navy, fontSize: 14, fontWeight: '800' },
+  switchBtnText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
-  manualHint: { color: L.textSub, fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  manualHint: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19, textAlign: 'center' },
   codeInput: {
-    borderWidth: 1.5, borderColor: L.border, borderRadius: radius.card,
+    borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta,
     paddingVertical: 18, textAlign: 'center', backgroundColor: L.bg,
-    color: L.navy, fontSize: 28, fontWeight: '900', letterSpacing: 6,
+    color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900', letterSpacing: 6,
   },
   redeemBtn: {
-    backgroundColor: L.navy, borderRadius: 30, paddingVertical: 15,
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 15,
     alignItems: 'center', justifyContent: 'center', minHeight: 52,
   },
   redeemBtnDisabled: { opacity: 0.4 },
-  redeemBtnText: { color: L.white, fontSize: 16, fontWeight: '800' },
+  redeemBtnText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
   linkBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10 },
-  linkBtnText: { color: L.gold, fontSize: 14, fontWeight: '800' },
+  linkBtnText: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
 
   successWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 32 },
   successIcon: {
     width: 84, height: 84, borderRadius: 42, backgroundColor: L.success,
     alignItems: 'center', justifyContent: 'center', marginBottom: 8,
   },
-  successTitle:     { color: L.navy, fontSize: 26, fontWeight: '900' },
-  successOffer:     { color: L.text, fontSize: 16, fontWeight: '700', textAlign: 'center' },
-  successBuyer:     { color: L.textSub, fontSize: 14, fontWeight: '600' },
-  successRemaining: { color: L.navy, fontSize: 14, fontWeight: '800', marginTop: 6 },
-  successNote:      { color: L.textSub, fontSize: 12 },
+  successTitle: { color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900' },
+  successOffer: { color: L.text, fontSize: text.titleSm.size, fontWeight: '800', textAlign: 'center' },
+  successBuyer: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  successRemaining: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800', marginTop: 6 },
+  successNote: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   againBtn: {
-    marginTop: 26, backgroundColor: L.navy, borderRadius: 30,
+    marginTop: 26, backgroundColor: L.navy, borderRadius: shape.cta,
     paddingHorizontal: 30, paddingVertical: 14,
   },
-  againBtnText: { color: L.white, fontSize: 15, fontWeight: '800' },
+  againBtnText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
   doneBtn: { paddingVertical: 12 },
-  doneBtnText: { color: L.textSub, fontSize: 14, fontWeight: '700' },
+  doneBtnText: { color: L.textSub, fontSize: text.action.size, fontWeight: '800' },
 });

@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { fetchActiveCoachOffersBrowse, type CoachOfferBrowseCard } from '@/lib/coach/offers';
 import { LoadingState, EmptyState, ErrorState } from '@/components';
 import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent } from '@/lib/coach/constants';
@@ -118,22 +120,22 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: 17, fontWeight: '800' },
+  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  emptyTitle: { color: L.textSub, fontSize: 14, fontWeight: '600' },
+  emptyTitle: { color: L.textSub, fontSize: text.titleSm.size, fontWeight: '800' },
 
-  card: { backgroundColor: L.bg, borderRadius: radius.card, borderWidth: 1, borderColor: L.border, padding: 12 },
+  card: { backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border, padding: 12 },
   cardRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  thumb: { width: 64, height: 64, borderRadius: 10 },
-  cardTitle: { color: L.navy, fontSize: 14, fontWeight: '700' },
-  cardSub: { color: L.textSub, fontSize: 12, marginTop: 2 },
-  cardLocation: { color: L.textSub, fontSize: 11, marginTop: 2 },
+  thumb: { width: 64, height: 64, borderRadius: shape.cta },
+  cardTitle: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  cardSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+  cardLocation: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  priceStrike: { color: L.textSub, fontSize: 12, textDecorationLine: 'line-through' },
-  priceNow: { color: L.navy, fontSize: 13, fontWeight: '800' },
-  pctOff: { color: colors.gold, fontSize: 11, fontWeight: '700' },
+  priceStrike: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textDecorationLine: 'line-through' },
+  priceNow: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
+  pctOff: { color: colors.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 
-  premiumBadge: { backgroundColor: L.navy, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3 },
+  premiumBadge: { backgroundColor: L.navy, borderRadius: shape.badge, paddingHorizontal: 6, paddingVertical: 3 },
   premiumBadgeText: { color: L.bg, fontSize: 9, fontWeight: '800' },
 });
