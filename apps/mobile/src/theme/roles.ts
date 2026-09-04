@@ -47,10 +47,20 @@ export type ThemeRoles = {
   // Status
   success: string;
   successBg: string;
+  /**
+   * Border for a tinted status chip. Added 2026-09-04: `accent` had
+   * `accentBorder` and the status family did not, so `community/[id]` invented
+   * its own `greenBorder: '#BBF7D0'` locally — a solid Tailwind green-200 that
+   * would glow on a dark ground. These are alpha-of-base at 0.35, matching
+   * `accentBorder`, so they compose over either theme's surface.
+   */
+  successBorder: string;
   danger: string;
   dangerBg: string;
+  dangerBorder: string;
   warning: string;
   warningBg: string;
+  warningBorder: string;
 
   // Overlays
   overlay: string;
@@ -80,10 +90,13 @@ export const lightRoles: ThemeRoles = {
 
   success: '#22C55E',
   successBg: '#F0FDF4',
+  successBorder: 'rgba(34,197,94,0.35)',
   danger: '#EF4444',
   dangerBg: '#FEF2F2',
+  dangerBorder: 'rgba(239,68,68,0.35)',
   warning: '#CA8A04',
   warningBg: '#FEF9E7',
+  warningBorder: 'rgba(202,138,4,0.35)',
 
   overlay: 'rgba(10,18,40,0.45)',
   scrimMedia: 'rgba(0,0,0,0.45)',
@@ -123,10 +136,13 @@ export const darkRoles: ThemeRoles = {
 
   success: '#34D399',
   successBg: 'rgba(52,211,153,0.12)',
+  successBorder: 'rgba(52,211,153,0.35)',
   danger: '#EF4444',
   dangerBg: 'rgba(239,68,68,0.12)',
+  dangerBorder: 'rgba(239,68,68,0.35)',
   warning: '#F59E0B',
   warningBg: 'rgba(245,158,11,0.12)',
+  warningBorder: 'rgba(245,158,11,0.35)',
 
   overlay: 'rgba(7,9,26,0.85)',
   // Text over a photo needs a dark scrim in BOTH themes — the photo does not
