@@ -5,7 +5,9 @@ import { AppIcon } from '@/components/AppIcon';
 import { CourtIcon } from '@/components/CourtIcon';
 import { ProfileCompletionRing } from '@/components/ProfileCompletionRing';
 import { StatusChip } from '@/components/StatusChip';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { getProfileCompletion } from '@/lib/profileCompletion';
 import type { MyStatsPlayerCard } from '@/lib/stats/myStats';
 import { confidenceBandLabel, formatPar } from '@/lib/supabase/par';
@@ -284,7 +286,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   credential: {
-    borderRadius: 22,
+    borderRadius: shape.card,
     overflow: 'hidden',
     backgroundColor: colors.playerCredentialBg,
   },
@@ -312,9 +314,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   initials: {
-    ...typography.sectionTitle,
     color: colors.gold,
-    fontSize: 32,
+    fontSize: 32, fontWeight: '900',
   },
   nameRow: {
     flexDirection: 'row',
@@ -325,9 +326,9 @@ const styles = StyleSheet.create({
   name: {
     flexShrink: 1,
     color: colors.playerCredentialText,
-    fontSize: 24,
+    fontSize: text.cardTitle.size,
     lineHeight: 27,
-    fontWeight: '900',
+    fontWeight: '800',
     textAlign: 'left',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
@@ -349,15 +350,14 @@ const styles = StyleSheet.create({
     gap: 5,
     borderWidth: 1,
     borderColor: colors.goldBorder,
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
   },
   infoPillText: {
-    ...typography.metadata,
     color: colors.playerCredentialText,
-    fontWeight: '700',
-    fontSize: 12,
+    fontWeight: '800',
+    fontSize: text.chipValue.size,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
@@ -369,16 +369,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   profileLabel: {
-    ...typography.metadata,
     color: colors.playerCredentialMuted,
     fontSize: 10,
     textTransform: 'uppercase',
     fontWeight: '800',
   },
   profileValue: {
-    ...typography.cardTitle,
     color: colors.playerCredentialText,
-    fontSize: 14,
+    fontSize: text.rowValue.size, fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
@@ -391,7 +389,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   ratingValuePill: {
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.goldBorder,
@@ -400,7 +398,7 @@ const styles = StyleSheet.create({
   },
   ratingValue: {
     color: colors.playerCredentialText,
-    fontSize: 18,
+    fontSize: text.statValueSm.size,
     fontWeight: '900',
   },
   performancePanel: {
@@ -423,7 +421,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    borderRadius: 999,
+    borderRadius: shape.pill,
     paddingHorizontal: 7,
     paddingVertical: 4,
   },
@@ -444,7 +442,6 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
   scoreText: {
-    ...typography.metadata,
     color: colors.playerCredentialText,
     fontWeight: '800',
     fontSize: 10,
@@ -472,7 +469,7 @@ const styles = StyleSheet.create({
   footerQrStub: {
     width: 56,
     height: 56,
-    borderRadius: radius.md,
+    borderRadius: shape.panel,
     borderWidth: 1,
     borderColor: colors.goldBorder,
     backgroundColor: 'rgba(255,255,255,0.08)',
@@ -484,14 +481,12 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   footerLabel: {
-    ...typography.metadata,
     color: colors.gold,
     textTransform: 'uppercase',
     fontWeight: '900',
     fontSize: 10,
   },
-  footerTitle: {
-    ...typography.cardTitle,
+  footerTitle: { fontSize: text.titleSm.size, fontWeight: '800',
     color: colors.white,
     marginTop: 3,
   },
@@ -501,8 +496,7 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 2,
   },
-  footerMeta: {
-    ...typography.metadata,
+  footerMeta: { fontSize: text.caption.size, fontWeight: '500',
     color: colors.playerTextSub,
     flex: 1,
   },

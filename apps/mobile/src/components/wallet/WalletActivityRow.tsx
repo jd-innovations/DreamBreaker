@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import type { WalletActivityEntry } from '@/lib/walletTypes';
 
 const EVENT_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -55,9 +57,9 @@ const s = StyleSheet.create({
     width: 30, height: 30, borderRadius: 15, backgroundColor: colors.goldBg,
     alignItems: 'center', justifyContent: 'center', marginTop: 2,
   },
-  title: { color: colors.navy, fontSize: 13, fontWeight: '700' },
-  description: { color: colors.textSub, fontSize: 12, marginTop: 2 },
-  date: { color: colors.textSub, fontSize: 11, marginTop: 4 },
-  amount: { color: colors.navy, fontSize: 13, fontWeight: '800' },
-  empty: { color: colors.textSub, fontSize: 13, textAlign: 'center', paddingVertical: 20 },
+  title: { color: colors.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  description: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+  date: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 4 },
+  amount: { color: colors.navy, fontSize: text.rowValue.size, fontWeight: '800' },
+  empty: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', paddingVertical: 20 },
 });

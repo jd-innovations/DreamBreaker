@@ -14,7 +14,9 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 import { useQuickActionsOrder } from '@/hooks/useQuickActionsOrder';
 import { QUICK_ACTIONS } from '@/constants/quickActions';
@@ -464,9 +466,9 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     color: colors.textSub,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.6,
+    fontSize: text.sectionLabel.size,
+    fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing,
     marginBottom: spacing.md,
     paddingHorizontal: spacing.lg,
   },
@@ -497,14 +499,14 @@ const styles = StyleSheet.create({
   shortcutLabel: {
     color: colors.white,
     textAlign: 'center',
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
     lineHeight: 17,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.lg,
-    borderRadius: radius.sm,
+    borderRadius: shape.cta,
     paddingHorizontal: spacing.sm,
   },
   rowPressed: {
@@ -515,17 +517,17 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     color: colors.white,
-    fontSize: 17,
+    fontSize: text.body.size,
     fontWeight: '500',
   },
   rowSubtitle: {
     color: colors.textSub,
-    fontSize: 13,
+    fontSize: text.caption.size, fontWeight: '500',
     marginTop: 3,
   },
   emptyText: {
     color: colors.textSub,
-    fontSize: 14,
+    fontSize: text.caption.size, fontWeight: '500',
     paddingHorizontal: spacing.sm,
   },
   seeMoreIcon: {
@@ -547,11 +549,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingLeft: spacing.lg + 24 + spacing.lg,
     paddingRight: spacing.sm,
-    borderRadius: radius.sm,
+    borderRadius: shape.cta,
   },
   subRowLabel: {
     color: colors.textSub,
-    fontSize: 15,
+    fontSize: text.body.size, fontWeight: '500',
   },
   badge: {
     position: 'absolute',
@@ -559,7 +561,7 @@ const styles = StyleSheet.create({
     right: 2,
     minWidth: 16,
     height: 16,
-    borderRadius: 8,
+    borderRadius: shape.badge,
     paddingHorizontal: 3,
     backgroundColor: colors.danger,
     alignItems: 'center',

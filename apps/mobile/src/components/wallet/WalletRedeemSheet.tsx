@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { Avatar } from '@/components/Avatar';
 import type { WalletItem } from '@/lib/walletTypes';
 import type { WalletTypeAccent } from '@/lib/walletItemAccent';
@@ -145,18 +147,18 @@ const s = StyleSheet.create({
     borderWidth: 2, borderColor: L.bg,
   },
 
-  heading: { fontSize: 20, fontWeight: '900', color: L.navy, textAlign: 'center', marginBottom: 8 },
-  body: { fontSize: 14, color: L.textSub, lineHeight: 20, textAlign: 'center', marginBottom: 20 },
+  heading: { fontSize: text.modalTitle.size, fontWeight: '900', color: L.navy, textAlign: 'center', marginBottom: 8 },
+  body: { fontSize: text.body.size, fontWeight: '500', color: L.textSub, lineHeight: 20, textAlign: 'center', marginBottom: 20 },
 
   steps: { width: '100%', gap: 16, marginBottom: 20 },
   stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  stepTitle: { fontSize: 13, fontWeight: '700', color: L.navy },
-  stepSub: { fontSize: 12, color: L.textSub, marginTop: 2 },
+  stepTitle: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.navy },
+  stepSub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, marginTop: 2 },
 
   confirmBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    width: '100%', borderRadius: radius.button, paddingVertical: 14, marginBottom: 14,
+    width: '100%', borderRadius: shape.cta, paddingVertical: 14, marginBottom: 14,
   },
-  confirmText: { fontSize: 14, fontWeight: '800' },
-  cancelText: { color: L.textSub, fontSize: 13, fontWeight: '700' },
+  confirmText: { fontSize: text.actionLarge.size, fontWeight: '800' },
+  cancelText: { color: L.textSub, fontSize: text.action.size, fontWeight: '800' },
 });

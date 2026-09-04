@@ -1,7 +1,9 @@
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import {
   createSupportTicket,
@@ -203,14 +205,14 @@ function DisclosureRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  label: { ...typography.metadata, fontWeight: '700', color: colors.navy, marginBottom: spacing.sm, marginTop: spacing.md },
+  label: { fontSize: text.fieldLabel.size, fontWeight: '800', color: colors.navy, marginBottom: spacing.sm, marginTop: spacing.md },
   textarea: {
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: radius.sm,
+    borderRadius: shape.cta,
     padding: spacing.md,
     minHeight: 100,
-    fontSize: 15,
+    fontSize: text.body.size, fontWeight: '500',
     color: colors.text,
     backgroundColor: colors.bg,
   },
@@ -218,13 +220,13 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radius.chip,
+    borderRadius: shape.pill,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.bg,
   },
   chipActive: { backgroundColor: colors.navy, borderColor: colors.navy },
-  chipText: { fontSize: 12, fontWeight: '700', color: colors.textSub },
+  chipText: { fontSize: text.controlLabel.size, fontWeight: '700', color: colors.textSub },
   chipTextActive: { color: colors.gold },
   attachRow: {
     flexDirection: 'row',
@@ -235,34 +237,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderWidth: 1,
     borderColor: colors.goldBorder,
-    borderRadius: radius.sm,
+    borderRadius: shape.cta,
     backgroundColor: colors.goldBg,
   },
-  attachText: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.navy },
+  attachText: { flex: 1, fontSize: text.caption.size, fontWeight: '500', color: colors.navy },
   disclosureToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.md },
-  disclosureToggleText: { ...typography.metadata, color: colors.textSub, fontWeight: '600' },
+  disclosureToggleText: { fontSize: text.caption.size, color: colors.textSub, fontWeight: '500' },
   disclosureBody: {
     marginTop: spacing.sm,
     padding: spacing.md,
-    borderRadius: radius.sm,
+    borderRadius: shape.cta,
     backgroundColor: colors.page,
     gap: 6,
   },
   disclosureRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
-  disclosureLabel: { ...typography.metadata, color: colors.textSub },
-  disclosureValue: { ...typography.metadata, color: colors.navy, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
-  disclosureFootnote: { ...typography.metadata, color: colors.textSub, marginTop: spacing.sm },
-  errorText: { ...typography.metadata, color: colors.danger, marginTop: spacing.md },
+  disclosureLabel: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub },
+  disclosureValue: { fontSize: text.caption.size, color: colors.navy, fontWeight: '500', flexShrink: 1, textAlign: 'right' },
+  disclosureFootnote: { fontSize: text.caption.size, fontWeight: '500', color: colors.textSub, marginTop: spacing.sm },
+  errorText: { fontSize: text.caption.size, fontWeight: '500', color: colors.danger, marginTop: spacing.md },
   actionsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
   cancelInlineBtn: { flex: 1, paddingVertical: spacing.md, alignItems: 'center', justifyContent: 'center' },
-  cancelInlineText: { fontSize: 15, fontWeight: '700', color: colors.textSub },
+  cancelInlineText: { fontSize: text.action.size, fontWeight: '800', color: colors.textSub },
   submitBtn: {
     flex: 2,
     backgroundColor: colors.navy,
-    borderRadius: radius.button,
+    borderRadius: shape.cta,
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
   submitBtnDisabled: { opacity: 0.5 },
-  submitText: { color: colors.gold, fontSize: 16, fontWeight: '800' },
+  submitText: { color: colors.gold, fontSize: text.actionLarge.size, fontWeight: '800' },
 });

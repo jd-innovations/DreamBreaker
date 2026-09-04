@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { Avatar } from '@/components/Avatar';
 import { StatusChip } from '@/components/StatusChip';
 import { WalletRedeemSheet } from '@/components/wallet/WalletRedeemSheet';
@@ -142,30 +144,30 @@ export function WalletCard({ item }: { item: WalletItem }) {
 const c = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderRadius: radius.card, padding: 14, marginBottom: 12, gap: 12,
+    borderRadius: shape.card, padding: 14, marginBottom: 12, gap: 12,
   },
   unseenDot: {
     position: 'absolute', top: 12, right: 12,
     width: 8, height: 8, borderRadius: 4, backgroundColor: L.gold,
   },
-  hero: { width: '100%', height: 100, borderRadius: 10, marginTop: 2 },
+  hero: { width: '100%', height: 100, borderRadius: shape.cta, marginTop: 2 },
   eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   eyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 0.6 },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  title: { color: L.navy, fontSize: 15, fontWeight: '800', marginBottom: 2, lineHeight: 19 },
-  subtitle: { color: L.textSub, fontSize: 12 },
+  title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', marginBottom: 2, lineHeight: 19 },
+  subtitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   metaRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(10,18,40,0.08)', paddingTop: 10,
   },
-  value: { fontSize: 14, fontWeight: '800' },
-  expiration: { color: L.textSub, fontSize: 11, fontWeight: '600' },
+  value: { fontSize: text.rowValue.size, fontWeight: '800' },
+  expiration: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   cta: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
     backgroundColor: L.bg, borderWidth: 1, borderColor: 'rgba(10,18,40,0.10)',
-    borderRadius: radius.button, paddingVertical: 10,
+    borderRadius: shape.cta, paddingVertical: 10,
   },
   ctaDisabled: { opacity: 0.5 },
-  ctaLabel: { color: L.navy, fontSize: 12, fontWeight: '700' },
+  ctaLabel: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
   ctaLabelDisabled: { color: L.textSub },
 });

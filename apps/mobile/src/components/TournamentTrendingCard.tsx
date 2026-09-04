@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, type StyleProp, type ViewStyl
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { skillLabel } from '@/lib/supabase/playEvents';
 import { formatEventDay, formatStartTime, humanizeFormat } from '@/lib/tournamentDisplay';
 import type { Tournament } from '@/lib/tournamentTypes';
@@ -233,7 +235,7 @@ const tc = StyleSheet.create({
   // background, no photo. The hero image and its gradient were dropped so the
   // tournament listing reads as the community event listing does.
   card: {
-    borderRadius: 16, overflow: 'hidden',
+    borderRadius: shape.card, overflow: 'hidden',
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg,
     // No outer margin at all. Both insets here belonged to the Home list and
     // were wrong on the Events list, so spacing is the host's to set.
@@ -244,32 +246,32 @@ const tc = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: 6,
   },
-  typeText: { color: colors.gold, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
+  typeText: { color: colors.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   badge: {
     position: 'absolute', top: 10, left: 8,
     flexDirection: 'row', alignItems: 'center', gap: 3,
-    borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3,
+    borderRadius: shape.badge, paddingHorizontal: 6, paddingVertical: 3,
   },
-  badgeGold:  { backgroundColor: colors.gold },
+  badgeGold: { backgroundColor: colors.gold },
   badgeGreen: { backgroundColor: colors.success },
-  badgeText:  { color: colors.navy, fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+  badgeText: { color: colors.navy, fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
   miniLogo: {
     position: 'absolute', bottom: 8, left: 8,
     backgroundColor: 'rgba(10,18,40,0.85)',
-    borderRadius: 6, padding: 5, alignItems: 'center',
+    borderRadius: shape.badge, padding: 5, alignItems: 'center',
   },
   miniLogoText: { color: '#FFFFFF', fontSize: 8, fontWeight: '900', letterSpacing: 0.5, lineHeight: 10 },
 
-  info:        { padding: 16, gap: 4 },
-  nameRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
+  info: { padding: 16, gap: 4 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
   // Matches cl.name: uppercase, 22/26. flex + marginRight stay because this
   // title shares its row with the save heart, which cl.name does not.
   name: {
-    color: colors.navy, fontSize: 22, fontWeight: '800', lineHeight: 26,
+    color: colors.navy, fontSize: text.cardTitle.size, fontWeight: '800', lineHeight: 26,
     textTransform: 'uppercase', flex: 1, marginRight: 8,
   },
   verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  verifiedText:{ color: '#3B82F6', fontSize: 11, fontWeight: '600' },
+  verifiedText: { color: '#3B82F6', fontSize: text.caption.size, fontWeight: '500' },
 
   // Tinted block so the three figures read as one unit. The border alone was
   // not enough separation: the card is colors.bg, so an unfilled block was white on
@@ -278,44 +280,44 @@ const tc = StyleSheet.create({
   statsRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.page,
-    borderWidth: 1, borderColor: colors.border, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.border, borderRadius: shape.panel,
     paddingHorizontal: 8, paddingVertical: 10,
     marginBottom: 10,
   },
-  statItem:    { flex: 1, alignItems: 'center' },
-  statNum:     { color: colors.navy, fontSize: 15, fontWeight: '800' },
-  statLabel:   { color: colors.textSub, fontSize: 11 },
+  statItem: { flex: 1, alignItems: 'center' },
+  statNum: { color: colors.navy, fontSize: text.rowValue.size, fontWeight: '800' },
+  statLabel: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500' },
   statDivider: { width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 8 },
 
   fillBar: { marginTop: 4, marginBottom: 10 },
   formatPill: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.goldBg, borderRadius: 20,
+    backgroundColor: colors.goldBg, borderRadius: shape.pill,
     paddingHorizontal: 10, paddingVertical: 3,
     marginBottom: 8,
   },
-  formatPillText: { color: colors.gold, fontSize: 11, fontWeight: '800', letterSpacing: 0.4 },
+  formatPillText: { color: colors.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   // Mirrors cl.meta / cl.metaText.
-  metaRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  metaText: { color: '#000000', fontSize: 15, fontWeight: '500', flex: 1 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  metaText: { color: '#000000', fontSize: text.body.size, fontWeight: '500', flex: 1 },
 
-  btns:   { gap: 6 },
+  btns: { gap: 6 },
   btnRow: { flexDirection: 'row', gap: 6 },
   holdBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 1.5, borderColor: colors.gold, borderRadius: 10,
+    borderWidth: 1.5, borderColor: colors.gold, borderRadius: shape.cta,
     paddingVertical: 7,
   },
-  holdBtnLabel: { color: colors.gold, fontSize: 13, fontWeight: '800' },
+  holdBtnLabel: { color: colors.gold, fontSize: text.action.size, fontWeight: '800' },
   registerBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
-    backgroundColor: colors.gold, borderRadius: 10, paddingVertical: 7,
+    backgroundColor: colors.gold, borderRadius: shape.cta, paddingVertical: 7,
   },
-  registerLabel: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  registerLabel: { color: '#FFFFFF', fontSize: text.action.size, fontWeight: '800' },
   viewTournBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-    borderWidth: 1.5, borderColor: colors.border, borderRadius: 10,
+    borderWidth: 1.5, borderColor: colors.border, borderRadius: shape.cta,
     paddingVertical: 7,
   },
-  viewTournText: { color: colors.navy, fontSize: 13, fontWeight: '700' },
+  viewTournText: { color: colors.navy, fontSize: text.action.size, fontWeight: '800' },
 });

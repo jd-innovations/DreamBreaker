@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, Pressable, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 
 export const DISTANCE_STEPS = ['5 mi', '25 mi', '50 mi', 'Any distance'];
 
@@ -121,31 +123,31 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: 20,
   },
-  title: { color: colors.navy, fontSize: 17, fontWeight: '900' },
+  title: { color: colors.navy, fontSize: text.modalTitle.size, fontWeight: '900' },
   sectionLabel: {
-    color: colors.navy, fontSize: 12, fontWeight: '800',
-    letterSpacing: 0.5, marginBottom: 10, marginTop: 4,
+    color: colors.navy, fontSize: text.sectionLabel.size, fontWeight: '800',
+    letterSpacing: text.sectionLabel.letterSpacing, marginBottom: 10, marginTop: 4,
   },
   distRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 },
   distStep: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: 20, borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: shape.pill, borderWidth: 1.5, borderColor: colors.border,
     paddingHorizontal: 14, paddingVertical: 9, backgroundColor: colors.page,
   },
   distStepActive: { backgroundColor: colors.navy, borderColor: colors.navy },
-  distText: { color: colors.textSub, fontSize: 13, fontWeight: '600' },
+  distText: { color: colors.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   distTextActive: { color: '#FFFFFF' },
-  hint: { color: colors.textSub, fontSize: 11, marginBottom: 20 },
+  hint: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 20 },
   toggleRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 12, marginBottom: 20,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
   },
-  toggleLabel: { color: colors.navy, fontSize: 14, fontWeight: '700' },
-  toggleSub: { color: colors.textSub, fontSize: 12, marginTop: 2 },
+  toggleLabel: { color: colors.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  toggleSub: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
   applyBtn: {
-    backgroundColor: colors.gold, borderRadius: 14,
+    backgroundColor: colors.gold, borderRadius: shape.cta,
     paddingVertical: 15, alignItems: 'center',
   },
-  applyBtnText: { color: colors.navy, fontSize: 15, fontWeight: '800' },
+  applyBtnText: { color: colors.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
 });

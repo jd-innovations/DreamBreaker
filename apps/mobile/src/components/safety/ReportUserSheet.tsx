@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import { haptics } from '@/lib/haptics';
 import { PERSON_REPORT_REASONS, reportUser, type ReportReason } from '@/lib/services/reporting';
 import { blockUser } from '@/lib/services/blocking';
@@ -218,41 +220,41 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  title: { fontSize: 17, fontWeight: '800', color: colors.navy, flex: 1 },
+  title: { fontSize: text.modalTitle.size, fontWeight: '900', color: colors.navy, flex: 1 },
   body: { padding: 20, gap: 10, paddingBottom: 36 },
-  sectionLabel: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5, color: colors.textMuted, textTransform: 'uppercase', marginTop: 6 },
+  sectionLabel: { fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, color: colors.textMuted, textTransform: 'uppercase', marginTop: 6 },
   option: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
     padding: 14,
-    borderRadius: 12,
+    borderRadius: shape.panel,
     borderWidth: 1,
     borderColor: colors.border,
   },
   optionSelected: { borderColor: colors.navy, backgroundColor: colors.page },
   optionText: { flex: 1 },
-  optionLabel: { fontSize: 15, fontWeight: '700', color: colors.navy },
-  optionHint: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  optionLabel: { fontSize: text.rowTitle.size, fontWeight: '700', color: colors.navy },
+  optionHint: { fontSize: text.caption.size, fontWeight: '500', color: colors.textMuted, marginTop: 2 },
   notes: {
     minHeight: 90,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: shape.cta,
     padding: 12,
-    fontSize: 14,
+    fontSize: text.body.size, fontWeight: '500',
     color: colors.text,
   },
   blockRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-  blockText: { flex: 1, fontSize: 13, color: colors.text },
+  blockText: { flex: 1, fontSize: text.caption.size, fontWeight: '500', color: colors.text },
   submit: {
     marginTop: 8,
     backgroundColor: colors.danger,
-    borderRadius: 12,
+    borderRadius: shape.cta,
     paddingVertical: 14,
     alignItems: 'center',
   },
   submitDisabled: { opacity: 0.45 },
-  submitText: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
-  footnote: { fontSize: 12, color: colors.textMuted, textAlign: 'center', marginTop: 6, lineHeight: 17 },
+  submitText: { color: '#FFFFFF', fontWeight: '800', fontSize: text.actionLarge.size },
+  footnote: { fontSize: text.caption.size, fontWeight: '500', color: colors.textMuted, textAlign: 'center', marginTop: 6, lineHeight: 17 },
 });

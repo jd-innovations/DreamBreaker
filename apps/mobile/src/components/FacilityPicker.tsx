@@ -4,7 +4,9 @@ import {
   Modal, FlatList, ActivityIndicator, SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
+// Design standard, from the shared token source. See DESIGN_STANDARD.md.
+import { radius as shape, text } from '@shared/tokens';
 import {
   fetchFacilities,
   facilityAccessType,
@@ -81,13 +83,13 @@ function FacilityRow({
 }
 
 const fr = StyleSheet.create({
-  row:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border },
-  iconWrap:{ width: 34, height: 34, borderRadius: 17, backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, alignItems: 'center', justifyContent: 'center' },
-  body:    { flex: 1 },
-  name:    { fontSize: 14, fontWeight: '700', color: L.navy },
-  meta:    { fontSize: 12, color: L.textSub, marginTop: 1 },
-  access:  { fontWeight: '700' },
-  courts:  { fontSize: 11, fontWeight: '700', color: L.textSub },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border },
+  iconWrap: { width: 34, height: 34, borderRadius: 17, backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, alignItems: 'center', justifyContent: 'center' },
+  body: { flex: 1 },
+  name: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.navy },
+  meta: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, marginTop: 1 },
+  access: { fontWeight: '700' },
+  courts: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, color: L.textSub },
 });
 
 // ─── Picker modal ─────────────────────────────────────────────────────────────
@@ -266,18 +268,18 @@ export function FacilityPickerModal({
 }
 
 const m = StyleSheet.create({
-  root:    { flex: 1, backgroundColor: L.white },
-  header:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border },
-  title:   { fontSize: 17, fontWeight: '800', color: L.navy },
-  retryBtn: { marginTop: 10, borderWidth: 1.5, borderColor: L.navy, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 8 },
-  retryText: { color: L.navy, fontSize: 13, fontWeight: '800' },
-  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 12, borderWidth: 1.5, borderColor: L.border, borderRadius: radius.sm, paddingHorizontal: 12, height: 44 },
-  searchInput:{ flex: 1, fontSize: 14, color: L.text },
-  empty:   { alignItems: 'center', paddingTop: 60, gap: 10 },
-  emptyText:{ color: L.textSub, fontSize: 14, fontWeight: '500' },
-  footer:  { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border, padding: 12 },
-  manualBtn:{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12 },
-  manualText:{ fontSize: 14, color: L.textSub, fontWeight: '600' },
+  root: { flex: 1, backgroundColor: L.white },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border },
+  title: { fontSize: text.titleSm.size, fontWeight: '800', color: L.navy },
+  retryBtn: { marginTop: 10, borderWidth: 1.5, borderColor: L.navy, borderRadius: shape.pill, paddingHorizontal: 18, paddingVertical: 8 },
+  retryText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
+  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 12, borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, paddingHorizontal: 12, height: 44 },
+  searchInput: { flex: 1, fontSize: text.body.size, fontWeight: '500', color: L.text },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 10 },
+  emptyText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  footer: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: L.border, padding: 12 },
+  manualBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12 },
+  manualText: { fontSize: text.caption.size, color: L.textSub, fontWeight: '500' },
 });
 
 // ─── FacilityPicker (exported) ────────────────────────────────────────────────
@@ -414,15 +416,15 @@ export function FacilityPicker({ value, onChange, lat, lng, radiusMiles = 20 }: 
 }
 
 const p = StyleSheet.create({
-  placeholder:    { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: L.border, borderRadius: radius.sm, paddingHorizontal: 12, height: 46, backgroundColor: L.bg },
-  placeholderText:{ flex: 1, fontSize: 14, color: L.textSub },
-  chipWrap:       { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: L.gold, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: L.bg },
-  chipName:       { fontSize: 14, fontWeight: '700', color: L.navy },
-  chipSub:        { fontSize: 11, color: L.textSub, marginTop: 1 },
-  switchLink:     { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
-  switchText:     { fontSize: 12, color: L.textSub, fontWeight: '600', textDecorationLine: 'underline' },
-  inputWrap:      { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: L.border, borderRadius: radius.sm, paddingHorizontal: 12, height: 46, backgroundColor: L.bg, marginTop: 8 },
-  input:          { flex: 1, fontSize: 14, color: L.text },
+  placeholder: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, paddingHorizontal: 12, height: 46, backgroundColor: L.bg },
+  placeholderText: { flex: 1, fontSize: text.caption.size, fontWeight: '500', color: L.textSub },
+  chipWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: L.bg },
+  chipName: { fontSize: text.rowTitle.size, fontWeight: '700', color: L.navy },
+  chipSub: { fontSize: text.caption.size, fontWeight: '500', color: L.textSub, marginTop: 1 },
+  switchLink: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
+  switchText: { fontSize: text.caption.size, color: L.textSub, fontWeight: '500', textDecorationLine: 'underline' },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, paddingHorizontal: 12, height: 46, backgroundColor: L.bg, marginTop: 8 },
+  input: { flex: 1, fontSize: text.body.size, fontWeight: '500', color: L.text },
 });
 
 
