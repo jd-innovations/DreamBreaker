@@ -100,6 +100,7 @@ export function DirectorOnly({ tournamentId, children }: Props) {
           <>
             <ActivityIndicator size="large" color={colors.gold} />
             <Text style={s.text}>Checking permissions…</Text>
+            <Text style={s.text}>build 8b66870</Text>
             <Text style={s.text}>
               {elapsed}s · attempt {probe.mounts} · profile{' '}
               {profileLoading ? 'loading' : 'ready'} · tournament{' '}
