@@ -39,31 +39,19 @@ type Props = {
  *
  * This is UI-level only. RLS remains the real enforcement.
  */
-// Survives remounts on purpose. A guard that unmounts and remounts in a loop
-// resets any state or timer it owns, which is why an 8s in-component timer
-// never fired: the elapsed time and attempt count have to live outside it.
-const mountProbe = new Map<string, { firstSeen: number; mounts: number }>();
-
 export function DirectorOnly({ tournamentId, children }: Props) {
   const { canManage, denyReason, loading, profileLoading, directorLoading, error, refresh } =
     useTournamentDirector(tournamentId);
 
   // A guard that never resolves is indistinguishable from a slow one. After
   // eight seconds, say which half is stuck and offer a way out.
+  //
+  // A temporary mount-count/elapsed-time probe lived here while tracking down
+  // 2026-09-04's stall and the 2026-09-05 refocus flicker — both fixed and
+  // confirmed on device (see useTournamentDirector.ts). Removed now that
+  // there is nothing left to diagnose; this is production UX again, not a
+  // debug readout.
   const [stuck, setStuck] = useState(false);
-  const [, tick] = useState(0);
-
-  const probeKey = tournamentId ?? 'none';
-  const probe = mountProbe.get(probeKey) ?? { firstSeen: Date.now(), mounts: 0 };
-  if (!mountProbe.has(probeKey)) mountProbe.set(probeKey, probe);
-  useEffect(() => { probe.mounts += 1; }, [probe]);
-  // Re-render once a second while stuck so the elapsed counter moves.
-  useEffect(() => {
-    if (!loading) return;
-    const i = setInterval(() => tick(n => n + 1), 1000);
-    return () => clearInterval(i);
-  }, [loading]);
-  const elapsed = Math.round((Date.now() - probe.firstSeen) / 1000);
   useEffect(() => {
     if (!loading) { setStuck(false); return; }
     const t = setTimeout(() => setStuck(true), 8_000);
@@ -78,9 +66,6 @@ export function DirectorOnly({ tournamentId, children }: Props) {
   }, [loading, denyReason, tournamentId]);
 
   if (loading) {
-    // Labelled so it can be told apart from the screen's own spinner. Both are
-    // a gold ActivityIndicator centred on white, which made "it just spins"
-    // impossible to attribute.
     return (
       <View style={s.root}>
         {stuck ? (
@@ -100,12 +85,6 @@ export function DirectorOnly({ tournamentId, children }: Props) {
           <>
             <ActivityIndicator size="large" color={colors.gold} />
             <Text style={s.text}>Checking permissions…</Text>
-            <Text style={s.text}>build 89db4cf</Text>
-            <Text style={s.text}>
-              {elapsed}s · attempt {probe.mounts} · profile{' '}
-              {profileLoading ? 'loading' : 'ready'} · tournament{' '}
-              {directorLoading ? 'loading' : 'ready'}
-            </Text>
           </>
         )}
       </View>
