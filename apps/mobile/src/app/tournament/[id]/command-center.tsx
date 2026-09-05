@@ -383,13 +383,16 @@ function CommandCenterScreen() {
           <Ionicons name="scan-outline" size={15} color={L.navy} />
           <Text style={s.headerActionText}>Check-In</Text>
         </TouchableOpacity>
+        {/* Longest label of the three — flexes to take the row's remaining
+            width instead of splitting it evenly, so its own outline actually
+            wraps the text instead of the label overflowing past the pill. */}
         <TouchableOpacity
-          style={s.headerAction}
+          style={[s.headerAction, s.headerActionGrow]}
           activeOpacity={0.8}
           onPress={() => router.push(`/tournament/${id}/workspace` as never)}
         >
           <Ionicons name="people-outline" size={15} color={L.navy} />
-          <Text style={s.headerActionText}>Registrations</Text>
+          <Text style={s.headerActionText} numberOfLines={1}>Registrations</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={s.headerAction}
@@ -826,10 +829,13 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   headerAction: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
     borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
-    paddingVertical: 7,
+    paddingVertical: 7, paddingHorizontal: 12,
   },
+  // Check-In and Bracket size to their own (short) label instead of stretching
+  // to an equal third of the row — that slack is what Registrations needs.
+  headerActionGrow: { flex: 1 },
   headerActionText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
   section: { marginBottom: 20 },
