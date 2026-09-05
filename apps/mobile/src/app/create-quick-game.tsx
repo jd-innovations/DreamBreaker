@@ -19,7 +19,7 @@ import { PickleballIcon } from '@/components';
 import { useSession } from '@/hooks/useSession';
 import { createQuickGame, uploadPlayEventCover, parseDurationLabel } from '@/lib/supabase/playEvents';
 import { consumePendingGroupId } from '@/lib/pendingGroupLink';
-import { eventCoverUri } from '@/lib/eventCover';
+import { eventCoverSource } from '@/lib/eventCover';
 import { FacilityPicker, type FacilityPickerValue } from '@/components/FacilityPicker';
 import { fetchFacilityById } from '@/lib/supabase/facilities';
 
@@ -241,7 +241,7 @@ export default function CreateQuickGameScreen() {
   }
 
   // Preview shows the organizer's pick, else the shared bundled default.
-  const displayPhoto = eventCoverUri(photo);
+  const displayPhoto = eventCoverSource(photo);
 
   return (
     <View style={s.root}>
@@ -288,7 +288,7 @@ export default function CreateQuickGameScreen() {
             <View style={s.photoRow}>
               {/* Preview */}
               <View style={s.photoPreviewWrap}>
-                <Image source={{ uri: displayPhoto }} style={s.photoPreview} resizeMode="cover" />
+                <Image source={displayPhoto} style={s.photoPreview} resizeMode="cover" />
                 <TouchableOpacity style={s.cameraBtn} onPress={handlePhotoPress} activeOpacity={0.85}>
                   <Ionicons name="camera" size={16} color={L.navy} />
                 </TouchableOpacity>

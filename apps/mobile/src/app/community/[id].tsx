@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
   Modal, Pressable, Alert, Linking, Animated, Share,
-  type NativeSyntheticEvent, type NativeScrollEvent,
+  type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { createCommunityShareMessage } from '@/lib/communityShare';
@@ -18,7 +18,7 @@ import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { supabase } from '@/lib/supabase';
 import { platformAlert } from '@/lib/platformAlert';
-import { eventCoverUri } from '@/lib/eventCover';
+import { eventCoverSource } from '@/lib/eventCover';
 import { AppIcon, PickleballIcon, JoinCelebration, Avatar, ManageEventSheet, AddToCalendarButton, type AppIconName } from '@/components';
 import { appLinks } from '@/lib/appLinks';
 import { withLink, type CalendarEventInput } from '@/lib/calendarEvents';
@@ -73,7 +73,7 @@ type EventShape = {
   datetime: string; date: string; time: string; endTime: string;
   venue: string; address: string; city: string;
   players: number; maxPlayers: number; spots: number; pctFilled: number;
-  heroPhoto: string;
+  heroPhoto: ImageSourcePropType;
   format: string; skillLevel: string; courtType: string; fee: string;
   organizer: { name: string; initials: string; bg: string; rating: string; events: number; userId: string | null; avatarUrl?: string | null };
   about: string;
@@ -86,7 +86,7 @@ const EMPTY_EVENT: EventShape = {
   datetime: '', date: '', time: '', endTime: '',
   venue: '', address: '', city: '',
   players: 0, maxPlayers: 0, spots: 0, pctFilled: 0,
-  heroPhoto: '',
+  heroPhoto: eventCoverSource(null),
   format: '', skillLevel: '', courtType: '', fee: '',
   organizer: { name: '', initials: '', bg: colors.navy, rating: '', events: 0, userId: null },
   about: '',
@@ -168,7 +168,7 @@ function mapPlayEvent(data: PlayEventWithOrganizer, participantCount: number): E
     maxPlayers,
     spots: Math.max(0, maxPlayers - participantCount),
     pctFilled: maxPlayers > 0 ? Math.round((participantCount / maxPlayers) * 100) : 0,
-    heroPhoto: eventCoverUri(data.cover_url),
+    heroPhoto: eventCoverSource(data.cover_url),
     format: eventTypeLabel(data.event_type),
     skillLevel: skillLabel(data.skill_min ?? null, data.skill_max ?? null),
     courtType: 'Outdoor',
@@ -1601,7 +1601,7 @@ export default function CommunityEventScreen() {
         {/* ── HERO (preserved) ── */}
         <View style={s.hero}>
           <Animated.Image
-            source={{ uri: event.heroPhoto }}
+            source={event.heroPhoto}
             style={[StyleSheet.absoluteFill, { transform: [{ scale: heroScale }] }]}
             resizeMode="cover"
           />

@@ -21,7 +21,7 @@ import { createRoundRobin, uploadPlayEventCover, parseDurationLabel } from '@/li
 import { FacilityPicker, type FacilityPickerValue } from '@/components/FacilityPicker';
 import { fetchFacilityById } from '@/lib/supabase/facilities';
 import { consumePendingGroupId } from '@/lib/pendingGroupLink';
-import { eventCoverUri } from '@/lib/eventCover';
+import { eventCoverSource } from '@/lib/eventCover';
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
 
@@ -330,7 +330,7 @@ export default function CreateRoundRobinScreen() {
   }
 
   // Preview shows the organizer's pick, else the shared bundled default.
-  const displayPhoto = eventCoverUri(photo);
+  const displayPhoto = eventCoverSource(photo);
 
   // ── Header ──
 
@@ -386,7 +386,7 @@ export default function CreateRoundRobinScreen() {
 
               <View style={s.photoRow}>
                 <View style={s.photoPreviewWrap}>
-                  <Image source={{ uri: displayPhoto }} style={s.photoPreview} resizeMode="cover" />
+                  <Image source={displayPhoto} style={s.photoPreview} resizeMode="cover" />
                   <TouchableOpacity style={s.cameraBtn} onPress={handlePhotoPress} activeOpacity={0.85}>
                     <Ionicons name="camera" size={15} color={L.navy} />
                   </TouchableOpacity>

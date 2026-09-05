@@ -21,7 +21,6 @@ import {
   type PlayEventType,
 } from '@/lib/supabase/playEvents';
 import { FALLBACK_LOCATION_LABEL, useCurrentLocation, type Coordinates } from '@/lib/location';
-import { eventCoverUri } from '@/lib/eventCover';
 import { ExploreMap } from '@/components/ExploreMap';
 import type { Region } from '@/components/ExploreMap.types';
 import { PickleballIcon, AppIcon } from '@/components';
@@ -114,7 +113,11 @@ function playEventToPin(e: PlayEventWithMapFacility, origin: Coordinates): Explo
     id: e.id,
     category: 'community',
     name: e.name,
-    photo: eventCoverUri(e.cover_url),
+    // Deliberately NOT eventCoverSource(): PinPhoto already has its own
+    // fallback for a missing photo — player initials on a small map pin — and
+    // routing a cover-less event through the bundled stock court photo would
+    // replace that working design with a less useful one for this surface.
+    photo: e.cover_url ?? '',
     datetime: formatEventDateTime(e),
     distance: `${distMi.toFixed(1)} mi away`,
     distanceMi: distMi,

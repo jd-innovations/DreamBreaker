@@ -20,7 +20,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { createClinic, uploadPlayEventCover, parseDurationLabel } from '@/lib/supabase/playEvents';
 import { searchPlayers, type InvitablePlayer } from '@/lib/supabase/playEventInvites';
 import { consumePendingGroupId } from '@/lib/pendingGroupLink';
-import { eventCoverUri } from '@/lib/eventCover';
+import { eventCoverSource } from '@/lib/eventCover';
 import { FacilityPicker, type FacilityPickerValue } from '@/components/FacilityPicker';
 import { fetchFacilityById } from '@/lib/supabase/facilities';
 
@@ -311,7 +311,7 @@ export default function CreateClinicScreen() {
   }
 
   // Preview shows the organizer's pick, else the shared bundled default.
-  const displayPhoto = eventCoverUri(photo);
+  const displayPhoto = eventCoverSource(photo);
 
   return (
     <View style={s.root}>
@@ -356,7 +356,7 @@ export default function CreateClinicScreen() {
 
             <View style={s.photoRow}>
               <View style={s.photoPreviewWrap}>
-                <Image source={{ uri: displayPhoto }} style={s.photoPreview} resizeMode="cover" />
+                <Image source={displayPhoto} style={s.photoPreview} resizeMode="cover" />
                 <TouchableOpacity style={s.cameraBtn} onPress={handlePhotoPress} activeOpacity={0.85}>
                   <Ionicons name="camera" size={16} color={L.navy} />
                 </TouchableOpacity>

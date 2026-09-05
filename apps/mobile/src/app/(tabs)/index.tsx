@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   Image, Dimensions, NativeScrollEvent, NativeSyntheticEvent, ActivityIndicator,
+  type ImageSourcePropType,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +23,7 @@ import { useQuickActionsOrder } from '@/hooks/useQuickActionsOrder';
 import { QUICK_ACTIONS } from '@/constants/quickActions';
 import { getProfileCompletion } from '@/lib/profileCompletion';
 import { getProfileSetupTasks, hasRegisteredPushToken } from '@/lib/profileSetup';
-import { eventCoverUri } from '@/lib/eventCover';
+import { eventCoverSource } from '@/lib/eventCover';
 import { claimGuestParticipants, fetchJoinedPlayEvents, fetchOpenPlayEvents, gameTypePillStyle, skillLabel, type PlayEventWithCount, type PlayEventType } from '@/lib/supabase/playEvents';
 import { fetchTournaments } from '@/lib/supabase/tournaments';
 import { isTournamentExpired, type Tournament } from '@/lib/tournamentTypes';
@@ -202,7 +203,7 @@ type CommunityCardData = {
   spots: number;
   pctFilled: number;
   city: string;
-  photo: string;
+  photo: ImageSourcePropType;
   primaryAction: 'join' | 'view';
   distance: string;
   eventType: PlayEventType;
@@ -216,7 +217,7 @@ const COMMUNITY: CommunityCardData[] = [
     id: '1', name: 'Wednesday Round Robin', badge: 'OPEN', badgeGold: true,
     datetime: 'Wed, May 21 • 6:00 PM', venue: 'Lakewood Ranch Courts',
     players: 12, spots: 4, pctFilled: 75, city: 'Bradenton, FL',
-    photo: 'https://images.unsplash.com/photo-1543941948-60b9490a4414?w=400&h=240&fit=crop&q=80',
+    photo: { uri: 'https://images.unsplash.com/photo-1543941948-60b9490a4414?w=400&h=240&fit=crop&q=80' },
     primaryAction: 'join' as const, distance: '2.3 mi',
     eventType: 'round_robin' as PlayEventType, eventDate: todayPlus(0),
     skillMin: 3.5 as number | null, skillMax: 4.5 as number | null,
@@ -225,7 +226,7 @@ const COMMUNITY: CommunityCardData[] = [
     id: '2', name: 'Friday Morning Play', badge: 'SPOTS LEFT', badgeGold: false,
     datetime: 'Fri, May 23 • 8:30 AM', venue: 'Nathan Benderson Park',
     players: 8, spots: 8, pctFilled: 50, city: 'Sarasota, FL',
-    photo: 'https://images.unsplash.com/photo-1529832393073-e362750f78b3?w=400&h=240&fit=crop&q=80',
+    photo: { uri: 'https://images.unsplash.com/photo-1529832393073-e362750f78b3?w=400&h=240&fit=crop&q=80' },
     primaryAction: 'join' as const, distance: '8.1 mi',
     eventType: 'open_play' as PlayEventType, eventDate: todayPlus(1),
     skillMin: null as number | null, skillMax: null as number | null,
@@ -234,7 +235,7 @@ const COMMUNITY: CommunityCardData[] = [
     id: '3', name: 'Sunday Social Play', badge: 'OPEN', badgeGold: true,
     datetime: 'Sun, May 25 • 9:00 AM', venue: 'Premier Sports Campus',
     players: 16, spots: 2, pctFilled: 89, city: 'Sarasota, FL',
-    photo: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=240&fit=crop&q=80',
+    photo: { uri: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=240&fit=crop&q=80' },
     primaryAction: 'view' as const, distance: '12.4 mi',
     eventType: 'mixer' as PlayEventType, eventDate: todayPlus(4),
     skillMin: 3.0, skillMax: 3.5,
@@ -243,7 +244,7 @@ const COMMUNITY: CommunityCardData[] = [
     id: '4', name: 'Thursday Evening Play', badge: 'SPOTS LEFT', badgeGold: false,
     datetime: 'Thu, May 22 • 7:00 PM', venue: 'Waterside Sports Ctr',
     players: 20, spots: 12, pctFilled: 63, city: 'Lakewood Ranch, FL',
-    photo: 'https://images.unsplash.com/photo-1477525218966-c4a4c7ee6e56?w=400&h=240&fit=crop&q=80',
+    photo: { uri: 'https://images.unsplash.com/photo-1477525218966-c4a4c7ee6e56?w=400&h=240&fit=crop&q=80' },
     primaryAction: 'join' as const, distance: '5.7 mi',
     eventType: 'open_play' as PlayEventType, eventDate: todayPlus(2),
     skillMin: 4.0, skillMax: null as number | null,
@@ -287,7 +288,7 @@ function playEventToCard(e: PlayEventWithCount, viewerStatus?: CommunityCardData
     spots,
     pctFilled:     max > 0 ? Math.round((count / max) * 100) : 0,
     city:          [e.city, e.state].filter(Boolean).join(', '),
-    photo:         eventCoverUri(e.cover_url),
+    photo:         eventCoverSource(e.cover_url),
     primaryAction: e.status === 'open' ? 'join' : 'view',
     distance:      '',
     eventType:     (e.event_type as PlayEventType) ?? 'open_play',
