@@ -91,7 +91,22 @@ export function useTournamentDirector(tournamentId: string | null | undefined) {
     void refresh();
   }, [refresh, profileLoading]);
 
-  const resolving = loading || profileLoading;
+  // Once an answer is already resolved for this tournament, an unrelated
+  // profile refresh must not re-block the screen.
+  //
+  // Confirmed on video 2026-09-05: navigating away and back re-focuses the
+  // SAME still-mounted screen (native-stack keeps prior screens alive for
+  // swipe-back) rather than remounting it, and useProfile()'s own
+  // useFocusEffect force-refetches the profile on every one of those
+  // refocuses — flipping `profileLoading` true for the ~100-200ms the refetch
+  // takes. `resolvedFor` already stops that from re-running the tournament
+  // check, but `resolving` was still `loading || profileLoading`, so
+  // DirectorOnly re-showed its blocking screen for that profile refresh alone,
+  // even though the permission answer had not changed. The "22s / attempt 2"
+  // text Nate saw flash was stale `stuck` state from the ORIGINAL stall,
+  // briefly repainting before the quick refresh cleared it — not a new stall.
+  const hasResolved = tournamentId != null && resolvedFor === tournamentId;
+  const resolving = hasResolved ? false : (loading || profileLoading);
 
   const isDirector = !resolving && !!user?.id && directorId === user.id;
 
