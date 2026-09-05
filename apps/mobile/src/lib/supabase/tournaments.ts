@@ -206,6 +206,26 @@ export async function fetchTournamentForEdit(
   return dbRowToTournament(data as Record<string, unknown>);
 }
 
+// Shared with useTournamentDirector.ts. Director Hub calls
+// fetchDirectorTournaments(user.id) to list a director's own tournaments —
+// that query already establishes, for every tournament it returns, that this
+// user is its director. DirectorOnly used to throw that away and re-verify
+// ownership with an independent network round trip for every tournament a
+// director switched to, which is what visibly flashed "Checking
+// permissions…" on the first visit to EACH of a director's own tournaments,
+// not just a repeat visit to one. Caching the id set here means the check for
+// any tournament in it can be answered from memory instead of a request.
+//
+// A cache miss is always safe: it falls through to the real check (a brand
+// new tournament not yet in this list, or a screen reached without visiting
+// Director Hub first). This never grants access the real check wouldn't.
+let cachedDirectorId: string | null = null;
+let cachedDirectorTournamentIds: Set<string> | null = null;
+
+export function getCachedDirectorTournamentIds(directorId: string): Set<string> | null {
+  return cachedDirectorId === directorId ? cachedDirectorTournamentIds : null;
+}
+
 export async function fetchDirectorTournaments(directorId: string): Promise<Tournament[]> {
   const { data, error } = await supabase
     .from('tournaments')
@@ -214,7 +234,10 @@ export async function fetchDirectorTournaments(directorId: string): Promise<Tour
     .order('event_date', { ascending: false });
 
   if (error || !data) return [];
-  return data.map(dbRowToTournament);
+  const tournaments = data.map(dbRowToTournament);
+  cachedDirectorId = directorId;
+  cachedDirectorTournamentIds = new Set(tournaments.map(t => t.id));
+  return tournaments;
 }
 
 const CREATED_SELECT =

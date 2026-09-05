@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useProfile } from '@/hooks/useProfile';
-import { fetchTournamentDirectorId } from '@/lib/supabase/tournaments';
+import { fetchTournamentDirectorId, getCachedDirectorTournamentIds } from '@/lib/supabase/tournaments';
 
 // Why a director may not manage a tournament, when they may not.
 export type DirectorDenyReason = 'not_director' | 'not_approved';
@@ -64,6 +64,25 @@ export function useTournamentDirector(tournamentId: string | null | undefined) {
       setResolvedFor(tournamentId ?? null);
       return;
     }
+
+    // Skip the round trip when Director Hub (or any prior
+    // fetchDirectorTournaments call) has already established that this user
+    // owns this tournament. This is the fix for the actual reported pattern —
+    // switching between ANY of a director's own tournaments flashed on the
+    // first visit to EACH one, not just a repeat visit to the same one, which
+    // resolvedFor alone (scoped to a single tournamentId) could never address.
+    // A cache miss falls through to the real check below; it is never used to
+    // grant access the real check would refuse.
+    if (!force) {
+      const cachedIds = getCachedDirectorTournamentIds(user.id);
+      if (cachedIds?.has(tournamentId)) {
+        setDirectorId(user.id);
+        setResolvedFor(tournamentId);
+        setLoading(false);
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
     try {
