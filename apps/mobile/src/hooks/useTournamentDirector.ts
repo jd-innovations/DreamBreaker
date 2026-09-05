@@ -36,6 +36,19 @@ export function useTournamentDirector(tournamentId: string | null | undefined) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Which tournamentId the current answer belongs to, or null while unresolved.
+  //
+  // Needed because useProfile() runs its own useFocusEffect that force-
+  // refetches the profile on every screen focus — foregrounding the app,
+  // navigating back to a director screen, anything like that — which flips
+  // `profileLoading` on every one of those, every time, for every screen using
+  // this hook. `refresh` used to run unconditionally whenever that happened,
+  // which flashed every DirectorOnly-wrapped screen (command center included)
+  // back to "Checking permissions…" over an already-loaded screen on every
+  // focus. `resolvedFor` lets a refocus that already has its answer be a
+  // no-op instead of a real re-check.
+  const [resolvedFor, setResolvedFor] = useState<string | null>(null);
+
   // `profileLoading` is deliberately NOT checked in here any more. It used to
   // early-return while the profile was still loading, which left `loading` at
   // its initial `true` and depended on this callback being re-created and the
@@ -43,27 +56,34 @@ export function useTournamentDirector(tournamentId: string | null | undefined) {
   // guard sat on "Checking permissions…" forever — profile ready, tournament
   // loading, and no request ever sent. Waiting is now the effect's job, so
   // there is no path that leaves `loading` true without starting a fetch.
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
+    if (!force && tournamentId != null && resolvedFor === tournamentId) return;
     if (!user?.id || !tournamentId) {
       setDirectorId(null);
       setLoading(false);
+      setResolvedFor(tournamentId ?? null);
       return;
     }
     setLoading(true);
     setError(null);
     try {
       setDirectorId(await fetchTournamentDirectorId(tournamentId));
+      setResolvedFor(tournamentId);
     } catch (e) {
       // Without this the throw fell through to canManage === false, and the
       // guard read a FAILED check as "not the director" and redirected. A
       // failure to answer is not a denial.
+      //
+      // `resolvedFor` deliberately NOT set here: an unresolved failure stays
+      // eligible to retry on the next natural focus, rather than being
+      // permanently treated as answered until someone taps Retry.
       console.error('[useTournamentDirector] permission check failed:', e);
       setDirectorId(null);
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }, [user?.id, tournamentId]);
+  }, [user?.id, tournamentId, resolvedFor]);
 
   // Run once the profile is settled, and run again if it settles later.
   useEffect(() => {

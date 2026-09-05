@@ -92,7 +92,7 @@ export function DirectorOnly({ tournamentId, children }: Props) {
             <Text style={s.text}>
               tournament: {directorLoading ? 'still loading' : 'ready'}
             </Text>
-            <TouchableOpacity onPress={() => { void refresh(); }} style={{ marginTop: 16 }}>
+            <TouchableOpacity onPress={() => { void refresh(true); }} style={{ marginTop: 16 }}>
               <Text style={[s.text, { color: colors.gold }]}>Retry</Text>
             </TouchableOpacity>
           </>
@@ -120,7 +120,7 @@ export function DirectorOnly({ tournamentId, children }: Props) {
       <View style={s.root}>
         <Text style={s.text}>Could not verify your permissions.</Text>
         <Text style={s.text}>{error}</Text>
-        <TouchableOpacity onPress={() => { void refresh(); }} style={{ marginTop: 16 }}>
+        <TouchableOpacity onPress={() => { void refresh(true); }} style={{ marginTop: 16 }}>
           <Text style={[s.text, { color: colors.gold }]}>Retry</Text>
         </TouchableOpacity>
       </View>
