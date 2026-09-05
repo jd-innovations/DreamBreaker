@@ -245,8 +245,17 @@ function EditTournamentScreen() {
 
   // One request: ownership is the query's own `.eq('director_id', ...)`, not a
   // separate permission check beforehand. See fetchTournamentForEdit for why.
-  const load = useCallback(async () => {
+  //
+  // `force` exists because useProfile() re-triggers a profile refresh on every
+  // screen focus (its own useFocusEffect), which flips `profileLoading` and,
+  // since it used to be a dependency here, recreated this callback and re-ran
+  // the mount effect below — re-fetching the tournament and flashing the
+  // loading spinner over an already-populated form every time the screen
+  // regained focus. Skipping when the same tournament is already loaded stops
+  // that; Retry passes force so it still does a real refetch on request.
+  const load = useCallback(async (force = false) => {
     if (profileLoading) return;      // wait for the profile; do not fail yet
+    if (!force && tournament?.id === id) return;
     if (!user?.id) {
       setLoadError('You need to be signed in to edit a tournament.');
       setLoading(false);
@@ -290,7 +299,7 @@ function EditTournamentScreen() {
     } finally {
       setLoading(false);
     }
-  }, [id, user?.id, profileLoading, isApprovedDirector]);
+  }, [id, user?.id, profileLoading, isApprovedDirector, tournament]);
 
   useEffect(() => {
     let cancelled = false;
@@ -402,7 +411,7 @@ function EditTournamentScreen() {
       <View style={[s.root, { paddingTop: insets.top }]}>
         <StatusBar style="dark" />
         <ErrorState title="Can't open the editor" message={loadError}
-          action={{ label: 'Retry', onPress: () => { void load(); } }} />
+          action={{ label: 'Retry', onPress: () => { void load(true); } }} />
       </View>
     );
   }
