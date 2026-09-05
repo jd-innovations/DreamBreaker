@@ -403,7 +403,7 @@ function CommandCenterScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 32 }]}
+        contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 100 }]}
       >
 
         {/* ── SECTION 2 — OPERATIONS SUMMARY ── */}
@@ -676,24 +676,18 @@ function CommandCenterScreen() {
             <QuickAction
               icon="people-outline"
               label="Registration Workspace"
-              accent
               onPress={() => router.push(`/tournament/${id}/workspace` as never)}
             />
             <QuickAction
               icon="scan-outline"
               label="Check-In"
-              accent
               onPress={() => router.push(`/tournament/${id}/check-in` as never)}
             />
             <QuickAction
               icon="person-add-outline"
               label="Add Registration"
-              accent
               onPress={() => router.push(`/tournament/${id}/add-registration` as never)}
             />
-          </View>
-
-          <View style={[s.actionGrid, { marginTop: 8 }]}>
             <QuickAction
               icon="git-branch-outline"
               label="View Brackets"
