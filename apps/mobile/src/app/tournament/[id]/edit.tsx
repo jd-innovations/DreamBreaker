@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, KeyboardAvoidingView, Platform, Alert, Modal, ActivityIndicator,
@@ -11,10 +11,9 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
-import { fetchTournamentById, updateTournamentDetails } from '@/lib/supabase/tournaments';
+import { fetchTournamentForEdit, updateTournamentDetails } from '@/lib/supabase/tournaments';
 import { useProfile } from '@/hooks/useProfile';
 import type { Tournament } from '@/lib/tournamentTypes';
-import { DirectorOnly } from '@/components/DirectorOnly';
 import { ErrorState } from '@/components/states/ScreenState';
 import AmenityPicker from '@/components/AmenityPicker';
 
@@ -219,11 +218,21 @@ const f = StyleSheet.create({
 function EditTournamentScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { profile } = useProfile();
+  const { user, profile, loading: profileLoading } = useProfile();
   const stripeOnboarded = !!profile?.stripe_connect_onboarded_at;
+
+  // Mirrors is_approved_director(): ownership is checked IN the query below;
+  // this is the second half of what DirectorOnly used to check, read from data
+  // already in memory via useProfile — no extra request. A director whose
+  // approval has lapsed still owns the row, so skipping this would let them
+  // into the form and fail silently at the RLS UPDATE policy on save.
+  const isApprovedDirector =
+    (profile?.role === 'director' || profile?.is_director === true) &&
+    profile?.director_status === 'approved';
 
   const [loading, setLoading]       = useState(true);
   const [loadError, setLoadError]   = useState<string | null>(null);
+  const [notApproved, setNotApproved] = useState(false);
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [form, setForm]             = useState<FormState | null>(null);
   const [errors, setErrors]         = useState<Errors>({});
@@ -234,44 +243,63 @@ function EditTournamentScreen() {
   const [dateDraft, setDateDraft] = useState(new Date());
   const [amenities, setAmenities] = useState<string[]>([]);
 
+  // One request: ownership is the query's own `.eq('director_id', ...)`, not a
+  // separate permission check beforehand. See fetchTournamentForEdit for why.
+  const load = useCallback(async () => {
+    if (profileLoading) return;      // wait for the profile; do not fail yet
+    if (!user?.id) {
+      setLoadError('You need to be signed in to edit a tournament.');
+      setLoading(false);
+      return;
+    }
+    if (!id) {
+      setLoadError('No tournament was specified.');
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadError(null);
+    setNotApproved(false);
+    try {
+      const t = await fetchTournamentForEdit(id, user.id);
+      if (!t) {
+        // Not found or not yours — RLS makes those indistinguishable from the
+        // client, and neither is actionable differently, so one message covers
+        // both. Matches web's "Tournament not found or access denied."
+        setLoadError('Tournament not found, or you do not have access to edit it.');
+        return;
+      }
+      if (t.status !== 'draft') {
+        setLoadError(`This tournament is "${t.status}" and can only be edited while it is a draft.`);
+        return;
+      }
+      if (!isApprovedDirector) {
+        // Their own draft, but their director approval is not active. Not
+        // folded into loadError: this is not "the check failed", it is an
+        // an answer that says no — bouncing them with no explanation is the
+        // confusing case a clear message avoids.
+        setNotApproved(true);
+        return;
+      }
+      setTournament(t);
+      setForm(tournamentToForm(t));
+      setAmenities(t.amenities ?? []);
+    } catch (e) {
+      console.error('[tournament edit] load failed:', e);
+      setLoadError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [id, user?.id, profileLoading, isApprovedDirector]);
+
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      // Every exit from here MUST clear `loading`. Before this, the failure
-      // paths returned early and `setLoading(false)` was unreachable, so any
-      // problem showed as a spinner that never resolved and reported nothing.
-      // A request that never settles would leave the finally below unreached,
-      // so the wait is bounded. Ten seconds is well past a normal fetch.
-      const timeout = setTimeout(() => {
-        if (!cancelled) {
-          setLoadError('Timed out loading this tournament (10s). The request never came back.');
-          setLoading(false);
-        }
-      }, 10_000);
-      try {
-        const t = await fetchTournamentById(id);
-        if (cancelled) return;
-        if (!t) {
-          setLoadError('This tournament could not be loaded.');
-          return;
-        }
-        if (t.status !== 'draft') {
-          setLoadError(`This tournament is "${t.status}" and can only be edited while it is a draft.`);
-          return;
-        }
-        setTournament(t);
-        setForm(tournamentToForm(t));
-        setAmenities(t.amenities ?? []);
-      } catch (e) {
-        console.error('[tournament edit] load failed:', e);
-        if (!cancelled) setLoadError(String(e instanceof Error ? e.message : e));
-      } finally {
-        clearTimeout(timeout);
-        if (!cancelled) setLoading(false);
-      }
-    })();
+    // `load` itself is fine running after unmount (it only touches state), but
+    // this keeps the effect's own contract explicit rather than relying on
+    // React swallowing a late setState with a warning.
+    void (async () => { if (!cancelled) await load(); })();
     return () => { cancelled = true; };
-  }, [id]);
+  }, [load]);
 
   function set(field: keyof FormState, value: string) {
     setForm(prev => prev ? { ...prev, [field]: value } : prev);
@@ -374,12 +402,25 @@ function EditTournamentScreen() {
       <View style={[s.root, { paddingTop: insets.top }]}>
         <StatusBar style="dark" />
         <ErrorState title="Can't open the editor" message={loadError}
-          action={{ label: 'Go back', onPress: () => router.back() }} />
+          action={{ label: 'Retry', onPress: () => { void load(); } }} />
       </View>
     );
   }
 
-  if (loading || !form || !tournament) {
+  if (notApproved) {
+    return (
+      <View style={[s.root, { paddingTop: insets.top }]}>
+        <StatusBar style="dark" />
+        <ErrorState
+          title="Director approval required"
+          message="Your director approval is not active, so this tournament cannot be edited right now. Contact support if you think this is a mistake."
+          action={{ label: 'Go back', onPress: () => router.back() }}
+        />
+      </View>
+    );
+  }
+
+  if (loading || profileLoading || !form || !tournament) {
     return (
       <View style={[s.root, { paddingTop: insets.top, alignItems: 'center', justifyContent: 'center' }]}>
         <StatusBar style="dark" />
@@ -607,14 +648,10 @@ const s = StyleSheet.create({
   pickerDone: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
 });
 
-// Director-only route. The screen body above is mounted only after
-// DirectorOnly confirms the signed-in user directs this tournament, so its
-// effects and fetches never run for anyone else.
-export default function EditTournamentScreenRoute() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  return (
-    <DirectorOnly tournamentId={id}>
-      <EditTournamentScreen />
-    </DirectorOnly>
-  );
-}
+// No wrapper guard. Ownership and draft-status are enforced by the query
+// itself (fetchTournamentForEdit filters on director_id; RLS is the real
+// backstop either way), and director-approval is checked from useProfile with
+// no extra request. See fetchTournamentForEdit for why this replaced
+// DirectorOnly here specifically — the other nine tournament/[id]/* director
+// routes still use it and are not changed by this commit.
+export default EditTournamentScreen;

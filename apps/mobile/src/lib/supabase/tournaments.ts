@@ -164,6 +164,48 @@ export async function fetchTournamentById(id: string): Promise<Tournament | null
   return dbRowToTournament(data as Record<string, unknown>);
 }
 
+// For the edit screen only. Ownership is checked IN the query — `.eq('id',
+// id).eq('director_id', directorId)` — rather than by a separate permission
+// request beforehand, matching the web implementation
+// (web/src/app/director/tournaments/[id]/page.tsx), which has never shown this
+// problem.
+//
+// Root cause (2026-09-04): `tournament/[id]/edit.tsx` used to render inside
+// `<DirectorOnly>`, which runs its own hook (`useTournamentDirector`) that
+// fetches `director_id` via a SEPARATE request before the screen mounts. That
+// separate request stalled indefinitely on-device — confirmed NOT a data,
+// RLS, or session problem: the exact query executes in 0.138ms server-side
+// under this user's role, a completely fresh app install did not change the
+// behavior, and other mobile screens querying the same table succeeded. The
+// stall is specific to that second, otherwise-redundant request; removing it
+// removes the failure, whether or not its root cause is ever isolated.
+//
+// A null result here means "not found" OR "found but not yours" — RLS forbids
+// telling those apart from the client, and neither is actionable differently
+// by the caller, so the ambiguity is accepted rather than probed for. This
+// matches web's behavior exactly (see the reference above).
+//
+// Bounded with the same helper as fetchTournamentDirectorId so a stalled
+// request cannot leave a loading state stuck open, whatever caused this one.
+export async function fetchTournamentForEdit(
+  id: string,
+  directorId: string,
+): Promise<Tournament | null> {
+  const { data, error } = await withTimeout(
+    supabase
+      .from('tournaments')
+      .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,amenities')
+      .eq('id', id)
+      .eq('director_id', directorId)
+      .single(),
+    8_000,
+    'Loading the tournament',
+  );
+
+  if (error || !data) return null;
+  return dbRowToTournament(data as Record<string, unknown>);
+}
+
 export async function fetchDirectorTournaments(directorId: string): Promise<Tournament[]> {
   const { data, error } = await supabase
     .from('tournaments')
