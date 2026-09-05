@@ -1,21 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, KeyboardAvoidingView, Platform, Alert, Modal, ActivityIndicator,
+  TextInput, KeyboardAvoidingView, Platform, Alert, Modal, ActivityIndicator, Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { fetchTournamentForEdit, updateTournamentDetails } from '@/lib/supabase/tournaments';
+import { replaceImage } from '@/lib/media';
+import { eventCoverSource } from '@/lib/eventCover';
 import { useProfile } from '@/hooks/useProfile';
 import type { Tournament } from '@/lib/tournamentTypes';
 import { ErrorState } from '@/components/states/ScreenState';
 import AmenityPicker from '@/components/AmenityPicker';
+import { FacilityPicker, type FacilityPickerValue } from '@/components/FacilityPicker';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -242,6 +246,51 @@ function EditTournamentScreen() {
   >(null);
   const [dateDraft, setDateDraft] = useState(new Date());
   const [amenities, setAmenities] = useState<string[]>([]);
+  const [facilityId, setFacilityId] = useState<string | null>(null);
+  const [pickerValue, setPickerValue] = useState<FacilityPickerValue | null>(null);
+
+  // Hero image — `coverUri` is a local file:// pick pending upload; the
+  // existing cover_img_url stays authoritative on screen until save succeeds.
+  const [coverUri, setCoverUri] = useState<string | null>(null);
+  const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(null);
+
+  async function pickCoverFromLibrary() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert('Permission needed', 'Allow photo library access to change the hero image.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [16, 9], quality: 0.85,
+    });
+    if (!result.canceled) setCoverUri(result.assets[0].uri);
+  }
+
+  async function pickCoverFromCamera() {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) { Alert.alert('Permission needed', 'Allow camera access to take a photo.'); return; }
+    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [16, 9], quality: 0.85 });
+    if (!result.canceled) setCoverUri(result.assets[0].uri);
+  }
+
+  function handleCoverPress() {
+    Alert.alert('Hero Image', undefined, [
+      { text: 'Take Photo', onPress: pickCoverFromCamera },
+      { text: 'Choose from Library', onPress: pickCoverFromLibrary },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
+
+  // Same auto-fill contract as director/create-tournament.tsx's FacilityPicker
+  // wiring — picking a facility fills venue/city/state but leaves them editable.
+  function handlePickerChange(v: FacilityPickerValue) {
+    setPickerValue(v);
+    if (v.mode === 'facility') {
+      setFacilityId(v.facilityId);
+      set('venue', v.name);
+      set('city', v.city);
+      set('state', v.state);
+    } else {
+      setFacilityId(null);
+    }
+  }
 
   // One request: ownership is the query's own `.eq('director_id', ...)`, not a
   // separate permission check beforehand. See fetchTournamentForEdit for why.
@@ -278,12 +327,21 @@ function EditTournamentScreen() {
         setLoadError('Tournament not found, or you do not have access to edit it.');
         return;
       }
-      if (t.status !== 'draft') {
-        setLoadError(`This tournament is "${t.status}" and can only be edited while it is a draft.`);
+      // "tournaments: director update own" RLS only allows updates while
+      // status is NOT IN (in_progress, completed, cancelled) — this isn't a
+      // product choice being loosened here, it's what the database actually
+      // permits. Editing one of these would either silently no-op (the
+      // UPDATE's WHERE simply matches no row, and .update() reports no error)
+      // or corrupt the director's expectation that Save worked, so they're
+      // blocked before the form even opens rather than failing invisibly on
+      // Save.
+      if (t.rawStatus === 'completed' || t.rawStatus === 'in_progress' || t.rawStatus === 'cancelled') {
+        const label = t.rawStatus === 'in_progress' ? 'in progress' : t.rawStatus;
+        setLoadError(`This tournament is ${label} and can no longer be edited.`);
         return;
       }
       if (!isApprovedDirector) {
-        // Their own draft, but their director approval is not active. Not
+        // Their own tournament, but their director approval is not active. Not
         // folded into loadError: this is not "the check failed", it is an
         // an answer that says no — bouncing them with no explanation is the
         // confusing case a clear message avoids.
@@ -293,6 +351,14 @@ function EditTournamentScreen() {
       setTournament(t);
       setForm(tournamentToForm(t));
       setAmenities(t.amenities ?? []);
+      setFacilityId(t.facilityId ?? null);
+      setPickerValue(
+        t.facilityId
+          ? { mode: 'facility', facilityId: t.facilityId, name: t.venue, city: t.city, state: t.state, address: t.venueAddress ?? '' }
+          : null,
+      );
+      setExistingCoverUrl(t.coverImgUrl ?? null);
+      setCoverUri(null);
     } catch (e) {
       console.error('[tournament edit] load failed:', e);
       setLoadError(e instanceof Error ? e.message : String(e));
@@ -366,7 +432,69 @@ function EditTournamentScreen() {
     if (d) setDateDraft(d);
   }
 
-  async function save() {
+  const isDraft = tournament?.rawStatus === 'draft';
+
+  async function persist() {
+    if (!form || !tournament || !user?.id) return;
+    const eventDate = parseFormDate(form.date);
+    const closesAt  = parseFormDate(form.registrationCloseDate);
+    if (!eventDate || !closesAt) return; // already validated by save()
+
+    setSaving(true);
+    try {
+      const baseInput = {
+        amenities,
+        facilityId,
+        name:                 form.name.trim(),
+        venue:                form.venue.trim(),
+        city:                 form.city.trim(),
+        state:                form.state.trim().toUpperCase(),
+        eventDate,
+        startTime:            form.startTime.trim() || null,
+        registrationOpensAt:  parseFormDate(form.registrationOpenDate),
+        registrationClosesAt: closesAt,
+        entryFeeCents:        Math.round(parseFloat(form.entryFee) * 100),
+        holdFeeCents:         Math.round(parseFloat(form.holdFee)  * 100),
+        drawSize:             parseInt(form.drawSize, 10),
+        revertToPendingApproval: !isDraft,
+      };
+
+      const result = coverUri
+        // Pipeline validates → crops 16:9 → compresses → uploads, then runs
+        // commit (this write), then deletes the previous cover object. On a
+        // failed commit the new object is rolled back and the old cover stays.
+        ? await (async () => {
+            let inner: { ok: true } | { ok: false; error: string } = { ok: false, error: 'Upload failed.' };
+            await replaceImage(
+              {
+                uri: coverUri,
+                category: 'tournamentCover',
+                entityId: id,
+                ownerId: user.id,
+                previousUrl: existingCoverUrl,
+              },
+              async (uploaded) => {
+                inner = await updateTournamentDetails(id, { ...baseInput, coverImgUrl: uploaded.url });
+                if (!inner.ok) throw new Error(inner.error);
+              },
+            );
+            return inner;
+          })()
+        : await updateTournamentDetails(id, baseInput);
+
+      if (!result.ok) {
+        Alert.alert('Error', result.error || 'Failed to save changes. Please try again.');
+        return;
+      }
+      router.back();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to save changes. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function save() {
     if (!form) return;
     const e = validate(form, stripeOnboarded);
     if (Object.keys(e).length > 0) {
@@ -374,36 +502,23 @@ function EditTournamentScreen() {
       Alert.alert('Please fix errors', 'Review your entries and correct any issues before saving.');
       return;
     }
-
-    const eventDate = parseFormDate(form.date);
-    const closesAt  = parseFormDate(form.registrationCloseDate);
-    if (!eventDate || !closesAt) {
+    if (!parseFormDate(form.date) || !parseFormDate(form.registrationCloseDate)) {
       Alert.alert('Please fix errors', 'Review your entries and correct any issues before saving.');
       return;
     }
 
-    setSaving(true);
-    const result = await updateTournamentDetails(id, {
-      amenities,
-      name:                 form.name.trim(),
-      venue:                form.venue.trim(),
-      city:                 form.city.trim(),
-      state:                form.state.trim().toUpperCase(),
-      eventDate,
-      startTime:            form.startTime.trim() || null,
-      registrationOpensAt:  parseFormDate(form.registrationOpenDate),
-      registrationClosesAt: closesAt,
-      entryFeeCents:        Math.round(parseFloat(form.entryFee) * 100),
-      holdFeeCents:         Math.round(parseFloat(form.holdFee)  * 100),
-      drawSize:             parseInt(form.drawSize, 10),
-    });
-    setSaving(false);
-
-    if (!result.ok) {
-      Alert.alert('Error', result.error || 'Failed to save changes. Please try again.');
+    if (!isDraft) {
+      Alert.alert(
+        'Resubmit for review?',
+        'This tournament is already live. Saving changes will send it back for approval and hide it from players until it’s approved again.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Save & Resubmit', style: 'destructive', onPress: () => { void persist(); } },
+        ],
+      );
       return;
     }
-    router.back();
+    void persist();
   }
 
   if (loadError) {
@@ -450,7 +565,11 @@ function EditTournamentScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitle}>Edit Tournament</Text>
-          <Text style={s.headerSub}>Draft — not visible to players yet</Text>
+          <Text style={s.headerSub}>
+            {isDraft
+              ? 'Draft — not visible to players yet'
+              : 'Live — saving changes will resubmit for approval'}
+          </Text>
         </View>
       </View>
 
@@ -464,8 +583,25 @@ function EditTournamentScreen() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 100 }]}
         >
+          <Text style={s.sectionTitle}>Hero Image</Text>
+          <TouchableOpacity style={ph.uploadTile} activeOpacity={0.85} onPress={handleCoverPress}>
+            <Image
+              source={coverUri ? { uri: coverUri } : eventCoverSource(existingCoverUrl)}
+              style={ph.preview}
+              resizeMode="cover"
+            />
+            <View style={ph.editBadge}>
+              <Ionicons name="camera" size={14} color="#FFFFFF" />
+              <Text style={ph.editBadgeText}>Change</Text>
+            </View>
+          </TouchableOpacity>
+
           <Text style={s.sectionTitle}>Basics</Text>
           <Field label="Tournament Name *" value={form.name} onChange={v => set('name', v)} error={errors.name} />
+          <View style={{ marginBottom: 6 }}>
+            <Text style={f.label}>Facility Directory <Text style={{ color: L.textSub, fontWeight: '400' }}>(optional)</Text></Text>
+            <FacilityPicker value={pickerValue} onChange={handlePickerChange} />
+          </View>
           <Field label="Venue / Location *" value={form.venue} onChange={v => set('venue', v)} error={errors.venue} />
           <Field label="City *" value={form.city} onChange={v => set('city', v)} error={errors.city} />
           <Field label="State *" value={form.state} onChange={v => set('state', v)} error={errors.state} />
@@ -657,8 +793,23 @@ const s = StyleSheet.create({
   pickerDone: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
 });
 
-// No wrapper guard. Ownership and draft-status are enforced by the query
-// itself (fetchTournamentForEdit filters on director_id; RLS is the real
+const ph = StyleSheet.create({
+  uploadTile: {
+    height: 160, borderRadius: shape.panel, overflow: 'hidden',
+    marginBottom: 20, backgroundColor: L.border,
+  },
+  preview: { width: '100%', height: '100%' },
+  editBadge: {
+    position: 'absolute', right: 10, bottom: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: shape.pill,
+    paddingHorizontal: 10, paddingVertical: 6,
+  },
+  editBadgeText: { color: '#FFFFFF', fontSize: text.caption.size, fontWeight: '700' },
+});
+
+// No wrapper guard. Ownership is enforced by the query itself
+// (fetchTournamentForEdit filters on director_id; RLS is the real
 // backstop either way), and director-approval is checked from useProfile with
 // no extra request. See fetchTournamentForEdit for why this replaced
 // DirectorOnly here specifically — the other nine tournament/[id]/* director

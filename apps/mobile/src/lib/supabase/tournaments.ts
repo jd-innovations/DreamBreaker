@@ -195,7 +195,7 @@ export async function fetchTournamentForEdit(
   const { data, error } = await withTimeout(
     supabase
       .from('tournaments')
-      .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,amenities')
+      .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,cover_img_url,amenities')
       .eq('id', id)
       .eq('director_id', directorId)
       .single(),
@@ -310,12 +310,19 @@ export type UpdateTournamentInput = {
   holdFeeCents: number;
   drawSize: number;
   amenities: string[];
+  facilityId: string | null;
+  /** Omit to leave the cover untouched; pass the new URL (or null to clear it). */
+  coverImgUrl?: string | null;
+  /**
+   * Web's behavior for editing a tournament that is not a draft: the edit
+   * re-enters the approval queue rather than silently updating a page players
+   * may already be viewing. The edit screen sets this whenever the tournament
+   * being saved is not currently 'draft' (and not 'completed', which it never
+   * reaches here since that state is blocked from editing at all).
+   */
+  revertToPendingApproval?: boolean;
 };
 
-// Directors can only edit while the tournament is still a draft (RLS also
-// allows updates to a live tournament, but the mobile app doesn't yet mirror
-// web's "editing a live tournament kicks it back to pending_approval" flow,
-// so the edit screen is gated to draft-only until that's built).
 export async function updateTournamentDetails(id: string, input: UpdateTournamentInput): Promise<{ ok: true } | { ok: false; error: string }> {
   const { error } = await supabase
     .from('tournaments')
@@ -332,6 +339,19 @@ export async function updateTournamentDetails(id: string, input: UpdateTournamen
       hold_fee_cents:          input.holdFeeCents,
       draw_size:               input.drawSize,
       amenities:               input.amenities,
+      facility_id:             input.facilityId,
+      ...(input.coverImgUrl !== undefined ? { cover_img_url: input.coverImgUrl } : {}),
+      // "tournaments: director update own" RLS requires WITH CHECK
+      // (approved_at IS NULL AND approved_by IS NULL) on the row that results
+      // from this update. An already-approved tournament (open,
+      // filling_fast, registration_closed) carries a non-null approved_at
+      // from when an admin approved it — leaving it untouched here would
+      // make Postgres reject the whole update. Clearing both alongside the
+      // status flip is what actually re-enters the approval queue, not just
+      // a cosmetic status label.
+      ...(input.revertToPendingApproval
+        ? { status: 'pending_approval', approved_at: null, approved_by: null }
+        : {}),
     })
     .eq('id', id);
 

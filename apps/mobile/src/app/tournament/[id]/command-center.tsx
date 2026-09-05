@@ -50,10 +50,6 @@ const L = {
 function fmt(cents: number) { return `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`; }
 function pct(n: number, d: number): number { return d > 0 ? Math.round((n / d) * 100) : 0; }
 
-function comingSoon() {
-  Alert.alert('Coming Soon', 'This feature is not available yet.');
-}
-
 // Tournament status helpers imported from central lib — see tournamentStatus.ts
 
 // ─── Division readiness ───────────────────────────────────────────────────────
@@ -710,7 +706,11 @@ function CommandCenterScreen() {
               label="Export Players"
               onPress={exporting ? () => {} : handleExportRoster}
             />
-            <QuickAction icon="settings-outline"   label="Tournament Settings" onPress={comingSoon} />
+            <QuickAction
+              icon="settings-outline"
+              label="Tournament Settings"
+              onPress={() => router.push(`/tournament/${id}/edit` as never)}
+            />
           </View>
         </View>
 

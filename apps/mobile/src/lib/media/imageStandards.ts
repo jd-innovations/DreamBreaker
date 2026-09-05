@@ -49,7 +49,7 @@ export const IMAGE_STANDARDS: Record<ImageCategory, CategoryStandard> = {
 
   tournamentCover: {
     category: 'tournamentCover',
-    implemented: false,
+    implemented: true,
     bucket: 'tournament-covers',
     folder: ({ ownerId, entityId }) => `${ownerId}/${entityId}`,
     filename: 'uuid',
