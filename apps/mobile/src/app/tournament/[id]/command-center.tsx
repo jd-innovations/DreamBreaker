@@ -852,7 +852,13 @@ const s = StyleSheet.create({
 
   metricRow: { flexDirection: 'row', gap: 8 },
 
-  actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  // alignItems: 'flex-start' matters here, not just cosmetic — merging the
+  // two 3-and-5-item grids into one 8-item flexWrap row hit a real RN/Yoga
+  // quirk: flex:1 children default to alignItems:'stretch' on their own line,
+  // and with a single 8-item wrap container that produced blown-out,
+  // full-screen-tall tiles that never occurred with the smaller separate
+  // grids. flex-start lets each tile size to its own content again.
+  actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' },
 
   emptyInline: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
