@@ -42,6 +42,14 @@ export interface Tournament {
   divisionSkillMin: number | null;
   divisionSkillMax: number | null;
   status: 'draft' | 'pending_approval' | 'open' | 'filling_fast' | 'full' | 'upcoming' | 'completed' | 'cancelled';
+  /**
+   * The literal `tournaments.status` enum value, before dbStatusToAppStatus()
+   * folds it into the smaller app-level set above (e.g. DB 'registration_closed'
+   * becomes app 'full' or 'completed' depending on the event date). Director
+   * Hub's status filter needs the real value — a director filtering by
+   * "Registration Closed" should not silently get "Full" instead.
+   */
+  rawStatus: 'draft' | 'pending_approval' | 'open' | 'filling_fast' | 'registration_closed' | 'in_progress' | 'completed' | 'cancelled';
   registrationOpensAt:  string | null;
   registrationClosesAt: string | null;
   featured:             boolean;

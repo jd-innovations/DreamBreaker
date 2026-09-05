@@ -405,8 +405,23 @@ type TournamentSnapshot = {
   metrics: TournamentMetrics;
   bracketCount: number;
   divCount: number;
-  group: TournamentGroup;
 };
+
+// One chip per real `tournaments.status` value, not the app-level grouping
+// (active/upcoming/completed) the summary cards above use — a director
+// filtering by "Registration Closed" should see exactly that, not whatever
+// broader bucket it happens to fall into today.
+const STATUS_FILTERS: { value: Tournament['rawStatus'] | 'all'; label: string }[] = [
+  { value: 'open',                label: 'Open' },
+  { value: 'filling_fast',        label: 'Filling Fast' },
+  { value: 'registration_closed', label: 'Registration Closed' },
+  { value: 'in_progress',         label: 'In Progress' },
+  { value: 'draft',               label: 'Draft' },
+  { value: 'pending_approval',    label: 'Pending Review' },
+  { value: 'completed',           label: 'Completed' },
+  { value: 'cancelled',           label: 'Cancelled' },
+  { value: 'all',                 label: 'All' },
+];
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
@@ -415,8 +430,18 @@ export default function DirectorDashboard() {
   const { user, profile, loading: authLoading } = useProfile();
   const avatarUrl = profile?.avatar_url ?? readAuthAvatarUrl(user?.user_metadata) ?? null;
 
+  // Cheap: tournament rows only. Always unfiltered — the summary cards must
+  // reflect every tournament this director has, independent of which status
+  // the filter row below is currently showing.
+  const [allTournaments, setAllTournaments] = useState<Tournament[]>([]);
+  // Expensive: divisions + registrations + brackets, one round trip per
+  // tournament. Populated only for whichever tournaments the current filter
+  // selects — this is the fix for fetching every historical tournament's full
+  // detail on every visit, which stops scaling as a director accumulates
+  // tournaments over time.
   const [snapshots, setSnapshots] = useState<TournamentSnapshot[]>([]);
   const [loading, setLoading]     = useState(true);
+  const [statusFilter, setStatusFilter] = useState<Tournament['rawStatus'] | 'all'>('open');
 
   useSupportContext({
     feature: 'director',
@@ -431,8 +456,13 @@ export default function DirectorDashboard() {
   const loadSnapshots = useCallback(async () => {
     if (!user?.id) return;
     const tournaments = await fetchDirectorTournaments(user.id);
+    setAllTournaments(tournaments);
+
+    const filtered = statusFilter === 'all'
+      ? tournaments
+      : tournaments.filter(t => t.rawStatus === statusFilter);
     const snaps = await Promise.all(
-      tournaments.map(async t => {
+      filtered.map(async t => {
         const [divs, regs] = await Promise.all([
           fetchDivisionsForTournament(t.id),
           fetchTournamentRegistrations(t.id),
@@ -448,26 +478,30 @@ export default function DirectorDashboard() {
           revenueCents:     active.reduce((s, r) => s + r.amountPaid, 0),
           outstandingCents: active.filter(r => r.status !== 'no_show').reduce((s, r) => s + r.balanceDue, 0),
         };
-        return { tournament: t, metrics, bracketCount: getAllBrackets(t.id).length, divCount: divs.length, group: getGroup(t) };
+        return { tournament: t, metrics, bracketCount: getAllBrackets(t.id).length, divCount: divs.length };
       }),
     );
     setSnapshots(snaps);
     setLoading(false);
-  }, [user?.id]);
+  }, [user?.id, statusFilter]);
 
   useFocusEffect(useCallback(() => { loadSnapshots(); }, [loadSnapshots]));
 
   // ── Derived summary values ────────────────────────────────────────────────
+  // From `allTournaments` (cheap rows), independent of the status filter —
+  // the top summary cards always reflect the full picture, not the filtered
+  // list rendered below.
 
-  const active    = snapshots.filter(s => s.group === 'active');
-  const upcoming  = snapshots.filter(s => s.group === 'upcoming');
-  const completed = snapshots.filter(s => s.group === 'completed');
-  const totalRegs = snapshots.reduce((sum, s) => sum + s.metrics.total, 0);
+  const activeAll    = allTournaments.filter(t => getGroup(t) === 'active');
+  const upcomingAll  = allTournaments.filter(t => getGroup(t) === 'upcoming');
+  const completedAll = allTournaments.filter(t => getGroup(t) === 'completed');
+  // spots_filled is an authoritative column on the tournament row itself, so
+  // the running total needs no per-tournament registration fetch — unlike the
+  // snapshot metrics above, which do, and are now scoped to the filtered set.
+  const totalFilled  = allTournaments.reduce((sum, t) => sum + t.spotsFilled, 0);
 
-  // Fall back to spotsFilled when store is empty (mock seed data)
-  const totalFilled = snapshots.reduce((sum, s) =>
-    sum + Math.max(s.metrics.total, s.tournament.spotsFilled), 0,
-  );
+  const isEmpty    = allTournaments.length === 0;
+  const noMatches  = !isEmpty && !loading && snapshots.length === 0;
 
   if (loading || authLoading) {
     return (
@@ -525,8 +559,6 @@ export default function DirectorDashboard() {
     );
   }
 
-  const isEmpty = snapshots.length === 0;
-
   function goCreate() {
     router.push('/director/create-tournament' as never);
   }
@@ -571,7 +603,7 @@ export default function DirectorDashboard() {
           <View style={{ flex: 1 }}>
             <Text style={s.directorName}>{(profile?.full_name ?? 'Director').toUpperCase()}</Text>
             <Text style={s.directorSub}>
-              Tournament Director  ·  {snapshots.length} tournament{snapshots.length !== 1 ? 's' : ''}
+              Tournament Director  ·  {allTournaments.length} tournament{allTournaments.length !== 1 ? 's' : ''}
             </Text>
           </View>
           {/* Reaching this point already guarantees director_status === 'approved' — see the gate above */}
@@ -582,11 +614,14 @@ export default function DirectorDashboard() {
         </View>
 
         {/* ── Summary cards ── */}
+        {/* Always the full picture (allTournaments), independent of the status
+            filter below — a director filtering to "Draft" should not see the
+            ACTIVE card drop to 0. */}
         <View style={s.summaryRow}>
-          <SummaryCard label="ACTIVE"    value={active.length}    accent />
-          <SummaryCard label="UPCOMING"  value={upcoming.length}  />
-          <SummaryCard label="COMPLETED" value={completed.length} />
-          <SummaryCard label="TOTAL REGS" value={totalFilled}     />
+          <SummaryCard label="ACTIVE"    value={activeAll.length}    accent />
+          <SummaryCard label="UPCOMING"  value={upcomingAll.length}  />
+          <SummaryCard label="COMPLETED" value={completedAll.length} />
+          <SummaryCard label="TOTAL REGS" value={totalFilled}        />
         </View>
 
         {/* ── Quick actions ── */}
@@ -603,35 +638,69 @@ export default function DirectorDashboard() {
               icon="people-outline"
               label="Registrations"
               onPress={() => {
-                const first = snapshots[0];
-                if (first) router.push(`/tournament/${first.tournament.id}/workspace` as never);
+                const first = allTournaments[0];
+                if (first) router.push(`/tournament/${first.id}/workspace` as never);
               }}
             />
             <QuickAction
               icon="git-branch-outline"
               label="Brackets"
               onPress={() => {
-                const first = snapshots[0];
-                if (first) router.push(`/tournament/${first.tournament.id}/brackets` as never);
+                const first = allTournaments[0];
+                if (first) router.push(`/tournament/${first.id}/brackets` as never);
               }}
             />
             <QuickAction
               icon="trophy-outline"
               label="Results"
               onPress={() => {
-                const done = completed[0];
-                if (done) router.push(`/tournament/${done.tournament.id}/results` as never);
+                const done = completedAll[0];
+                if (done) router.push(`/tournament/${done.id}/results` as never);
                 else Alert.alert('No Results Yet', 'Complete a tournament to view results.');
               }}
             />
           </View>
         </View>
 
-        {/* ── Active tournaments ── */}
-        {active.length > 0 && (
+        {/* ── Status filter ── */}
+        {/* Drives which tournaments get the expensive divisions/registrations
+            fetch in loadSnapshots — not a client-side hide/show over an
+            already-fully-loaded list. Defaults to "Open" so a director with a
+            long history is not paying for every past tournament's detail on
+            every visit to this screen. */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>FILTER</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.filterRow}
+          >
+            {STATUS_FILTERS.map(f => {
+              const selected = statusFilter === f.value;
+              return (
+                <TouchableOpacity
+                  key={f.value}
+                  style={[s.filterChip, selected && s.filterChipSelected]}
+                  activeOpacity={0.8}
+                  onPress={() => setStatusFilter(f.value)}
+                >
+                  <Text style={[s.filterChipText, selected && s.filterChipTextSelected]}>
+                    {f.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* ── Filtered tournaments ── */}
+        {snapshots.length > 0 && (
           <View style={s.section}>
-            <SectionHeader title="IN PROGRESS" count={active.length} />
-            {active.map(({ tournament: t, metrics, bracketCount, divCount }) => (
+            <SectionHeader
+              title={STATUS_FILTERS.find(f => f.value === statusFilter)?.label.toUpperCase() ?? 'TOURNAMENTS'}
+              count={snapshots.length}
+            />
+            {snapshots.map(({ tournament: t, metrics, bracketCount, divCount }) => (
               <TournamentCard
                 key={t.id}
                 tournament={t}
@@ -643,39 +712,19 @@ export default function DirectorDashboard() {
           </View>
         )}
 
-        {/* ── Upcoming tournaments ── */}
-        {upcoming.length > 0 && (
-          <View style={s.section}>
-            <SectionHeader title="UPCOMING" count={upcoming.length} />
-            {upcoming.map(({ tournament: t, metrics, bracketCount, divCount }) => (
-              <TournamentCard
-                key={t.id}
-                tournament={t}
-                metrics={metrics}
-                bracketCount={bracketCount}
-                divCount={divCount}
-              />
-            ))}
+        {/* ── No tournaments match the current filter (but some exist) ── */}
+        {noMatches && (
+          <View style={s.noMatches}>
+            <Text style={s.noMatchesText}>
+              No tournaments are currently {STATUS_FILTERS.find(f => f.value === statusFilter)?.label.toLowerCase()}.
+            </Text>
+            <TouchableOpacity onPress={() => setStatusFilter('all')} activeOpacity={0.7}>
+              <Text style={s.noMatchesLink}>Show all tournaments</Text>
+            </TouchableOpacity>
           </View>
         )}
 
-        {/* ── Completed tournaments ── */}
-        {completed.length > 0 && (
-          <View style={s.section}>
-            <SectionHeader title="COMPLETED" count={completed.length} />
-            {completed.map(({ tournament: t, metrics, bracketCount, divCount }) => (
-              <TournamentCard
-                key={t.id}
-                tournament={t}
-                metrics={metrics}
-                bracketCount={bracketCount}
-                divCount={divCount}
-              />
-            ))}
-          </View>
-        )}
-
-        {/* ── Empty state ── */}
+        {/* ── Empty state: no tournaments at all ── */}
         {isEmpty && <EmptyState />}
 
       </ScrollView>
@@ -730,4 +779,28 @@ const s = StyleSheet.create({
     letterSpacing: text.cardLabel.letterSpacing, marginBottom: 10,
   },
   actionsRow: { flexDirection: 'row', gap: 8 },
+  filterRow: { flexDirection: 'row', gap: 8, paddingRight: 4 },
+  filterChip: {
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: shape.pill, borderWidth: 1, borderColor: L.border,
+    backgroundColor: L.bg,
+  },
+  filterChipSelected: {
+    backgroundColor: L.navy, borderColor: L.navy,
+  },
+  filterChipText: {
+    color: L.text, fontSize: text.body.size, fontWeight: '700',
+  },
+  filterChipTextSelected: {
+    color: L.page,
+  },
+  noMatches: {
+    alignItems: 'center', paddingVertical: 24, gap: 6,
+  },
+  noMatchesText: {
+    color: L.textSub, fontSize: text.body.size, textAlign: 'center',
+  },
+  noMatchesLink: {
+    color: L.gold, fontSize: text.body.size, fontWeight: '700',
+  },
 });

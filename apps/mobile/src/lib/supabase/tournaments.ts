@@ -104,6 +104,7 @@ function dbRowToTournament(row: Record<string, unknown>): Tournament {
       : [],
     ...divisionSkillRange(row.divisions),
     status:               dbStatusToAppStatus(String(row.status ?? ''), String(row.event_date ?? '')),
+    rawStatus:            String(row.status ?? '') as Tournament['rawStatus'],
     registrationOpensAt:  row.registration_opens_at != null ? String(row.registration_opens_at) : null,
     registrationClosesAt: row.registration_closes_at != null ? String(row.registration_closes_at) : null,
     featured:             Boolean(row.featured),

@@ -76,6 +76,7 @@ export async function fetchTournaments(): Promise<Tournament[]> {
     divisionSkillMin: null,
     divisionSkillMax: null,
     status:               mapStatus(row.status as DbStatus, String(row.event_date ?? '')),
+    rawStatus:            String(row.status ?? '') as Tournament['rawStatus'],
     registrationOpensAt:  null,
     registrationClosesAt: null,
     featured:             Boolean(row.featured),
