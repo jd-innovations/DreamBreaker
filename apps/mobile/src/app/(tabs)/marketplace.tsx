@@ -17,6 +17,7 @@ import { useCurrentLocation } from '@/lib/location';
 import {
   fetchListings, type MarketplaceListingCard, type ListingSort,
 } from '@/lib/marketplace/listingService';
+import { filterListingsByRadius } from '@/lib/marketplace/listingDistance';
 import {
   MARKETPLACE_BRANDS, CONDITION_OPTIONS, conditionLabel, formatPriceCents,
   listingAgeLabel, type MarketplaceCondition,
@@ -29,15 +30,6 @@ const CARD_W = (SW - 16 * 2 - 12) / 2;
 const FILTER_HEIGHT = 690;
 
 const RADIUS_OPTIONS = [5, 10, 25, 50] as const;
-
-function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const earthMiles = 3958.8;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return 2 * earthMiles * Math.asin(Math.sqrt(a));
-}
 
 // The local `const L` palette this screen used to carry is gone — it was eight
 // hardcoded values, two of which (#16A34A / #DCFCE7) were duplicates of the
@@ -314,15 +306,21 @@ export default function MarketplaceScreen() {
   const onRefresh = useCallback(() => { setRefreshing(true); void load(); }, [load]);
 
   // Distance filtering happens client-side (no server-side geo query for
-  // listings yet, unlike facilities' search_facilities_nearby RPC) — listings
-  // missing coordinates are excluded once a radius is picked, since distance
-  // to them can't be measured.
-  const listings = radiusMiles == null || myLat == null || myLng == null
-    ? rawListings
-    : rawListings.filter((l) =>
-        l.location_lat != null && l.location_lng != null &&
-        haversineMiles(myLat, myLng, l.location_lat, l.location_lng) <= radiusMiles,
-      );
+  // listings yet, unlike facilities' search_facilities_nearby RPC).
+  //
+  // Phase 0 of MARKETPLACE_MAP_AUDIT.md §4.2: listings with no coordinates are
+  // now KEPT rather than excluded. Excluding them emptied the grid on every
+  // radius, because no listing in production has coordinates at all. See
+  // filterListingsByRadius for the full reasoning and the trade-off.
+  const listings = React.useMemo(
+    () =>
+      filterListingsByRadius(
+        rawListings,
+        myLat == null || myLng == null ? null : { lat: myLat, lng: myLng },
+        radiusMiles,
+      ),
+    [rawListings, myLat, myLng, radiusMiles],
+  );
 
   const activeFilterCount = [brand, condition, priceLabel, radiusMiles].filter((v) => v != null).length;
 
