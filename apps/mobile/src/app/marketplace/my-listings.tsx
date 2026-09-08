@@ -1,6 +1,6 @@
 // Seller listing management — Edit / Mark Pending / Mark Sold / Delete, plus
 // where the free-tier active-listing count is visible to the seller.
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert,
 } from 'react-native';
@@ -13,6 +13,7 @@ import {
   type MarketplaceListingCard,
 } from '@/lib/marketplace/listingService';
 import { conditionLabel, formatPriceCents } from '@/lib/marketplace/constants';
+import { ContextMenu, useContextMenu, type MenuItem } from '@/components/ContextMenu';
 
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -73,6 +74,54 @@ export default function MyListingsScreen() {
     ]);
   }
 
+  // Was a horizontal row of text buttons (Edit / Mark Pending / Mark Sold /
+  // Delete) that overflowed and clipped off-screen on a normal-width phone
+  // once a listing had all four available. One "•••" trigger per row into the
+  // real iOS system action sheet instead — see ContextMenu.tsx for why this,
+  // not a hand-drawn popover, and why not the long-press UIMenu style (needs a
+  // native module, and therefore a new build, to add).
+  const listingMenu = useContextMenu();
+  const [listingMenuTop, setListingMenuTop] = useState(0);
+  const [activeListing, setActiveListing] = useState<MarketplaceListingCard | null>(null);
+
+  function menuItemsFor(item: MarketplaceListingCard): MenuItem[] {
+    if (item.status === 'sold') return [{ icon: 'trash-outline', label: 'Delete', danger: true }];
+    return [
+      { icon: 'pencil-outline', label: 'Edit' },
+      { icon: 'time-outline', label: item.status === 'pending' ? 'Mark Active' : 'Mark Pending' },
+      { icon: 'checkmark-circle-outline', label: 'Mark Sold' },
+      { icon: 'trash-outline', label: 'Delete', danger: true },
+    ];
+  }
+
+  function openListingMenu(item: MarketplaceListingCard, top: number) {
+    setActiveListing(item);
+    setListingMenuTop(top);
+    listingMenu.present(menuItemsFor(item), (label) => handleListingMenuItem(item, label));
+  }
+
+  function handleListingMenuItem(item: MarketplaceListingCard, label: string) {
+    listingMenu.close(() => {
+      switch (label) {
+        case 'Edit':
+          router.push(`/marketplace/edit/${item.id}` as never);
+          break;
+        case 'Mark Pending':
+          handleStatusChange(item.id, 'pending');
+          break;
+        case 'Mark Active':
+          handleStatusChange(item.id, 'active');
+          break;
+        case 'Mark Sold':
+          handleStatusChange(item.id, 'sold');
+          break;
+        case 'Delete':
+          handleDelete(item.id);
+          break;
+      }
+    });
+  }
+
   return (
     <View style={s.root}>
       <View style={[s.header, { paddingTop: insets.top + 8 }]}>
@@ -100,42 +149,64 @@ export default function MyListingsScreen() {
           data={listings}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}
-          renderItem={({ item }) => (
-            <View style={s.row}>
-              {item.primaryPhotoUrl ? (
-                <Image source={{ uri: item.primaryPhotoUrl }} style={s.thumb} />
-              ) : (
-                <View style={[s.thumb, s.thumbPlaceholder]}><Ionicons name="image-outline" size={20} color={L.textMuted} /></View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={s.title} numberOfLines={1}>{item.title}</Text>
-                <Text style={s.meta}>{formatPriceCents(item.asking_price_cents)} · {conditionLabel(item.condition)}</Text>
-                <Text style={[s.status, { color: STATUS_COLOR[item.status] }]}>{STATUS_LABEL[item.status]}</Text>
-                <View style={s.actionRow}>
-                  {item.status !== 'sold' && (
-                    <TouchableOpacity onPress={() => router.push(`/marketplace/edit/${item.id}` as never)}>
-                      <Text style={s.actionText}>Edit</Text>
-                    </TouchableOpacity>
-                  )}
-                  {item.status !== 'sold' && (
-                    <TouchableOpacity onPress={() => handleStatusChange(item.id, item.status === 'pending' ? 'active' : 'pending')}>
-                      <Text style={s.actionText}>{item.status === 'pending' ? 'Mark Active' : 'Mark Pending'}</Text>
-                    </TouchableOpacity>
-                  )}
-                  {item.status !== 'sold' && (
-                    <TouchableOpacity onPress={() => handleStatusChange(item.id, 'sold')}>
-                      <Text style={s.actionText}>Mark Sold</Text>
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity onPress={() => handleDelete(item.id)}>
-                    <Text style={[s.actionText, { color: L.danger }]}>Delete</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          )}
+          renderItem={({ item }) => <ListingRow item={item} onOpenMenu={openListingMenu} />}
         />
       )}
+
+      {/* ── Shared backdrop dismiss (Android popover only — iOS's system sheet
+          handles its own dismissal) ── */}
+      {listingMenu.visible && (
+        <TouchableOpacity
+          style={[StyleSheet.absoluteFill, { zIndex: 40 }]}
+          activeOpacity={1}
+          onPress={() => listingMenu.close()}
+        />
+      )}
+
+      {listingMenu.visible && activeListing && (
+        <ContextMenu
+          items={menuItemsFor(activeListing)}
+          top={listingMenuTop}
+          right={16}
+          opacity={listingMenu.opacity}
+          scale={listingMenu.scale}
+          onItemPress={(label) => handleListingMenuItem(activeListing, label)}
+        />
+      )}
+    </View>
+  );
+}
+
+function ListingRow({
+  item, onOpenMenu,
+}: {
+  item: MarketplaceListingCard; onOpenMenu: (item: MarketplaceListingCard, top: number) => void;
+}) {
+  const triggerRef = useRef<View>(null);
+
+  function handlePress() {
+    // Only meaningful on Android, where the popover needs a Y coordinate — see
+    // ContextMenu.tsx: iOS present() shows the system sheet and this is unused.
+    triggerRef.current?.measure((_x, _y, _w, h, _pageX, pageY) => { onOpenMenu(item, pageY + h + 6); });
+  }
+
+  return (
+    <View style={s.row}>
+      {item.primaryPhotoUrl ? (
+        <Image source={{ uri: item.primaryPhotoUrl }} style={s.thumb} />
+      ) : (
+        <View style={[s.thumb, s.thumbPlaceholder]}><Ionicons name="image-outline" size={20} color={L.textMuted} /></View>
+      )}
+      <View style={{ flex: 1 }}>
+        <Text style={s.title} numberOfLines={1}>{item.title}</Text>
+        <Text style={s.meta}>{formatPriceCents(item.asking_price_cents)} · {conditionLabel(item.condition)}</Text>
+        <Text style={[s.status, { color: STATUS_COLOR[item.status] }]}>{STATUS_LABEL[item.status]}</Text>
+      </View>
+      <View ref={triggerRef} collapsable={false}>
+        <TouchableOpacity style={s.moreBtn} onPress={handlePress} hitSlop={8}>
+          <Ionicons name="ellipsis-horizontal" size={20} color={L.navy} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -149,12 +220,11 @@ const s = StyleSheet.create({
   emptyText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   sellBtn: { marginTop: 8, backgroundColor: L.navy, borderRadius: shape.pill, paddingHorizontal: 20, paddingVertical: 10 },
   sellBtnText: { color: '#FFFFFF', fontSize: text.action.size, fontWeight: '800' },
-  row: { flexDirection: 'row', gap: 12, marginBottom: 14, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: L.border },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 14, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: L.border },
   thumb: { width: 68, height: 68, borderRadius: shape.panel },
   thumbPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F7FB' },
   title: { color: L.text, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 2 },
   meta: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginBottom: 2 },
-  status: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, marginBottom: 6 },
-  actionRow: { flexDirection: 'row', gap: 16 },
-  actionText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
+  status: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  moreBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });
