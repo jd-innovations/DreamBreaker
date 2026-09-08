@@ -27,7 +27,7 @@ import {
   type SentGroupInviteDetails,
 } from '@/lib/supabase/groupInvites';
 import {
-  fetchNotifications, markNotificationRead, type AppNotification,
+  fetchNotifications, markNotificationRead, markAllNotificationsRead, type AppNotification,
 } from '@/lib/supabase/notifications';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -298,10 +298,24 @@ function GroupInviteCard({
 // ─── Activity row (generic notifications feed) ─────────────────────────────────
 
 const NOTIFICATION_ICON: Record<string, string> = {
-  wallet_item_added:     'wallet-outline',
-  wallet_item_available: 'checkmark-circle-outline',
-  match_recorded:        'tennisball-outline',
-  match_claimed:         'checkmark-done-circle-outline',
+  wallet_item_added:        'wallet-outline',
+  wallet_item_available:    'checkmark-circle-outline',
+  match_recorded:           'tennisball-outline',
+  match_claimed:            'checkmark-done-circle-outline',
+  tournament_published:     'trophy-outline',
+  tournament_rejected:      'alert-circle-outline',
+  tournament_cancelled:     'close-circle-outline',
+  tournament_pending:       'time-outline',
+  director_approved:        'shield-checkmark-outline',
+  director_suspended:       'alert-circle-outline',
+  facility_manager_approved: 'business-outline',
+  facility_manager_rejected: 'close-circle-outline',
+  registration_confirmed:   'checkmark-done-circle-outline',
+  group_invite:             'people-outline',
+  play_event_invite:        'mail-outline',
+  hold_expired:             'time-outline',
+  waitlist_offer_expired:   'hourglass-outline',
+  waitlist_spot_offered:    'flash-outline',
 };
 
 function timeAgo(iso: string): string {
@@ -338,6 +352,17 @@ function NotificationRow({ notification, last, onPress }: { notification: AppNot
       {!last && <View style={s.divider} />}
     </>
   );
+}
+
+// ─── Notification link rewrite ──────────────────────────────────────────────────
+// `notifications.link` is shared with the web app's Next.js router, so some
+// stored paths are web-only routes with no mobile equivalent (e.g.
+// `/dashboard`). Rewrite those to their mobile counterpart here rather than
+// in the database, so the one stored link keeps working correctly on web.
+
+function mobileNotificationLink(link: string): string {
+  if (link === '/dashboard') return '/(tabs)';
+  return link;
 }
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
@@ -415,12 +440,21 @@ export default function InvitesScreen() {
     refreshNotifications();
   }, [refreshReceivedInvites, refreshReceivedGroupInvites, refreshSentInvites, refreshSentGroupInvites, refreshNotifications]));
 
+  async function handleMarkAllRead() {
+    if (!user?.id) return;
+    const hasUnread = notifications.some(n => !n.readAt);
+    if (!hasUnread) return;
+    const now = new Date().toISOString();
+    setNotifications(prev => prev.map(n => (n.readAt ? n : { ...n, readAt: now })));
+    await markAllNotificationsRead(user.id);
+  }
+
   async function handleOpenNotification(notification: AppNotification) {
     if (!notification.readAt) {
       setNotifications(prev => prev.map(n => (n.id === notification.id ? { ...n, readAt: new Date().toISOString() } : n)));
       markNotificationRead(notification.id);
     }
-    if (notification.link) router.push(notification.link as never);
+    if (notification.link) router.push(mobileNotificationLink(notification.link) as never);
   }
 
   async function handleAcceptGameInvite(invite: ReceivedPlayEventInvite) {
@@ -503,7 +537,16 @@ export default function InvitesScreen() {
           <Ionicons name="chevron-back" size={20} color={L.navy} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Activity</Text>
-        <TouchableOpacity style={s.backBtn} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={s.backBtn}
+          activeOpacity={0.7}
+          onPress={() => {
+            Alert.alert('Mark all as read?', 'This clears the unread dot on every notification.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Mark All Read', onPress: handleMarkAllRead },
+            ]);
+          }}
+        >
           <Ionicons name="ellipsis-horizontal" size={20} color={L.navy} />
         </TouchableOpacity>
       </View>

@@ -44,3 +44,12 @@ export async function markNotificationRead(id: string): Promise<void> {
     .eq('id', id);
   if (error) console.warn('markNotificationRead failed', error);
 }
+
+export async function markAllNotificationsRead(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .is('read_at', null);
+  if (error) console.warn('markAllNotificationsRead failed', error);
+}

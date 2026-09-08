@@ -166,7 +166,7 @@ async function sweepExpiredHolds() {
       type: "hold_expired",
       title: "Your hold has expired",
       body: `Your Hold My Spot for ${t.name} has expired. Your hold fee is non-refundable. We've opened your spot to the next waitlisted player.`,
-      link: `/tournaments/${reg.tournament_id}`,
+      link: `/tournament/${reg.tournament_id}`,
       templateKey: "hold_expired",
       variables: {
         full_name: profile?.full_name ?? "there",
@@ -210,7 +210,7 @@ async function sweepExpiredWaitlistOffers() {
       type: "waitlist_offer_expired",
       title: "Your waitlist offer expired",
       body: `You didn't complete registration for ${t?.name ?? "the tournament"} within 24 hours. Your spot has been passed to the next player.`,
-      link: `/tournaments/${reg.tournament_id}`,
+      link: `/tournament/${reg.tournament_id}`,
       templateKey: "waitlist_offer_expired",
       variables: {
         full_name: profile?.full_name ?? "there",
