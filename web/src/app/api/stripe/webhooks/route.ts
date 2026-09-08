@@ -220,6 +220,8 @@ async function handlePaymentEvent(service: ServiceClient, event: Stripe.Event) {
         `[stripe webhook] could not settle refunds row for payment ${payment.id} :: ${settleError.message}`,
       );
     }
+
+    await notifyRefundProcessed(service, payment.id, refundedAmount);
     return;
   }
 
@@ -250,5 +252,50 @@ async function handlePaymentEvent(service: ServiceClient, event: Stripe.Event) {
         failure_reason: intent.last_payment_error?.message ?? null,
       })
       .eq("id", payment.id);
+  }
+}
+
+// Tournament-purpose payments only: refund_processed's copy is written as "your
+// refund for {{tournament_name}}", so a reservation or coach-offer refund would
+// get mismatched content rather than no email — scoped narrowly instead.
+const TOURNAMENT_PURPOSE_TYPES = new Set([
+  "tournament_registration_entry",
+  "tournament_registration_hold",
+  "tournament_registration_balance",
+  "tournament_team_entry",
+]);
+
+async function notifyRefundProcessed(service: ServiceClient, paymentId: string, refundedAmountCents: number) {
+  const { data: payment } = await service
+    .from("payments")
+    .select("purpose_type, purpose_id, payer_user_id, metadata")
+    .eq("id", paymentId)
+    .maybeSingle();
+  if (!payment || !TOURNAMENT_PURPOSE_TYPES.has(payment.purpose_type)) return;
+
+  const meta = (payment.metadata ?? {}) as Record<string, unknown>;
+  const tournamentId = typeof meta.tournamentId === "string" ? meta.tournamentId : payment.purpose_id;
+  if (!tournamentId || !payment.payer_user_id) return;
+
+  const [{ data: tournament }, { data: payer }] = await Promise.all([
+    service.from("tournaments").select("name").eq("id", tournamentId).maybeSingle(),
+    service.from("profiles").select("email, full_name").eq("id", payment.payer_user_id).maybeSingle(),
+  ]);
+  if (!tournament || !payer?.email) return;
+
+  const { error } = await service.functions.invoke("send-transactional-email", {
+    body: {
+      to: payer.email,
+      templateKey: "refund_processed",
+      variables: {
+        full_name: payer.full_name ?? "there",
+        tournament_name: tournament.name,
+        amount: `$${(refundedAmountCents / 100).toFixed(2)}`,
+      },
+      idempotencyKey: `refund-processed/${paymentId}`,
+    },
+  });
+  if (error) {
+    console.error(`[stripe webhook] refund_processed email failed for payment ${paymentId} :: ${error.message}`);
   }
 }

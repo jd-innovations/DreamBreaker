@@ -48,6 +48,15 @@ const TRIGGER_PAYLOADS = {
   waitlist_spot_offered: { full_name: 'Sample Name', tournament_name: 'Sample Tournament', link_url: 'https://pickleballapp.app/t/sample' },
   hold_expired: { full_name: 'Sample Name', tournament_name: 'Sample Tournament', link_url: 'https://pickleballapp.app/t/sample' },
   waitlist_offer_expired: { full_name: 'Sample Name', tournament_name: 'Sample Tournament' },
+  // fn_notify_tournament_status (cancelled/pending_approval branches)
+  tournament_cancelled: { full_name: 'Sample Name', tournament_name: 'Sample Tournament' },
+  tournament_pending: { full_name: 'Sample Name', tournament_name: 'Sample Tournament', director_name: 'Sample Director', link: 'https://pickleballapp.app/admin' },
+  // create_partner_match_on_mutual_like
+  new_match: { full_name: 'Sample Name', match_name: 'Sample Match', link: 'https://pickleballapp.app' },
+  // fn_notify_waitlist_added
+  waitlist_added: { full_name: 'Sample Name', tournament_name: 'Sample Tournament', position: '1', link: 'https://pickleballapp.app/tournaments/sample' },
+  // web/src/app/api/stripe/webhooks/route.ts charge.refunded handler
+  refund_processed: { full_name: 'Sample Name', tournament_name: 'Sample Tournament', amount: '$45.00' },
 };
 
 function readEnv() {

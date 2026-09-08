@@ -275,14 +275,70 @@ async function cancelOne(
   // Offering a place that does not exist is worse than missing one, which is a
   // reconciliation problem rather than an angry player.
   if (!alreadyWithdrawn) {
-    const { error: promoteError } = await service
+    const { data: promotedRows, error: promoteError } = await service
       .rpc("promote_next_waitlisted", { p_tournament_id: reg.tournament_id });
     if (promoteError) {
       console.error(`[cancel-registration] promotion failed for ${reg.tournament_id} :: ${promoteError.message}`);
+    } else {
+      // promote_next_waitlisted() deliberately does not email -- its own doc
+      // comment says the caller does that. waitlist-sweeper's identical
+      // promotion path already does; this one never did, so a spot freed by
+      // a cancellation notified nobody until now.
+      const promoted = (Array.isArray(promotedRows) ? promotedRows[0] : promotedRows) as
+        | { registration_id: string; player_id: string | null; full_name: string | null; email: string | null; offer_expires_at: string }
+        | undefined;
+      // A director-added guest has no account and no address; the RPC still
+      // promotes them so an account-holder cannot jump the queue, but there
+      // is nothing to send.
+      if (promoted?.email) {
+        const tournamentName = await getTournamentName(service, reg.tournament_id);
+        await sendTemplateEmail(
+          promoted.email,
+          "waitlist_spot_offered",
+          {
+            full_name: promoted.full_name ?? "there",
+            tournament_name: tournamentName,
+            link_url: `${APP_URL}/tournaments/${reg.tournament_id}`,
+          },
+          `waitlist-spot-offered/${promoted.registration_id}/${promoted.offer_expires_at}`,
+        );
+      }
     }
   }
 
   return base;
+}
+
+const APP_URL = Deno.env.get("PUBLIC_APP_URL") ?? "https://pickleballapp.app";
+
+// Mirrors waitlist-sweeper/index.ts's sendTemplateEmail exactly -- same
+// shared sender, same fire-and-forget contract. Not extracted to _shared/
+// because it is two small functions duplicated in two files, not a growing
+// pattern yet.
+async function sendTemplateEmail(
+  to: string,
+  templateKey: string,
+  variables: Record<string, string>,
+  idempotencyKey: string,
+): Promise<void> {
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!anonKey) {
+    console.error("[cancel-registration] SUPABASE_ANON_KEY not available, skipping email");
+    return;
+  }
+  const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-transactional-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${anonKey}` },
+    body: JSON.stringify({ to, templateKey, variables, idempotencyKey }),
+  });
+  if (!res.ok) {
+    console.error(`[cancel-registration email failed] ${res.status} ${await res.text()}`);
+  }
+}
+
+async function getTournamentName(service: ServiceClient, tournamentId: string): Promise<string> {
+  const { data } = await service.from("tournaments").select("name").eq("id", tournamentId).maybeSingle();
+  return (data as { name: string } | null)?.name ?? "the tournament";
 }
 
 /**

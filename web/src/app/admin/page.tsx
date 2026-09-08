@@ -90,6 +90,8 @@ interface EmailTemplate {
   html_body: string;
   variables: string[];
   enabled: boolean;
+  layout: string | null;
+  preheader: string | null;
 }
 
 interface EmailSponsor {
@@ -99,22 +101,6 @@ interface EmailSponsor {
   link: string | null;
   active: boolean;
   sort_order: number;
-}
-
-// Render a template body to preview HTML: fill {{vars}} with sample text and
-// expand {{sponsor_logos}} into a logo row from the active sponsors.
-function renderEmailPreview(html: string, vars: string[], sponsors: EmailSponsor[]) {
-  let out = html;
-  for (const v of vars) {
-    const sample = v === "link" ? "#" : v.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-    out = out.replaceAll(`{{${v}}}`, v === "link" ? "#" : `<em>${sample}</em>`);
-  }
-  const logos = sponsors.filter((s) => s.active).sort((a, b) => a.sort_order - b.sort_order);
-  const logoHtml = logos.length === 0
-    ? ""
-    : `<div style="margin-top:16px;padding-top:12px;border-top:1px solid #e5e5e5;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">${logos.map((s) => `<img src="${s.logo_url}" alt="${s.name}" style="height:28px;object-fit:contain;" />`).join("")}</div>`;
-  out = out.replaceAll("{{sponsor_logos}}", logoHtml);
-  return out;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -245,8 +231,15 @@ export default function AdminPage() {
   const [tplSubject, setTplSubject] = useState("");
   const [tplBody, setTplBody] = useState("");
   const [tplEnabled, setTplEnabled] = useState(true);
+  const [tplLayout, setTplLayout] = useState<string | null>(null);
+  const [tplPreheader, setTplPreheader] = useState<string | null>(null);
   const [savingTpl, setSavingTpl] = useState(false);
   const [emailSponsors, setEmailSponsors] = useState<EmailSponsor[]>([]);
+  // Rendered by the real send path (send-transactional-email, dryRun) --
+  // deliberately not a second, hand-rolled preview. See selectTemplate/saveTemplate.
+  const [tplPreviewHtml, setTplPreviewHtml] = useState<string | null>(null);
+  const [tplPreviewError, setTplPreviewError] = useState<string | null>(null);
+  const [tplPreviewLoading, setTplPreviewLoading] = useState(false);
   const [newSponsorName, setNewSponsorName] = useState("");
   const [newSponsorLogo, setNewSponsorLogo] = useState("");
   const [newSponsorLink, setNewSponsorLink] = useState("");
@@ -339,7 +332,7 @@ export default function AdminPage() {
       // Email templates + sponsor logos
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: tpls } = await (supabase as any).from("email_templates")
-        .select("key,name,subject,html_body,variables,enabled").order("name");
+        .select("key,name,subject,html_body,variables,enabled,layout,preheader").order("name");
       const tplRows = (tpls ?? []) as EmailTemplate[];
       setEmailTemplates(tplRows);
       if (tplRows.length > 0) {
@@ -347,6 +340,8 @@ export default function AdminPage() {
         setTplSubject(tplRows[0].subject);
         setTplBody(tplRows[0].html_body);
         setTplEnabled(tplRows[0].enabled);
+        setTplLayout(tplRows[0].layout);
+        setTplPreheader(tplRows[0].preheader);
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: spons } = await (supabase as any).from("email_sponsors")
@@ -558,6 +553,8 @@ export default function AdminPage() {
     setTplSubject(t.subject);
     setTplBody(t.html_body);
     setTplEnabled(t.enabled);
+    setTplLayout(t.layout);
+    setTplPreheader(t.preheader);
   };
 
   const saveTemplate = async () => {
@@ -566,13 +563,41 @@ export default function AdminPage() {
     const supabase = createClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any).from("email_templates")
-      .update({ subject: tplSubject, html_body: tplBody, enabled: tplEnabled, updated_by: currentUserId })
+      .update({ subject: tplSubject, html_body: tplBody, enabled: tplEnabled, layout: tplLayout, preheader: tplPreheader, updated_by: currentUserId })
       .eq("key", selectedTplKey);
     setSavingTpl(false);
     if (error) { toast.error("Failed to save template."); return; }
-    setEmailTemplates((prev) => prev.map((t) => t.key === selectedTplKey ? { ...t, subject: tplSubject, html_body: tplBody, enabled: tplEnabled } : t));
+    setEmailTemplates((prev) => prev.map((t) => t.key === selectedTplKey ? { ...t, subject: tplSubject, html_body: tplBody, enabled: tplEnabled, layout: tplLayout, preheader: tplPreheader } : t));
     toast.success("Template saved.");
   };
+
+  // Renders through the real send path (send-transactional-email, dryRun) --
+  // exactly what /admin/email-preview does, and exactly what a real send
+  // would produce. No second, hand-rolled preview: what shows here is what
+  // ships, including a 422 if a body references a variable nothing supplies
+  // (the failure mode behind the 2026-08-21 mail-drop incident).
+  const renderTplPreview = useCallback(async () => {
+    if (navSection !== "email_templates" || !tplSubject || !tplBody) return;
+    setTplPreviewLoading(true);
+    setTplPreviewError(null);
+    const supabase = createClient();
+    const { data, error } = await supabase.functions.invoke("send-transactional-email", {
+      body: { subject: tplSubject, html: tplBody, dryRun: true, withShell: tplLayout !== null },
+    });
+    setTplPreviewLoading(false);
+    if (error) {
+      const detail = (data as { missing?: string[] } | null)?.missing;
+      setTplPreviewHtml(null);
+      setTplPreviewError(detail?.length ? `Unresolved variables: ${detail.join(", ")}` : error.message);
+      return;
+    }
+    setTplPreviewHtml((data as { html: string }).html);
+  }, [navSection, tplSubject, tplBody, tplLayout]);
+
+  useEffect(() => {
+    const id = setTimeout(() => { void renderTplPreview(); }, 400);
+    return () => clearTimeout(id);
+  }, [renderTplPreview]);
 
   const addSponsor = async () => {
     if (!newSponsorName.trim() || !newSponsorLogo.trim()) { toast.error("Name and logo URL are required."); return; }
@@ -1647,17 +1672,45 @@ export default function AdminPage() {
                             <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">BODY (HTML)</label>
                             <textarea value={tplBody} onChange={(e) => setTplBody(e.target.value)} rows={10}
                               className="w-full rounded-xl bg-secondary border border-border px-4 py-3 text-sm font-mono outline-none focus:ring-2 focus:ring-ring resize-y" />
+                            {tplLayout !== null && (
+                              <p className="text-[11px] text-muted-foreground mt-1.5">
+                                This body is wrapped in the shared email shell at send time — write structure only
+                                (<span className="font-mono">{"<p>"}</span>, <span className="font-mono">{"<strong>"}</span>,{" "}
+                                <span className="font-mono">{"<h2>"}</span>), no colors or a wrapping <span className="font-mono">{"<div>"}</span>.
+                              </p>
+                            )}
                           </div>
                           <div>
                             <div className="font-mono text-[10px] tracking-widest text-muted-foreground mb-2">INSERT VARIABLE</div>
                             <div className="flex flex-wrap gap-2">
-                              {[...selectedTpl.variables, "sponsor_logos"].map((v) => (
+                              {selectedTpl.variables.map((v) => (
                                 <button key={v} onClick={() => setTplBody((b) => `${b}{{${v}}}`)}
                                   className="px-2.5 h-7 rounded-full border border-border text-xs font-mono hover:bg-secondary transition-colors">
                                   {`{{${v}}}`}
                                 </button>
                               ))}
                             </div>
+                          </div>
+                          <div>
+                            <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">PREHEADER (inbox preview line)</label>
+                            <input value={tplPreheader ?? ""} onChange={(e) => setTplPreheader(e.target.value || null)}
+                              placeholder="Shown after the subject in the inbox list — falls back to the subject if blank."
+                              className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                          </div>
+                          <div>
+                            <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">LAYOUT</label>
+                            <select value={tplLayout ?? ""} onChange={(e) => setTplLayout(e.target.value || null)}
+                              className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring">
+                              <option value="">Unwrapped (legacy — body is a full document)</option>
+                              <option value="transactional">Transactional — receipt/confirmation, no unsubscribe</option>
+                              <option value="notification">Notification — has an unsubscribe link</option>
+                            </select>
+                            {tplLayout === "notification" && (
+                              <p className="text-[11px] text-amber-600 mt-1.5">
+                                Preference enforcement isn&apos;t wired up yet — a send here ignores a
+                                player&apos;s email notification toggle. See Phase 5.5 in EMAIL_NOTIFICATIONS_EXECUTION_PLAN.md.
+                              </p>
+                            )}
                           </div>
                           <div className="flex justify-end">
                             <button onClick={saveTemplate} disabled={savingTpl}
@@ -1668,11 +1721,21 @@ export default function AdminPage() {
                         </div>
 
                         <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-                          <div className="font-mono text-[10px] tracking-widest text-muted-foreground mb-1">PREVIEW</div>
-                          <div className="text-sm font-semibold mb-3">{renderEmailPreview(tplSubject, selectedTpl.variables, emailSponsors).replace(/<[^>]+>/g, "")}</div>
-                          <div className="rounded-xl bg-white text-black p-5 text-sm leading-relaxed [&_a]:text-primary [&_a]:underline"
-                            dangerouslySetInnerHTML={{ __html: renderEmailPreview(tplBody, selectedTpl.variables, emailSponsors) }} />
-                          <p className="text-[11px] text-muted-foreground mt-3">Sending is wired up in a later phase; edits here are saved and will be used when emails go out.</p>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="font-mono text-[10px] tracking-widest text-muted-foreground">PREVIEW</div>
+                            {tplPreviewLoading && <div className="text-[10px] text-muted-foreground">rendering…</div>}
+                          </div>
+                          <div className="text-sm font-semibold mb-3">{tplSubject}</div>
+                          {tplPreviewError ? (
+                            <pre className="rounded-xl bg-red-500/10 text-red-500 p-4 text-xs whitespace-pre-wrap">{tplPreviewError}</pre>
+                          ) : (
+                            <iframe title="Template preview" srcDoc={tplPreviewHtml ?? ""} sandbox=""
+                              className="w-full rounded-xl border border-border bg-white" style={{ height: 420 }} />
+                          )}
+                          <p className="text-[11px] text-muted-foreground mt-3">
+                            Rendered by the real send path (same as <span className="font-mono">/admin/email-preview</span>) — what
+                            shows here is what actually sends, including an error if a variable is unresolved.
+                          </p>
                         </div>
                       </>
                     )}

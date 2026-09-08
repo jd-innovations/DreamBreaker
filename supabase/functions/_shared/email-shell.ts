@@ -82,6 +82,14 @@ export interface EmailShellOptions {
   preferencesUrl: string;
   unsubscribeUrl?: string;
   assetBase?: string;
+  /**
+   * Show the company's physical postal address in the footer. Off by
+   * default: the address on file is residential, and CAN-SPAM's
+   * physical-address requirement attaches to commercial/marketing mail, not
+   * transactional or account-notification mail. Set true only for
+   * `layout === 'marketing'` sends (Phase 7's broadcast composer).
+   */
+  showAddress?: boolean;
 }
 
 export function renderEmail(opts: EmailShellOptions): string {
@@ -211,7 +219,7 @@ export function renderEmail(opts: EmailShellOptions): string {
 
           <tr><td colspan="2" height="16" style="height:16px;font-size:0;line-height:0;">&nbsp;</td></tr>
           <tr><td colspan="2" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:${BRAND.mutedDark};">
-            ${COMPANY} &#183; ${ADDRESS}<br />&#169; ${new Date().getUTCFullYear()} Pickleball App. All rights reserved.
+            ${opts.showAddress ? `${COMPANY} &#183; ${ADDRESS}<br />` : ""}&#169; ${new Date().getUTCFullYear()} Pickleball App. All rights reserved.
           </td></tr>
 
         </table>
@@ -237,6 +245,8 @@ export function renderText(opts: {
   ctaUrl?: string;
   preferencesUrl: string;
   unsubscribeUrl?: string;
+  /** See `EmailShellOptions.showAddress` — same rule applies here. */
+  showAddress?: boolean;
 }): string {
   const body = opts.bodyText ?? htmlToText(opts.bodyHtml ?? "");
   const lines = [opts.preheader, "", body];
@@ -251,7 +261,7 @@ export function renderText(opts: {
     `Notification preferences: ${opts.preferencesUrl}`,
   );
   if (opts.unsubscribeUrl) lines.push(`Unsubscribe: ${opts.unsubscribeUrl}`);
-  lines.push(`${COMPANY} · ${ADDRESS}`);
+  if (opts.showAddress) lines.push(`${COMPANY} · ${ADDRESS}`);
 
   return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }

@@ -222,10 +222,11 @@ Deno.serve(async (req: Request) => {
         preheader: subject,
         bodyHtml: html,
         preferencesUrl: PREFERENCES_URL,
+        showAddress: layout === "marketing",
       })
       : html;
     const text = shell
-      ? renderText({ preheader: subject, bodyHtml: html, preferencesUrl: PREFERENCES_URL })
+      ? renderText({ preheader: subject, bodyHtml: html, preferencesUrl: PREFERENCES_URL, showAddress: layout === "marketing" })
       : undefined;
 
     return new Response(
@@ -258,6 +259,10 @@ Deno.serve(async (req: Request) => {
       bodyHtml: html,
       preferencesUrl: PREFERENCES_URL,
       unsubscribeUrl: layout === "notification" ? UNSUBSCRIBE_URL : undefined,
+      // Residential address on file — CAN-SPAM's physical-address rule attaches
+      // to commercial/marketing mail, not transactional or account mail, so it
+      // only appears once Phase 7's broadcast layout exists and is selected.
+      showAddress: layout === "marketing",
     };
     finalHtml = renderEmail(shellOpts);
     // HTML-only mail is spam-scored; a wrapped send always carries both parts.
