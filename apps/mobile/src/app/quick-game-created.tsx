@@ -1070,8 +1070,11 @@ const s = StyleSheet.create({
   heroMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   heroMetaText: { fontSize: text.rowTitle.size, color: 'rgba(255,255,255,0.9)', fontWeight: '700' },
 
-  // Scroll
-  scroll: { paddingHorizontal: spacing.screenH, paddingTop: spacing.md, gap: 12 },
+  // Scroll — no paddingTop: the hero is the first child and must bleed to the
+  // very top of the scroll content (behind the status bar), matching
+  // community/[id].tsx's identical full-bleed hero. `gap` already spaces the
+  // hero from mapCard below it.
+  scroll: { paddingHorizontal: spacing.screenH, gap: 12 },
 
   // Map card (replaces summaryCard) — bleeds past the scroll's horizontal
   // padding so it reads wider than the cards below it, per design ask.
