@@ -3,7 +3,7 @@
 // DraggableSheet (collapsed → half → full) carrying progressively more detail.
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, TextInput, Share, Image,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, TextInput, Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +20,7 @@ import { fetchProfile, type UserProfile } from '@/lib/services/profile';
 import { conditionLabel, formatPriceCents, listingAgeLabel, type MarketplaceBrand } from '@/lib/marketplace/constants';
 import { BRAND_LOGOS } from '@/lib/marketplace/brandLogos';
 import { haptics } from '@/lib/haptics';
-import { appLinks } from '@/lib/appLinks';
+import { shareEntity } from '@/lib/share';
 
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -126,9 +126,7 @@ export default function ListingDetailScreen() {
 
   const handleShare = async () => {
     try {
-      await Share.share({
-        message: `Check out this ${listing.title} for ${formatPriceCents(listing.asking_price_cents)} on Pickleball App: ${appLinks.marketplaceListing(listing.id)}`,
-      });
+      await shareEntity({ type: 'marketplace', id: listing.id, title: listing.title, priceCents: listing.asking_price_cents });
     } catch {
       // user cancelled or share unavailable — nothing to do
     }

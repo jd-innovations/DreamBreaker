@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Image, ActivityIndicator, Linking, Alert, Modal, Pressable, Share, TextInput,
+  ScrollView, Image, ActivityIndicator, Linking, Alert, Modal, Pressable, TextInput,
 } from 'react-native';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,7 +17,7 @@ import { goBack } from '@/lib/navigation';
 import { useSession } from '@/hooks/useSession';
 import { useSupportContext } from '@/lib/support/supportContext';
 import { createSupportTicket } from '@/lib/supportTicketService';
-import { appLinks } from '@/lib/appLinks';
+import { shareEntity } from '@/lib/share';
 import { AppIcon, StatusChip } from '@/components';
 import { VenueMapCard } from '@/components/VenueMapCard';
 import {
@@ -681,9 +681,7 @@ export default function FacilityDetailScreen() {
 
   async function handleShare() {
     try {
-      await Share.share({
-        message: `Check out ${facility!.name} on Pickleball App: ${appLinks.facility(facility!.id)}`,
-      });
+      await shareEntity({ type: 'facility', id: facility!.id, name: facility!.name });
     } catch {
       // user cancelled or share unavailable — nothing to do
     }

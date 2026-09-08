@@ -10,7 +10,7 @@ import { IS_INTERNAL_BUILD } from '@/lib/featureFlags';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, spacing, iconCircle } from '@/theme';
+import { colors, spacing, iconCircle } from '@/theme';
 import { EmptyState, LoadingState } from '@/components/states/ScreenState';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -36,7 +36,7 @@ import {
   sbMatchesToRRRounds, ScheduleExistsError,
 } from '@/lib/supabase/roundRobin';
 import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilities';
-import { createCommunityShareMessage } from '@/lib/communityShare';
+import { shareEntity } from '@/lib/share';
 import { FacilityCard } from '@/components/FacilityCard';
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
@@ -450,10 +450,14 @@ export default function RoundRobinCreatedScreen() {
 
   async function handleShare() {
     try {
-      const message = isSupabase && sbEvent
-        ? createCommunityShareMessage(sbEvent)
-        : `Join my round robin "${g.title}" on Pickleball App!\n${fmtDate(g.date)} at ${fmtTime(g.startTime)} — ${g.locationName}`;
-      await Share.share({ message, title: g.title });
+      if (isSupabase && sbEvent) {
+        await shareEntity({ type: 'community', event: sbEvent });
+      } else {
+        await Share.share({
+          message: `Join my round robin "${g.title}" on Pickleball App!\n${fmtDate(g.date)} at ${fmtTime(g.startTime)} — ${g.locationName}`,
+          title: g.title,
+        });
+      }
     } catch { /* dismissed */ }
   }
 

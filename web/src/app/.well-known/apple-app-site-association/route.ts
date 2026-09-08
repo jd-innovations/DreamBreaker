@@ -23,6 +23,18 @@ const TEAM_ID = process.env.APPLE_TEAM_ID ?? process.env.APPLE_DEVELOPER_TEAM_ID
 // a phone camera currently 404s rather than opening the app. Adding it here
 // would route a check-in token through the deep-link handler, which is a
 // bigger decision than a path list — see item 5.3's completion notes.
+//
+// Added 2026-09-08 (sharing framework audit): '/coach/*' and '/facility/*'.
+// Both now have real web pages (web/src/app/coach/[id], .../facility/[id])
+// AND matching mobile screens (apps/mobile/src/app/coach/[id].tsx,
+// .../facility/[id].tsx) — the two conditions this file's own history says to
+// check first. facility/* has no exceptions: every path under it
+// (apply, check-in, deals, manage, [id]) is a real screen. coach/* needs one:
+// 'NOT /coach/offers/*' must stay ahead of the wildcard, because
+// coach/offers/[id] (bare, no /edit) still has no matching screen — only
+// create.tsx and [id]/edit.tsx exist. Apple evaluates these paths in order and
+// stops at the first match, so the NOT-exclusion has to come before '/coach/*'
+// or it does nothing.
 const PATHS = [
   '/conversation/*',
   '/groups/*',
@@ -30,6 +42,9 @@ const PATHS = [
   '/marketplace/*',
   '/claim/*',
   '/community/*',
+  'NOT /coach/offers/*',
+  '/coach/*',
+  '/facility/*',
 ];
 
 export const dynamic = 'force-dynamic';

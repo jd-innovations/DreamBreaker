@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Dimensions, Image, Modal, Pressable, Alert, ActivityIndicator,
-  LayoutAnimation, Platform, UIManager, Share, Animated,
+  LayoutAnimation, Platform, UIManager, Animated,
 } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,6 +43,7 @@ import { supabase } from '@/lib/supabase';
 import { getOrCreateConversation } from '@/lib/conversationService';
 import { useSupportContext } from '@/lib/support/supportContext';
 import { appLinks } from '@/lib/appLinks';
+import { shareEntity } from '@/lib/share';
 import type { Tournament } from '@/lib/tournamentTypes';
 import type { DivisionData } from '@/data/divisions';
 
@@ -409,9 +410,7 @@ export default function TournamentDetail() {
   const handleShare = useCallback(async () => {
     if (!tournament) return;
     try {
-      await Share.share({
-        message: `Check out ${tournament.name} on Pickleball App: ${appLinks.tournament(tournament.id)}`,
-      });
+      await shareEntity({ type: 'tournament', id: tournament.id, name: tournament.name });
     } catch {
       // User cancelled or the native share sheet was unavailable.
     }

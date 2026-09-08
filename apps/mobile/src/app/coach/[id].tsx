@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Share, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -7,7 +7,7 @@ import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
-import { appLinks } from '@/lib/appLinks';
+import { shareEntity } from '@/lib/share';
 import { InfoTooltip } from '@/components/InfoTooltip';
 import { useSupportContext } from '@/lib/support/supportContext';
 import { fetchCoachProfile, fetchCoachPublicOffers, type CoachProfile } from '@/lib/coach/coachProfile';
@@ -86,9 +86,7 @@ export default function CoachProfileScreen() {
   async function handleShare() {
     if (!coach) return;
     try {
-      await Share.share({
-        message: `${coach.fullName} coaches on Pickleball App: ${appLinks.coach(coach.id)}`,
-      });
+      await shareEntity({ type: 'coach', id: coach.id, fullName: coach.fullName });
     } catch { /* dismissed */ }
   }
 

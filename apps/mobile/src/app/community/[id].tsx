@@ -2,11 +2,11 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
-  Modal, Pressable, Alert, Linking, Animated, Share,
+  Modal, Pressable, Alert, Linking, Animated,
   type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { createCommunityShareMessage } from '@/lib/communityShare';
+import { shareEntity } from '@/lib/share';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -444,15 +444,12 @@ export default function CommunityEventScreen() {
 
   // The share button in the hero rendered with no onPress - a dead control,
   // not a stubbed one, since nothing on this screen imported Share at all.
-  // Uses rawPlayEvent (the unmapped row) because createCommunityShareMessage
-  // takes a PlayEvent, and EventShape is this screen's own display shape.
+  // Uses rawPlayEvent (the unmapped row) because shareEntity's 'community'
+  // case takes a PlayEvent, and EventShape is this screen's own display shape.
   async function handleShare() {
     if (!rawPlayEvent) return;
     try {
-      await Share.share({
-        message: createCommunityShareMessage(rawPlayEvent),
-        title: event.name,
-      });
+      await shareEntity({ type: 'community', event: rawPlayEvent });
     } catch { /* user dismissed the sheet */ }
   }
   const isPastEvent = event.badge === 'COMPLETED' || event.badge === 'CANCELLED';

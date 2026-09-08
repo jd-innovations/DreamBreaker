@@ -29,7 +29,7 @@ import { setPendingGroupId } from '@/lib/pendingGroupLink';
 import { sendPartnerLike, hasSentPartnerLike, isPartnerMatch } from '@/lib/partnerLikes';
 import { getOrCreateConversation } from '@/lib/conversationService';
 import { useSupportContext } from '@/lib/support/supportContext';
-import { appLinks } from '@/lib/appLinks';
+import { shareEntity } from '@/lib/share';
 import {
   acceptGroupInvite,
   fetchGroupInviteCandidates,
@@ -1410,7 +1410,7 @@ export default function GroupDetail() {
 
   function handleShare() {
     if (!groupId || !group) return;
-    Share.share({ message: `Join "${group.name}" on Pickleball App: ${appLinks.group(groupId)}` });
+    shareEntity({ type: 'group', id: groupId, name: group.name });
   }
 
   async function openInviteMembers() {

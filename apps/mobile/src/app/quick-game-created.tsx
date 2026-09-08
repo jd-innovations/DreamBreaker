@@ -26,7 +26,7 @@ import {
 import { getCurrentGame, updateStatus, type QuickGame } from '@/lib/quickGameStore';
 import { getRosterCount } from '@/lib/quickGameRosterStore';
 import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilities';
-import { createCommunityShareMessage } from '@/lib/communityShare';
+import { shareEntity } from '@/lib/share';
 import { FacilityCard } from '@/components/FacilityCard';
 import { VenueMapCard } from '@/components/VenueMapCard';
 import { eventCoverSource } from '@/lib/eventCover';
@@ -407,10 +407,14 @@ export default function QuickGameCreatedScreen() {
 
   async function handleShare() {
     try {
-      const message = isSupabase && event
-        ? createCommunityShareMessage(event)
-        : `Join my pickleball game "${g.title}" on Pickleball App!\n${fmtDate(g.date)} at ${fmtTime(g.startTime)} — ${g.locationName}`;
-      await Share.share({ message, title: g.title });
+      if (isSupabase && event) {
+        await shareEntity({ type: 'community', event });
+      } else {
+        await Share.share({
+          message: `Join my pickleball game "${g.title}" on Pickleball App!\n${fmtDate(g.date)} at ${fmtTime(g.startTime)} — ${g.locationName}`,
+          title: g.title,
+        });
+      }
     } catch { /* dismissed */ }
   }
 

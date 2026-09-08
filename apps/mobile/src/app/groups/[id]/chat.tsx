@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Image, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Share,
+  StyleSheet, Image, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
   Modal, Pressable, Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -29,7 +29,7 @@ import {
 } from '@/lib/attachmentPicker';
 import { ReactionPills, AttachmentOptionsSheet, FileAttachmentRow } from '@/components';
 import { useSupportContext } from '@/lib/support/supportContext';
-import { appLinks } from '@/lib/appLinks';
+import { shareEntity } from '@/lib/share';
 import type { Tables } from '@shared/database.types';
 
 const FALLBACK_EVENT_IMAGE = 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=200&fit=crop&q=80';
@@ -344,7 +344,7 @@ export default function GroupChat() {
 
   function handleShare() {
     if (!id || !group) return;
-    Share.share({ message: `Join "${group.name}" on Pickleball App: ${appLinks.group(id)}` });
+    shareEntity({ type: 'group', id, name: group.name });
   }
 
   if (loading) {
