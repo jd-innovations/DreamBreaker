@@ -21,11 +21,13 @@
  *   node ./scripts/validate-eas-env.js --self-test
  */
 
-// The shared flat ESLint config targets the app's React Native source and does
-// not declare Node globals; this file is a plain CommonJS script. Paths resolve
+// This file is a plain CommonJS script, not React Native source. Paths resolve
 // from __dirname rather than process.cwd() so the check works when invoked from
 // the repo root (e.g. in CI) as well as from apps/mobile.
-/* global __dirname */
+//
+// __dirname is now declared for scripts/*.js in eslint.config.js, so the
+// file-local `/* global __dirname */` this used to carry has been removed --
+// keeping it would report as a no-redeclare warning.
 
 const fs = require('fs');
 const path = require('path');
