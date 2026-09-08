@@ -26,6 +26,7 @@ interface Tournament {
   venue_address: string;
   zip_code: string;
   event_date: string;
+  registration_closes_at: string | null;
   format: string;
   formats: string[] | null;
   tournament_format: string | null;
@@ -37,6 +38,7 @@ interface Tournament {
   hold_duration_hours: number;
   prize_pool_cents: number | null;
   hold_cutoff_days: number;
+  refund_cutoff_days: number;
   description: string | null;
   rules: string | null;
   cover_img_url: string | null;
@@ -408,7 +410,7 @@ export default function DirectorTournamentPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: t, error } = await (supabase as any)
         .from("tournaments")
-        .select("id,name,city,state,venue_name,venue_address,zip_code,event_date,format,formats,tournament_format,pool_count,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,hold_duration_hours,hold_cutoff_days,prize_pool_cents,description,rules,cover_img_url,status,created_at")
+        .select("id,name,city,state,venue_name,venue_address,zip_code,event_date,registration_closes_at,format,formats,tournament_format,pool_count,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,hold_duration_hours,hold_cutoff_days,refund_cutoff_days,prize_pool_cents,description,rules,cover_img_url,status,created_at")
         .eq("id", id)
         .eq("director_id", userId)
         .single();
@@ -640,10 +642,12 @@ export default function DirectorTournamentPage() {
       state: fd.get("state") as string,
       zip_code: fd.get("zip_code") as string,
       event_date: fd.get("event_date") as string,
+      registration_closes_at: fd.get("registration_closes_at") as string,
       description: (fd.get("description") as string) || null,
       rules: (fd.get("rules") as string) || null,
       prize_pool_cents: fd.get("prize_pool") ? Math.round(parseFloat(fd.get("prize_pool") as string) * 100) : null,
       hold_cutoff_days: parseInt(fd.get("hold_cutoff_days") as string, 10) || 7,
+      refund_cutoff_days: parseInt(fd.get("refund_cutoff_days") as string, 10) || 15,
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any).from("tournaments").update(updates).eq("id", id);
@@ -859,6 +863,10 @@ export default function DirectorTournamentPage() {
                   </div>
                 </div>
                 <div>
+                  <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">REGISTRATION CLOSES</label>
+                  <input name="registration_closes_at" type="date" defaultValue={tournament.registration_closes_at ? tournament.registration_closes_at.slice(0, 10) : ""} required className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+                <div>
                   <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">VENUE ADDRESS</label>
                   <input name="venue_address" defaultValue={tournament.venue_address ?? ""} className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
                 </div>
@@ -904,6 +912,22 @@ export default function DirectorTournamentPage() {
                     Unredeemed holds are cancelled this many days before the event. The hold fee is forfeited and waitlisted players are promoted in order, each with 24 hours to complete payment.
                   </p>
                 </div>
+                <div>
+                  <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">
+                    REFUND CUTOFF (DAYS BEFORE EVENT)
+                  </label>
+                  <input
+                    name="refund_cutoff_days"
+                    type="number"
+                    min={0}
+                    max={365}
+                    defaultValue={tournament.refund_cutoff_days ?? 15}
+                    className="w-full h-11 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Players who cancel at least this many days before the event are eligible for a full entry-fee refund. Inside the window, no refund. This does not apply to Hold My Spot deposits, which are always non-refundable. Refunds are currently issued manually — this setting decides eligibility, not payout.
+                  </p>
+                </div>
                 <button type="submit" disabled={savingDetails} className="w-full h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] text-sm disabled:opacity-50 flex items-center justify-center gap-2">
                   <FloppyDisk size={15} weight="bold" />{savingDetails ? "SAVING…" : "SAVE CHANGES"}
                 </button>
@@ -918,6 +942,14 @@ export default function DirectorTournamentPage() {
                       <div><div className="text-sm font-semibold">{fmtDate(tournament.event_date)}</div></div>
                     </div>
                     <div className="flex items-start gap-3">
+                      <Clock size={16} className="text-primary mt-0.5 flex-shrink-0" />
+                      <div>
+                        <div className="text-sm font-semibold">
+                          {tournament.registration_closes_at ? `Registration closes ${fmtDate(tournament.registration_closes_at)}` : "Registration close date not set"}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
                       <MapPin size={16} className="text-primary mt-0.5 flex-shrink-0" />
                       <div>
                         <div className="text-sm font-semibold">{tournament.venue_name}</div>
@@ -929,6 +961,7 @@ export default function DirectorTournamentPage() {
                       <div>
                         <div className="text-sm font-semibold">{fmt(tournament.entry_fee_cents)} entry · {fmt(tournament.hold_fee_cents)} hold</div>
                         <div className="text-xs text-muted-foreground">Hold valid for {tournament.hold_duration_hours}h · Cutoff {tournament.hold_cutoff_days ?? 7} days before event</div>
+                        <div className="text-xs text-muted-foreground">Entry fee refundable up to {tournament.refund_cutoff_days ?? 15} days before event · deposits non-refundable</div>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">

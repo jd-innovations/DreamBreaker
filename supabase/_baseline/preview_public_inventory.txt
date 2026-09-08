@@ -1,0 +1,861 @@
+constraint|blocked_users_blocked_id_fkey
+constraint|blocked_users_blocker_id_fkey
+constraint|blocked_users_pkey
+constraint|bracket_matches_division_id_fkey
+constraint|bracket_matches_next_match_id_fkey
+constraint|bracket_matches_pkey
+constraint|bracket_matches_score_entered_by_fkey
+constraint|bracket_matches_team1_player_a_fkey
+constraint|bracket_matches_team1_player_b_fkey
+constraint|bracket_matches_team2_player_a_fkey
+constraint|bracket_matches_team2_player_b_fkey
+constraint|bracket_matches_tournament_id_fkey
+constraint|bracket_seeds_pkey
+constraint|bracket_seeds_player_id_fkey
+constraint|bracket_seeds_tournament_id_fkey
+constraint|bracket_seeds_tournament_id_player_id_key
+constraint|bracket_seeds_tournament_id_seed_number_key
+constraint|conversation_participant_settings_conversation_id_fkey
+constraint|conversation_participant_settings_pkey
+constraint|conversation_participant_settings_user_id_fkey
+constraint|conversation_participants_conversation_id_fkey
+constraint|conversation_participants_pkey
+constraint|conversation_participants_user_id_fkey
+constraint|conversations_created_by_fkey
+constraint|conversations_participant_a_fkey
+constraint|conversations_participant_b_fkey
+constraint|conversations_pkey
+constraint|conversations_related_play_event_id_fkey
+constraint|conversations_related_tournament_id_fkey
+constraint|court_assignments_match_id_fkey
+constraint|court_assignments_pkey
+constraint|court_assignments_tournament_id_court_number_key
+constraint|court_assignments_tournament_id_fkey
+constraint|divisions_pkey
+constraint|divisions_tournament_id_fkey
+constraint|dupr_history_pkey
+constraint|dupr_history_player_id_fkey
+constraint|dupr_history_tournament_id_fkey
+constraint|dynamic_stories_pkey
+constraint|email_log_pkey
+constraint|email_sponsors_pkey
+constraint|email_templates_pkey
+constraint|email_templates_updated_by_fkey
+constraint|facilities_owner_user_id_fkey
+constraint|facilities_pkey
+constraint|facilities_slug_key
+constraint|facility_photos_facility_id_fkey
+constraint|facility_photos_pkey
+constraint|facility_photos_uploaded_by_fkey
+constraint|group_invites_group_id_fkey
+constraint|group_invites_group_id_invitee_id_key
+constraint|group_invites_invitee_id_fkey
+constraint|group_invites_inviter_id_fkey
+constraint|group_invites_pkey
+constraint|group_members_group_id_fkey
+constraint|group_members_pkey
+constraint|group_members_user_id_fkey
+constraint|group_photos_group_id_fkey
+constraint|group_photos_pkey
+constraint|group_photos_post_id_fkey
+constraint|group_photos_uploaded_by_fkey
+constraint|group_poll_options_pkey
+constraint|group_poll_options_post_id_fkey
+constraint|group_poll_votes_option_id_fkey
+constraint|group_poll_votes_pkey
+constraint|group_poll_votes_user_id_fkey
+constraint|group_post_comments_author_id_fkey
+constraint|group_post_comments_parent_comment_id_fkey
+constraint|group_post_comments_pkey
+constraint|group_post_comments_post_id_fkey
+constraint|group_post_likes_pkey
+constraint|group_post_likes_post_id_fkey
+constraint|group_post_likes_user_id_fkey
+constraint|group_post_reports_group_id_fkey
+constraint|group_post_reports_pkey
+constraint|group_post_reports_reported_user_id_fkey
+constraint|group_post_reports_reporter_id_fkey
+constraint|group_post_reports_reviewed_by_fkey
+constraint|group_posts_author_id_fkey
+constraint|group_posts_group_id_fkey
+constraint|group_posts_pkey
+constraint|group_posts_related_play_event_id_fkey
+constraint|groups_conversation_id_fkey
+constraint|groups_organizer_id_fkey
+constraint|groups_pkey
+constraint|location_settings_pkey
+constraint|location_settings_user_id_fkey
+constraint|matchmaking_swipes_pkey
+constraint|matchmaking_swipes_requester_id_fkey
+constraint|matchmaking_swipes_target_id_fkey
+constraint|message_reactions_message_id_fkey
+constraint|message_reactions_pkey
+constraint|message_reactions_user_id_fkey
+constraint|messages_conversation_id_fkey
+constraint|messages_pkey
+constraint|messages_sender_id_fkey
+constraint|notifications_pkey
+constraint|notifications_user_id_fkey
+constraint|par_algorithm_versions_pkey
+constraint|par_game_processing_algorithm_version_fkey
+constraint|par_game_processing_game_id_fkey
+constraint|par_game_processing_pkey
+constraint|par_game_processing_session_id_fkey
+constraint|par_rating_events_algorithm_version_fkey
+constraint|par_rating_events_game_id_fkey
+constraint|par_rating_events_pkey
+constraint|par_rating_events_profile_id_fkey
+constraint|par_rating_events_reversal_event_id_fkey
+constraint|par_rating_events_session_id_fkey
+constraint|partner_likes_from_user_id_fkey
+constraint|partner_likes_from_user_id_to_user_id_kind_key
+constraint|partner_likes_pkey
+constraint|partner_likes_to_user_id_fkey
+constraint|partner_matches_pkey
+constraint|partner_matches_user_a_fkey
+constraint|partner_matches_user_a_user_b_key
+constraint|partner_matches_user_b_fkey
+constraint|partner_preferences_pkey
+constraint|partner_preferences_user_id_fkey
+constraint|personal_game_participants_game_id_fkey
+constraint|personal_game_participants_once_per_game
+constraint|personal_game_participants_pkey
+constraint|personal_game_participants_session_participant_id_fkey
+constraint|personal_game_participants_unique_position
+constraint|personal_games_pkey
+constraint|personal_games_session_id_fkey
+constraint|personal_games_unique_number
+constraint|personal_guest_players_created_by_fkey
+constraint|personal_guest_players_pkey
+constraint|personal_guest_shares_created_by_fkey
+constraint|personal_guest_shares_guest_player_id_fkey
+constraint|personal_guest_shares_pkey
+constraint|personal_guest_shares_session_guest_unique
+constraint|personal_guest_shares_session_id_fkey
+constraint|personal_guest_shares_session_participant_id_fkey
+constraint|personal_guest_shares_unique_participant
+constraint|personal_match_claims_claimed_by_profile_id_fkey
+constraint|personal_match_claims_created_by_fkey
+constraint|personal_match_claims_guest_player_id_fkey
+constraint|personal_match_claims_guest_share_id_fkey
+constraint|personal_match_claims_pkey
+constraint|personal_match_claims_session_id_fkey
+constraint|personal_match_claims_session_participant_id_fkey
+constraint|personal_match_claims_token_hash_key
+constraint|personal_session_participants_created_by_fkey
+constraint|personal_session_participants_guest_player_id_fkey
+constraint|personal_session_participants_pkey
+constraint|personal_session_participants_profile_id_fkey
+constraint|personal_session_participants_session_id_fkey
+constraint|personal_sessions_created_by_fkey
+constraint|personal_sessions_facility_id_fkey
+constraint|personal_sessions_pkey
+constraint|platform_settings_pkey
+constraint|play_event_invites_invitee_id_fkey
+constraint|play_event_invites_inviter_id_fkey
+constraint|play_event_invites_pkey
+constraint|play_event_invites_play_event_id_fkey
+constraint|play_event_invites_play_event_id_invitee_id_key
+constraint|play_events_facility_id_fkey
+constraint|play_events_group_id_fkey
+constraint|play_events_instructor_id_fkey
+constraint|play_events_organizer_id_fkey
+constraint|play_events_pkey
+constraint|play_events_slug_key
+constraint|play_matches_event_id_fkey
+constraint|play_matches_pkey
+constraint|play_matches_player_a_id_fkey
+constraint|play_matches_player_a2_id_fkey
+constraint|play_matches_player_b_id_fkey
+constraint|play_matches_player_b2_id_fkey
+constraint|play_participants_claimed_by_fkey
+constraint|play_participants_event_id_fkey
+constraint|play_participants_pkey
+constraint|player_par_profiles_algorithm_version_fkey
+constraint|player_par_profiles_last_processed_game_id_fkey
+constraint|player_par_profiles_pkey
+constraint|player_par_profiles_profile_id_fkey
+constraint|profile_hidden_matches_match_id_fkey
+constraint|profile_hidden_matches_pkey
+constraint|profile_hidden_matches_player_id_fkey
+constraint|profile_hidden_matches_player_id_match_id_key
+constraint|profiles_director_approved_by_fkey
+constraint|profiles_handle_key
+constraint|profiles_home_court_id_fkey
+constraint|profiles_id_fkey
+constraint|profiles_pkey
+constraint|profiles_stripe_connect_account_id_key
+constraint|profiles_stripe_customer_id_key
+constraint|push_tokens_pkey
+constraint|push_tokens_user_id_fkey
+constraint|registrations_added_by_director_id_fkey
+constraint|registrations_checked_in_by_fkey
+constraint|registrations_division_id_fkey
+constraint|registrations_partner_id_fkey
+constraint|registrations_pkey
+constraint|registrations_player_id_fkey
+constraint|registrations_replaces_registration_id_fkey
+constraint|registrations_tournament_id_fkey
+constraint|saved_play_events_pkey
+constraint|saved_play_events_play_event_id_fkey
+constraint|saved_play_events_player_id_fkey
+constraint|saved_play_events_player_id_play_event_id_key
+constraint|story_views_pkey
+constraint|story_views_story_id_fkey
+constraint|story_views_story_id_user_id_key
+constraint|story_views_user_id_fkey
+constraint|tournament_bookmarks_pkey
+constraint|tournament_bookmarks_player_id_fkey
+constraint|tournament_bookmarks_player_id_tournament_id_key
+constraint|tournament_bookmarks_tournament_id_fkey
+constraint|tournament_sponsors_pkey
+constraint|tournament_sponsors_tournament_id_fkey
+constraint|tournaments_approved_by_fkey
+constraint|tournaments_director_id_fkey
+constraint|tournaments_facility_id_fkey
+constraint|tournaments_pkey
+constraint|tournaments_slug_key
+constraint|transactions_pkey
+constraint|transactions_player_id_fkey
+constraint|transactions_registration_id_fkey
+constraint|transactions_stripe_id_key
+constraint|transactions_tournament_id_fkey
+constraint|unique_block
+constraint|unique_open_group_report
+constraint|unique_open_report
+constraint|uq_match_per_round
+constraint|uq_play_participant_email_per_event
+constraint|uq_swipe
+constraint|user_reports_conversation_id_fkey
+constraint|user_reports_pkey
+constraint|user_reports_reported_id_fkey
+constraint|user_reports_reporter_id_fkey
+constraint|user_reports_reviewed_by_fkey
+constraint|wallet_activity_pkey
+constraint|wallet_activity_user_id_fkey
+constraint|wallet_activity_wallet_item_id_fkey
+constraint|wallet_items_partner_id_fkey
+constraint|wallet_items_pkey
+constraint|wallet_items_user_id_fkey
+constraint|wallet_partners_pkey
+constraint|wallet_partners_slug_key
+constraint|wallet_redemptions_pkey
+constraint|wallet_redemptions_user_id_fkey
+constraint|wallet_redemptions_wallet_item_id_fkey
+function|add_personal_session_guest_participant("p_session_id" "uuid", "p_display_name" "text", "p_estimated_skill" "text" DEFAULT NULL::"text", "p_phone" "text" DEFAULT NULL::"text", "p_email" "text" DEFAULT NULL::"text")
+function|add_personal_session_registered_participant("p_session_id" "uuid", "p_profile_id" "uuid")
+function|admin_delete_tournament("p_tournament_id" "uuid")
+function|apply_to_be_director()
+function|claim_personal_match("p_token" "text")
+function|complete_personal_session("p_session_id" "uuid", "p_facility_id" "uuid" DEFAULT NULL::"uuid", "p_notes" "text" DEFAULT NULL::"text", "p_indoor_outdoor" "text" DEFAULT NULL::"text")
+function|complete_personal_session_with_distribution("p_session_id" "uuid", "p_facility_id" "uuid" DEFAULT NULL::"uuid", "p_notes" "text" DEFAULT NULL::"text", "p_indoor_outdoor" "text" DEFAULT NULL::"text")
+function|create_partner_match_on_mutual_like()
+function|create_personal_match_claim_link("p_guest_share_id" "uuid")
+function|create_personal_session("p_format" "text", "p_facility_id" "uuid" DEFAULT NULL::"uuid", "p_played_at" timestamp with time zone DEFAULT NULL::timestamp with time zone, "p_indoor_outdoor" "text" DEFAULT NULL::"text", "p_notes" "text" DEFAULT NULL::"text")
+function|current_user_director_status()
+function|current_user_is_director()
+function|current_user_role()
+function|ensure_personal_game_participant_session()
+function|ensure_personal_match_claims_for_session("p_session_id" "uuid")
+function|evaluate_personal_game_par_eligibility("p_game_id" "uuid")
+function|expire_stale_holds()
+function|fn_auto_tournament_status()
+function|fn_enforce_play_capacity()
+function|fn_enforce_registration_close()
+function|fn_enforce_single_division()
+function|fn_generate_facility_slug()
+function|fn_generate_play_event_slug()
+function|fn_generate_tournament_slug()
+function|fn_handle_new_user()
+function|fn_notify_director_status()
+function|fn_notify_registration()
+function|fn_notify_tournament_status()
+function|fn_set_updated_at()
+function|fn_sync_facility_coords()
+function|fn_sync_play_event_full()
+function|fn_sync_spots_filled()
+function|fn_update_conversation_last_message()
+function|generate_dynamic_stories()
+function|get_or_create_direct_conversation("p_partner_id" "uuid")
+function|get_or_create_play_event_conversation("p_event_id" "uuid")
+function|has_pending_group_invite("p_group_id" "uuid", "p_user_id" "uuid")
+function|initialize_own_player_par_profile()
+function|initialize_player_par_profile("p_profile_id" "uuid", "p_algorithm_version" "text" DEFAULT NULL::"text")
+function|is_admin()
+function|is_approved_director()
+function|is_conversation_participant("p_conversation_id" "uuid", "p_user_id" "uuid")
+function|is_group_admin("p_group_id" "uuid", "p_user_id" "uuid")
+function|is_group_member("p_group_id" "uuid", "p_user_id" "uuid")
+function|is_personal_session_visible("p_session_id" "uuid", "p_user_id" "uuid")
+function|join_play_event("p_event_id" "uuid", "p_first_name" "text", "p_email" "text", "p_claimed_by" "uuid" DEFAULT NULL::"uuid", "p_added_by_organizer" boolean DEFAULT false, "p_self_rating" "text" DEFAULT NULL::"text", "p_last_initial" "text" DEFAULT NULL::"text")
+function|mark_personal_guest_share_initiated("p_guest_share_id" "uuid")
+function|mark_wallet_item_seen("p_item_id" "uuid")
+function|notify_group_invite()
+function|notify_new_message()
+function|notify_play_event_invite()
+function|notify_wallet_item_added()
+function|notify_wallet_item_available()
+function|par_clamp("p_value" numeric, "p_min" numeric, "p_max" numeric)
+function|par_confidence_band("p_score" numeric)
+function|par_explanation_code("p_actual" numeric, "p_expected" numeric, "p_margin_category" "text")
+function|par_guest_estimated_rating("p_skill" "text", "p_anchor" numeric, "p_config" "jsonb")
+function|par_score_margin_category("p_margin" integer, "p_config" "jsonb")
+function|par_score_margin_multiplier("p_category" "text", "p_config" "jsonb")
+function|par_skill_level_initial_value("p_skill_level" "text")
+function|personal_match_claim_hash("p_token" "text")
+function|personal_match_claim_token()
+function|personal_session_expected_players("p_format" "text")
+function|process_personal_game_par("p_game_id" "uuid")
+function|process_personal_session_par("p_session_id" "uuid")
+function|recalculate_personal_session_par("p_session_id" "uuid")
+function|retry_failed_personal_game_par("p_game_id" "uuid")
+function|reverse_personal_game_par("p_game_id" "uuid", "p_reason" "text" DEFAULT 'manual_reversal'::"text")
+function|save_personal_game_score("p_game_id" "uuid", "p_team_one_score" integer, "p_team_two_score" integer)
+function|search_facilities_nearby("lat" double precision, "lng" double precision, "radius_meters" double precision DEFAULT 25000, "search_query" "text" DEFAULT NULL::"text", "verified_only" boolean DEFAULT false, "public_only" boolean DEFAULT false, "result_limit" integer DEFAULT 50)
+function|touch_location_settings()
+function|touch_partner_preferences()
+function|try_process_personal_claimed_participant_par()
+function|try_process_personal_session_par()
+function|validate_personal_game_ready("p_game_id" "uuid")
+function|validate_personal_match_claim("p_token" "text")
+grant|GRANT ALL ON FUNCTION "public"."add_personal_session_guest_participant"
+grant|GRANT ALL ON FUNCTION "public"."add_personal_session_registered_participant"
+grant|GRANT ALL ON FUNCTION "public"."admin_delete_tournament"
+grant|GRANT ALL ON FUNCTION "public"."apply_to_be_director"
+grant|GRANT ALL ON FUNCTION "public"."claim_personal_match"
+grant|GRANT ALL ON FUNCTION "public"."complete_personal_session"
+grant|GRANT ALL ON FUNCTION "public"."complete_personal_session_with_distribution"
+grant|GRANT ALL ON FUNCTION "public"."create_partner_match_on_mutual_like"
+grant|GRANT ALL ON FUNCTION "public"."create_personal_match_claim_link"
+grant|GRANT ALL ON FUNCTION "public"."create_personal_session"
+grant|GRANT ALL ON FUNCTION "public"."current_user_director_status"
+grant|GRANT ALL ON FUNCTION "public"."current_user_is_director"
+grant|GRANT ALL ON FUNCTION "public"."current_user_role"
+grant|GRANT ALL ON FUNCTION "public"."ensure_personal_game_participant_session"
+grant|GRANT ALL ON FUNCTION "public"."ensure_personal_match_claims_for_session"
+grant|GRANT ALL ON FUNCTION "public"."evaluate_personal_game_par_eligibility"
+grant|GRANT ALL ON FUNCTION "public"."expire_stale_holds"
+grant|GRANT ALL ON FUNCTION "public"."fn_auto_tournament_status"
+grant|GRANT ALL ON FUNCTION "public"."fn_enforce_play_capacity"
+grant|GRANT ALL ON FUNCTION "public"."fn_enforce_registration_close"
+grant|GRANT ALL ON FUNCTION "public"."fn_enforce_single_division"
+grant|GRANT ALL ON FUNCTION "public"."fn_generate_facility_slug"
+grant|GRANT ALL ON FUNCTION "public"."fn_generate_play_event_slug"
+grant|GRANT ALL ON FUNCTION "public"."fn_generate_tournament_slug"
+grant|GRANT ALL ON FUNCTION "public"."fn_handle_new_user"
+grant|GRANT ALL ON FUNCTION "public"."fn_notify_director_status"
+grant|GRANT ALL ON FUNCTION "public"."fn_notify_registration"
+grant|GRANT ALL ON FUNCTION "public"."fn_notify_tournament_status"
+grant|GRANT ALL ON FUNCTION "public"."fn_set_updated_at"
+grant|GRANT ALL ON FUNCTION "public"."fn_sync_facility_coords"
+grant|GRANT ALL ON FUNCTION "public"."fn_sync_play_event_full"
+grant|GRANT ALL ON FUNCTION "public"."fn_sync_spots_filled"
+grant|GRANT ALL ON FUNCTION "public"."fn_update_conversation_last_message"
+grant|GRANT ALL ON FUNCTION "public"."generate_dynamic_stories"
+grant|GRANT ALL ON FUNCTION "public"."get_or_create_direct_conversation"
+grant|GRANT ALL ON FUNCTION "public"."get_or_create_play_event_conversation"
+grant|GRANT ALL ON FUNCTION "public"."has_pending_group_invite"
+grant|GRANT ALL ON FUNCTION "public"."initialize_own_player_par_profile"
+grant|GRANT ALL ON FUNCTION "public"."initialize_player_par_profile"
+grant|GRANT ALL ON FUNCTION "public"."is_admin"
+grant|GRANT ALL ON FUNCTION "public"."is_approved_director"
+grant|GRANT ALL ON FUNCTION "public"."is_conversation_participant"
+grant|GRANT ALL ON FUNCTION "public"."is_group_admin"
+grant|GRANT ALL ON FUNCTION "public"."is_group_member"
+grant|GRANT ALL ON FUNCTION "public"."is_personal_session_visible"
+grant|GRANT ALL ON FUNCTION "public"."join_play_event"
+grant|GRANT ALL ON FUNCTION "public"."mark_personal_guest_share_initiated"
+grant|GRANT ALL ON FUNCTION "public"."mark_wallet_item_seen"
+grant|GRANT ALL ON FUNCTION "public"."notify_group_invite"
+grant|GRANT ALL ON FUNCTION "public"."notify_new_message"
+grant|GRANT ALL ON FUNCTION "public"."notify_play_event_invite"
+grant|GRANT ALL ON FUNCTION "public"."notify_wallet_item_added"
+grant|GRANT ALL ON FUNCTION "public"."notify_wallet_item_available"
+grant|GRANT ALL ON FUNCTION "public"."par_clamp"
+grant|GRANT ALL ON FUNCTION "public"."par_confidence_band"
+grant|GRANT ALL ON FUNCTION "public"."par_explanation_code"
+grant|GRANT ALL ON FUNCTION "public"."par_guest_estimated_rating"
+grant|GRANT ALL ON FUNCTION "public"."par_score_margin_category"
+grant|GRANT ALL ON FUNCTION "public"."par_score_margin_multiplier"
+grant|GRANT ALL ON FUNCTION "public"."par_skill_level_initial_value"
+grant|GRANT ALL ON FUNCTION "public"."personal_match_claim_hash"
+grant|GRANT ALL ON FUNCTION "public"."personal_match_claim_token"
+grant|GRANT ALL ON FUNCTION "public"."personal_session_expected_players"
+grant|GRANT ALL ON FUNCTION "public"."process_personal_game_par"
+grant|GRANT ALL ON FUNCTION "public"."process_personal_session_par"
+grant|GRANT ALL ON FUNCTION "public"."recalculate_personal_session_par"
+grant|GRANT ALL ON FUNCTION "public"."retry_failed_personal_game_par"
+grant|GRANT ALL ON FUNCTION "public"."reverse_personal_game_par"
+grant|GRANT ALL ON FUNCTION "public"."save_personal_game_score"
+grant|GRANT ALL ON FUNCTION "public"."search_facilities_nearby"
+grant|GRANT ALL ON FUNCTION "public"."touch_location_settings"
+grant|GRANT ALL ON FUNCTION "public"."touch_partner_preferences"
+grant|GRANT ALL ON FUNCTION "public"."try_process_personal_claimed_participant_par"
+grant|GRANT ALL ON FUNCTION "public"."try_process_personal_session_par"
+grant|GRANT ALL ON FUNCTION "public"."validate_personal_game_ready"
+grant|GRANT ALL ON FUNCTION "public"."validate_personal_match_claim"
+grant|GRANT ALL ON TABLE "public"."blocked_users"
+grant|GRANT ALL ON TABLE "public"."bracket_matches"
+grant|GRANT ALL ON TABLE "public"."bracket_seeds"
+grant|GRANT ALL ON TABLE "public"."conversation_participant_settings"
+grant|GRANT ALL ON TABLE "public"."conversation_participants"
+grant|GRANT ALL ON TABLE "public"."conversations"
+grant|GRANT ALL ON TABLE "public"."court_assignments"
+grant|GRANT ALL ON TABLE "public"."divisions"
+grant|GRANT ALL ON TABLE "public"."dupr_history"
+grant|GRANT ALL ON TABLE "public"."dynamic_stories"
+grant|GRANT ALL ON TABLE "public"."email_log"
+grant|GRANT ALL ON TABLE "public"."email_sponsors"
+grant|GRANT ALL ON TABLE "public"."email_templates"
+grant|GRANT ALL ON TABLE "public"."facilities"
+grant|GRANT ALL ON TABLE "public"."facility_photos"
+grant|GRANT ALL ON TABLE "public"."group_invites"
+grant|GRANT ALL ON TABLE "public"."group_members"
+grant|GRANT ALL ON TABLE "public"."group_photos"
+grant|GRANT ALL ON TABLE "public"."group_poll_options"
+grant|GRANT ALL ON TABLE "public"."group_poll_votes"
+grant|GRANT ALL ON TABLE "public"."group_post_comments"
+grant|GRANT ALL ON TABLE "public"."group_post_likes"
+grant|GRANT ALL ON TABLE "public"."group_post_reports"
+grant|GRANT ALL ON TABLE "public"."group_posts"
+grant|GRANT ALL ON TABLE "public"."groups"
+grant|GRANT ALL ON TABLE "public"."location_settings"
+grant|GRANT ALL ON TABLE "public"."matchmaking_swipes"
+grant|GRANT ALL ON TABLE "public"."message_reactions"
+grant|GRANT ALL ON TABLE "public"."messages"
+grant|GRANT ALL ON TABLE "public"."notifications"
+grant|GRANT ALL ON TABLE "public"."par_algorithm_versions"
+grant|GRANT ALL ON TABLE "public"."par_game_processing"
+grant|GRANT ALL ON TABLE "public"."par_rating_events"
+grant|GRANT ALL ON TABLE "public"."partner_likes"
+grant|GRANT ALL ON TABLE "public"."partner_matches"
+grant|GRANT ALL ON TABLE "public"."partner_preferences"
+grant|GRANT ALL ON TABLE "public"."personal_game_participants"
+grant|GRANT ALL ON TABLE "public"."personal_games"
+grant|GRANT ALL ON TABLE "public"."personal_guest_players"
+grant|GRANT ALL ON TABLE "public"."personal_guest_shares"
+grant|GRANT ALL ON TABLE "public"."personal_match_claims"
+grant|GRANT ALL ON TABLE "public"."personal_session_participants"
+grant|GRANT ALL ON TABLE "public"."personal_sessions"
+grant|GRANT ALL ON TABLE "public"."platform_settings"
+grant|GRANT ALL ON TABLE "public"."play_event_invites"
+grant|GRANT ALL ON TABLE "public"."play_events"
+grant|GRANT ALL ON TABLE "public"."play_matches"
+grant|GRANT ALL ON TABLE "public"."play_participants"
+grant|GRANT ALL ON TABLE "public"."play_participants_authenticated"
+grant|GRANT ALL ON TABLE "public"."play_participants_public"
+grant|GRANT ALL ON TABLE "public"."player_par_profiles"
+grant|GRANT ALL ON TABLE "public"."profile_hidden_matches"
+grant|GRANT ALL ON TABLE "public"."profiles"
+grant|GRANT ALL ON TABLE "public"."push_tokens"
+grant|GRANT ALL ON TABLE "public"."registrations"
+grant|GRANT ALL ON TABLE "public"."saved_play_events"
+grant|GRANT ALL ON TABLE "public"."story_views"
+grant|GRANT ALL ON TABLE "public"."tournament_bookmarks"
+grant|GRANT ALL ON TABLE "public"."tournament_sponsors"
+grant|GRANT ALL ON TABLE "public"."tournaments"
+grant|GRANT ALL ON TABLE "public"."transactions"
+grant|GRANT ALL ON TABLE "public"."user_reports"
+grant|GRANT ALL ON TABLE "public"."v_director_earnings"
+grant|GRANT ALL ON TABLE "public"."v_mutual_matches"
+grant|GRANT ALL ON TABLE "public"."v_tournament_listing"
+grant|GRANT ALL ON TABLE "public"."wallet_activity"
+grant|GRANT ALL ON TABLE "public"."wallet_items"
+grant|GRANT ALL ON TABLE "public"."wallet_partners"
+grant|GRANT ALL ON TABLE "public"."wallet_redemptions"
+index|blocked_users.idx_blocked_users_blocked
+index|blocked_users.idx_blocked_users_blocker
+index|bracket_matches.idx_bracket_division
+index|bracket_matches.idx_bracket_matches_next_match_id
+index|bracket_matches.idx_bracket_matches_score_entered_by
+index|bracket_matches.idx_bracket_matches_team1_player_a
+index|bracket_matches.idx_bracket_matches_team1_player_b
+index|bracket_matches.idx_bracket_matches_team2_player_a
+index|bracket_matches.idx_bracket_matches_team2_player_b
+index|bracket_matches.idx_bracket_round
+index|bracket_matches.idx_bracket_tournament
+index|conversation_participant_settings.idx_conversation_participant_settings_user
+index|conversation_participants.idx_conversation_participants_user
+index|conversations.idx_conversations_a
+index|conversations.idx_conversations_b
+index|conversations.idx_conversations_created_by
+index|conversations.idx_conversations_last_msg
+index|conversations.idx_conversations_related_play_event
+index|conversations.idx_conversations_related_tournament
+index|conversations.idx_conversations_type
+index|conversations.uq_conversation_pair
+index|conversations.uq_conversations_play_event
+index|conversations.uq_conversations_tournament_group
+index|divisions.idx_divisions_tournament
+index|dupr_history.idx_dupr_history_player
+index|dupr_history.idx_dupr_history_tournament_id
+index|dynamic_stories.idx_dynamic_stories_type_expires
+index|dynamic_stories.uq_dynamic_stories_source
+index|facilities.idx_facilities_city_state
+index|facilities.idx_facilities_claim_status
+index|facilities.idx_facilities_coords
+index|facilities.idx_facilities_data_source
+index|facilities.idx_facilities_name_trgm
+index|facilities.idx_facilities_owner
+index|facilities.idx_facilities_public_access
+index|facilities.idx_facilities_verified
+index|facilities.uq_facilities_google_place_id
+index|facility_photos.idx_facility_photos_facility
+index|facility_photos.idx_facility_photos_primary
+index|facility_photos.uq_facility_photos_google_name
+index|group_invites.idx_group_invites_group_status
+index|group_invites.idx_group_invites_invitee_status
+index|group_members.idx_group_members_user
+index|group_photos.idx_group_photos_group
+index|group_photos.idx_group_photos_post
+index|group_poll_options.idx_group_poll_options_post
+index|group_post_comments.idx_group_post_comments_parent
+index|group_post_comments.idx_group_post_comments_post
+index|group_post_reports.idx_group_post_reports_group
+index|group_post_reports.idx_group_post_reports_status
+index|group_post_reports.idx_group_post_reports_target
+index|group_posts.idx_group_posts_group
+index|groups.idx_groups_organizer
+index|groups.idx_groups_privacy
+index|matchmaking_swipes.idx_swipes_requester
+index|matchmaking_swipes.idx_swipes_target
+index|messages.idx_messages_conversation
+index|messages.idx_messages_sender_id
+index|notifications.idx_notifications_user_created
+index|notifications.idx_notifications_user_unread
+index|notifications.uq_notifications_idempotency_key
+index|par_algorithm_versions.uq_par_algorithm_versions_active
+index|par_game_processing.idx_par_game_processing_session
+index|par_game_processing.idx_par_game_processing_status
+index|par_rating_events.idx_par_rating_events_profile_processed
+index|par_rating_events.idx_par_rating_events_session_game
+index|par_rating_events.uq_par_rating_events_active_player_game
+index|personal_game_participants.idx_personal_game_participants_session_participant
+index|personal_games.idx_personal_games_session
+index|personal_guest_shares.idx_personal_guest_shares_guest
+index|personal_guest_shares.idx_personal_guest_shares_session
+index|personal_match_claims.idx_personal_match_claims_claimed_by
+index|personal_match_claims.idx_personal_match_claims_guest_share
+index|personal_match_claims.idx_personal_match_claims_session
+index|personal_match_claims.uq_personal_match_claims_claimed_participant
+index|personal_match_claims.uq_personal_match_claims_pending_share
+index|personal_session_participants.idx_personal_session_participants_profile
+index|personal_session_participants.uq_personal_session_participants_guest
+index|personal_session_participants.uq_personal_session_participants_profile
+index|personal_sessions.idx_personal_sessions_created_by
+index|personal_sessions.idx_personal_sessions_facility
+index|play_events.idx_play_events_date
+index|play_events.idx_play_events_facility
+index|play_events.idx_play_events_group
+index|play_events.idx_play_events_organizer
+index|play_events.idx_play_events_status
+index|play_matches.idx_play_matches_event
+index|play_matches.idx_play_matches_player_a
+index|play_matches.idx_play_matches_player_b
+index|play_participants.idx_play_participants_claimed
+index|play_participants.idx_play_participants_email
+index|play_participants.idx_play_participants_event
+index|player_par_profiles.idx_player_par_profiles_last_rated
+index|profile_hidden_matches.idx_profile_hidden_matches_match_id
+index|profiles.idx_profiles_director_approved_by
+index|profiles.idx_profiles_dupr
+index|profiles.idx_profiles_handle
+index|profiles.idx_profiles_home_court
+index|profiles.idx_profiles_location_coords
+index|profiles.idx_profiles_role
+index|push_tokens.idx_push_tokens_user
+index|registrations.idx_registrations_added_by_director_id
+index|registrations.idx_registrations_checked_in_by
+index|registrations.idx_registrations_division_id
+index|registrations.idx_registrations_hold_expiry
+index|registrations.idx_registrations_partner
+index|registrations.idx_registrations_player
+index|registrations.idx_registrations_replaces_registration_id
+index|registrations.idx_registrations_status
+index|registrations.idx_registrations_tournament
+index|registrations.idx_registrations_waitlist
+index|registrations.uq_registration_legacy
+index|registrations.uq_registration_per_division
+index|story_views.idx_story_views_user
+index|tournament_bookmarks.idx_tournament_bookmarks_tournament_id
+index|tournament_sponsors.tournament_sponsors_tournament_id_idx
+index|tournaments.idx_tournaments_approved_by
+index|tournaments.idx_tournaments_city_state
+index|tournaments.idx_tournaments_director
+index|tournaments.idx_tournaments_event_date
+index|tournaments.idx_tournaments_facility
+index|tournaments.idx_tournaments_format
+index|tournaments.idx_tournaments_search
+index|tournaments.idx_tournaments_skill
+index|tournaments.idx_tournaments_status
+index|transactions.idx_transactions_player
+index|transactions.idx_transactions_registration
+index|transactions.idx_transactions_tournament
+index|user_reports.idx_user_reports_reported
+index|user_reports.idx_user_reports_status
+index|wallet_activity.idx_wallet_activity_item
+index|wallet_activity.idx_wallet_activity_user_created
+index|wallet_items.idx_wallet_items_idempotent_source
+index|wallet_items.idx_wallet_items_partner
+index|wallet_items.idx_wallet_items_user
+index|wallet_items.idx_wallet_items_user_status
+index|wallet_items.idx_wallet_items_user_type
+index|wallet_items.idx_wallet_items_user_unseen
+index|wallet_redemptions.idx_wallet_redemptions_item
+index|wallet_redemptions.idx_wallet_redemptions_user
+policy|blocked_users.users can delete own blocks
+policy|blocked_users.users can insert own blocks
+policy|blocked_users.users can view own blocks
+policy|bracket_matches.bracket_matches: admin full access
+policy|bracket_matches.bracket_matches: director manage own
+policy|bracket_matches.bracket_matches: public read
+policy|bracket_seeds.bracket_seeds_director_write
+policy|bracket_seeds.bracket_seeds_public_read
+policy|conversation_participant_settings.conversation_participant_settings: self read
+policy|conversation_participant_settings.conversation_participant_settings: self update
+policy|conversation_participant_settings.conversation_participant_settings: self upsert
+policy|conversation_participants.conversation_participants: participants read
+policy|conversation_participants.conversation_participants: self join
+policy|conversation_participants.conversation_participants: self leave
+policy|conversation_participants.conversation_participants: self update
+policy|conversations.conversations: participants insert
+policy|conversations.conversations: participants read
+policy|conversations.conversations: participants update
+policy|court_assignments.court_assignments_director_write
+policy|court_assignments.court_assignments_public_read
+policy|divisions.divisions: admin full access
+policy|divisions.divisions: director manage own
+policy|divisions.divisions: public read
+policy|dupr_history.dupr_history: public read
+policy|dupr_history.dupr_history: service insert only
+policy|dynamic_stories.dynamic_stories: authenticated read
+policy|email_log.email_log: admin read
+policy|email_sponsors.email_sponsors: admin write
+policy|email_sponsors.email_sponsors: public read
+policy|email_templates.email_templates: admin all
+policy|facilities.facilities: admin full access
+policy|facilities.facilities: authenticated claim
+policy|facilities.facilities: authenticated insert
+policy|facilities.facilities: owner update
+policy|facilities.facilities: public read
+policy|facility_photos.facility_photos: admin full access
+policy|facility_photos.facility_photos: authenticated insert
+policy|facility_photos.facility_photos: public read
+policy|facility_photos.facility_photos: uploader delete
+policy|group_invites.group_invites: invitee or inviter can update
+policy|group_invites.group_invites: participants can read
+policy|group_invites.group_invites: sender can invite
+policy|group_members.group_members: admin update
+policy|group_members.group_members: read member or public group
+policy|group_members.group_members: self join or admin add
+policy|group_members.group_members: self leave or admin remove
+policy|group_photos.group_photos: member insert
+policy|group_photos.group_photos: member read
+policy|group_photos.group_photos: own or admin delete
+policy|group_poll_options.group_poll_options: author insert
+policy|group_poll_options.group_poll_options: member read
+policy|group_poll_votes.group_poll_votes: member read
+policy|group_poll_votes.group_poll_votes: member vote own
+policy|group_poll_votes.group_poll_votes: own delete
+policy|group_post_comments.group_post_comments: member insert own
+policy|group_post_comments.group_post_comments: member read
+policy|group_post_comments.group_post_comments: own or admin delete
+policy|group_post_comments.group_post_comments: own update
+policy|group_post_likes.group_post_likes: member insert own
+policy|group_post_likes.group_post_likes: member read
+policy|group_post_likes.group_post_likes: own delete
+policy|group_post_reports.admins can manage all group reports
+policy|group_post_reports.reporters can insert own group reports
+policy|group_post_reports.reporters can view own group reports
+policy|group_posts.group_posts: member insert
+policy|group_posts.group_posts: member read
+policy|group_posts.group_posts: own or admin delete
+policy|group_posts.group_posts: own update
+policy|groups.groups: organizer delete
+policy|groups.groups: organizer insert
+policy|groups.groups: organizer or admin update
+policy|groups.groups: read invited
+policy|groups.groups: read public or member
+policy|location_settings.owner_all
+policy|matchmaking_swipes.swipes: admin read
+policy|matchmaking_swipes.swipes: own delete
+policy|matchmaking_swipes.swipes: own insert
+policy|matchmaking_swipes.swipes: own read
+policy|matchmaking_swipes.swipes: read targeting me
+policy|message_reactions.message reactions: own delete
+policy|message_reactions.message reactions: participant react
+policy|message_reactions.message reactions: participants read
+policy|messages.messages: admin read
+policy|messages.messages: mark as read
+policy|messages.messages: participant mark read
+policy|messages.messages: participant send
+policy|messages.messages: participants read
+policy|notifications.notifications: own delete
+policy|notifications.notifications: own read
+policy|notifications.notifications: own update
+policy|notifications.service_insert_notifications
+policy|notifications.users_read_own_notifications
+policy|notifications.users_update_own_notifications
+policy|par_algorithm_versions.par_algorithm_versions: authenticated read
+policy|par_game_processing.par_game_processing: match participants read
+policy|par_rating_events.par_rating_events: owner or match participant read
+policy|partner_likes.owner_insert_delete
+policy|partner_likes.recipient_read
+policy|partner_matches.participants_read
+policy|partner_preferences.owner_all
+policy|personal_game_participants.personal_game_participants: creator insert
+policy|personal_game_participants.personal_game_participants: session visible read
+policy|personal_games.personal_games: creator insert
+policy|personal_games.personal_games: creator update incomplete
+policy|personal_games.personal_games: session visible read
+policy|personal_guest_players.personal_guest_players: creator read
+policy|personal_guest_players.personal_guest_players: creator update
+policy|personal_guest_shares.personal_guest_shares: creator read
+policy|personal_guest_shares.personal_guest_shares: creator update
+policy|personal_match_claims.personal_match_claims: claimed owner read
+policy|personal_match_claims.personal_match_claims: creator read
+policy|personal_session_participants.personal_session_participants: session visible read
+policy|personal_sessions.personal_sessions: creator insert
+policy|personal_sessions.personal_sessions: creator update incomplete
+policy|personal_sessions.personal_sessions: participant read
+policy|platform_settings.platform_settings: admin write
+policy|platform_settings.platform_settings: public read
+policy|play_event_invites.invitee_can_respond
+policy|play_event_invites.inviter_can_send
+policy|play_event_invites.participants_read
+policy|play_events.play_events: admin full access
+policy|play_events.play_events: organizer delete own
+policy|play_events.play_events: organizer insert
+policy|play_events.play_events: organizer update own
+policy|play_events.play_events: public read
+policy|play_matches.play_matches: admin full access
+policy|play_matches.play_matches: organizer manage
+policy|play_matches.play_matches: public read
+policy|play_participants.play_participants: admin full access
+policy|play_participants.play_participants: organizer + self read
+policy|play_participants.play_participants: organizer manage
+policy|play_participants.play_participants: public join
+policy|play_participants.play_participants: self claim
+policy|play_participants.play_participants: self leave
+policy|player_par_profiles.player_par_profiles: owner read
+policy|profile_hidden_matches.Players manage their own hidden matches
+policy|profiles.profiles: admin full access
+policy|profiles.profiles: own update
+policy|profiles.profiles: public read
+policy|push_tokens.push_tokens: self delete
+policy|push_tokens.push_tokens: self insert
+policy|push_tokens.push_tokens: self read
+policy|push_tokens.push_tokens: self update
+policy|registrations.registrations: admin full access
+policy|registrations.registrations: director insert manual
+policy|registrations.registrations: director read own tournament
+policy|registrations.registrations: director update own tournament
+policy|registrations.registrations: player insert own
+policy|registrations.registrations: player read own
+policy|registrations.registrations: player update own
+policy|saved_play_events.owner_manage_saved_play_events
+policy|story_views.story_views: self insert
+policy|story_views.story_views: self read
+policy|tournament_bookmarks.Anyone can read bookmark counts
+policy|tournament_bookmarks.Players can manage their own bookmarks
+policy|tournament_sponsors.sponsors_director_delete
+policy|tournament_sponsors.sponsors_director_insert
+policy|tournament_sponsors.sponsors_director_update
+policy|tournament_sponsors.sponsors_public_read
+policy|tournaments.tournaments: admin full access
+policy|tournaments.tournaments: director insert
+policy|tournaments.tournaments: director update own
+policy|tournaments.tournaments: public read approved
+policy|transactions.transactions: admin full access
+policy|transactions.transactions: director read own tournament
+policy|transactions.transactions: player read own
+policy|user_reports.admins can manage all reports
+policy|user_reports.reporters can insert own reports
+policy|user_reports.reporters can view own reports
+policy|wallet_activity.wallet_activity: user select own
+policy|wallet_items.wallet_items: user select own
+policy|wallet_partners.wallet_partners: public read active
+policy|wallet_redemptions.wallet_redemptions: user select own
+table|blocked_users
+table|bracket_matches
+table|bracket_seeds
+table|conversation_participant_settings
+table|conversation_participants
+table|conversations
+table|court_assignments
+table|divisions
+table|dupr_history
+table|dynamic_stories
+table|email_log
+table|email_sponsors
+table|email_templates
+table|facilities
+table|facility_photos
+table|group_invites
+table|group_members
+table|group_photos
+table|group_poll_options
+table|group_poll_votes
+table|group_post_comments
+table|group_post_likes
+table|group_post_reports
+table|group_posts
+table|groups
+table|location_settings
+table|matchmaking_swipes
+table|message_reactions
+table|messages
+table|notifications
+table|par_algorithm_versions
+table|par_game_processing
+table|par_rating_events
+table|partner_likes
+table|partner_matches
+table|partner_preferences
+table|personal_game_participants
+table|personal_games
+table|personal_guest_players
+table|personal_guest_shares
+table|personal_match_claims
+table|personal_session_participants
+table|personal_sessions
+table|platform_settings
+table|play_event_invites
+table|play_events
+table|play_matches
+table|play_participants
+table|player_par_profiles
+table|profile_hidden_matches
+table|profiles
+table|push_tokens
+table|registrations
+table|saved_play_events
+table|story_views
+table|tournament_bookmarks
+table|tournament_sponsors
+table|tournaments
+table|transactions
+table|user_reports
+table|wallet_activity
+table|wallet_items
+table|wallet_partners
+table|wallet_redemptions
+type|bracket_type
+type|director_status
+type|match_direction
+type|play_event_status
+type|play_event_type
+type|registration_status
+type|report_reason
+type|report_status
+type|round_label
+type|tournament_format
+type|tournament_status
+type|transaction_status
+type|transaction_type
+type|user_role
+view|play_participants_authenticated
+view|play_participants_public
+view|v_director_earnings
+view|v_mutual_matches
+view|v_tournament_listing

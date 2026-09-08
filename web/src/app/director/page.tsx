@@ -79,12 +79,16 @@ interface Registration {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<string, string> = {
-  draft: "Draft", pending_approval: "Pending", approved: "Approved",
-  published: "Live", cancelled: "Cancelled",
+  draft: "Draft", pending_approval: "Pending",
+  open: "Open", filling_fast: "Filling Fast",
+  registration_closed: "Reg. Closed", in_progress: "In Progress",
+  completed: "Completed", cancelled: "Cancelled",
 };
 const STATUS_DOT: Record<string, string> = {
   draft: "bg-muted-foreground", pending_approval: "bg-amber-400",
-  approved: "bg-blue-400", published: "bg-primary", cancelled: "bg-red-400",
+  open: "bg-primary", filling_fast: "bg-primary",
+  registration_closed: "bg-blue-400", in_progress: "bg-green-500",
+  completed: "bg-green-700", cancelled: "bg-red-400",
 };
 
 const TIER_LABELS: Record<string, string> = { title: "Title", gold: "Gold", silver: "Silver", standard: "Standard" };
@@ -147,11 +151,69 @@ const TOURNAMENT_STRUCTURES = [
   { key: "mlp",          label: "MLP Format",     desc: "Team-based, Dreambreaker end",  short: "MLP" },
 ];
 
-function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (t: Tournament) => void }) {
+// Minimal facility row returned by the directory search in CreateDialog
+interface FacilityRow { id: string; name: string; address: string; city: string; state: string; court_count: number }
+
+function CreateDialog({ onClose, onCreated, stripeOnboarded }: { onClose: () => void; onCreated: (t: Tournament) => void; stripeOnboarded: boolean }) {
   const [loading, setLoading] = useState(false);
   const [selectedFormats, setSelectedFormats] = useState<Set<string>>(new Set(["doubles/mens"]));
   const [structure, setStructure] = useState("single_elim");
   const [poolCount, setPoolCount] = useState(4);
+
+  // Facility directory selection
+  const [facilityId,   setFacilityId]   = useState<string | null>(null);
+  const [facSearch,    setFacSearch]    = useState(false);
+  const [facQuery,     setFacQuery]     = useState('');
+  const [facList,      setFacList]      = useState<FacilityRow[]>([]);
+  const [facLoading,   setFacLoading]   = useState(false);
+  const [facLoaded,    setFacLoaded]    = useState(false);
+  // Controlled venue fields (pre-filled when facility is selected, editable)
+  const [venName,      setVenName]      = useState('');
+  const [venAddress,   setVenAddress]   = useState('');
+  const [venCity,      setVenCity]      = useState('');
+  const [venState,     setVenState]     = useState('');
+  const [venZip,       setVenZip]       = useState('');
+  const [linkedName,   setLinkedName]   = useState<string | null>(null);
+
+  const openFacSearch = async () => {
+    setFacSearch(true);
+    if (facLoaded) return;
+    setFacLoading(true);
+    try {
+      const supabase = createClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from('facilities')
+        .select('id,name,address,city,state,court_count')
+        .eq('verified', true)
+        .order('name')
+        .limit(60);
+      setFacList((data ?? []) as FacilityRow[]);
+      setFacLoaded(true);
+    } finally { setFacLoading(false); }
+  };
+
+  const selectFacility = (f: FacilityRow) => {
+    setFacilityId(f.id);
+    setLinkedName(f.name);
+    setVenName(f.name);
+    setVenAddress(f.address);
+    setVenCity(f.city);
+    setVenState(f.state);
+    setFacSearch(false);
+    setFacQuery('');
+  };
+
+  const clearFacility = () => {
+    setFacilityId(null);
+    setLinkedName(null);
+  };
+
+  const filteredFacs = facQuery.trim()
+    ? facList.filter(f =>
+        f.name.toLowerCase().includes(facQuery.toLowerCase()) ||
+        f.city.toLowerCase().includes(facQuery.toLowerCase()))
+    : facList;
 
   const toggleFormat = (key: string) => {
     setSelectedFormats((prev) => {
@@ -163,6 +225,11 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const entryFee = parseFloat(new FormData(e.currentTarget).get("entry_fee") as string);
+    if (entryFee > 0 && !stripeOnboarded) {
+      toast.error("Connect payouts via Stripe before charging an entry fee — set it to $0 or complete Stripe Connect onboarding first.");
+      return;
+    }
     setLoading(true);
     const fd = new FormData(e.currentTarget);
     try {
@@ -175,14 +242,16 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
       const insertPayload: any = {
         director_id: userId,
         name: fd.get("name") as string,
-        venue_name: fd.get("venue") as string,
-        venue_address: fd.get("venue_address") as string,
-        city: fd.get("city") as string,
-        state: fd.get("state") as string,
-        zip_code: fd.get("zip_code") as string,
+        venue_name: venName || (fd.get("venue") as string),
+        venue_address: venAddress || (fd.get("venue_address") as string),
+        city: venCity || (fd.get("city") as string),
+        state: venState || (fd.get("state") as string),
+        zip_code: venZip || (fd.get("zip_code") as string),
+        facility_id: facilityId ?? null,
         event_date: fd.get("date") as string,
+        registration_closes_at: fd.get("registration_closes_at") as string,
         format: primaryFmt?.format ?? "doubles",
-        formats: [...selectedFormats].map((k) => k.split("/")[0]),
+        formats: [...new Set([...selectedFormats].map((k) => k.split("/")[0]))],
         tournament_format: structure,
         pool_count: structure === "pool_bracket" ? poolCount : null,
         draw_size: parseInt(fd.get("capacity") as string, 10),
@@ -217,12 +286,52 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
         </div>
         <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto px-6 pb-6 flex-1 min-h-0">
           <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">EVENT NAME</label><input name="name" required placeholder="e.g. Spring Slam Open" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
-          <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">VENUE NAME</label><input name="venue" required placeholder="e.g. Lakewood Ranch Sports Complex" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
-          <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">VENUE ADDRESS</label><input name="venue_address" required placeholder="123 Main St" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+          {/* Facility directory picker */}
+          <div className="rounded-xl border border-border bg-secondary/40 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] tracking-widest text-muted-foreground">FACILITY DIRECTORY</span>
+              {linkedName
+                ? <button type="button" onClick={clearFacility} className="text-[10px] text-muted-foreground hover:text-foreground underline">Clear</button>
+                : <button type="button" onClick={openFacSearch} className="text-[10px] text-primary hover:underline font-mono tracking-wider">SEARCH ↗</button>}
+            </div>
+            {linkedName
+              ? <div className="flex items-center gap-2 text-sm"><MapPin size={13} className="text-primary flex-shrink-0" /><span className="font-semibold truncate">{linkedName}</span><span className="text-xs text-muted-foreground">(auto-filled below)</span></div>
+              : <p className="text-xs text-muted-foreground">Link to a verified facility to auto-fill venue fields — or fill them manually.</p>}
+            {facSearch && (
+              <div className="border border-border rounded-xl bg-card mt-1 overflow-hidden shadow-lg">
+                <div className="flex items-center gap-2 px-3 border-b border-border">
+                  <MagnifyingGlass size={14} className="text-muted-foreground flex-shrink-0" />
+                  <input
+                    autoFocus
+                    value={facQuery}
+                    onChange={e => setFacQuery(e.target.value)}
+                    placeholder="Search by name or city…"
+                    className="flex-1 h-10 bg-transparent text-sm outline-none"
+                  />
+                  <button type="button" onClick={() => setFacSearch(false)} className="text-muted-foreground hover:text-foreground"><X size={14} /></button>
+                </div>
+                <div className="max-h-48 overflow-y-auto">
+                  {facLoading && <p className="text-xs text-muted-foreground text-center py-4">Loading…</p>}
+                  {!facLoading && filteredFacs.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No facilities found</p>}
+                  {filteredFacs.map(f => (
+                    <button key={f.id} type="button" onClick={() => selectFacility(f)}
+                      className="w-full text-left px-3 py-2.5 hover:bg-secondary flex items-center justify-between gap-3 border-b border-border last:border-0">
+                      <div><p className="text-sm font-semibold">{f.name}</p><p className="text-xs text-muted-foreground">{f.city}, {f.state} · {f.court_count} courts</p></div>
+                      <ArrowRight size={13} className="text-muted-foreground flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Venue fields — pre-filled when facility linked, always editable */}
+          <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">VENUE NAME</label><input name="venue" required placeholder="e.g. Lakewood Ranch Sports Complex" value={venName} onChange={e => setVenName(e.target.value)} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+          <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">VENUE ADDRESS</label><input name="venue_address" placeholder="123 Main St" value={venAddress} onChange={e => setVenAddress(e.target.value)} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
           <div className="grid grid-cols-3 gap-3">
-            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">CITY</label><input name="city" required placeholder="Bradenton" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
-            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">STATE</label><input name="state" required placeholder="FL" maxLength={2} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
-            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">ZIP</label><input name="zip_code" required placeholder="34202" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">CITY</label><input name="city" required placeholder="Bradenton" value={venCity} onChange={e => setVenCity(e.target.value)} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">STATE</label><input name="state" required placeholder="FL" maxLength={2} value={venState} onChange={e => setVenState(e.target.value)} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">ZIP</label><input name="zip_code" placeholder="34202" value={venZip} onChange={e => setVenZip(e.target.value)} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
           </div>
           {/* Tournament Structure */}
           <div>
@@ -273,10 +382,17 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
               })}
             </div>
           </div>
-          <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">EVENT DATE</label><input name="date" type="date" required className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">EVENT DATE</label><input name="date" type="date" required className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">REGISTRATION CLOSES</label><input name="registration_closes_at" type="date" required className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+          </div>
           <div className="grid grid-cols-3 gap-3">
             <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">DRAW SIZE</label><input name="capacity" type="number" required placeholder="32" min={4} className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
-            <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">ENTRY FEE ($)</label><input name="entry_fee" type="number" required placeholder="75" min={0} step="0.01" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
+            <div>
+              <label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">ENTRY FEE ($)</label>
+              <input name="entry_fee" type="number" required placeholder="75" min={0} step="0.01" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />
+              {!stripeOnboarded && <p className="mt-1 text-[10px] text-amber-500">Set to 0 until Stripe payouts are connected</p>}
+            </div>
             <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">HOLD FEE ($)</label><input name="hold_fee" type="number" required placeholder="10" min={0} step="0.01" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
           </div>
           <div><label className="font-mono text-[10px] tracking-widest text-muted-foreground block mb-1.5">PRIZE POOL ($) <span className="text-muted-foreground/60">— optional</span></label><input name="prize_pool" type="number" placeholder="2500" min={0} step="0.01" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
@@ -332,6 +448,7 @@ export default function DirectorPage() {
   // Management state
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [submitErrors, setSubmitErrors] = useState<string[]>([]);
   const [managementLoaded, setManagementLoaded] = useState<string | null>(null);
   const [editingBanner, setEditingBanner] = useState(false);
   const [bannerUrl, setBannerUrl] = useState("");
@@ -433,11 +550,46 @@ export default function DirectorPage() {
   };
 
   const submitForApproval = async (id: string) => {
+    setSubmitErrors([]);
     setPublishing(id);
     const supabase = createClient();
-    const { error } = await supabase.from("tournaments").update({ status: "pending_approval", submitted_for_approval_at: new Date().toISOString() }).eq("id", id);
+
+    // Fetch fresh tournament fields + division count in parallel.
+    // We don't rely on local state because loadManagement may not have run yet.
+    const [{ data: tData }, { count: divCount }] = await Promise.all([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase as any)
+        .from("tournaments")
+        .select("name, venue_name, event_date, registration_closes_at")
+        .eq("id", id)
+        .single(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase as any)
+        .from("divisions")
+        .select("id", { count: "exact", head: true })
+        .eq("tournament_id", id),
+    ]);
+
+    const errors: string[] = [];
+    if (!tData?.name?.trim())             errors.push("Tournament name is required.");
+    if (!tData?.venue_name?.trim())       errors.push("Venue / location is required.");
+    if (!tData?.event_date)               errors.push("Event date is required.");
+    if (!tData?.registration_closes_at)   errors.push("Registration close date is required.");
+    if (!divCount || divCount === 0)      errors.push("At least one division is required.");
+
+    if (errors.length > 0) {
+      setPublishing(null);
+      setSubmitErrors(errors);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("tournaments")
+      .update({ status: "pending_approval", submitted_for_approval_at: new Date().toISOString() })
+      .eq("id", id);
     setPublishing(null);
     if (error) { toast.error("Failed to submit."); return; }
+    setSubmitErrors([]);
     setTournaments((prev) => prev.map((t) => t.id === id ? { ...t, status: "pending_approval" } : t));
     toast.success("Submitted for approval!");
   };
@@ -525,7 +677,7 @@ export default function DirectorPage() {
     // If the tournament is already live/approved, editing it sends it back to
     // the admin approval queue and clears the prior approval stamps. Drafts and
     // pending tournaments just save in place.
-    const liveStatuses = ["approved", "open", "filling_fast", "registration_closed"];
+    const liveStatuses = ["open", "filling_fast", "registration_closed", "in_progress"];
     const needsReapproval = !!selected && liveStatuses.includes(selected.status);
     if (needsReapproval) {
       updates.status = "pending_approval";
@@ -664,7 +816,7 @@ export default function DirectorPage() {
         {tournamentPickerOpen && (
           <div className="mt-1 space-y-0.5 max-h-48 overflow-y-auto">
             {tournaments.map((t) => (
-              <button key={t.id} onClick={() => { setSelectedId(t.id); setTournamentPickerOpen(false); setRegsLoaded(null); setManagementLoaded(null); setMobileSidebarOpen(false); }}
+              <button key={t.id} onClick={() => { setSelectedId(t.id); setTournamentPickerOpen(false); setRegsLoaded(null); setManagementLoaded(null); setMobileSidebarOpen(false); setSubmitErrors([]); }}
                 className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${t.id === selectedId ? "bg-primary/10 text-foreground" : "hover:bg-secondary text-muted-foreground"}`}>
                 <div className="flex items-center gap-2">
                   <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[t.status]}`} />
@@ -979,38 +1131,39 @@ export default function DirectorPage() {
 
               {/* Status/actions row */}
               {selected.status === "draft" && (
-                <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <Warning size={20} weight="fill" className="text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-semibold">This tournament is in draft</div>
-                      <div className="text-sm text-muted-foreground">Submit for approval to make it visible to players and open registration.</div>
+                <div className="space-y-3">
+                  <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <Warning size={20} weight="fill" className="text-primary flex-shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-semibold">This tournament is in draft</div>
+                        <div className="text-sm text-muted-foreground">Submit for approval to make it visible to players and open registration.</div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-3 flex-shrink-0">
-                    <Link href={`/director/tournaments/${selected.id}`}>
-                      <button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors flex items-center gap-1.5">
-                        <PencilSimple size={14} /> Edit Details
-                      </button>
-                    </Link>
-                    {selected.entry_fee_cents > 0 && !stripeOnboarded ? (
-                      <button
-                        onClick={startConnect}
-                        disabled={connectLoading}
-                        title="Connect a bank account before publishing paid tournaments"
-                        className="h-10 px-5 rounded-full bg-amber-500 text-white hover:bg-amber-400 text-sm font-display tracking-wider transition-colors disabled:opacity-50 flex items-center gap-1.5"
-                      >
-                        <Bank size={14} weight="fill" />
-                        {connectLoading ? "Connecting…" : "Set Up Payouts First"}
-                      </button>
-                    ) : (
+                    <div className="flex gap-3 flex-shrink-0">
+                      <Link href={`/director/tournaments/${selected.id}`}>
+                        <button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors flex items-center gap-1.5">
+                          <PencilSimple size={14} /> Edit Details
+                        </button>
+                      </Link>
                       <button onClick={() => submitForApproval(selected.id)} disabled={publishing === selected.id}
                         className="h-10 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors disabled:opacity-50 flex items-center gap-1.5">
                         <CheckCircle size={14} weight="fill" />
                         {publishing === selected.id ? "Submitting…" : "Submit for Approval"}
                       </button>
-                    )}
+                    </div>
                   </div>
+                  {submitErrors.length > 0 && (
+                    <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3">
+                      <Warning size={16} weight="fill" className="text-destructive flex-shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-sm font-semibold text-destructive mb-1">Fix these before submitting:</div>
+                        <ul className="text-sm text-destructive space-y-0.5 list-disc list-inside">
+                          {submitErrors.map((e, i) => <li key={i}>{e}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1262,21 +1415,10 @@ export default function DirectorPage() {
               {/* Actions */}
               <div className="flex flex-wrap gap-3">
                 {selected.status === "draft" && (
-                  selected.entry_fee_cents > 0 && !stripeOnboarded ? (
-                    <button
-                      onClick={startConnect}
-                      disabled={connectLoading}
-                      title="Connect a bank account before publishing paid tournaments"
-                      className="flex items-center gap-2 px-5 h-10 rounded-full bg-amber-500 text-white hover:bg-amber-400 font-display tracking-wider text-sm transition-colors disabled:opacity-50"
-                    >
-                      <Bank size={14} weight="fill" /> {connectLoading ? "CONNECTING…" : "SET UP PAYOUTS FIRST"}
-                    </button>
-                  ) : (
-                    <button onClick={() => submitForApproval(selected.id)} disabled={publishing === selected.id}
-                      className="flex items-center gap-2 px-5 h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-wider text-sm transition-colors disabled:opacity-50">
-                      <CheckCircle size={14} weight="fill" /> {publishing === selected.id ? "SUBMITTING…" : "SUBMIT FOR APPROVAL"}
-                    </button>
-                  )
+                  <button onClick={() => submitForApproval(selected.id)} disabled={publishing === selected.id}
+                    className="flex items-center gap-2 px-5 h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-wider text-sm transition-colors disabled:opacity-50">
+                    <CheckCircle size={14} weight="fill" /> {publishing === selected.id ? "SUBMITTING…" : "SUBMIT FOR APPROVAL"}
+                  </button>
                 )}
                 {selected.status === "pending_approval" && (
                   <div className="flex items-center gap-2 px-5 h-10 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-400 font-mono text-xs tracking-wider">
@@ -1525,11 +1667,15 @@ export default function DirectorPage() {
       )}
 
       {showCreate && (
-        <CreateDialog onClose={() => setShowCreate(false)} onCreated={(t) => {
-          setTournaments((prev) => [...prev, t]);
-          setSelectedId(t.id);
-          setShowCreate(false);
-        }} />
+        <CreateDialog
+          onClose={() => setShowCreate(false)}
+          stripeOnboarded={stripeOnboarded}
+          onCreated={(t) => {
+            setTournaments((prev) => [...prev, t]);
+            setSelectedId(t.id);
+            setShowCreate(false);
+          }}
+        />
       )}
     </div>
   );

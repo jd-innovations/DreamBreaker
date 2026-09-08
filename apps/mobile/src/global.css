@@ -1,0 +1,49 @@
+:root {
+  --font-display:
+    Spline Sans, Inter, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji,
+    Segoe UI Symbol, Noto Color Emoji;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+  --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Web-only resets (react-native-web). Ignored on native iOS/Android.
+   Strip the browser's default focus outline / border / shadow from every
+   TextInput (which renders as <input>/<textarea> on web) so fields blend
+   into the iOS-style settings rows.
+   ────────────────────────────────────────────────────────────────────────── */
+input,
+textarea,
+select,
+[contenteditable] {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+[contenteditable]:focus,
+input:focus-visible,
+textarea:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Let the page use the dynamic viewport so the on-screen keyboard overlays
+   content instead of pushing the layout past the visible edge on mobile web. */
+html,
+body,
+#root {
+  height: 100%;
+  min-height: 100dvh;
+  margin: 0;
+  -webkit-overflow-scrolling: touch;
+}

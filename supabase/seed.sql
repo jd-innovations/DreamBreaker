@@ -7,6 +7,18 @@
 -- NOTE: In production, users are created via Supabase Auth signup.
 -- This seed creates users directly in auth.users for local dev testing only.
 
+-- Seeded registrations below are already paid (hold + entry fee), and
+-- fn_protect_registration_payment_fields refuses to let anyone but the payment
+-- webhook set those columns. Its escape hatch is auth.role() = 'service_role',
+-- which reads request.jwt.claims -- unset when psql runs this file, so the
+-- guard fired and `supabase db reset` failed outright.
+--
+-- Claiming the service role here is the same identity the real webhook handler
+-- runs as, so the seed writes those columns the same way production does
+-- rather than the trigger being weakened to accommodate it. Scoped to this
+-- session (third arg false), local dev only.
+select set_config('request.jwt.claims', '{"role":"service_role"}', false);
+
 -- =============================================================================
 -- AUTH USERS (local dev only — password: "Password123!")
 -- =============================================================================
@@ -150,9 +162,16 @@ insert into public.tournaments (
     'Austin', 'TX',
     'doubles', 'round_robin_to_single_elim', 3.5, 4.5, 64,
     6500, 1000, 72, 520000,
-    '2026-03-14',
-    '2025-12-01 00:00:00+00', '2026-03-07 23:59:59+00',
-    '2026-03-14 06:30:00+00', '2026-03-14 07:30:00+00',
+    -- Dates are relative to now(), not absolute. The original literals were in
+    -- the future when written and have since passed, which made `supabase db
+    -- reset` fail outright: status 'open' with a registration window that had
+    -- closed tripped the registration-closed trigger on the seeded
+    -- registrations below. Anything absolute here is a time bomb.
+    -- Spacing preserved from the original: registration closes 7 days before
+    -- the event, check-in opens on the day.
+    (now() + interval '21 days')::date,
+    now() - interval '105 days', now() + interval '14 days',
+    now() + interval '21 days', now() + interval '21 days' + interval '1 hour',
     'open', 41,
     now() - interval '2 months', '00000000-0000-0000-0000-000000000001',
     'The Sunset Slam Open is part of the Dream Breaker PB Pro Circuit. Doubles with players from across the region competing for $5,200 in cash + sponsor prizes.'
@@ -165,9 +184,9 @@ insert into public.tournaments (
     'Dallas', 'TX',
     'juniors', 'single_elim', null, null, 40,
     3000, 500, 72, 180000,
-    '2026-05-22',
-    '2026-02-01 00:00:00+00', '2026-05-15 23:59:59+00',
-    '2026-05-22 07:00:00+00', '2026-05-22 08:00:00+00',
+    (now() + interval '90 days')::date,
+    now() - interval '60 days', now() + interval '83 days',
+    now() + interval '90 days', now() + interval '90 days' + interval '1 hour',
     'open', 8,
     now() - interval '1 month', '00000000-0000-0000-0000-000000000001',
     'U18 junior singles bracket. Great entry point for the next generation of PB talent.'
@@ -180,8 +199,8 @@ insert into public.tournaments (
     'Denver', 'CO',
     'singles', 'single_elim', 3.0, 4.0, 32,
     5000, 1000, 72, 340000,
-    '2026-04-19',
-    '2026-01-15 00:00:00+00', '2026-04-12 23:59:59+00',
+    (now() + interval '56 days')::date,
+    now() - interval '40 days', now() + interval '49 days',
     null, null,
     'draft', 0,  -- Reid is pending director — tournament stays draft
     null, null,
@@ -278,4 +297,99 @@ insert into public.dupr_history (player_id, tournament_id, rating_before, rating
 values
   ('00000000-0000-0000-0000-000000000004', null, 4.06, 4.18),
   ('00000000-0000-0000-0000-000000000005', null, 4.10, 4.21)
+on conflict do nothing;
+
+-- =============================================================================
+-- SAMPLE WALLET DATA (Alex Morgan)
+-- =============================================================================
+
+insert into public.wallet_partners (id, slug, name, description, logo_url, website_url)
+values
+  ('50000000-0000-0000-0000-000000000001', 'premium-membership', 'DreamBreaker PB',
+   'DreamBreaker PB Premium membership.', null, null),
+  ('50000000-0000-0000-0000-000000000002', 'pickleball-grip-doctor', 'Pickleball Grip Doctor',
+   'Premium member merchandise credit.', null, 'https://pickleballgripdoctor.com'),
+  ('50000000-0000-0000-0000-000000000003', 'selkirk-sport', 'Selkirk Sport',
+   'Pickleball paddles and gear.', null, 'https://www.selkirk.com')
+on conflict (slug) do nothing;
+
+-- One placeholder wallet item per type category, so every dashboard section
+-- has an example to preview.
+insert into public.wallet_items (
+  id, user_id, partner_id, type, status, title, subtitle, description,
+  value_amount, currency_code, value_label, original_value_amount, remaining_value_amount,
+  starts_at, expires_at, action_type, action_label, action_url,
+  external_system, source_type, source_id, is_seen
+)
+values
+  ('50000000-0000-0000-0000-000000000101',
+   '00000000-0000-0000-0000-000000000004',
+   '50000000-0000-0000-0000-000000000001',
+   'membership', 'active', 'Premium Membership', 'Active',
+   'Full access to premium tournament and marketplace features.',
+   null, 'USD', null, null, null,
+   now(), now() + interval '1 year',
+   'view_details', null, null,
+   null, 'seed', 'seed-premium-alex', false),
+  ('50000000-0000-0000-0000-000000000102',
+   '00000000-0000-0000-0000-000000000004',
+   '50000000-0000-0000-0000-000000000002',
+   'credit', 'processing', 'Pickleball Grip Doctor Annual Credit', 'Setting up your benefit',
+   'Annual store credit for pickleball paddle grip replacement and accessories.',
+   25.00, 'USD', '$25 Annual Credit', 25.00, 25.00,
+   now(), now() + interval '1 year',
+   'external_url', 'Shop Now', 'https://pickleballgripdoctor.com',
+   'shopify', 'seed', 'seed-pgd-alex', false),
+  ('50000000-0000-0000-0000-000000000104',
+   '00000000-0000-0000-0000-000000000004',
+   '50000000-0000-0000-0000-000000000003',
+   'offer', 'available', '15% Off Selkirk Paddles', 'Selkirk Sport',
+   'Save 15% on any Selkirk paddle. One-time use per member.',
+   null, 'USD', '15% Off', null, null,
+   now(), now() + interval '90 days',
+   'external_url', 'Shop Now', 'https://www.selkirk.com',
+   null, 'seed', 'seed-offer-alex', false),
+  ('50000000-0000-0000-0000-000000000105',
+   '00000000-0000-0000-0000-000000000004',
+   '50000000-0000-0000-0000-000000000001',
+   'pass', 'active', 'VIP Tournament Pass', 'Sarasota Open',
+   'Priority check-in and reserved seating at Sarasota Open.',
+   null, 'USD', null, null, null,
+   now(), now() + interval '30 days',
+   'view_details', null, null,
+   null, 'seed', 'seed-pass-alex', false),
+  ('50000000-0000-0000-0000-000000000106',
+   '00000000-0000-0000-0000-000000000004',
+   '50000000-0000-0000-0000-000000000001',
+   'ticket', 'available', 'Sarasota Open Spectator Ticket', 'Sarasota Open',
+   'General admission for one day at Sarasota Open.',
+   null, 'USD', null, null, null,
+   now(), now() + interval '45 days',
+   'view_details', null, null,
+   null, 'seed', 'seed-ticket-alex', false),
+  ('50000000-0000-0000-0000-000000000107',
+   '00000000-0000-0000-0000-000000000004',
+   '50000000-0000-0000-0000-000000000001',
+   'reward', 'available', 'Referral Reward', 'You earned a $10 credit',
+   'Thanks for referring a friend to DreamBreaker PB — enjoy $10 toward your next entry fee.',
+   10.00, 'USD', '$10 Credit', 10.00, 10.00,
+   now(), now() + interval '180 days',
+   'view_details', null, null,
+   null, 'seed', 'seed-reward-alex', false)
+on conflict do nothing;
+
+insert into public.wallet_activity (wallet_item_id, user_id, event_type, title, description)
+values
+  ('50000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000004',
+   'activated', 'Premium membership activated', 'Welcome to DreamBreaker PB Premium.'),
+  ('50000000-0000-0000-0000-000000000102', '00000000-0000-0000-0000-000000000004',
+   'created', 'Credit added to your wallet', 'Your annual Grip Doctor credit is being set up.'),
+  ('50000000-0000-0000-0000-000000000104', '00000000-0000-0000-0000-000000000004',
+   'created', 'Offer added to your wallet', 'Selkirk Sport 15% off unlocked.'),
+  ('50000000-0000-0000-0000-000000000105', '00000000-0000-0000-0000-000000000004',
+   'activated', 'Pass activated', 'Your VIP pass for Sarasota Open is active.'),
+  ('50000000-0000-0000-0000-000000000106', '00000000-0000-0000-0000-000000000004',
+   'created', 'Ticket added to your wallet', 'Spectator ticket for Sarasota Open added.'),
+  ('50000000-0000-0000-0000-000000000107', '00000000-0000-0000-0000-000000000004',
+   'created', 'Reward earned', 'You earned a $10 referral credit.')
 on conflict do nothing;

@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { Bell, Lock, User, Eye, EyeSlash, Trash } from "@phosphor-icons/react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
+import { LEGAL_ROUTES } from "@/lib/legal";
 
 type Section = "account" | "security" | "notifications";
 
@@ -67,10 +69,18 @@ export default function SettingsPage() {
               </div>
               <div className="p-6">
                 <h3 className="font-display text-xl tracking-wide text-destructive mb-3">DANGER ZONE</h3>
-                <p className="text-sm text-muted-foreground mb-4">Permanently delete your account and all associated data. This cannot be undone.</p>
-                <button onClick={() => toast.error("Contact support to delete your account.")} className="rounded-full border border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground h-11 px-6 font-display tracking-[0.2em] text-sm flex items-center gap-2 transition-colors" data-testid="settings-delete-account">
-                  <Trash size={16} weight="bold" /> DELETE ACCOUNT
-                </button>
+                <p className="text-sm text-muted-foreground mb-4">Permanently delete your account and all associated data. This cannot be undone. Deletion is self-service in the Pickleball App mobile app, under Account Settings &rarr; Delete Account.</p>
+                <Link href={LEGAL_ROUTES.deleteAccount} className="rounded-full border border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground h-11 px-6 font-display tracking-[0.2em] text-sm inline-flex items-center gap-2 transition-colors" data-testid="settings-delete-account">
+                  <Trash size={16} weight="bold" /> HOW TO DELETE MY ACCOUNT
+                </Link>
+              </div>
+              <div className="p-6">
+                <h3 className="font-display text-xl tracking-wide mb-3">LEGAL &amp; SUPPORT</h3>
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                  <Link href={LEGAL_ROUTES.terms} className="text-primary hover:underline" data-testid="settings-terms">Terms of Service</Link>
+                  <Link href={LEGAL_ROUTES.privacy} className="text-primary hover:underline" data-testid="settings-privacy">Privacy Policy</Link>
+                  <Link href={LEGAL_ROUTES.help} className="text-primary hover:underline" data-testid="settings-support">Support</Link>
+                </div>
               </div>
             </div>
           )}

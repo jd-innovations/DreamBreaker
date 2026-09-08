@@ -1,0 +1,426 @@
+import { supabase } from '@/lib/supabase';
+import { isTournamentExpired, type Tournament } from '@/lib/tournamentTypes';
+
+// DB tournament_status values that are visible to players.
+// Matches the tournament_status enum in the database exactly — do not add
+// 'published' or 'approved' here, they are not in the DB enum.
+const VISIBLE_STATUSES = [
+  'open', 'filling_fast', 'registration_closed',
+  'in_progress', 'completed',
+] as const;
+
+// `registration_closed` means only "you cannot sign up". It arrives for two
+// unrelated reasons — the draw filled, or the event is behind us — and
+// collapsing both to 'full' labels a finished tournament FULL, which is wrong
+// in a way that reads as a bug. The event date is the only thing that
+// separates them, and it is already selected here.
+//
+// Added when the lifecycle sweeper (20260831030000) started closing past-dated
+// tournaments; before that they stayed 'open' and this case never appeared.
+function dbStatusToAppStatus(s: string, eventDate: string): Tournament['status'] {
+  const finished = isTournamentExpired({ eventDate });
+  switch (s) {
+    case 'draft':                return 'draft';
+    case 'pending_approval':     return 'pending_approval';
+    case 'open':                 return 'open';
+    case 'filling_fast':         return 'filling_fast';
+    case 'registration_closed':  return finished ? 'completed' : 'full';
+    case 'in_progress':          return finished ? 'completed' : 'open';
+    case 'completed':            return 'completed';
+    case 'cancelled':            return 'cancelled';
+    default:                     return 'upcoming';
+  }
+}
+
+function formatDate(dateStr: string): string {
+  try {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+// Widest skill band the divisions cover. Zeros are treated as "unset" rather
+// than as a real 0.0 rating, which is what produced the "0 – 0" on cards whose
+// skill only ever lived on their divisions.
+function divisionSkillRange(divisions: unknown): {
+  divisionSkillMin: number | null;
+  divisionSkillMax: number | null;
+} {
+  if (!Array.isArray(divisions)) return { divisionSkillMin: null, divisionSkillMax: null };
+
+  const mins: number[] = [];
+  const maxes: number[] = [];
+  for (const d of divisions as { skill_min?: unknown; skill_max?: unknown }[]) {
+    const lo = Number(d?.skill_min ?? 0);
+    const hi = Number(d?.skill_max ?? 0);
+    if (lo > 0) mins.push(lo);
+    if (hi > 0) maxes.push(hi);
+  }
+  return {
+    divisionSkillMin: mins.length  ? Math.min(...mins)  : null,
+    divisionSkillMax: maxes.length ? Math.max(...maxes) : null,
+  };
+}
+
+function dbRowToTournament(row: Record<string, unknown>): Tournament {
+  return {
+    id:             String(row.id),
+    name:           String(row.name ?? ''),
+    // Null on most rows. The detail screen shows the About section only when
+    // this has content, or offers the director a prompt to write one — it must
+    // not fall back to invented copy, which is what it displayed before.
+    description:    row.description != null && String(row.description).trim() ? String(row.description) : null,
+    venue:          String(row.venue_name ?? ''),
+    city:           String(row.city ?? ''),
+    state:          String(row.state ?? ''),
+    venueAddress:   row.venue_address != null ? String(row.venue_address) : null,
+    zipCode:        row.zip_code != null ? String(row.zip_code) : null,
+    date:           formatDate(String(row.event_date ?? '')),
+    eventDate:      String(row.event_date ?? ''),
+    startTime:      row.start_time != null ? String(row.start_time) : null,
+    entryFeeCents:  Number(row.entry_fee_cents ?? 0),
+    holdFeeCents:   Number(row.hold_fee_cents ?? 0),
+    prizePoolCents: row.prize_pool_cents != null ? Number(row.prize_pool_cents) : null,
+    drawSize:             Number(row.draw_size ?? 0),
+    spotsFilled:          Number(row.spots_filled ?? 0),
+    skillMin:             Number(row.skill_min ?? 0),
+    skillMax:             Number(row.skill_max ?? 0),
+    formats:              Array.isArray(row.formats) ? (row.formats as string[]) : [],
+    // Formats actually offered, read off the divisions rather than the
+    // tournaments.formats array. Division creation does not write back to that
+    // array, so it goes stale: tournaments with a single mixed_doubles division
+    // were carrying formats = [] and being displayed as plain "Doubles".
+    // Empty unless the caller's select embedded divisions(format).
+    divisionFormats: Array.isArray(row.divisions)
+      ? Array.from(new Set(
+          (row.divisions as { format?: unknown }[])
+            .map(d => (d?.format != null ? String(d.format) : ''))
+            .filter(Boolean),
+        ))
+      : [],
+    ...divisionSkillRange(row.divisions),
+    status:               dbStatusToAppStatus(String(row.status ?? ''), String(row.event_date ?? '')),
+    rawStatus:            String(row.status ?? '') as Tournament['rawStatus'],
+    registrationOpensAt:  row.registration_opens_at != null ? String(row.registration_opens_at) : null,
+    registrationClosesAt: row.registration_closes_at != null ? String(row.registration_closes_at) : null,
+    featured:             Boolean(row.featured),
+    facilityId:           row.facility_id != null ? String(row.facility_id) : null,
+    coverImgUrl:          row.cover_img_url != null ? String(row.cover_img_url) : null,
+    // Director-chosen chips for the detail strip. Empty for every tournament
+    // until a director picks some; the strip hides itself rather than falling
+    // back to the invented copy it used to show.
+    amenities:            Array.isArray(row.amenities) ? (row.amenities as string[]) : [],
+    directorId:           row.director_id != null ? String(row.director_id) : null,
+  };
+}
+
+export async function fetchTournaments(): Promise<Tournament[]> {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('id,name,venue_name,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,registration_opens_at,registration_closes_at,featured,cover_img_url,divisions(format,skill_min,skill_max)')
+    .in('status', VISIBLE_STATUSES)
+    .order('event_date', { ascending: true });
+
+  if (error || !data) return [];
+  return data.map(dbRowToTournament);
+}
+
+/**
+ * Batch sibling of fetchTournamentById, for screens that already know which
+ * tournaments they need - the Events tab resolves the user's registrations
+ * into full rows so it can render the same card the Home tab does.
+ *
+ * Embeds divisions(format, skill_min, skill_max) because the card reads its
+ * format pill and skill range from divisions first: tournaments.formats is not
+ * maintained by division creation, so a mixed-doubles event can carry an empty
+ * array and be announced as plain "Doubles".
+ *
+ * No status filter. The caller asked for these specific ids and is showing
+ * them because the user is registered; a tournament that has since closed
+ * registration must still appear on their own list.
+ */
+export async function fetchTournamentsByIds(ids: string[]): Promise<Tournament[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,cover_img_url,divisions(format,skill_min,skill_max)')
+    .in('id', ids);
+
+  if (error || !data) return [];
+  return data.map(row => dbRowToTournament(row as Record<string, unknown>));
+}
+
+export async function fetchTournamentById(id: string): Promise<Tournament | null> {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,amenities')
+    .eq('id', id)
+    .single();
+
+  if (error || !data) return null;
+  return dbRowToTournament(data as Record<string, unknown>);
+}
+
+// For the edit screen only. Ownership is checked IN the query — `.eq('id',
+// id).eq('director_id', directorId)` — rather than by a separate permission
+// request beforehand, matching the web implementation
+// (web/src/app/director/tournaments/[id]/page.tsx), which has never shown this
+// problem.
+//
+// Root cause (2026-09-04): `tournament/[id]/edit.tsx` used to render inside
+// `<DirectorOnly>`, which runs its own hook (`useTournamentDirector`) that
+// fetches `director_id` via a SEPARATE request before the screen mounts. That
+// separate request stalled indefinitely on-device — confirmed NOT a data,
+// RLS, or session problem: the exact query executes in 0.138ms server-side
+// under this user's role, a completely fresh app install did not change the
+// behavior, and other mobile screens querying the same table succeeded. The
+// stall is specific to that second, otherwise-redundant request; removing it
+// removes the failure, whether or not its root cause is ever isolated.
+//
+// A null result here means "not found" OR "found but not yours" — RLS forbids
+// telling those apart from the client, and neither is actionable differently
+// by the caller, so the ambiguity is accepted rather than probed for. This
+// matches web's behavior exactly (see the reference above).
+//
+// Bounded with the same helper as fetchTournamentDirectorId so a stalled
+// request cannot leave a loading state stuck open, whatever caused this one.
+export async function fetchTournamentForEdit(
+  id: string,
+  directorId: string,
+): Promise<Tournament | null> {
+  const { data, error } = await withTimeout(
+    supabase
+      .from('tournaments')
+      .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,cover_img_url,amenities')
+      .eq('id', id)
+      .eq('director_id', directorId)
+      .single(),
+    8_000,
+    'Loading the tournament',
+  );
+
+  if (error || !data) return null;
+  return dbRowToTournament(data as Record<string, unknown>);
+}
+
+// Shared with useTournamentDirector.ts. Director Hub calls
+// fetchDirectorTournaments(user.id) to list a director's own tournaments —
+// that query already establishes, for every tournament it returns, that this
+// user is its director. DirectorOnly used to throw that away and re-verify
+// ownership with an independent network round trip for every tournament a
+// director switched to, which is what visibly flashed "Checking
+// permissions…" on the first visit to EACH of a director's own tournaments,
+// not just a repeat visit to one. Caching the id set here means the check for
+// any tournament in it can be answered from memory instead of a request.
+//
+// A cache miss is always safe: it falls through to the real check (a brand
+// new tournament not yet in this list, or a screen reached without visiting
+// Director Hub first). This never grants access the real check wouldn't.
+let cachedDirectorId: string | null = null;
+let cachedDirectorTournamentIds: Set<string> | null = null;
+
+export function getCachedDirectorTournamentIds(directorId: string): Set<string> | null {
+  return cachedDirectorId === directorId ? cachedDirectorTournamentIds : null;
+}
+
+export async function fetchDirectorTournaments(directorId: string): Promise<Tournament[]> {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('id,name,venue_name,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured')
+    .eq('director_id', directorId)
+    .order('event_date', { ascending: false });
+
+  if (error || !data) return [];
+  const tournaments = data.map(dbRowToTournament);
+  cachedDirectorId = directorId;
+  cachedDirectorTournamentIds = new Set(tournaments.map(t => t.id));
+  return tournaments;
+}
+
+const CREATED_SELECT =
+  'id,name,venue_name,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,facility_id';
+
+export type CreateTournamentInput = {
+  directorId: string;
+  name: string;
+  venue: string;
+  city: string;
+  state: string;
+  eventDate: string;              // ISO date, e.g. 2026-08-16
+  startTime: string | null;       // "HH:MM" local wall-clock, or null
+  registrationOpensAt: string | null; // ISO date or null
+  registrationClosesAt: string;   // ISO date
+  entryFeeCents: number;
+  holdFeeCents: number;
+  drawSize: number;
+  facilityId: string | null;
+  amenities: string[];
+};
+
+// Always creates in 'draft' — matches the web director flow (draft -> submit
+// for approval -> admin approves -> open). Requires the RLS-enforced
+// is_approved_director() (see "tournaments: director insert" policy); the
+// caller must already be gated to approved directors before reaching this.
+export async function createDraftTournament(input: CreateTournamentInput): Promise<Tournament | null> {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .insert({
+      director_id:            input.directorId,
+      name:                   input.name,
+      venue_name:             input.venue,
+      city:                   input.city,
+      state:                  input.state,
+      format:                 'doubles',
+      event_date:             input.eventDate,
+      start_time:             input.startTime,
+      registration_opens_at:  input.registrationOpensAt,
+      registration_closes_at: input.registrationClosesAt,
+      entry_fee_cents:        input.entryFeeCents,
+      hold_fee_cents:         input.holdFeeCents,
+      draw_size:              input.drawSize,
+      facility_id:            input.facilityId,
+      amenities:              input.amenities,
+      status:                 'draft',
+      spots_filled:           0,
+    })
+    .select(CREATED_SELECT)
+    .single();
+
+  if (error || !data) {
+    console.error('[createDraftTournament] error:', error?.message, error?.code);
+    return null;
+  }
+  return dbRowToTournament(data as Record<string, unknown>);
+}
+
+export type UpdateTournamentInput = {
+  name: string;
+  venue: string;
+  city: string;
+  state: string;
+  eventDate: string;
+  startTime: string | null;
+  registrationOpensAt: string | null;
+  registrationClosesAt: string;
+  entryFeeCents: number;
+  holdFeeCents: number;
+  drawSize: number;
+  amenities: string[];
+  facilityId: string | null;
+  /** Omit to leave the cover untouched; pass the new URL (or null to clear it). */
+  coverImgUrl?: string | null;
+  /**
+   * Web's behavior for editing a tournament that is not a draft: the edit
+   * re-enters the approval queue rather than silently updating a page players
+   * may already be viewing. The edit screen sets this whenever the tournament
+   * being saved is not currently 'draft' (and not 'completed', which it never
+   * reaches here since that state is blocked from editing at all).
+   */
+  revertToPendingApproval?: boolean;
+};
+
+export async function updateTournamentDetails(id: string, input: UpdateTournamentInput): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await supabase
+    .from('tournaments')
+    .update({
+      name:                    input.name,
+      venue_name:              input.venue,
+      city:                    input.city,
+      state:                   input.state,
+      event_date:              input.eventDate,
+      start_time:              input.startTime,
+      registration_opens_at:   input.registrationOpensAt,
+      registration_closes_at:  input.registrationClosesAt,
+      entry_fee_cents:         input.entryFeeCents,
+      hold_fee_cents:          input.holdFeeCents,
+      draw_size:               input.drawSize,
+      amenities:               input.amenities,
+      facility_id:             input.facilityId,
+      ...(input.coverImgUrl !== undefined ? { cover_img_url: input.coverImgUrl } : {}),
+      // "tournaments: director update own" RLS requires WITH CHECK
+      // (approved_at IS NULL AND approved_by IS NULL) on the row that results
+      // from this update. An already-approved tournament (open,
+      // filling_fast, registration_closed) carries a non-null approved_at
+      // from when an admin approved it — leaving it untouched here would
+      // make Postgres reject the whole update. Clearing both alongside the
+      // status flip is what actually re-enters the approval queue, not just
+      // a cosmetic status label.
+      ...(input.revertToPendingApproval
+        ? { status: 'pending_approval', approved_at: null, approved_by: null }
+        : {}),
+    })
+    .eq('id', id);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function submitTournamentForApproval(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await supabase
+    .from('tournaments')
+    .update({ status: 'pending_approval', submitted_for_approval_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+// Minimal ownership lookup for the director route guard. Deliberately selects
+// only `director_id` rather than reusing fetchTournamentById(): the guard runs
+// on every director screen mount and needs one column, not the full row.
+// Returns null when the tournament does not exist OR is not readable by the
+// caller — both cases mean "not the director" to the guard.
+// Measured 2026-09-04: this call can never settle. On the tournament edit route
+// the director guard sat at "tournament loading" for 32s and a manual Retry
+// hung the same way, while identical queries on other screens returned
+// normally — so it is this request, not the client and not the session.
+//
+// Root cause unknown. What is certain is that a Supabase call with no timeout
+// hangs forever and reports nothing, which is what made it invisible: the guard
+// spun with no error to show. Bounded here so it fails loudly instead.
+export class QueryTimeoutError extends Error {
+  constructor(what: string, ms: number) {
+    super(`${what} did not respond within ${ms / 1000}s.`);
+    this.name = 'QueryTimeoutError';
+  }
+}
+
+function withTimeout<T>(p: PromiseLike<T>, ms: number, what: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new QueryTimeoutError(what, ms)), ms);
+    Promise.resolve(p).then(
+      v => { clearTimeout(timer); resolve(v); },
+      e => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
+export async function fetchTournamentDirectorId(id: string): Promise<string | null> {
+  const started = Date.now();
+  // Measured 2026-09-04: server-side this query plans and executes in 0.138ms
+  // with RLS applied, yet the device sometimes never receives a response while
+  // other queries from the same client succeed. That is a lost request, not a
+  // slow one — so one retry, which costs nothing when the first attempt works.
+  const run = () => withTimeout(
+    supabase.from('tournaments').select('director_id').eq('id', id).maybeSingle(),
+    8_000,
+    'The permission check',
+  );
+  let result;
+  try {
+    result = await run();
+  } catch (first) {
+    console.warn('[fetchTournamentDirectorId] first attempt failed, retrying:', first);
+    result = await run();
+  }
+  const { data, error } = result;
+  console.log(`[fetchTournamentDirectorId] ${id} settled in ${Date.now() - started}ms`,
+    error ? `error=${error.message}` : `director=${data?.director_id ?? 'null'}`);
+
+  if (error || !data) return null;
+  return data.director_id != null ? String(data.director_id) : null;
+}

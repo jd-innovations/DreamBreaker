@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { Logo } from "./logo";
 import { InstagramLogo, TiktokLogo, YoutubeLogo, XLogo } from "@phosphor-icons/react/dist/ssr";
+import { LEGAL_ROUTES } from "@/lib/legal";
 
 const socials = [InstagramLogo, TiktokLogo, YoutubeLogo, XLogo];
 
@@ -40,13 +42,31 @@ export function Footer() {
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>About</li>
             <li>Directors</li>
-            <li>Contact</li>
-            <li>Terms · Privacy</li>
+            <li>
+              <Link href={LEGAL_ROUTES.help} className="hover:text-primary transition-colors" data-testid="footer-support">
+                Support
+              </Link>
+            </li>
+            <li>
+              <Link href={LEGAL_ROUTES.terms} className="hover:text-primary transition-colors" data-testid="footer-terms">
+                Terms of Service
+              </Link>
+            </li>
+            <li>
+              <Link href={LEGAL_ROUTES.privacy} className="hover:text-primary transition-colors" data-testid="footer-privacy">
+                Privacy Policy
+              </Link>
+            </li>
+            <li>
+              <Link href={LEGAL_ROUTES.deleteAccount} className="hover:text-primary transition-colors" data-testid="footer-delete-account">
+                Delete Account
+              </Link>
+            </li>
           </ul>
         </div>
       </div>
       <div className="border-t border-border py-5 text-center text-xs text-muted-foreground font-mono">
-        © 2026 COMPETE PICKLEBALL · ALL RIGHTS RESERVED
+        © 2026 PICKLEBALL APP · ALL RIGHTS RESERVED
       </div>
     </footer>
   );

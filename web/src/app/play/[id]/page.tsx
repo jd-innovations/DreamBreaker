@@ -132,7 +132,7 @@ export default function PlayEventPage({ params }: { params: Promise<{ id: string
             </span>
           </div>
 
-          <h1 className="font-display text-4xl sm:text-5xl tracking-wide leading-[0.95] mb-4">{event.name}</h1>
+          <h1 className="font-display text-4xl sm:text-5xl tracking-tight leading-[0.85] mb-4">{event.name}</h1>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Stat icon={Calendar} label="DATE" value={formatEventDate(event.event_date)} />

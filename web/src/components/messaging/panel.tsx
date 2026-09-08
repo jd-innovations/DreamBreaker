@@ -415,18 +415,27 @@ export function MessagingPanel({
     const existing = conversations.find((c) => c.otherId === otherId);
     if (existing) { openConversation(existing.id); setShowNewConvo(false); return; }
 
+    // Goes through the get_or_create_direct_conversation RPC (same one mobile
+    // uses) instead of a raw insert — that RPC enforces the "is this pairing
+    // actually allowed to DM" relationship check (mutual match, director/
+    // registrant, play-event organizer/participant, etc.) under RLS. A raw
+    // insert here would either be silently blocked by that same RLS or, if
+    // the policy is looser than intended, bypass the relationship check
+    // entirely.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
-      .from("conversations")
-      .insert({ participant_a: currentUserId, participant_b: otherId })
-      .select("id,participant_a,participant_b,last_message_at,created_at")
-      .single();
+    const { data: conversationId, error } = await (supabase as any).rpc(
+      "get_or_create_direct_conversation",
+      { p_partner_id: otherId },
+    );
 
-    if (error || !data) { toast.error("Could not start conversation."); return; }
+    if (error || !conversationId) {
+      toast.error(error?.hint ?? error?.message ?? "Could not start conversation.");
+      return;
+    }
 
     const otherProfile = allUsers.find((u) => u.id === otherId) ?? profileCache[otherId];
     const newConv: Conversation = {
-      id: (data as DBConversation).id,
+      id: String(conversationId),
       otherId,
       otherName: otherProfile?.full_name ?? "Unknown",
       otherRole: otherProfile?.role ?? "player",
@@ -441,7 +450,7 @@ export function MessagingPanel({
     setConversations((prev) => [newConv, ...prev]);
     if (otherProfile) setProfileCache((prev) => ({ ...prev, [otherId]: otherProfile }));
     setShowNewConvo(false);
-    openConversation((data as DBConversation).id);
+    openConversation(String(conversationId));
   };
 
   // Open initial recipient (declared after startOrOpenConversation so it is

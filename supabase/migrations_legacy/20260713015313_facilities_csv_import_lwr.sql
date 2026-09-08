@@ -1,0 +1,86 @@
+-- Curated facilities directory import. Review before applying.
+-- 1 google-keyed + 0 id-keyed facilities, 10 photos.
+
+insert into public.facilities (
+  google_place_id, data_source, source_url, name, slug, facility_type, address, address_line_2, city, state, postal_code, country, latitude, longitude, phone, website, google_maps_uri, description, court_count, indoor_courts, outdoor_courts, surface_type, lighting, restrooms, water, parking, pro_shop, lessons_available, open_play_available, reservation_required, public_access, membership_required, bookable_by_public, booking_url, fee_type, typical_fee, hours_summary, skill_levels, amenities, tags, status, data_confidence, verified, last_verified_date, notes, import_batch_id, created_by, price_level, wheelchair_accessible, google_rating, google_rating_count, google_types, business_status, created_at, updated_at
+) values
+('ChIJTTNA1C07w4gROEDyfilZDeQ', 'google_places', 'https://maps.google.com/?cid=16432888650103144504', 'Lakewood Ranch Park Pickleball Courts', 'lakewood-ranch-park-bradenton-fl-1', null, '5350 Lakewood Ranch Boulevard', null, 'Bradenton', 'FL', '34211', 'US', 27.4472266, -82.4365494, '(941) 742-5923', 'https://www.mymanatee.org/departments/sports_and_leisure_services/parks__preserves___beaches/lakewood_ranch_park', 'https://maps.google.com/?cid=16432888650103144504', null, 6, 0, 6, 'Hard', true, true, true, true, false, false, true, false, true, false, false, null, null, null, 'Monday: 7:00 AM – 11:00 PM
+Tuesday: 7:00 AM – 11:00 PM
+Wednesday: 7:00 AM – 11:00 PM
+Thursday: 7:00 AM – 11:00 PM
+Friday: 7:00 AM – 11:00 PM
+Saturday: 7:00 AM – 11:00 PM
+Sunday: 7:00 AM – 11:00 PM', '{}', '{}', '{}', 'approved', 100, true, '2026-07-02T17:08:18.649+00:00', null, '4b0df1f9-cf02-4c8f-b5bc-d51e6067cef1', '8412b737-be17-46bd-a4f3-809b808f7ef1', null, true, 4.4, 86, '{"park","point_of_interest","establishment"}', 'OPERATIONAL', '2026-07-01T14:25:38.489463+00:00', '2026-07-02T17:08:26.988257+00:00')
+on conflict (google_place_id) do update set
+  data_source = excluded.data_source,
+  source_url = excluded.source_url,
+  name = excluded.name,
+  slug = excluded.slug,
+  facility_type = excluded.facility_type,
+  address = excluded.address,
+  address_line_2 = excluded.address_line_2,
+  city = excluded.city,
+  state = excluded.state,
+  postal_code = excluded.postal_code,
+  country = excluded.country,
+  latitude = excluded.latitude,
+  longitude = excluded.longitude,
+  phone = excluded.phone,
+  website = excluded.website,
+  google_maps_uri = excluded.google_maps_uri,
+  description = excluded.description,
+  court_count = excluded.court_count,
+  indoor_courts = excluded.indoor_courts,
+  outdoor_courts = excluded.outdoor_courts,
+  surface_type = excluded.surface_type,
+  lighting = excluded.lighting,
+  restrooms = excluded.restrooms,
+  water = excluded.water,
+  parking = excluded.parking,
+  pro_shop = excluded.pro_shop,
+  lessons_available = excluded.lessons_available,
+  open_play_available = excluded.open_play_available,
+  reservation_required = excluded.reservation_required,
+  public_access = excluded.public_access,
+  membership_required = excluded.membership_required,
+  bookable_by_public = excluded.bookable_by_public,
+  booking_url = excluded.booking_url,
+  fee_type = excluded.fee_type,
+  typical_fee = excluded.typical_fee,
+  hours_summary = excluded.hours_summary,
+  skill_levels = excluded.skill_levels,
+  amenities = excluded.amenities,
+  tags = excluded.tags,
+  status = excluded.status,
+  data_confidence = excluded.data_confidence,
+  verified = excluded.verified,
+  last_verified_date = excluded.last_verified_date,
+  notes = excluded.notes,
+  import_batch_id = excluded.import_batch_id,
+  created_by = excluded.created_by,
+  price_level = excluded.price_level,
+  wheelchair_accessible = excluded.wheelchair_accessible,
+  google_rating = excluded.google_rating,
+  google_rating_count = excluded.google_rating_count,
+  google_types = excluded.google_types,
+  business_status = excluded.business_status,
+  updated_at = excluded.updated_at;
+
+insert into public.facility_photos (facility_id, url, google_photo_name, is_primary)
+select f.id, v.url, v.name, v.is_primary
+from public.facilities f
+join (values
+  ('ChIJTTNA1C07w4gROEDyfilZDeQ', 'https://fbzetvkbhneptvfruilw.supabase.co/functions/v1/facility-photo?name=places%2FChIJTTNA1C07w4gROEDyfilZDeQ%2Fphotos%2FAaVGc3kgwLfQUrwzxH0neDYjS6MGQctfejnYDQbXiDmXw4zEtqSAW-9pMEDMGJlmfYQwwH8wt72o5bR77b1UntqhEbZDl6ePL_3WIhdc2uidMqfIuUtTchqAAM6ESOINsQ93oEInDVkG2lT0aoeq0805p9DGwT17UWi72kh6PLDjqrOA1Bed9ibrrR-L-mEeEPVZtmz2-fJ82f03oxAAwvcza7hZPSGDb8O19KVmlqwJGvhzJW10aOGXCLOaoKvC32ewskOSuE2fOnnKNIMUfmkMV4_BqhDOY3Sozikgvmn2y-dm84sGATwEx0uq6g6Q9D2OjnBNjoU8_f9_aTTOHzNAFqeKsaXp_vr7JJWkpomjku0TYx9L9-x4x2wPcT2hQkvP4GZ7sZ3my1w8Q53-dRP_8HzND80BRuvMeoJ0ro3YXyHm1u-Ayc-2KjQ2QmpUqA&w=800', 'places/ChIJTTNA1C07w4gROEDyfilZDeQ/photos/AaVGc3kgwLfQUrwzxH0neDYjS6MGQctfejnYDQbXiDmXw4zEtqSAW-9pMEDMGJlmfYQwwH8wt72o5bR77b1UntqhEbZDl6ePL_3WIhdc2uidMqfIuUtTchqAAM6ESOINsQ93oEInDVkG2lT0aoeq0805p9DGwT17UWi72kh6PLDjqrOA1Bed9ibrrR-L-mEeEPVZtmz2-fJ82f03oxAAwvcza7hZPSGDb8O19KVmlqwJGvhzJW10aOGXCLOaoKvC32ewskOSuE2fOnnKNIMUfmkMV4_BqhDOY3Sozikgvmn2y-dm84sGATwEx0uq6g6Q9D2OjnBNjoU8_f9_aTTOHzNAFqeKsaXp_vr7JJWkpomjku0TYx9L9-x4x2wPcT2hQkvP4GZ7sZ3my1w8Q53-dRP_8HzND80BRuvMeoJ0ro3YXyHm1u-Ayc-2KjQ2QmpUqA', true),
+  ('ChIJTTNA1C07w4gROEDyfilZDeQ', 'https://fbzetvkbhneptvfruilw.supabase.co/functions/v1/facility-photo?name=places%2FChIJTTNA1C07w4gROEDyfilZDeQ%2Fphotos%2FAaVGc3kQfs1u-Thw810NHW_pICVrKnEN3zMDSpY6OEaEWEcK_0Op5Cpfg4DtyUD2vFsjbIrVmcC-PvVLSeYz0K2aAb4ntMNpVCteM6zhO-PzJLmHtM7zTJt9CjYS_fBNGWHnVbju7sOhkYU8-OqBx4mqejbD7NmsJeiDDtXx1qZ8iTQ2HvZakmm6D-fNSvf3ZRUFTRTTy_QDHtMQD44ISWLBUN3K8XvXp80iFcpLKF9AxviHoAehXjje1N6guuKu-xt90Z4AuEQ1G9UoIamhYoWKFmzitU3gmqsDBnthoQ0vmaGJwGhjFsZVgwrNXOt6WJp3EbFDew4mRAeOg_dS2HD1ewBm-0uoR2VQ9-I9KBQpnnBmTS0B3qn4sumIlEmDXs8yDxcAX-1EsO8pMfP4ArI3jipARXwOtYFq90S1S75LrNC57w9VPi3uVgpg9BOiAate&w=800', 'places/ChIJTTNA1C07w4gROEDyfilZDeQ/photos/AaVGc3kQfs1u-Thw810NHW_pICVrKnEN3zMDSpY6OEaEWEcK_0Op5Cpfg4DtyUD2vFsjbIrVmcC-PvVLSeYz0K2aAb4ntMNpVCteM6zhO-PzJLmHtM7zTJt9CjYS_fBNGWHnVbju7sOhkYU8-OqBx4mqejbD7NmsJeiDDtXx1qZ8iTQ2HvZakmm6D-fNSvf3ZRUFTRTTy_QDHtMQD44ISWLBUN3K8XvXp80iFcpLKF9AxviHoAehXjje1N6guuKu-xt90Z4AuEQ1G9UoIamhYoWKFmzitU3gmqsDBnthoQ0vmaGJwGhjFsZVgwrNXOt6WJp3EbFDew4mRAeOg_dS2HD1ewBm-0uoR2VQ9-I9KBQpnnBmTS0B3qn4sumIlEmDXs8yDxcAX-1EsO8pMfP4ArI3jipARXwOtYFq90S1S75LrNC57w9VPi3uVgpg9BOiAate', false),
+  ('ChIJTTNA1C07w4gROEDyfilZDeQ', 'https://fbzetvkbhneptvfruilw.supabase.co/functions/v1/facility-photo?name=places%2FChIJTTNA1C07w4gROEDyfilZDeQ%2Fphotos%2FAaVGc3kpWUXz8fJDp4-6slJkvehfSWUpSGFNAkItruWQlIlCZK7JbML3zewLLeoeiTbqLh007ZDSZJQOEnqweFk01bWRQDsiJvU_y9irpydsy-ozeGB8SbGWUutpcdxHUFqORSlGW3X71qRB5ZgcTVo3yFcD9mP_SNMvhcxIeG7bhZQoQJ07foNl0yvvrFHUzy5q7hwsvS2XUE4R_GmIOiHEdX3xoURMByO2iGrInlyKqsmSxNpnuhNQoIfL9Uh8hfecMe8lWircx8z7B2ezYSui7tQoOlbswzawAC3xZ948AQph3GCmzsU02bJgKROxXF9YNV3OmlsWOl_NjHRgh8kzyn9tnlARdMyIS2cHavAvAKRqF6Jd-iTDdIKTM7uXKhsbLEnCtvnG9LCy-lJ2EO8qYyRUxfdwm7EhCgreNbJd9EvYTyji&w=800', 'places/ChIJTTNA1C07w4gROEDyfilZDeQ/photos/AaVGc3kpWUXz8fJDp4-6slJkvehfSWUpSGFNAkItruWQlIlCZK7JbML3zewLLeoeiTbqLh007ZDSZJQOEnqweFk01bWRQDsiJvU_y9irpydsy-ozeGB8SbGWUutpcdxHUFqORSlGW3X71qRB5ZgcTVo3yFcD9mP_SNMvhcxIeG7bhZQoQJ07foNl0yvvrFHUzy5q7hwsvS2XUE4R_GmIOiHEdX3xoURMByO2iGrInlyKqsmSxNpnuhNQoIfL9Uh8hfecMe8lWircx8z7B2ezYSui7tQoOlbswzawAC3xZ948AQph3GCmzsU02bJgKROxXF9YNV3OmlsWOl_NjHRgh8kzyn9tnlARdMyIS2cHavAvAKRqF6Jd-iTDdIKTM7uXKhsbLEnCtvnG9LCy-lJ2EO8qYyRUxfdwm7EhCgreNbJd9EvYTyji', false),
+  ('ChIJTTNA1C07w4gROEDyfilZDeQ', 'https://fbzetvkbhneptvfruilw.supabase.co/functions/v1/facility-photo?name=places%2FChIJTTNA1C07w4gROEDyfilZDeQ%2Fphotos%2FAaVGc3lRQSlycAIZhfe4rXO5ObchGwXqo6uhUzLvD_CquKR7Vn4FBZYR9HwZGP8UxwFJZTJcVc0MFNQ1v_8_FbEbrfYp9iE8QNNMy5TD19Ke3RqcqK8dl371uOAfKWk5zffRsKz6EVVb1KDT8_KJYkK9Fa-R27WqRxWaz1URsT1EkmEVRL0HKKD0KJoHcqGNfsJ-m1v8PlzTjrMikLuyrEwKYXXqjYsgSrMPpayZhp2xAqlxdrVQWJ5TLf1qUWlVTFynI24JIKyRx3ki-5f-a-OEWYZrkHJ4MTR3m2Ox8Pi2BZC1CYX0sN2FyRaESfkNM_bxGvgNHqupQHACvm6wIpV4DlCJeGDjT5e8YnQqQr73wf9-MElrLZg3N4eLddFziCpSwfBO9uRrFW2eR2clR8MKIwN7JpqPkZgagz54CAp2Q3mZlw&w=800', 'places/ChIJTTNA1C07w4gROEDyfilZDeQ/photos/AaVGc3lRQSlycAIZhfe4rXO5ObchGwXqo6uhUzLvD_CquKR7Vn4FBZYR9HwZGP8UxwFJZTJcVc0MFNQ1v_8_FbEbrfYp9iE8QNNMy5TD19Ke3RqcqK8dl371uOAfKWk5zffRsKz6EVVb1KDT8_KJYkK9Fa-R27WqRxWaz1URsT1EkmEVRL0HKKD0KJoHcqGNfsJ-m1v8PlzTjrMikLuyrEwKYXXqjYsgSrMPpayZhp2xAqlxdrVQWJ5TLf1qUWlVTFynI24JIKyRx3ki-5f-a-OEWYZrkHJ4MTR3m2Ox8Pi2BZC1CYX0sN2FyRaESfkNM_bxGvgNHqupQHACvm6wIpV4DlCJeGDjT5e8YnQqQr73wf9-MElrLZg3N4eLddFziCpSwfBO9uRrFW2eR2clR8MKIwN7JpqPkZgagz54CAp2Q3mZlw', false),
+  ('ChIJTTNA1C07w4gROEDyfilZDeQ', 'https://fbzetvkbhneptvfruilw.supabase.co/functions/v1/facility-photo?name=places%2FChIJTTNA1C07w4gROEDyfilZDeQ%2Fphotos%2FAaVGc3nccJkesA2HuVIUTrjEbWljUVyE5RibQO0S0IB-Tcrh1vf787xG31apkylcGRjyQ000HG5dJn-HlEaWrzqJb-zflmVAecrxNYojkrIuxuEdf9R7o-QbRcRqh0E75EZFcXbnYyL_KR511gSFiekBPLxvTwSk-DSa-GczySJHhWm-5Uhaeui9Qwaje13wzQvKdIRI977BdnvXzT8lgzYsxjyz-2YCSMt-2lfhT0y0QfEU2XNeGdfOpec2Fd0WMTFdui7WXb3HYvpLpAmskzyRwcjuOu-QRdyungUhRhPS2c-QTGCW0hBDD4RWqckBvGPoRwwR3_B1UuFG-00N_CmLYNOVE3olRe25I8hW6l9zLDqZHZjXxsbwLVCSoGlAqeiB-FBKi4arYsvRjXkZXv4q8skvzqj4CGORMFBw8e0Sefw&w=800', 'places/ChIJTTNA1C07w4gROEDyfilZDeQ/photos/AaVGc3nccJkesA2HuVIUTrjEbWljUVyE5RibQO0S0IB-Tcrh1vf787xG31apkylcGRjyQ000HG5dJn-HlEaWrzqJb-zflmVAecrxNYojkrIuxuEdf9R7o-QbRcRqh0E75EZFcXbnYyL_KR511gSFiekBPLxvTwSk-DSa-GczySJHhWm-5Uhaeui9Qwaje13wzQvKdIRI977BdnvXzT8lgzYsxjyz-2YCSMt-2lfhT0y0QfEU2XNeGdfOpec2Fd0WMTFdui7WXb3HYvpLpAmskzyRwcjuOu-QRdyungUhRhPS2c-QTGCW0hBDD4RWqckBvGPoRwwR3_B1UuFG-00N_CmLYNOVE3olRe25I8hW6l9zLDqZHZjXxsbwLVCSoGlAqeiB-FBKi4arYsvRjXkZXv4q8skvzqj4CGORMFBw8e0Sefw', false),
+  ('ChIJTTNA1C07w4gROEDyfilZDeQ', 'https://fbzetvkbhneptvfruilw.supabase.co/functions/v1/facility-photo?name=places%2FChIJTTNA1C07w4gROEDyfilZDeQ%2Fphotos%2FAaVGc3nq5e0ttJT2I8h8TOY6AGcCwIaKIL--jkxD3oWJli1ZyvJhbm6JqnUkahD8xI4Y2DuEmZx6Utc5qDgywhPUXN61vQhkIY7GfJPonuOQ_ev1lO9LkA5hbaantKn0InDcgs-BKnxFqutySPoyxNXHF2dgcCWISOt-4n7P3Z__nEb2CWlG-OsawNd3q6ptzjNn4WB0BIZVXgTIzoXP9waNelSQKWZWB7Zx46iWqvOr8wkcQtK0v8PL9zlaKxOuPxlDr841jxoNU-B1KxsUbx70INXZr_QUW-e2YvqaMNpfdW9vQg0wY5MRFTt7JDU-O1cvPpFbmrcCYCxUBrhHFvC8fGyuNKAqdCSaptuuivG70gS6udXekbGswcovPH6XCPst04YbkBmdkM_gMY2EuyWlO-u8A52eCwQcD6GawEjvnRYq8cNBjxolpVtVPBWXqcCx&w=800', 'places/ChIJTTNA1C07w4gROEDyfilZDeQ/photos/AaVGc3nq5e0ttJT2I8h8TOY6AGcCwIaKIL--jkxD3oWJli1ZyvJhbm6JqnUkahD8xI4Y2DuEmZx6Utc5qDgywhPUXN61vQhkIY7GfJPonuOQ_ev1lO9LkA5hbaantKn0InDcgs-BKnxFqutySPoyxNXHF2dgcCWISOt-4n7P3Z__nEb2CWlG-OsawNd3q6ptzjNn4WB0BIZVXgTIzoXP9waNelSQKWZWB7Zx46iWqvOr8wkcQtK0v8PL9zlaKxOuPxlDr841jxoNU-B1KxsUbx70INXZr_QUW-e2YvqaMNpfdW9vQg0wY5MRFTt7JDU-O1cvPpFbmrcCYCxUBrhHFvC8fGyuNKAqdCSaptuuivG70gS6udXekbGswcovPH6XCPst04YbkBmdkM_gMY2EuyWlO-u8A52eCwQcD6GawEjvnRYq8cNBjxolpVtVPBWXqcCx', false),
+  ('ChIJTTNA1C07w4gROEDyfilZDeQ', 'https://fbzetvkbhneptvfruilw.supabase.co/functions/v1/facility-photo?name=places%2FChIJTTNA1C07w4gROEDyfilZDeQ%2Fphotos%2FAaVGc3lF5qdtEldniBwaDNzdBBEnpMIgmxftc22cQcAapz3KfgOn1w9vR0qtGJlxdYUOSReKRptHr-Ddjpy02Ye1mn1FZHquEdjbUx87yNtCBtyGDEC7j1rk-EmbP7U2OjvoilxGaWHKUaPAopFpWWv99dvCUTCi6qyoIc40feLi3JcJ33UJ-9kZz1WtfMKEuHuXbhGLnniyFE6qch3cQE1PnrBsMTXDJKrUuHGXgak-TMFX1MrdfUiVpVNUwp_2pbfRMvEWdzVR4QWDk6_foixZUFR8TFQQdp6Rl4Tz-nnVXVRcK2Om7aNNF11ukcr2-vRChVG7WULaJv7LBKfP4PEJtD3KIMCvzsE8kn4gyV_8HO-fNOdknxrB6M5fywv1VW1uirqzjIKjgYzQRrtXLUBBhTtqFCfNA8x1s_qv19Szo7g_ihxv&w=800', 'places/ChIJTTNA1C07w4gROEDyfilZDeQ/photos/AaVGc3lF5qdtEldniBwaDNzdBBEnpMIgmxftc22cQcAapz3KfgOn1w9vR0qtGJlxdYUOSReKRptHr-Ddjpy02Ye1mn1FZHquEdjbUx87yNtCBtyGDEC7j1rk-EmbP7U2OjvoilxGaWHKUaPAopFpWWv99dvCUTCi6qyoIc40feLi3JcJ33UJ-9kZz1WtfMKEuHuXbhGLnniyFE6qch3cQE1PnrBsMTXDJKrUuHGXgak-TMFX1MrdfUiVpVNUwp_2pbfRMvEWdzVR4QWDk6_foixZUFR8TFQQdp6Rl4Tz-nnVXVRcK2Om7aNNF11ukcr2-vRChVG7WULaJv7LBKfP4PEJtD3KIMCvzsE8kn4gyV_8HO-fNOdknxrB6M5fywv1VW1uirqzjIKjgYzQRrtXLUBBhTtqFCfNA8x1s_qv19Szo7g_ihxv', false),
+  ('ChIJTTNA1C07w4gROEDyfilZDeQ', 'https://fbzetvkbhneptvfruilw.supabase.co/functions/v1/facility-photo?name=places%2FChIJTTNA1C07w4gROEDyfilZDeQ%2Fphotos%2FAaVGc3l6rm32zhuYJpLn4SzYYEfXhG_5hEpnBs-XmKErHNgCeFXzFVkA5s-yHtoDc5on9UEhLR4I6YH5Vj4iybkQmvIbArt5ByBW9mmiMLoXJWbXF_60PrnuscAcD7wT_9q6Y1ixFLDHoZ-6KZO-hPVzd4xv-XpBAxzUS0MZReL9gKoDoOuhXFR-lrsPoP44VJuY1NRRGf484qV7NoQ-gTsk1Bc1QFvekY2tk85gYY3Q_pL7oSRsu1-bqhE4S7egsMI7kBbjhx06Sp0uAakjQr3X1KvGhAsDwEOik4ZfsAIM9_OpnoL5_L9CwjvEJPMqFXaZNvM0dK1BuGX6Q6Ji9NUW3MTnLbPR0TtYXe5DgSZe-ZP6w-EqMYjSeSeEBAhE93L-ys4E_ov_qO6xgGAHlkAB1w7Y8yWeXh4xRqZEwah5WssaJfE&w=800', 'places/ChIJTTNA1C07w4gROEDyfilZDeQ/photos/AaVGc3l6rm32zhuYJpLn4SzYYEfXhG_5hEpnBs-XmKErHNgCeFXzFVkA5s-yHtoDc5on9UEhLR4I6YH5Vj4iybkQmvIbArt5ByBW9mmiMLoXJWbXF_60PrnuscAcD7wT_9q6Y1ixFLDHoZ-6KZO-hPVzd4xv-XpBAxzUS0MZReL9gKoDoOuhXFR-lrsPoP44VJuY1NRRGf484qV7NoQ-gTsk1Bc1QFvekY2tk85gYY3Q_pL7oSRsu1-bqhE4S7egsMI7kBbjhx06Sp0uAakjQr3X1KvGhAsDwEOik4ZfsAIM9_OpnoL5_L9CwjvEJPMqFXaZNvM0dK1BuGX6Q6Ji9NUW3MTnLbPR0TtYXe5DgSZe-ZP6w-EqMYjSeSeEBAhE93L-ys4E_ov_qO6xgGAHlkAB1w7Y8yWeXh4xRqZEwah5WssaJfE', false),
+  ('ChIJTTNA1C07w4gROEDyfilZDeQ', 'https://fbzetvkbhneptvfruilw.supabase.co/functions/v1/facility-photo?name=places%2FChIJTTNA1C07w4gROEDyfilZDeQ%2Fphotos%2FAaVGc3kBLw5jHBBo4WevIUCa7tccD3Ad1EZSAiFCdlBufE5lCAqXC36f9IR2B2RPh8lvaawwOLjSu28CiB_PFShdwDMKWQ_5pGSBjGqaXWoYS4Tm8ttd2H1WxsQhpCFC5ZGlq-wYLdcS6eVOFzFweK6Gz32nhDgo40Y9LrwrCA7X_iqXky229UY6wX1pUPCROjHY_M-vxx29lcYgCiA9s-l4DMjJoYZA0aMdCylTThoivRb1G9b2VQPkYSYwn6a16adBqXedrI63yNdnm5bLfUdmOOFBSw_y897aw7ezWco6bc8olAEUoJFBqfKrXwIDScuTqGyqTGTW_a_IDNJ-_hd2TaF-FXT8at21hU9DIpGITXXvyNFTWyQ3JZoOYkmdemBhJo0WKDRrIbSwUWq5Iz3kdpGe1zWrEok22GEkwlJMtkkguU5H&w=800', 'places/ChIJTTNA1C07w4gROEDyfilZDeQ/photos/AaVGc3kBLw5jHBBo4WevIUCa7tccD3Ad1EZSAiFCdlBufE5lCAqXC36f9IR2B2RPh8lvaawwOLjSu28CiB_PFShdwDMKWQ_5pGSBjGqaXWoYS4Tm8ttd2H1WxsQhpCFC5ZGlq-wYLdcS6eVOFzFweK6Gz32nhDgo40Y9LrwrCA7X_iqXky229UY6wX1pUPCROjHY_M-vxx29lcYgCiA9s-l4DMjJoYZA0aMdCylTThoivRb1G9b2VQPkYSYwn6a16adBqXedrI63yNdnm5bLfUdmOOFBSw_y897aw7ezWco6bc8olAEUoJFBqfKrXwIDScuTqGyqTGTW_a_IDNJ-_hd2TaF-FXT8at21hU9DIpGITXXvyNFTWyQ3JZoOYkmdemBhJo0WKDRrIbSwUWq5Iz3kdpGe1zWrEok22GEkwlJMtkkguU5H', false),
+  ('ChIJTTNA1C07w4gROEDyfilZDeQ', 'https://fbzetvkbhneptvfruilw.supabase.co/functions/v1/facility-photo?name=places%2FChIJTTNA1C07w4gROEDyfilZDeQ%2Fphotos%2FAaVGc3mvdk5Wl6NiQ4DRUdPpQ7fC6N0hP5ww1M_eKo_DhMQZn8eiXxGjmA_fd8ZBTDZO-pnxshSpz0ATFoXjGhLcaryD9hKZisyuWY_8ULiqhpzWrTm9Hlr69Shg-RePc1UAOwhnParRau0VET5CDgzxc-3Tn3EYEZc0AiZFK6V52iIBS2_zyEhQlKYyg5v2aMdJ0uB1bgvTtZxkFA9CTjpcFr5lEgOrB42VaIAsNvHVRe3dZZvl6jBcjZW8CdSkjy6hHFnvCrEWIKwTJ5ncioo8jC76LLv0UznRrfjJ4wDJcOIqnM9BQWfSYMIzoRbx7M2KoKLnlFMSbn0N1vOkwvtM0eU6GqEAP7v93k-P7dgKHz85cIYVEZ5yAwF1uTMnHALRwtDuu5qRfKg_Cxd9q-2bLpRcBTNS0n9X-dMeiD1PgI1e6g&w=800', 'places/ChIJTTNA1C07w4gROEDyfilZDeQ/photos/AaVGc3mvdk5Wl6NiQ4DRUdPpQ7fC6N0hP5ww1M_eKo_DhMQZn8eiXxGjmA_fd8ZBTDZO-pnxshSpz0ATFoXjGhLcaryD9hKZisyuWY_8ULiqhpzWrTm9Hlr69Shg-RePc1UAOwhnParRau0VET5CDgzxc-3Tn3EYEZc0AiZFK6V52iIBS2_zyEhQlKYyg5v2aMdJ0uB1bgvTtZxkFA9CTjpcFr5lEgOrB42VaIAsNvHVRe3dZZvl6jBcjZW8CdSkjy6hHFnvCrEWIKwTJ5ncioo8jC76LLv0UznRrfjJ4wDJcOIqnM9BQWfSYMIzoRbx7M2KoKLnlFMSbn0N1vOkwvtM0eU6GqEAP7v93k-P7dgKHz85cIYVEZ5yAwF1uTMnHALRwtDuu5qRfKg_Cxd9q-2bLpRcBTNS0n9X-dMeiD1PgI1e6g', false)
+) as v(google_place_id, url, name, is_primary)
+  on f.google_place_id = v.google_place_id
+on conflict (facility_id, google_photo_name) where google_photo_name is not null
+do update set url = excluded.url, is_primary = excluded.is_primary;

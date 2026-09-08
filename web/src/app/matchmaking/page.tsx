@@ -3,6 +3,16 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import {
+  AVAILABILITY_BLOCKS,
+  type AvailabilityDay,
+  type AvailabilityBlock,
+  scheduleOverlap,
+  overlapSlotCount,
+  describeOverlap,
+  normalizeSchedule,
+  type AvailabilitySchedule,
+} from "@shared/availability";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Heart, X, XCircle, Plug, MapPin, Star, ArrowRight, Trophy,
@@ -15,8 +25,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
+import { playStyleLabel } from "@shared/play-profile";
 import { getUserId } from "@/lib/dev-user";
-import { matchPartners } from "@/data/mock-data";
 import { PlayerProfileSheet } from "@/components/shared/player-profile-sheet";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -30,7 +40,8 @@ interface Partner {
   location: string;
   distance: string | null;
   availability: string | null;
-  play_style: string | null;
+  availability_schedule: unknown;
+  play_style: string[] | null;
   badges: string[];
   img: string;
   bio: string | null;
@@ -59,15 +70,37 @@ interface Filters {
 const DEFAULT_FILTERS: Filters = { format: "All", minDupr: "", maxDupr: "", availability: "All", maxDistance: "Any" };
 
 const FORMATS = ["All", "Mixed Doubles", "Men's Doubles", "Women's Doubles", "Singles"];
-const AVAIL_OPTIONS = ["All", "Weekends", "Weeknights", "Flexible", "Sat / Sun mornings", "Weekends + Tue evenings"];
+// Filters are predicates over the schedule, not prose matched against a derived
+// string. The old list ("Weekends + Tue evenings") was compared with `===`
+// against `profiles.availability`, so it only ever matched someone who had
+// picked the identical phrase from the identical dropdown — and matches nothing
+// at all now that the text is derived from the grid.
+const AVAIL_OPTIONS = ["All", "Mornings", "Afternoons", "Evenings", "Weekdays", "Weekends"] as const;
+
+function matchesAvailabilityFilter(schedule: AvailabilitySchedule, filter: string): boolean {
+  if (filter === "All") return true;
+  const has = (days: AvailabilityDay[], blocks: AvailabilityBlock[]) =>
+    days.some((d) => (schedule[d] ?? []).some((b) => blocks.includes(b)));
+  const week: AvailabilityDay[] = ["mon", "tue", "wed", "thu", "fri"];
+  const weekend: AvailabilityDay[] = ["sat", "sun"];
+  const all: AvailabilityDay[] = [...week, ...weekend];
+  switch (filter) {
+    case "Mornings":   return has(all, ["morning"]);
+    case "Afternoons": return has(all, ["afternoon"]);
+    case "Evenings":   return has(all, ["evening"]);
+    case "Weekdays":   return has(week, [...AVAILABILITY_BLOCKS]);
+    case "Weekends":   return has(weekend, [...AVAILABILITY_BLOCKS]);
+    default:           return true;
+  }
+}
 const DISTANCES = ["Any", "5 mi", "10 mi", "25 mi", "50 mi"];
 
 // ─── Compute match score ──────────────────────────────────────────────────────
 
 function computeMatch(
-  p: { dupr: number | null; availability: string | null; distance: string | null },
+  p: { dupr: number | null; availability_schedule: unknown; distance: string | null },
   myDupr: number | null,
-  myAvail: string | null,
+  mySchedule: AvailabilitySchedule,
 ): { pct: number; reasons: string[] } {
   let score = 0;
   const reasons: string[] = [];
@@ -75,8 +108,20 @@ function computeMatch(
   if (p.dupr && myDupr && Math.abs(p.dupr - myDupr) <= 0.5) {
     score += 35; reasons.push("Same DUPR range");
   }
-  if (p.availability && myAvail && p.availability === myAvail) {
-    score += 30; reasons.push("Matching availability");
+
+  // Real overlap — same day AND same block. This used to compare the derived
+  // `availability` summary by string equality, which is wrong in both
+  // directions: that summary drops the time of day, so two players both
+  // reading "Wed, Sat" scored the full 30 even when one meant Wednesday
+  // morning and the other Wednesday evening, while two people genuinely
+  // sharing Wednesday and Saturday scored zero because their summary strings
+  // differed. See AVAILABILITY_MODEL.md.
+  const overlap = scheduleOverlap(mySchedule, normalizeSchedule(p.availability_schedule));
+  if (overlap.length) {
+    // Weighted by how much time they actually share, so one coincidental slot
+    // does not read the same as a whole week in common.
+    score += Math.min(30, 15 + overlapSlotCount(overlap) * 5);
+    reasons.push(describeOverlap(overlap)!);
   }
   const dist = p.distance ? parseInt(p.distance) : 99;
   if (dist <= 10) { score += 25; reasons.push("Near you"); }
@@ -95,13 +140,18 @@ function profileToPartner(
     id: string; full_name: string; handle: string | null;
     dupr: number | null; skill_level: string | null;
     location_city: string | null; location_state: string | null;
-    avatar_url: string | null; bio: string | null; play_style: string | null;
+    avatar_url: string | null; bio: string | null; play_style: string[] | null;
     availability: string | null;
+    availability_schedule: unknown;
   },
   myDupr: number | null,
-  myAvail: string | null,
+  mySchedule: AvailabilitySchedule,
 ): Partner {
-  const { pct, reasons } = computeMatch({ dupr: p.dupr, availability: p.availability, distance: null }, myDupr, myAvail);
+  const { pct, reasons } = computeMatch(
+    { dupr: p.dupr, availability_schedule: p.availability_schedule, distance: null },
+    myDupr,
+    mySchedule,
+  );
   return {
     id: p.id,
     name: p.full_name,
@@ -111,8 +161,12 @@ function profileToPartner(
     location: [p.location_city, p.location_state].filter(Boolean).join(", ") || "Unknown",
     distance: null,
     availability: p.availability,
+    availability_schedule: p.availability_schedule,
     play_style: p.play_style,
-    badges: [p.play_style].filter(Boolean) as string[],
+    // One badge per style, rendered as labels. The column is a text[] of keys
+    // since the play_style migration; the comma-splitting this used to do is
+    // now the database's job, not the view's.
+    badges: (p.play_style ?? []).map(playStyleLabel),
     img: p.avatar_url ?? "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=600&h=800&fit=crop",
     bio: p.bio,
     matchPct: pct,
@@ -124,29 +178,6 @@ function profileToPartner(
   };
 }
 
-function mockToPartner(p: (typeof matchPartners)[0], myDupr: number | null, myAvail: string | null): Partner {
-  const { pct, reasons } = computeMatch({ dupr: p.dupr, availability: p.availability, distance: p.distance }, myDupr, myAvail);
-  return {
-    id: p.id,
-    name: p.name,
-    handle: null,
-    dupr: p.dupr,
-    skill_level: null,
-    location: p.location,
-    distance: p.distance,
-    availability: p.availability,
-    play_style: p.style,
-    badges: [p.style],
-    img: p.img,
-    bio: p.bio,
-    matchPct: pct,
-    matchReasons: reasons,
-    tournamentOverlap: pct > 70 ? "Austin Open" : null,
-    mutuals: Math.floor(pct / 20),
-    isTopRated: p.dupr >= 4.5,
-    isVerified: false,
-  };
-}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -258,9 +289,9 @@ function MatchmakingInner() {
   const [swipeDir, setSwipeDir] = useState<"left" | "right" | "up" | null>(null);
   const [myId, setMyId] = useState<string | null>(null);
   const [myDupr, setMyDupr] = useState<number | null>(null);
-  const [myAvail, setMyAvail] = useState<string | null>(null);
+  const [mySchedule, setMySchedule] = useState<AvailabilitySchedule>({});
   const [myLocation, setMyLocation] = useState<string | null>(null);
-  const [myStyle, setMyStyle] = useState<string | null>(null);
+  const [myStyle, setMyStyle] = useState<string[]>([]);
   const [myBio, setMyBio] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
@@ -290,28 +321,37 @@ function MatchmakingInner() {
       const user = { id: userId };
 
       // Get my profile for match scoring
-      const { data: me } = await supabase.from("profiles").select("dupr,availability,location_city,location_state,play_style,bio").eq("id", user.id).single();
+      const { data: me } = await supabase.from("profiles").select("dupr,availability,availability_schedule,location_city,location_state,play_style,bio").eq("id", user.id).single();
       const meDupr = me?.dupr ?? null;
-      const meAvail = me?.availability ?? null;
       setMyDupr(meDupr);
-      setMyAvail(meAvail);
+      const meSchedule = normalizeSchedule(me?.availability_schedule);
+      setMySchedule(meSchedule);
       setMyLocation([me?.location_city, me?.location_state].filter(Boolean).join(", ") || null);
-      setMyStyle(me?.play_style ?? null);
+      setMyStyle(me?.play_style ?? []);
       setMyBio(me?.bio ?? null);
 
       const { data: alreadySwiped } = await supabase.from("matchmaking_swipes").select("target_id").eq("requester_id", user.id);
       const swipedIds = new Set((alreadySwiped ?? []).map((s) => s.target_id));
 
+      // `is_discoverable` is the user's own "show me in matchmaking" switch,
+      // set from Match Settings on either platform. Mobile's finder has always
+      // honoured it (useFinderCandidates); web did not, so someone who opted
+      // out was hidden on one platform and still listed on the other
+      // (alignment audit, workstream A2).
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability")
+        .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule")
         .eq("role", "player")
+        .eq("is_discoverable", true)
         .neq("id", user.id)
         .order("dupr", { ascending: false })
         .limit(20);
 
-      const partners = (profiles ?? []).filter((p) => !swipedIds.has(p.id)).map((p) => profileToPartner(p, meDupr, meAvail));
-      setDeck(partners.length > 0 ? [...partners].reverse() : matchPartners.map((p) => mockToPartner(p, meDupr, meAvail)));
+      // An empty deck shows the "ALL CAUGHT UP" panel. It used to deal five
+      // invented players instead — swipeable, likeable, and indistinguishable
+      // from real people (item 6.1).
+      const partners = (profiles ?? []).filter((p) => !swipedIds.has(p.id)).map((p) => profileToPartner(p, meDupr, meSchedule));
+      setDeck([...partners].reverse());
 
       const { data: userProfiles } = await supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name");
       setAllUsers((userProfiles ?? []) as MessagingUserProfile[]);
@@ -325,8 +365,8 @@ function MatchmakingInner() {
       if (incomingSwipes && incomingSwipes.length > 0) {
         const incomingIds = incomingSwipes.map((s) => s.requester_id).filter((id) => !swipedIds.has(id));
         if (incomingIds.length > 0) {
-          const { data: ip } = await supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability").in("id", incomingIds);
-          setIncoming((ip ?? []).map((p) => profileToPartner(p, meDupr, meAvail)));
+          const { data: ip } = await supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule").in("id", incomingIds);
+          setIncoming((ip ?? []).map((p) => profileToPartner(p, meDupr, meSchedule)));
         }
       }
 
@@ -334,8 +374,8 @@ function MatchmakingInner() {
       const { data: mutual } = await supabase.from("v_mutual_matches").select("user_a,user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
       if (mutual && mutual.length > 0) {
         const ids = mutual.map((m) => m.user_a === user.id ? m.user_b : m.user_a).filter(Boolean) as string[];
-        const { data: mp } = await supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability").in("id", ids);
-        setMatches((mp ?? []).map((p) => profileToPartner(p, meDupr, meAvail)));
+        const { data: mp } = await supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule").in("id", ids);
+        setMatches((mp ?? []).map((p) => profileToPartner(p, meDupr, meSchedule)));
       }
 
       // Tournament partner pool — if launched from a tournament CTA
@@ -349,17 +389,17 @@ function MatchmakingInner() {
         if (tData) {
           const { data: partnerRegs } = await supabase
             .from("registrations")
-            .select("player_id, profiles!player_id(id, full_name, handle, dupr, skill_level, location_city, location_state, avatar_url, bio, play_style, availability)")
+            .select("player_id, profiles!player_id(id, full_name, handle, dupr, skill_level, location_city, location_state, avatar_url, bio, play_style, availability, availability_schedule)")
             .eq("tournament_id", tournamentIdParam)
             .eq("needs_partner", true)
             .in("status", ["held", "registered", "checked_in"])
             .neq("player_id", user.id);
 
           const tournamentPartners = (partnerRegs ?? [])
-            .map((r) => r.profiles as { id: string; full_name: string; handle: string | null; dupr: number | null; skill_level: string | null; location_city: string | null; location_state: string | null; avatar_url: string | null; bio: string | null; play_style: string | null; availability: string | null } | null)
+            .map((r) => r.profiles as { id: string; full_name: string; handle: string | null; dupr: number | null; skill_level: string | null; location_city: string | null; location_state: string | null; avatar_url: string | null; bio: string | null; play_style: string[] | null; availability: string | null; availability_schedule: unknown } | null)
             .filter(Boolean)
             .map((p) => ({
-              ...profileToPartner(p!, meDupr, meAvail),
+              ...profileToPartner(p!, meDupr, meSchedule),
               tournamentOverlap: (tData as { name: string }).name,
             }));
 
@@ -371,8 +411,9 @@ function MatchmakingInner() {
 
       setLoading(false);
     }
-    load().catch(() => {
-      setDeck(matchPartners.map((p) => mockToPartner(p, null, null)));
+    load().catch((err) => {
+      console.error("[matchmaking] failed to load candidates", err);
+      setDeck([]);
       setLoading(false);
     });
   }, [tournamentIdParam]);
@@ -481,7 +522,7 @@ function MatchmakingInner() {
   const visibleDeck = deck.filter((p) => {
     if (filters.minDupr && (p.dupr ?? 0) < parseFloat(filters.minDupr)) return false;
     if (filters.maxDupr && (p.dupr ?? 99) > parseFloat(filters.maxDupr)) return false;
-    if (filters.availability !== "All" && p.availability !== filters.availability) return false;
+    if (!matchesAvailabilityFilter(normalizeSchedule(p.availability_schedule), filters.availability)) return false;
     if (filters.maxDistance !== "Any") {
       const maxMi = parseInt(filters.maxDistance);
       const dist = p.distance ? parseInt(p.distance) : 999;
@@ -849,7 +890,7 @@ function MatchmakingInner() {
                         {/* Chips */}
                         <div className="flex gap-2 flex-wrap mb-4">
                           {topCard.availability && <InfoChip label="AVAILABILITY" value={topCard.availability} />}
-                          {topCard.play_style && <InfoChip label="PLAY STYLE" value={topCard.play_style} />}
+                          {topCard.play_style?.length ? <InfoChip label="PLAY STYLE" value={topCard.play_style.map(playStyleLabel).join(", ")} /> : null}
                         </div>
 
                         {/* Why matched */}

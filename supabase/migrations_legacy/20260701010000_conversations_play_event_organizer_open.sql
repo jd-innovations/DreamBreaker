@@ -1,0 +1,114 @@
+-- =============================================================================
+-- Fix: "Message Organizer" is shown to any visitor on a play_event's page
+-- (apps/mobile/src/app/community/[id].tsx OverviewContent), not just joined
+-- participants. The previous fix (20260701004108) required the current user
+-- to already be a claimed participant before they could DM the organizer,
+-- which is stricter than the product's actual UI, so RLS still rejected the
+-- insert for a user who hadn't joined.
+--
+-- Fix: any authenticated user may open a direct conversation with a
+-- play_event organizer, no prior join required. The reverse direction
+-- (organizer -> participant) still requires the target to be a claimed
+-- participant of that organizer's event.
+-- =============================================================================
+
+drop policy if exists "conversations: participants insert" on public.conversations;
+
+create policy "conversations: participants insert"
+  on public.conversations for insert
+  with check (
+    (
+      conversation_type = 'direct'
+      and (participant_a = (select auth.uid()) or participant_b = (select auth.uid()))
+      and (
+        exists (
+          select 1
+            from public.partner_likes l1
+            join public.partner_likes l2
+              on l1.from_user_id = l2.to_user_id
+             and l1.to_user_id   = l2.from_user_id
+             and l2.kind         = 'like'
+           where l1.kind         = 'like'
+             and l1.from_user_id in (participant_a, participant_b)
+             and l1.to_user_id   in (participant_a, participant_b)
+        )
+        or exists (
+          select 1
+            from public.profiles      dir
+            join public.tournaments    t   on t.director_id    = dir.id
+            join public.registrations  r   on r.tournament_id  = t.id
+           where dir.id = (select auth.uid())
+             and (dir.role = 'director' or dir.is_director = true)
+             and dir.director_status = 'approved'
+             and r.player_id in (participant_a, participant_b)
+             and r.player_id != (select auth.uid())
+             and r.status    in ('held', 'registered', 'checked_in')
+        )
+        or exists (
+          select 1
+            from public.registrations  r
+            join public.tournaments    t   on t.id = r.tournament_id
+           where r.player_id   = (select auth.uid())
+             and r.status      in ('held', 'registered', 'checked_in')
+             and t.director_id in (participant_a, participant_b)
+             and t.director_id != (select auth.uid())
+        )
+        -- Organizer messaging a claimed participant of their own play_event.
+        or exists (
+          select 1
+            from public.play_events       pe
+            join public.play_participants pp on pp.event_id = pe.id
+           where pe.organizer_id = (select auth.uid())
+             and pp.claimed_by  in (participant_a, participant_b)
+             and pp.claimed_by  != (select auth.uid())
+        )
+        -- CHANGED: any authenticated user messaging a play_event organizer —
+        -- no prior join required, matching the "Message Organizer" CTA shown
+        -- on every event page regardless of join status.
+        or exists (
+          select 1
+            from public.play_events pe
+           where pe.organizer_id in (participant_a, participant_b)
+             and pe.organizer_id != (select auth.uid())
+        )
+      )
+    )
+    or (
+      conversation_type = 'play_event'
+      and created_by = (select auth.uid())
+      and related_play_event_id is not null
+      and (
+        exists (
+          select 1 from public.play_events pe
+           where pe.id = related_play_event_id
+             and pe.organizer_id = (select auth.uid())
+        )
+        or exists (
+          select 1 from public.play_participants pp
+           where pp.event_id = related_play_event_id
+             and pp.claimed_by = (select auth.uid())
+        )
+      )
+    )
+    or (
+      conversation_type in ('tournament', 'announcement')
+      and created_by = (select auth.uid())
+      and related_tournament_id is not null
+      and (
+        exists (
+          select 1 from public.tournaments t
+           where t.id = related_tournament_id
+             and t.director_id = (select auth.uid())
+        )
+        or exists (
+          select 1 from public.registrations r
+           where r.tournament_id = related_tournament_id
+             and r.player_id = (select auth.uid())
+             and r.status in ('held', 'registered', 'checked_in')
+        )
+      )
+    )
+  );
+
+comment on policy "conversations: participants insert" on public.conversations is
+  'Direct: mutual Partner Finder like, tournament director<->registrant, play_event organizer<->claimed participant, or anyone<->play_event organizer (Message Organizer CTA). Play_event/tournament: creator must be organizer/director or a participant/registrant of the target event.';

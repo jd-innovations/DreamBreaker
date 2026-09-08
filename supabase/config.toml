@@ -1,4 +1,4 @@
-# Supabase project configuration — DreamBreaker PB
+# Supabase project configuration — Pickleball App
 # https://supabase.com/docs/reference/cli/config
 
 [api]
@@ -26,6 +26,23 @@ enabled = true
 file_size_limit = "5MiB"
 
 [auth]
+# NOTE: this file configures the LOCAL stack (`supabase start`) only. The hosted
+# projects read their auth settings from the Supabase Dashboard, so the
+# localhost URLs below are correct here and must NOT be replaced with production
+# URLs — doing so breaks local development without changing production at all.
+#
+# Production/staging equivalents must be set in Dashboard → Authentication →
+# URL Configuration, and are NOT provable from this repo:
+#   Site URL:        the deployed web origin
+#   Redirect allow-list must include, at minimum:
+#     - <web origin>/auth/callback        (web OAuth, see web/src/app/auth/callback/route.ts)
+#     - pickleballapp://                 (mobile OAuth return, makeRedirectUri() in lib/auth.ts)
+#     - pickleballapp://reset-password   (password recovery deep link)
+#     - https://pickleballapp.app/**      (universal links, see lib/appLinks.ts)
+#     - exp://** for Expo Go / dev-client testing, if used
+# Google/Apple provider client IDs and secrets are also Dashboard-side for hosted
+# projects; the env() references below only resolve for the local stack.
+# See TODO1.1_EXECUTION_PLAN.md item 1.2 for the full verification checklist.
 enabled = true
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["http://localhost:3000/auth/callback"]
@@ -45,11 +62,13 @@ enable_signup = false
 
 [auth.external.google]
 enabled = true
-# Set via environment: SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID / SECRET
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
 
 [auth.external.apple]
 enabled = true
-# Set via environment: SUPABASE_AUTH_EXTERNAL_APPLE_CLIENT_ID / SECRET
+client_id = "env(SUPABASE_AUTH_EXTERNAL_APPLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
 
 [realtime]
 enabled = true
@@ -60,3 +79,63 @@ enabled = true
 # Storage buckets — provisioned by migration or dashboard
 # tournament-covers: public read, 5MB max, images only
 # player-avatars:    public read, 2MB max, images only
+
+# facility-photo: public Google Places photo proxy (no auth so <Image> can load).
+# Requires the GOOGLE_PLACES_API_KEY secret set on the deployed function.
+[functions.facility-photo]
+verify_jwt = false
+
+# event-weather: Google Weather forecast proxy for the event-detail weather widget.
+# Requires the GOOGLE_WEATHER_API_KEY secret set on the deployed function.
+[functions.event-weather]
+verify_jwt = true
+
+# send-transactional-email: shared Resend sender for all real transactional email
+# (DB trigger-driven + the admin Communications composer). Requires the
+# RESEND_API_KEY and SUPABASE_SERVICE_ROLE_KEY secrets set on the deployed function.
+[functions.send-transactional-email]
+verify_jwt = true
+
+# waitlist-sweeper: expires stale holds/waitlist offers, promotes the next
+# waitlisted player, and emails affected players via send-transactional-email.
+# Scheduled every 15 min via pg_cron (20260807020000_schedule_waitlist_sweeper.sql).
+[functions.waitlist-sweeper]
+verify_jwt = true
+
+# create-tournament-entry-payment-intent: first domain-specific consumer of the
+# shared payment foundation (supabase/functions/_shared/payments.ts). Computes
+# the authoritative entry fee server-side, then delegates to the generic
+# createPayment() primitive. Requires STRIPE_SECRET_KEY and
+# SUPABASE_SERVICE_ROLE_KEY secrets set on the deployed function.
+[functions.create-tournament-entry-payment-intent]
+verify_jwt = true
+
+# Per-player doubles/mixed entry fees. The first creates the team and both
+# obligations then charges only the INITIATING player's share; the second is
+# how the invited partner pays their own. Neither registers anyone — that
+# happens in the webhook finalizer, once per player. verify_jwt = true is
+# load-bearing: both derive the payer from the JWT, never from the body.
+# Requires STRIPE_SECRET_KEY and SUPABASE_SERVICE_ROLE_KEY secrets.
+[functions.create-tournament-team-entry-payment-intent]
+verify_jwt = true
+
+[functions.create-tournament-team-member-payment-intent]
+verify_jwt = true
+
+# create-coach-offer-purchase-payment-intent: Coach Marketplace V1 Phase 3's
+# real-money entry point. All price/commission/inventory logic lives in the
+# create_coach_offer_purchase() Postgres RPC, not here — this function only
+# hands the RPC's result to the shared createPayment() primitive. Requires
+# STRIPE_SECRET_KEY and SUPABASE_SERVICE_ROLE_KEY secrets set on the
+# deployed function (shared with create-tournament-entry-payment-intent).
+[functions.create-coach-offer-purchase-payment-intent]
+verify_jwt = true
+
+# delete-account: self-service account deletion (TODO1.1_EXECUTION_PLAN.md 1.3).
+# verify_jwt = true is load-bearing, not cosmetic — it is the outer gate that
+# stops an unauthenticated caller from ever reaching the handler. The handler
+# independently re-verifies the JWT and derives the target user id from it, so
+# there is no request parameter by which one user could delete another. Requires
+# SUPABASE_SERVICE_ROLE_KEY set on the deployed function.
+[functions.delete-account]
+verify_jwt = true

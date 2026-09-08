@@ -1,0 +1,166 @@
+import { getSession, signUp } from '@/lib/auth';
+import { track } from '@/lib/analytics';
+import { updateProfile } from '@/lib/services/profile';
+import { AVAILABILITY_OPTIONS } from './mockData';
+import type { OnboardingDraft } from './state';
+import {
+  PLAY_STYLE_KEYS,
+  PREFERRED_FORMAT_KEYS,
+  PLAY_INTENSITY_KEYS,
+} from '@shared/play-profile';
+
+/**
+ * Routes the onboarding "playing style" selections onto the three columns they
+ * actually belong to. Mirrors web/src/lib/onboarding/transform.ts — keep both
+ * in step until packages/shared covers mobile too.
+ */
+function splitPlayingStyle(selected: string[]): {
+  play_style?: string[];
+  preferred_formats?: string[];
+  play_intensity?: string;
+} {
+  const styles = selected.filter((k) => (PLAY_STYLE_KEYS as readonly string[]).includes(k));
+  const formats = selected.filter((k) => (PREFERRED_FORMAT_KEYS as readonly string[]).includes(k));
+  const intensity = selected.find((k) => (PLAY_INTENSITY_KEYS as readonly string[]).includes(k));
+  return {
+    ...(styles.length ? { play_style: styles } : {}),
+    ...(formats.length ? { preferred_formats: formats } : {}),
+    ...(intensity ? { play_intensity: intensity } : {}),
+  };
+}
+
+// self_rating option keys collected during onboarding don't all match
+// profiles.skill_level's CHECK constraint values — translate the ones that
+// differ; already-valid bands pass through unchanged.
+const SKILL_LEVEL_MAP: Record<string, string> = {
+  beginner: '2.5-3.0',
+  '2.5-below': '2.5-3.0',
+  '4.5-plus': '4.5+',
+};
+
+function toSkillLevel(selfRating: string | null): string | undefined {
+  if (!selfRating) return undefined;
+  return SKILL_LEVEL_MAP[selfRating] ?? selfRating;
+}
+
+// profiles.self_rating is a separate numeric-string column (CHECK'd
+// downstream by par_v1_foundation.sql's initializer, which prefers it over
+// the coarser skill_level band) and is what useFinderCandidates.ts falls
+// back to for compatibility scoring when dupr is null. Map each onboarding
+// band to its midpoint, matching PAR_RATING_SPEC.md's "Initial PAR" table.
+const SELF_RATING_NUMERIC_MAP: Record<string, string> = {
+  beginner: '2.0',
+  '2.5-below': '2.4',
+  '3.0-3.5': '3.25',
+  '3.5-4.0': '3.75',
+  '4.0-4.5': '4.25',
+  '4.5-plus': '4.75',
+};
+
+function toSelfRatingNumeric(selfRating: string | null): string | undefined {
+  if (!selfRating) return undefined;
+  return SELF_RATING_NUMERIC_MAP[selfRating];
+}
+
+// profiles.hand's CHECK constraint uses 'right'/'left'/'ambidextrous';
+// onboarding's handedness options are 'right_handed'/'left_handed'/'ambidextrous'.
+function toHand(handedness: string | null): string | undefined {
+  if (!handedness) return undefined;
+  if (handedness === 'right_handed') return 'right';
+  if (handedness === 'left_handed') return 'left';
+  return handedness;
+}
+
+function availabilityLabel(key: string): string {
+  return AVAILABILITY_OPTIONS.find(o => o.key === key)?.label ?? key;
+}
+
+// Maps the local onboarding draft to real `profiles` column values (minus
+// full_name, handled separately by callers). Single source of truth for
+// both the OAuth path (authenticated UPDATE) and the email path (values
+// ride into raw_user_meta_data at signUp() — see fn_handle_new_user() in
+// migration 20260805000000).
+function draftToProfileFields(draft: OnboardingDraft) {
+  return {
+    avatar_url: draft.avatarUrl ?? undefined,
+    gender: draft.gender ?? undefined,
+    hand: toHand(draft.handedness),
+    skill_level: toSkillLevel(draft.selfRating),
+    self_rating: toSelfRatingNumeric(draft.selfRating),
+    // The "playing style" step asks three questions at once — see
+    // PLAY_STYLE_VOCABULARY.md. Its keys were already the right keys; they
+    // were simply all written to one column, and only the first of them.
+    //
+    //   how you play   -> play_style        (text[])
+    //   what you play  -> preferred_formats (text[])
+    //   how seriously  -> play_intensity    (text, single)
+    //
+    // Every selection is kept now. This used to store playingStyle[0] and
+    // discard the other two of the three the user was invited to pick.
+    ...splitPlayingStyle(draft.playingStyle),
+    // profiles.availability is a human-readable summary string (see
+    // edit-profile.tsx's summarizeSchedule); onboarding's tag list doesn't
+    // map cleanly onto the day/block availability_schedule grid, so store a
+    // readable join here and leave availability_schedule for a later pass.
+    availability: draft.availability.length ? draft.availability.map(availabilityLabel).join(', ') : undefined,
+    date_of_birth: draft.dateOfBirth ?? undefined,
+    home_court_id: draft.homeCourt?.id ?? undefined,
+    location_city: draft.estimatedCity ?? undefined,
+    location_state: draft.estimatedState ?? undefined,
+    location_lat: draft.estimatedLat ?? undefined,
+    location_lng: draft.estimatedLng ?? undefined,
+    story_radius_miles: draft.searchRadiusMiles,
+    onboarding_intent: draft.intent.length ? draft.intent : undefined,
+  };
+}
+
+export type FinalizeOnboardingResult =
+  | { ok: true; needsEmailConfirmation: boolean }
+  | { ok: false; error: string };
+
+// Called once, at the true end of onboarding (all-set.tsx's CTA). Writes
+// every collected draft field to Supabase:
+//  - OAuth (Google/Apple) already has a live session from create-account.tsx,
+//    where both providers authenticate for real before onboarding continues
+//    -> authenticated UPDATE via updateProfile().
+//  - Email/password has no session yet (confirmation required, see
+//    supabase/config.toml) -> the fields ride into signUp()'s metadata and
+//    the DB trigger writes them atomically with account creation.
+export async function finalizeOnboarding(draft: OnboardingDraft): Promise<FinalizeOnboardingResult> {
+  const fullName = `${draft.firstName} ${draft.lastName}`.trim();
+  const fields = draftToProfileFields(draft);
+
+  try {
+    const session = await getSession();
+
+    if (session?.user) {
+      await updateProfile(session.user.id, { ...fields, full_name: fullName || undefined });
+      // A session existed, so the profile was actually written.
+      track('profile_completed', { source: 'onboarding', method: draft.authMethod ?? 'email' });
+      return { ok: true, needsEmailConfirmation: false };
+    }
+
+    if (!draft.profileEmail || !draft.emailPassword) {
+      // Reaching here with an OAuth method means the provider session was lost
+      // between create-account.tsx and this screen (signed out, token expired,
+      // app reinstalled mid-onboarding). Apple used to land here by design --
+      // its button was a no-op stub -- but it now authenticates for real up
+      // front alongside Google, so this is a genuine session-loss case for
+      // both providers rather than an unimplemented feature.
+      if (draft.authMethod === 'apple' || draft.authMethod === 'google') {
+        const providerLabel = draft.authMethod === 'apple' ? 'Apple' : 'Google';
+        return { ok: false, error: `Your ${providerLabel} sign-in didn't carry through. Please go back and sign in again to finish creating your account.` };
+      }
+      return { ok: false, error: 'Missing account details. Please go back and enter your email and password.' };
+    }
+
+    await signUp(draft.profileEmail, draft.emailPassword, fullName, fields);
+    // Deliberately no profile_completed here. The fields ride into
+    // raw_user_meta_data and the profile row is written by the trigger only
+    // once the email is confirmed — counting it now would claim a completed
+    // profile for everyone who never opens the confirmation mail.
+    return { ok: true, needsEmailConfirmation: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Something went wrong. Please try again.' };
+  }
+}

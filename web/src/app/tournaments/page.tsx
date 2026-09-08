@@ -7,7 +7,6 @@ import { BookmarkButton } from "@/components/shared/bookmark-button";
 import { ShareButton } from "@/components/shared/share-button";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
-import { tournaments as mockTournaments } from "@/data/mock-data";
 
 const formats = ["All", "Doubles", "Singles", "Mixed", "Juniors"];
 const levels = ["All", "3.0 – 4.0", "3.5 – 4.5", "4.0 – 5.0", "4.5+", "U18"];
@@ -46,42 +45,34 @@ function statusLabel(status: string) {
   return status === "filling_fast" ? "Filling Fast" : status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// Adapt mock data to the same shape so the card component stays uniform
-function mockToRow(t: (typeof mockTournaments)[0]): TournamentRow {
-  const [city, state] = t.location.split(", ");
-  return {
-    id: t.id, name: t.name, city, state: state ?? "",
-    venue_name: t.venue, venue_address: null, cover_img_url: t.img,
-    format: t.format.split("·")[0].trim().toLowerCase().replace(/ /g, "_"),
-    skill_min: null, skill_max: null,
-    draw_size: t.spots, spots_filled: t.filled,
-    entry_fee_cents: t.entryFee * 100, hold_fee_cents: t.holdFee * 100,
-    prize_pool_cents: parseInt(t.prize.replace(/[^0-9]/g, "")) * 100,
-    event_date: t.dateISO,
-    status: t.status.toLowerCase().replace(/ /g, "_"),
-  };
-}
-
 export default function TournamentsPage() {
   const [q, setQ] = useState("");
   const [format, setFormat] = useState("All");
   const [level, setLevel] = useState("All");
   const [rows, setRows] = useState<TournamentRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
     async function load() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("tournaments")
         .select("id,name,city,state,venue_name,venue_address,cover_img_url,format,skill_min,skill_max,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,prize_pool_cents,event_date,status")
         .in("status", ["open", "filling_fast", "registration_closed"])
         .order("event_date", { ascending: true });
-      setRows(data && data.length > 0 ? data : mockTournaments.map(mockToRow));
+      if (error) throw error;
+      setRows(data ?? []);
       setLoading(false);
     }
-    load().catch(() => {
-      setRows(mockTournaments.map(mockToRow));
+    // This used to render six fabricated tournaments — entry fees, prize pools
+    // and all — whenever the query returned nothing OR threw. The error branch
+    // was the dangerous one: the page invented events precisely when the
+    // database was unreachable (item 6.1).
+    load().catch((err) => {
+      console.error("[tournaments] failed to load tournaments", err);
+      setRows([]);
+      setLoadFailed(true);
       setLoading(false);
     });
   }, []);
@@ -141,6 +132,18 @@ export default function TournamentsPage() {
               </div>
             ))}
           </div>
+        ) : loadFailed ? (
+          <div className="text-center py-20 text-muted-foreground">
+            <p className="mb-3">We couldn&apos;t load tournaments just now.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="font-display tracking-[0.2em] text-sm text-primary hover:underline"
+            >
+              TRY AGAIN
+            </button>
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="text-center py-20 text-muted-foreground">No tournaments are open for registration right now.</div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">No tournaments match your filters.</div>
         ) : (
@@ -165,7 +168,7 @@ export default function TournamentsPage() {
                       <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur text-white text-[10px] font-mono tracking-widest">{lvlDisplay}</span>
                     </div>
                     <div className="absolute bottom-3 left-3 right-3">
-                      <div className="font-display text-2xl text-white tracking-wide leading-tight">{t.name}</div>
+                      <div className="font-display text-2xl text-white tracking-tight leading-[0.85]">{t.name}</div>
                       <div className="text-xs text-white/70 font-mono mt-1">{fmtDisplay}</div>
                     </div>
                   </Link>
@@ -197,7 +200,7 @@ export default function TournamentsPage() {
                         <BookmarkButton tournamentId={t.id} size="sm" />
                         <ShareButton
                           title={t.name}
-                          text={`Check out ${t.name} on Compete Pickleball — ${t.city}, ${t.state}`}
+                          text={`Check out ${t.name} on Pickleball App — ${t.city}, ${t.state}`}
                           url={`${typeof window !== "undefined" ? window.location.origin : ""}/tournaments/${t.id}`}
                           size="sm"
                         />
