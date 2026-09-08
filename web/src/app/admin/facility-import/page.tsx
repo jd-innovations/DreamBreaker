@@ -13,8 +13,13 @@
  * updating an already-claimed/verified facility has no RLS policy that would
  * let an ordinary authenticated admin do it.
  *
- * Photo ingestion is deliberately out of scope here — see
- * scripts/import-facilities-csv.mjs for the existing (CLI-only) photo path.
+ * Photo (2026-09-08 update): the PRIMARY photo only, same as the CLI script
+ * — this is not a gallery importer, and admin_commit_facility_import upserts
+ * exactly one facility_photos row per facility. The review card below shows
+ * that photo (or a graceful placeholder — the facility-photo proxy can be
+ * down independent of anything this page does) plus a live Google Maps link
+ * from the row's own lat/lng, so an admin can sanity-check what a row will
+ * actually look like before it becomes a real facility.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -22,6 +27,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
+import { getSupabaseUrl } from "@/lib/supabase/env";
 import { parseFacilityCsv, type StageRowInput } from "@/lib/facilityImport";
 
 type MatchType = "confident" | "possible" | "new" | "invalid";
@@ -142,7 +148,8 @@ export default function FacilityImportPage() {
     setDecisions({});
     try {
       const text = await file.text();
-      const { rows: parsedRows, skipped } = parseFacilityCsv(text);
+      const functionsBaseUrl = `${getSupabaseUrl()}/functions/v1`;
+      const { rows: parsedRows, skipped } = parseFacilityCsv(text, functionsBaseUrl);
       setParseSkipped(skipped);
       if (parsedRows.length === 0) {
         toast.error("No usable rows found in this CSV.");
@@ -412,6 +419,22 @@ export default function FacilityImportPage() {
   );
 }
 
+interface RowMapped {
+  name?: string; city?: string; state?: string; address?: string;
+  phone?: string | null; website?: string | null; description?: string | null;
+  court_count?: number; indoor_courts?: number; outdoor_courts?: number;
+  surface_type?: string | null; amenities?: string[]; skill_levels?: string[];
+  latitude?: number | null; longitude?: number | null;
+  photo_url?: string | null;
+}
+
+function mapsSearchUrl(lat: number | null | undefined, lng: number | null | undefined, name: string) {
+  if (lat != null && lng != null) {
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
+}
+
 function RowCard({
   row, decision, onDecide, readOnly,
 }: {
@@ -420,24 +443,93 @@ function RowCard({
   onDecide: (rowId: string, decision: Decision) => void;
   readOnly: boolean;
 }) {
-  const name = (row.mapped as { name?: string }).name ?? "(no name)";
-  const city = (row.mapped as { city?: string }).city ?? "";
-  const state = (row.mapped as { state?: string }).state ?? "";
+  const [expanded, setExpanded] = useState(false);
+  const [photoFailed, setPhotoFailed] = useState(false);
+  const m = row.mapped as RowMapped;
+  const name = m.name ?? "(no name)";
+  const city = m.city ?? "";
+  const state = m.state ?? "";
+  const hasPhoto = !!m.photo_url && !photoFailed;
 
   return (
     <div className="border border-border rounded-xl p-4 bg-card">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="font-medium text-sm truncate">{name}</div>
-          <div className="text-xs text-muted-foreground">Row {row.row_number} · {[city, state].filter(Boolean).join(", ")}</div>
+      <div className="flex items-start gap-3">
+        {/* Photo preview — same proxy URL the app itself will use. A failed
+            load (e.g. the facility-photo function or the underlying Google
+            token being unavailable) falls back to a plain placeholder rather
+            than a broken-image icon, since that failure is independent of
+            this import and shouldn't read as "the import is broken". */}
+        <div className="w-20 h-20 rounded-lg bg-secondary border border-border flex items-center justify-center flex-shrink-0 overflow-hidden">
+          {hasPhoto ? (
+            // Admin-only preview thumbnail from a controlled proxy — next/image's
+            // remote-domain allowlist isn't worth configuring for this one page.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={m.photo_url!}
+              alt=""
+              className="w-full h-full object-cover"
+              onError={() => setPhotoFailed(true)}
+            />
+          ) : (
+            <span className="text-[10px] text-muted-foreground text-center px-1">
+              {m.photo_url ? "Photo unavailable" : "No photo"}
+            </span>
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="font-medium text-sm truncate">{name}</div>
+              <div className="text-xs text-muted-foreground">Row {row.row_number} · {[city, state].filter(Boolean).join(", ")}</div>
+            </div>
+            <span className={`text-[10px] font-mono px-2 py-1 rounded-full border flex-shrink-0 ${MATCH_COLOR[row.match_type]}`}>
+              {row.match_type.toUpperCase()}
+            </span>
+          </div>
+
           {row.error && <div className="text-xs text-destructive mt-1">{row.error}</div>}
           {row.match_reason && <div className="text-xs text-muted-foreground mt-1">Matched: {row.match_reason}</div>}
           {row.applied && <div className="text-xs text-primary mt-1">Applied ✓</div>}
           {row.apply_error && <div className="text-xs text-destructive mt-1">Apply error: {row.apply_error}</div>}
+
+          <div className="flex items-center gap-3 mt-2">
+            <a
+              href={mapsSearchUrl(m.latitude, m.longitude, `${name} ${city} ${state}`)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline"
+            >
+              View on map ↗
+            </a>
+            <button onClick={() => setExpanded((v) => !v)} className="text-xs text-muted-foreground hover:text-foreground">
+              {expanded ? "Hide details" : "Show details"}
+            </button>
+          </div>
+
+          {expanded && (
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 mt-3 text-xs border-t border-border pt-3">
+              <dt className="text-muted-foreground">Address</dt>
+              <dd className="truncate">{m.address || "—"}</dd>
+              <dt className="text-muted-foreground">Phone</dt>
+              <dd>{m.phone || "—"}</dd>
+              <dt className="text-muted-foreground">Website</dt>
+              <dd className="truncate">{m.website || "—"}</dd>
+              <dt className="text-muted-foreground">Courts</dt>
+              <dd>{m.court_count ?? 0} total ({m.indoor_courts ?? 0} indoor / {m.outdoor_courts ?? 0} outdoor)</dd>
+              <dt className="text-muted-foreground">Surface</dt>
+              <dd>{m.surface_type || "—"}</dd>
+              <dt className="text-muted-foreground">Amenities</dt>
+              <dd className="truncate">{m.amenities?.length ? m.amenities.join(", ") : "—"}</dd>
+              {m.description && (
+                <>
+                  <dt className="text-muted-foreground">Description</dt>
+                  <dd className="col-span-1">{m.description}</dd>
+                </>
+              )}
+            </dl>
+          )}
         </div>
-        <span className={`text-[10px] font-mono px-2 py-1 rounded-full border flex-shrink-0 ${MATCH_COLOR[row.match_type]}`}>
-          {row.match_type.toUpperCase()}
-        </span>
       </div>
 
       {row.match_type === "possible" && !readOnly && (

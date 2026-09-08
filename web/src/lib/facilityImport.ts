@@ -5,10 +5,17 @@
 // for one still works with the other. Diverges only where it has to:
 // - No SQL literal building (produces plain JS values for the
 //   admin_stage_facility_import RPC's jsonb payload instead).
-// - No photo handling — kept separate on purpose (see the migration header).
 // - No import_batch_id/created_by/created_at/updated_at columns — those are
 //   the server side's job now (admin_stage_facility_import /
 //   admin_commit_facility_import), not the uploader's.
+//
+// Photo handling (2026-09-08 update): only the PRIMARY photo, same as the
+// CLI script — this is not a gallery importer. Extracts the Google Places
+// photo resource name from the export's `photos` column and builds the same
+// facility-photo proxy URL the script builds, so admin_commit_facility_import
+// can upsert one facility_photos row per facility on commit. Still no
+// gallery, still no re-upload/re-host of the image — this only ever points
+// at Google's photo via the existing proxy.
 
 export interface MappedFacilityRow {
   google_place_id: string | null;
@@ -61,6 +68,10 @@ export interface MappedFacilityRow {
   google_rating_count: number | null;
   google_types: string[];
   business_status: string | null;
+  /** Facility-photo proxy URL for the primary photo, or null if the CSV has none. */
+  photo_url: string | null;
+  /** Google Places photo resource name ("places/{id}/photos/{ref}"), or null. */
+  photo_google_name: string | null;
 }
 
 export interface StageRowInput {
@@ -133,11 +144,53 @@ function toArr(v: string): string[] {
   return v.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-function mapRow(get: (key: string) => string): MappedFacilityRow {
+// Same resource-name shape the facility-photo edge function's NAME_RE
+// requires — a photo whose name doesn't match this is silently dropped
+// rather than stored, same as the CLI script.
+const GOOGLE_PHOTO_NAME_RE = /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/;
+
+interface RawPhotoEntry {
+  url?: string;
+  is_primary?: boolean;
+}
+
+function extractPrimaryPhoto(
+  rawPhotosJson: string,
+  functionsBaseUrl: string,
+): { url: string | null; googleName: string | null } {
+  const none = { url: null, googleName: null };
+  if (!rawPhotosJson || !rawPhotosJson.trim()) return none;
+
+  let photos: unknown;
+  try {
+    photos = JSON.parse(rawPhotosJson);
+  } catch {
+    return none;
+  }
+  const list = Array.isArray(photos) ? (photos as RawPhotoEntry[]) : [];
+  const primary = list.find((p) => p?.is_primary) ?? list[0] ?? null;
+  if (!primary?.url) return none;
+
+  let name: string | null = null;
+  try {
+    const parsed = new URL(primary.url);
+    const n = parsed.searchParams.get("name");
+    name = n && GOOGLE_PHOTO_NAME_RE.test(n) ? n : null;
+  } catch {
+    name = null;
+  }
+  if (!name) return none;
+
+  const proxyUrl = `${functionsBaseUrl.replace(/\/$/, "")}/facility-photo?name=${encodeURIComponent(name)}&w=800`;
+  return { url: proxyUrl, googleName: name };
+}
+
+function mapRow(get: (key: string) => string, functionsBaseUrl: string): MappedFacilityRow {
   const indoor = toIntZ(get("indoor_courts"));
   const outdoor = toIntZ(get("outdoor_courts"));
   const total = toIntZ(get("total_courts"));
   const courtCount = Math.max(total, indoor + outdoor);
+  const photo = extractPrimaryPhoto(get("photos"), functionsBaseUrl);
 
   return {
     google_place_id: toStr(get("google_place_id")),
@@ -191,10 +244,12 @@ function mapRow(get: (key: string) => string): MappedFacilityRow {
     google_rating_count: toInt(get("google_rating_count")),
     google_types: toArr(get("google_types")),
     business_status: toStr(get("business_status")),
+    photo_url: photo.url,
+    photo_google_name: photo.googleName,
   };
 }
 
-export function parseFacilityCsv(text: string): ParsedCsv {
+export function parseFacilityCsv(text: string, functionsBaseUrl: string): ParsedCsv {
   const rawRows = parseCsv(text).filter((r) => r.length > 1 && r.some((c) => c !== ""));
   if (rawRows.length < 2) {
     return { rows: [], skipped: [{ rowNumber: 0, reason: "CSV has no data rows" }] };
@@ -216,7 +271,7 @@ export function parseFacilityCsv(text: string): ParsedCsv {
     const raw: Record<string, string> = {};
     header.forEach((h, j) => { raw[h] = r[j] ?? ""; });
 
-    rows.push({ row_number: i, raw, mapped: mapRow(get) });
+    rows.push({ row_number: i, raw, mapped: mapRow(get, functionsBaseUrl) });
   }
 
   return { rows, skipped };
