@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,11 @@ import { colors } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import { usePurchaseHistory } from '@/hooks/usePurchaseHistory';
 import type { Purchase, PurchasePurposeType } from '@/lib/paymentTypes';
+import {
+  fetchSavedPaymentMethods, deletePaymentMethod, setDefaultPaymentMethod, paymentMethodErrorMessage,
+  type SavedPaymentMethod,
+} from '@/lib/payments/paymentMethods';
+import { useSavedPaymentMethods } from '@/lib/payments/useSavedPaymentMethods';
 
 // Theme-backed alias — brand values resolve from @/theme.
 // purple/teal are payment-brand accent colors — documented exception.
@@ -80,12 +85,15 @@ function Div() {
   return <View style={s.div} />;
 }
 
-// ─── Visa logo ───────────────────────────────────────────────────────────────
+// ─── Card brand badge ────────────────────────────────────────────────────────
+// Generic (not Visa-specific — a real card list has any brand Stripe
+// supports), navy rather than a brand color since no per-brand color table
+// exists here.
 
-function VisaLogo() {
+function CardBrandBadge({ brand }: { brand: string }) {
   return (
     <View style={s.visaBox}>
-      <Text style={s.visaText}>VISA</Text>
+      <Text style={s.visaText} numberOfLines={1}>{brand.toUpperCase()}</Text>
     </View>
   );
 }
@@ -111,6 +119,59 @@ function OutlineCircle({ name }: { name: string }) {
     <View style={s.outlineCircle}>
       <Ionicons name={name as never} size={20} color={L.blue} />
     </View>
+  );
+}
+
+// ─── Saved payment method row ────────────────────────────────────────────────
+
+function PaymentMethodRow({
+  method, onManage,
+}: {
+  method: SavedPaymentMethod; onManage: (method: SavedPaymentMethod) => void;
+}) {
+  return (
+    <TouchableOpacity style={s.row} activeOpacity={0.7} onPress={() => onManage(method)}>
+      <CardBrandBadge brand={method.brand} />
+      <Text style={[s.rowLabel, { flex: 1 }]}>
+        {method.brand.charAt(0).toUpperCase() + method.brand.slice(1)} •••• {method.last4}
+      </Text>
+      {method.isDefault && (
+        <View style={s.defaultBadge}>
+          <Text style={s.defaultText}>DEFAULT</Text>
+        </View>
+      )}
+      <Ionicons name="chevron-forward" size={16} color={L.textMuted} style={{ marginLeft: 8 }} />
+    </TouchableOpacity>
+  );
+}
+
+// ─── Payment methods section (loading / error / empty / list) ───────────────
+
+function PaymentMethodsSection({
+  methods, loading, error, adding, onAdd, onManage,
+}: {
+  methods: SavedPaymentMethod[]; loading: boolean; error: string | null; adding: boolean;
+  onAdd: () => void; onManage: (method: SavedPaymentMethod) => void;
+}) {
+  return (
+    <Group>
+      {loading ? (
+        <StateRow><ActivityIndicator color={L.textMuted} /></StateRow>
+      ) : error ? (
+        <StateRow><Text style={s.stateText}>{error}</Text></StateRow>
+      ) : methods.length === 0 ? (
+        <StateRow><Text style={s.stateText}>No saved payment methods yet.</Text></StateRow>
+      ) : (
+        methods.map(m => <React.Fragment key={m.id}><PaymentMethodRow method={m} onManage={onManage} /><Div /></React.Fragment>)
+      )}
+      <TouchableOpacity style={s.row} activeOpacity={0.7} onPress={onAdd} disabled={adding}>
+        {adding
+          ? <View style={s.outlineCircle}><ActivityIndicator size="small" color={L.blue} /></View>
+          : <OutlineCircle name="add" />}
+        <Text style={[s.rowLabel, { flex: 1 }]}>Add Payment Method</Text>
+        <Ionicons name="chevron-forward" size={16} color={L.textMuted} />
+      </TouchableOpacity>
+    </Group>
   );
 }
 
@@ -226,6 +287,73 @@ function NavRow({
 export default function PaymentsSettingsScreen() {
   const insets = useSafeAreaInsets();
   const { purchases, loading, refreshing, error, refresh } = usePurchaseHistory(PREVIEW_LIMIT);
+  const { addPaymentMethod, processing: addingCard } = useSavedPaymentMethods();
+
+  const [methods, setMethods] = useState<SavedPaymentMethod[]>([]);
+  const [methodsLoading, setMethodsLoading] = useState(true);
+  const [methodsError, setMethodsError] = useState<string | null>(null);
+
+  const loadMethods = useCallback(async () => {
+    setMethodsError(null);
+    try {
+      setMethods(await fetchSavedPaymentMethods());
+    } catch {
+      setMethodsError('Could not load your payment methods.');
+    } finally {
+      setMethodsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadMethods(); }, [loadMethods]);
+
+  async function handleAddPaymentMethod() {
+    const outcome = await addPaymentMethod();
+    if (outcome.status === 'saved') {
+      setMethods(prev => [outcome.paymentMethod, ...prev]);
+    } else if (outcome.status === 'failed') {
+      Alert.alert('Could not save card', outcome.message);
+    } else if (outcome.status === 'error') {
+      Alert.alert('Could not save card', paymentMethodErrorMessage(outcome.code));
+    }
+    // 'canceled': the user closed the sheet themselves — nothing to say.
+  }
+
+  function handleManagePaymentMethod(method: SavedPaymentMethod) {
+    const label = `${method.brand.charAt(0).toUpperCase() + method.brand.slice(1)} •••• ${method.last4}`;
+    const options: { text: string; style?: 'destructive' | 'cancel'; onPress?: () => void }[] = [];
+    if (!method.isDefault) {
+      options.push({
+        text: 'Set as Default',
+        onPress: async () => {
+          const result = await setDefaultPaymentMethod(method.id);
+          if (result.ok) {
+            setMethods(prev => prev.map(m => ({ ...m, isDefault: m.id === method.id })));
+          } else {
+            Alert.alert('Could not update default card', paymentMethodErrorMessage(result.code));
+          }
+        },
+      });
+    }
+    options.push({
+      text: 'Remove Card',
+      style: 'destructive',
+      onPress: async () => {
+        const result = await deletePaymentMethod(method.id);
+        if (result.ok) {
+          loadMethods(); // re-fetch rather than splice locally: a promoted new default comes from the server
+        } else {
+          Alert.alert('Could not remove card', paymentMethodErrorMessage(result.code));
+        }
+      },
+    });
+    options.push({ text: 'Cancel', style: 'cancel' });
+    Alert.alert(label, undefined, options);
+  }
+
+  async function handleRefresh() {
+    refresh();
+    loadMethods();
+  }
 
   return (
     <View style={s.root}>
@@ -243,34 +371,22 @@ export default function PaymentsSettingsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 40 }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       >
         <Text style={s.intro}>
           Manage your payment methods{'\n'}and view your purchase history.
         </Text>
 
         {/* ── Payment Methods ── */}
-        {/* TODO: placeholder. No payment-methods table exists — saved cards
-            need Stripe Customer/PaymentMethod support before this is real. */}
         <SectionHeader label="PAYMENT METHODS" />
-        <Group>
-          {/* Saved card */}
-          <TouchableOpacity style={s.row} activeOpacity={0.7}>
-            <VisaLogo />
-            <Text style={[s.rowLabel, { flex: 1 }]}>Visa •••• 4321</Text>
-            <View style={s.defaultBadge}>
-              <Text style={s.defaultText}>DEFAULT</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={L.textMuted} style={{ marginLeft: 8 }} />
-          </TouchableOpacity>
-          <Div />
-          {/* Add method */}
-          <TouchableOpacity style={s.row} activeOpacity={0.7}>
-            <OutlineCircle name="add" />
-            <Text style={[s.rowLabel, { flex: 1 }]}>Add Payment Method</Text>
-            <Ionicons name="chevron-forward" size={16} color={L.textMuted} />
-          </TouchableOpacity>
-        </Group>
+        <PaymentMethodsSection
+          methods={methods}
+          loading={methodsLoading}
+          error={methodsError}
+          adding={addingCard}
+          onAdd={handleAddPaymentMethod}
+          onManage={handleManagePaymentMethod}
+        />
 
         {/* Security note */}
         <View style={s.noteRow}>
@@ -372,13 +488,13 @@ const s = StyleSheet.create({
 
   // Visa logo
   visaBox: {
-    width: 52, height: 36, borderRadius: shape.badge,
-    backgroundColor: '#1A1F71',
+    width: 52, height: 36, borderRadius: shape.badge, paddingHorizontal: 4,
+    backgroundColor: L.navy,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   visaText: {
-    color: '#FFFFFF', fontSize: text.body.size, fontWeight: '500',
-    letterSpacing: 1, fontStyle: 'italic',
+    color: '#FFFFFF', fontSize: text.microLabel.size, fontWeight: '700',
+    letterSpacing: 0.5,
   },
 
   // Default badge

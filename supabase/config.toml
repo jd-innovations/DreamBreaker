@@ -131,6 +131,27 @@ verify_jwt = true
 [functions.create-coach-offer-purchase-payment-intent]
 verify_jwt = true
 
+# Saved payment methods (payments-settings.tsx). Requires STRIPE_SECRET_KEY
+# and SUPABASE_SERVICE_ROLE_KEY secrets set on all three deployed functions.
+# create-setup-intent lazily creates the Stripe Customer (profiles.stripe_customer_id,
+# same pattern as stripe_connect_account_id in create-connect-onboarding-link)
+# and returns everything PaymentSheet's customer flow needs in one round trip.
+[functions.create-setup-intent]
+verify_jwt = true
+
+# confirm-payment-method: re-retrieves the SetupIntent from Stripe server-side
+# before writing a payment_methods row -- never trusts a client-reported
+# PaymentSheet success alone. See the function's own comment for why this is
+# safe to do synchronously rather than via the web app's webhook route.
+[functions.confirm-payment-method]
+verify_jwt = true
+
+# delete-payment-method: detaches from Stripe first, then removes the local
+# row, so the two never diverge with the row surviving a card Stripe no
+# longer has attached.
+[functions.delete-payment-method]
+verify_jwt = true
+
 # delete-account: self-service account deletion (TODO1.1_EXECUTION_PLAN.md 1.3).
 # verify_jwt = true is load-bearing, not cosmetic — it is the outer gate that
 # stops an unauthenticated caller from ever reaching the handler. The handler
