@@ -3,17 +3,18 @@
  *
  * Two things live here:
  *
- * 1. PerfTraceDiagnosticBanner - renders REGARDLESS of the PERF flag, because a
- *    diagnostic gated on the thing being diagnosed can never tell you why the
- *    thing is off. It reports the raw flag value, the computed PERF_TRACE_ON,
- *    whether the overlay mounted, and which bundle is running.
+ * 1. PerfTraceDiagnosticBanner - does not require the PERF flag to be *correct*,
+ *    because a diagnostic gated on the thing being diagnosed can never tell you
+ *    why the thing is off. It reports the raw flag value, the computed
+ *    PERF_TRACE_ON, whether the overlay mounted, and which bundle is running.
  *
  * 2. PerfTraceOverlay - the actual trace viewer, gated on PERF_TRACE_ON.
  *
- * Neither can reach production:
- * - The banner is hidden when EXPO_PUBLIC_APP_ENV is 'production' OR 'internal',
- *   so it appears on a local Metro/dev-client run only - never in the preview
- *   (Build B) that measures perceived performance, and never in production.
+ * Neither can reach production, and both fail CLOSED:
+ * - The banner requires APP_ENV === 'development' (from featureFlags, which
+ *   resolves an unset value to 'production' in a release build) AND the
+ *   perf-trace flag to be explicitly present. An undefined EXPO_PUBLIC_APP_ENV
+ *   can no longer reveal it - see the gate below for the bug this replaced.
  * - The overlay keeps the harness's own unmodified double gate.
  *
  * DELETE THIS FILE with the rest of the harness. Tagged `// PERF-TRACE`.
@@ -26,6 +27,9 @@ import {
 import {
   PERF_TRACE_ON, flush, perfReset, getLastBatch, getBufferedCount, subscribeToFlush,
 } from '@/lib/devPerfTrace';
+// Single source of truth for the build environment. Deliberately not the raw
+// process.env value - see the DIAG_VISIBLE gate below.
+import { APP_ENV } from '@/lib/featureFlags';
 
 /**
  * Change this string whenever you want to prove the device picked up a fresh
@@ -37,10 +41,27 @@ const BUNDLE_MARKER = 'PERF-DIAG-v1';
 const RAW_FLAG = process.env.EXPO_PUBLIC_PERF_TRACE;
 const RAW_APP_ENV = process.env.EXPO_PUBLIC_APP_ENV;
 
-// Deliberately excludes 'internal' as well as 'production': Build B (preview,
-// APP_ENV=internal) must stay visually clean, since it is the build used to
-// judge perceived performance.
-const DIAG_VISIBLE = RAW_APP_ENV !== 'production' && RAW_APP_ENV !== 'internal';
+// FAILS CLOSED. The previous gate was
+//   RAW_APP_ENV !== 'production' && RAW_APP_ENV !== 'internal'
+// which evaluates to TRUE when RAW_APP_ENV is undefined - so any bundle that
+// lost the variable showed this banner to real users. Not hypothetical: a bare
+// `eas update` drops EXPO_PUBLIC_APP_ENV (see scripts/publish-update.js, which
+// exists because of exactly that), and an absent value is precisely the case
+// the old gate failed open on.
+//
+// Two independent conditions, both requiring something to be explicitly set:
+//
+//  1. APP_ENV from featureFlags, not the raw env var. That helper is the single
+//     source of truth and resolves an unset or unrecognized value to
+//     'production' in a release build, so forgetting the variable can only ever
+//     hide diagnostics, never reveal them. Only 'development' shows the banner;
+//     'internal' stays clean because Build B is what perceived performance is
+//     judged on.
+//  2. The perf-trace flag must be deliberately present. Presence rather than
+//     === '1', because reporting a mistyped flag value is the banner's whole
+//     job - but an absent flag now keeps it hidden.
+const FLAG_PRESENT = typeof RAW_FLAG === 'string' && RAW_FLAG.length > 0;
+const DIAG_VISIBLE = APP_ENV === 'development' && FLAG_PRESENT;
 
 function bundleSource(): string {
   try {
