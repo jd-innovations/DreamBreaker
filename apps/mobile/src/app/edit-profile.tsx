@@ -24,6 +24,18 @@ import { notifyProfileUpdated } from '@/lib/profileEvents';
 import { FacilityPickerModal } from '@/components/FacilityPicker';
 import { fetchFacilityById, type FacilityWithPrimaryPhoto } from '@/lib/supabase/facilities';
 import { FALLBACK_LOCATION, useCurrentLocation } from '@/lib/location';
+import { supabase } from '@/lib/supabase';
+import { GAME_TYPES, type GameType } from '@/lib/partnerLookingFor';
+
+const GAME_TYPE_SUBS: Record<GameType, string> = {
+  "Men's Singles": "Play men's singles",
+  "Women's Singles": "Play women's singles",
+  "Men's Doubles": "Play men's doubles",
+  "Women's Doubles": "Play women's doubles",
+  'Mixed Doubles': 'Play mixed doubles',
+  'Community Play': 'Join community games',
+  'Tournament Partner': 'Find partners for tournaments',
+};
 
 // Theme-backed alias — brand values resolve from @/theme.
 // blue = iOS system color for Cancel/Done modal actions (kept intentionally).
@@ -405,13 +417,13 @@ export default function EditProfileScreen() {
   const [hand, setHand] = useState<'left' | 'right'>('right');
   const [years, setYears] = useState(0);
 
-  // Toggles (local only for now)
-  const [partnerFinder,     setPartnerFinder]     = useState(true);
-  const [communityPlay,     setCommunityPlay]     = useState(true);
-  const [mixedDoubles,      setMixedDoubles]      = useState(true);
-  const [mensDoubles,       setMensDoubles]       = useState(false);
-  const [womensDoubles,     setWomensDoubles]     = useState(false);
-  const [tournamentPartner, setTournamentPartner] = useState(true);
+  // Looking For — real, backed by partner_preferences (see
+  // match/preferences.tsx, the other screen reading/writing this table).
+  const [activelyLooking, setActivelyLooking] = useState(true);
+  const [gameTypes,       setGameTypes]       = useState<string[]>([]);
+
+  // Marketplace / Privacy toggles remain local-only — separate, pre-existing
+  // gap, out of scope here.
   const [allowMarketplace,     setAllowMarketplace]     = useState(true);
   const [showSellerReputation, setShowSellerReputation] = useState(true);
   const [allowDMs,             setAllowDMs]             = useState(true);
@@ -449,7 +461,24 @@ export default function EditProfileScreen() {
         });
       }
     }).finally(() => setLoading(false));
+
+    // Own row — RLS permits owner read directly, no RPC needed (that's only
+    // required for reading *other* users' rows, see useFinderCandidates.ts).
+    supabase
+      .from('partner_preferences')
+      .select('actively_looking, game_types')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data: prefs }) => {
+        if (!prefs) return; // no row yet -- table defaults (true / []) already match initial state
+        setActivelyLooking(prefs.actively_looking);
+        setGameTypes(prefs.game_types ?? []);
+      });
   }, [user?.id, authLoading]);
+
+  function toggleGameType(type: GameType) {
+    setGameTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]));
+  }
 
   function handleSelectHomeCourt(facility: FacilityWithPrimaryPhoto) {
     setHomeCourtId(facility.id);
@@ -512,6 +541,20 @@ export default function EditProfileScreen() {
         await updateProfile(userId, baseUpdates);
       }
       notifyProfileUpdated();
+
+      // Separate table, separate write -- a failure here must not be reported
+      // as if the whole save failed, since the profile fields above already
+      // committed.
+      const { error: prefsError } = await supabase.from('partner_preferences').upsert({
+        user_id: userId,
+        actively_looking: activelyLooking,
+        game_types: gameTypes,
+      });
+      if (prefsError) {
+        Alert.alert('Partial save', 'Profile saved, but Looking For preferences could not be saved. Please try again.');
+        return;
+      }
+
       goBack();
     } catch (e: any) {
       // DB is unchanged on failure; avatarUri still holds the local pick, so
@@ -637,12 +680,22 @@ export default function EditProfileScreen() {
         {/* ── Looking For ── */}
         <SectionHeader label="LOOKING FOR" />
         <Group>
-          <ToggleRow label="Partner Finder"     sub="Find players to play with"        value={partnerFinder}     onChange={setPartnerFinder} />
-          <ToggleRow label="Community Play"     sub="Join community games"             value={communityPlay}     onChange={setCommunityPlay} />
-          <ToggleRow label="Mixed Doubles"      sub="Play mixed doubles"               value={mixedDoubles}      onChange={setMixedDoubles} />
-          <ToggleRow label="Men's Doubles"      sub="Play men's doubles"               value={mensDoubles}       onChange={setMensDoubles} />
-          <ToggleRow label="Women's Doubles"    sub="Play women's doubles"             value={womensDoubles}     onChange={setWomensDoubles} />
-          <ToggleRow label="Tournament Partner" sub="Find partners for tournaments"    value={tournamentPartner} onChange={setTournamentPartner} last />
+          <ToggleRow
+            label="Actively Looking"
+            sub="Show your profile in the Partner Finder"
+            value={activelyLooking}
+            onChange={setActivelyLooking}
+          />
+          {GAME_TYPES.map((type, i) => (
+            <ToggleRow
+              key={type}
+              label={type}
+              sub={GAME_TYPE_SUBS[type]}
+              value={gameTypes.includes(type)}
+              onChange={() => toggleGameType(type)}
+              last={i === GAME_TYPES.length - 1}
+            />
+          ))}
         </Group>
 
         {/* ── Marketplace ── */}

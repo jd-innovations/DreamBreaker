@@ -42,9 +42,10 @@ type ProfileRow = {
   // compiler.
   play_style: string[] | null;
   availability: string | null;
-  looking_status: string;
   date_of_birth: string | null;
 };
+
+type LookingFor = { activelyLooking: boolean; gameTypes: string[] };
 
 type Mine = { dupr: number | null; availability: string | null };
 
@@ -84,7 +85,15 @@ function parseRadiusMiles(label: string): number {
   return Number.isFinite(n) ? n : Infinity;
 }
 
-function mapProfile(row: ProfileRow, mine: Mine, distance: number | null): FinderCandidate {
+// Caps the card's "looking for" line at 2 game types plus a "+N" suffix, so
+// a player who selected every option doesn't render an unbounded comma list.
+function summarizeGameTypes(gameTypes: string[]): string {
+  if (gameTypes.length === 0) return 'Partner';
+  if (gameTypes.length <= 2) return gameTypes.join(', ');
+  return `${gameTypes.slice(0, 2).join(', ')} +${gameTypes.length - 2}`;
+}
+
+function mapProfile(row: ProfileRow, mine: Mine, distance: number | null, lookingFor: LookingFor | undefined): FinderCandidate {
   // Prefer a verified DUPR; fall back to the player's self-rating. Track which
   // one we used so the card doesn't mislabel a self-rating as a DUPR.
   const selfNum = row.self_rating ? parseFloat(row.self_rating) : NaN;
@@ -116,7 +125,7 @@ function mapProfile(row: ProfileRow, mine: Mine, distance: number | null): Finde
     dupr: duprNum,
     location,
     distance,
-    lookingFor: humanize(row.looking_status) || 'Partner',
+    lookingFor: summarizeGameTypes(lookingFor?.gameTypes ?? []),
     skillRange: row.skill_level || '',
     tags1,
     bio: row.bio || '',
@@ -149,6 +158,7 @@ export type UseFinderCandidatesOptions = {
 
 export function useFinderCandidates(opts?: UseFinderCandidatesOptions) {
   const [rows, setRows] = useState<ProfileRow[]>([]);
+  const [lookingForByUser, setLookingForByUser] = useState<Map<string, LookingFor>>(new Map());
   const [mine, setMine] = useState<Mine>({ dupr: null, availability: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -171,7 +181,7 @@ export function useFinderCandidates(opts?: UseFinderCandidatesOptions) {
         supabase
           .from('profiles')
           .select(
-            'id, full_name, avatar_url, bio, location_city, location_state, location_lat, location_lng, dupr, self_rating, skill_level, hand, play_style, availability, looking_status, date_of_birth'
+            'id, full_name, avatar_url, bio, location_city, location_state, location_lat, location_lng, dupr, self_rating, skill_level, hand, play_style, availability, date_of_birth'
           )
           .eq('is_discoverable', true)
           .neq('id', user?.id ?? '')
@@ -201,16 +211,23 @@ export function useFinderCandidates(opts?: UseFinderCandidatesOptions) {
 
       // Only candidates who are still actively looking (defaults to true when
       // a candidate has never set preferences, per the partner_preferences
-      // schema default).
+      // schema default). partner_preferences' only RLS policy is owner-only,
+      // so reading another user's row requires the get_partner_looking_for
+      // RPC (migration 20260907181827) -- a direct .from() select here
+      // silently returns nothing for anyone but the caller.
+      let lookingForNext = new Map<string, LookingFor>();
       if (candidateRows.length > 0) {
-        const { data: candidatePrefs } = await supabase
-          .from('partner_preferences')
-          .select('user_id, actively_looking')
-          .in('user_id', candidateRows.map((r) => r.id));
-        const notLooking = new Set(
-          (candidatePrefs ?? []).filter((p) => !p.actively_looking).map((p) => p.user_id)
+        const { data: candidatePrefs } = await (supabase as any).rpc('get_partner_looking_for', {
+          candidate_ids: candidateRows.map((r) => r.id),
+        });
+        const prefRows = (candidatePrefs ?? []) as { user_id: string; actively_looking: boolean; game_types: string[] }[];
+        lookingForNext = new Map(
+          prefRows.map((p) => [p.user_id, { activelyLooking: p.actively_looking, gameTypes: p.game_types ?? [] }])
         );
-        candidateRows = candidateRows.filter((r) => !notLooking.has(r.id));
+        candidateRows = candidateRows.filter((r) => {
+          const pref = lookingForNext.get(r.id);
+          return pref ? pref.activelyLooking : true;
+        });
       }
 
       // Skill-range filter from the caller's own saved preferences. Other
@@ -228,6 +245,7 @@ export function useFinderCandidates(opts?: UseFinderCandidatesOptions) {
       }
 
       setRows(candidateRows);
+      setLookingForByUser(lookingForNext);
       setMine(mineNext);
       setLoading(false);
     }
@@ -259,8 +277,8 @@ export function useFinderCandidates(opts?: UseFinderCandidatesOptions) {
       // the radius is finite. Candidates with unknown coordinates are kept
       // rather than silently hidden on missing data.
       .filter(({ distance }) => distance == null || !Number.isFinite(radiusMiles) || distance <= radiusMiles)
-      .map(({ row, distance }) => mapProfile(row, mine, distance));
-  }, [rows, mine, myCoords?.lat, myCoords?.lng, radiusMiles]);
+      .map(({ row, distance }) => mapProfile(row, mine, distance, lookingForByUser.get(row.id)));
+  }, [rows, mine, myCoords?.lat, myCoords?.lng, radiusMiles, lookingForByUser]);
 
   return { candidates, loading, error };
 }

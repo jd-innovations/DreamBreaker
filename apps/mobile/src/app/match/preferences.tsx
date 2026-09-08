@@ -12,6 +12,7 @@ import { colors, spacing } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
 import { useSupportContext } from '@/lib/support/supportContext';
+import { GAME_TYPES } from '@/lib/partnerLookingFor';
 
 const L = {
   bg: colors.bg, page: colors.page, navy: colors.navy,
@@ -20,7 +21,6 @@ const L = {
   success: colors.success,
 };
 
-const GAME_TYPES = ["Men's Singles", "Women's Singles", "Men's Doubles", "Women's Doubles", 'Mixed Doubles', 'Community Play'];
 const SKILL_RANGES = ['3.0–3.5', '3.5–4.0', '4.0–4.5', '4.5–5.0', '5.0+'];
 const DISTANCE_STEPS = ['5 mi', '25 mi', '50 mi', '100+ mi'];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -36,7 +36,7 @@ const sl = StyleSheet.create({
 });
 
 function ChipGroup({ options, selected, onToggle, multi = true }: {
-  options: string[];
+  options: readonly string[];
   selected: string[];
   onToggle: (v: string) => void;
   multi?: boolean;
