@@ -53,3 +53,17 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
     .is('read_at', null);
   if (error) console.warn('markAllNotificationsRead failed', error);
 }
+
+// For notifications inserted with a stable idempotency_key (see
+// notify_play_event_invite / notify_group_invite), so accepting or declining
+// an invite from the Received tab can also clear its duplicate row in the
+// generic Activity feed, instead of leaving it — and its unread badge —
+// stuck until the user opens it there directly.
+export async function markNotificationReadByKey(idempotencyKey: string): Promise<void> {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('idempotency_key', idempotencyKey)
+    .is('read_at', null);
+  if (error) console.warn('markNotificationReadByKey failed', error);
+}

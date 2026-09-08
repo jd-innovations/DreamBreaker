@@ -27,7 +27,8 @@ import {
   type SentGroupInviteDetails,
 } from '@/lib/supabase/groupInvites';
 import {
-  fetchNotifications, markNotificationRead, markAllNotificationsRead, type AppNotification,
+  fetchNotifications, markNotificationRead, markAllNotificationsRead, markNotificationReadByKey,
+  type AppNotification,
 } from '@/lib/supabase/notifications';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -464,6 +465,7 @@ export default function InvitesScreen() {
       await acceptPlayEventInvite(invite, user.id, profile?.full_name ?? 'Player', user.email ?? '');
       setGameInvites(prev => prev.filter(i => i.id !== invite.id));
       refreshReceivedInvites();
+      markNotificationReadByKey(`play-event-invite/${invite.id}`).then(refreshNotifications);
     } catch (err) {
       Alert.alert('Could not join', err instanceof Error ? err.message : 'Please try again.');
     } finally {
@@ -477,6 +479,7 @@ export default function InvitesScreen() {
       await declinePlayEventInvite(invite.id);
       setGameInvites(prev => prev.filter(i => i.id !== invite.id));
       refreshReceivedInvites();
+      markNotificationReadByKey(`play-event-invite/${invite.id}`).then(refreshNotifications);
     } finally {
       setRespondingId(null);
     }
@@ -488,6 +491,7 @@ export default function InvitesScreen() {
       await acceptGroupInvite(invite);
       setGroupInvites(prev => prev.filter(i => i.id !== invite.id));
       refreshReceivedGroupInvites();
+      markNotificationReadByKey(`group-invite/${invite.id}`).then(refreshNotifications);
       if (invite.group_id) router.push(`/groups/${invite.group_id}` as never);
     } catch (err) {
       Alert.alert('Could not join group', err instanceof Error ? err.message : 'Please try again.');
@@ -502,6 +506,7 @@ export default function InvitesScreen() {
       await declineGroupInvite(invite.id);
       setGroupInvites(prev => prev.filter(i => i.id !== invite.id));
       refreshReceivedGroupInvites();
+      markNotificationReadByKey(`group-invite/${invite.id}`).then(refreshNotifications);
     } finally {
       setRespondingId(null);
     }
