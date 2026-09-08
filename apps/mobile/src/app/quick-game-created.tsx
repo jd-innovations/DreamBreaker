@@ -8,7 +8,7 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { colors, spacing, iconCircle } from '@/theme';
+import { colors, spacing, iconCircle } from '@/theme';
 import { EmptyState, LoadingState } from '@/components/states/ScreenState';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -29,14 +29,13 @@ import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilitie
 import { createCommunityShareMessage } from '@/lib/communityShare';
 import { FacilityCard } from '@/components/FacilityCard';
 import { VenueMapCard } from '@/components/VenueMapCard';
+import { eventCoverSource } from '@/lib/eventCover';
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
 
 const { width: SW } = Dimensions.get('window');
 const HERO_H = Math.round((SW - spacing.screenH * 2) * (9 / 16));
 
-const FALLBACK_PHOTO =
-  'https://images.unsplash.com/photo-1564977695759-da1be1ceb25c?w=800&h=450&fit=crop&q=80';
 const HOST_AVATAR =
   'https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?w=120&h=120&fit=crop&q=80';
 
@@ -213,7 +212,7 @@ function playEventToDisplay(e: PlayEvent) {
   return {
     id:           e.id,
     title:        e.name,
-    imageUri:     e.cover_url ?? FALLBACK_PHOTO,
+    imageUri:     e.cover_url ?? null,
     date:         e.event_date,
     startTime,
     locationName: e.venue_name ?? e.location,
@@ -273,7 +272,7 @@ export default function QuickGameCreatedScreen() {
     ? {
         id:            localGame.id,
         title:         localGame.title,
-        imageUri:      localGame.imageUri ?? FALLBACK_PHOTO,
+        imageUri:      localGame.imageUri ?? null,
         date:          localGame.date,
         startTime:     localGame.startTime,
         locationName:  localGame.locationName,
@@ -282,7 +281,7 @@ export default function QuickGameCreatedScreen() {
         status:        localGame.status,
       }
     : {
-        id: 'demo', title: 'Thursday Open Play', imageUri: FALLBACK_PHOTO,
+        id: 'demo', title: 'Thursday Open Play', imageUri: null,
         date: new Date().toISOString(), startTime: new Date().toISOString(),
         locationName: 'Lakewood Ranch Courts', skillRange: '3.5 – 4.0',
         playersNeeded: 4, status: 'open' as const,
@@ -604,7 +603,7 @@ export default function QuickGameCreatedScreen() {
         {/* ── FULL-BLEED HERO — scrolls away with the rest of the content ── */}
         <View style={s.hero}>
           <Image
-            source={{ uri: g.imageUri || FALLBACK_PHOTO }}
+            source={eventCoverSource(g.imageUri)}
             style={StyleSheet.absoluteFill}
             resizeMode="cover"
           />
