@@ -13,6 +13,7 @@ import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
+import { getEventShell } from '@/lib/eventShellCache';   // F7 fix
 import { isTournamentCompleted, getAllBrackets } from '@/lib/directorBracketStore';
 import { isTournamentCompleted as fetchHasPublishedResults } from '@/lib/supabase/brackets';
 import { StatusChip, AddToCalendarButton } from '@/components';
@@ -72,6 +73,10 @@ const L = {
   redBg:     colors.dangerBg,
 };
 
+// Fallback only. Previously used unconditionally — the hero never showed a
+// director's real cover image at all, regardless of tournament.coverImgUrl,
+// which read as a jarring flash-to-wrong-image once the F7 shell (which does
+// use the real cover) started showing the correct photo first.
 const HERO_PHOTO     = 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&h=600&fit=crop&q=80';
 const DIRECTOR_PHOTO = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&q=80';
 
@@ -261,9 +266,19 @@ export default function TournamentDetail() {
   const [regDivIds, setRegDivIds]   = useState<Set<string>>(new Set());
   const [heldSpots, setHeldSpots]   = useState<import('@/lib/tournamentStore').HeldSpot[]>([]);
   const [tournament, setTournament] = useState<Tournament | null>(null);
+  // F7 fix: `tournament` isn't in the focus effect's useCallback deps below
+  // (it never was), so reading it directly there would close over a stale
+  // value. A ref mirror gives the effect a live read without changing when
+  // the callback identity itself changes.
+  const tournamentRef = useRef<Tournament | null>(null);
+  tournamentRef.current = tournament;
   const [divisions, setDivisions]   = useState<DivisionData[]>([]);
   const [loading, setLoading]       = useState(true);
   const { id } = useLocalSearchParams<{ id: string }>();
+  // F7 fix: same shell-cache pattern as community/[id].tsx — a first-paint
+  // hint only, read once, never a source of truth. Populated by Home's
+  // tournaments effect.
+  const [shell] = useState(() => getEventShell(id));
 
   // Measured, not hardcoded: this bar's height changes when the CTA stack
   // expands, so a constant would be wrong in one of the two states. Rounded
@@ -420,7 +435,10 @@ export default function TournamentDetail() {
     useCallback(() => {
       let active = true;
       async function load() {
-        setLoading(true);
+        // F7 fix (same class as F3): don't tear an already-known tournament
+        // back into a full loading state on a refocus. Only a cold load
+        // (nothing on screen yet) blocks; a revisit refreshes in place.
+        if (!tournamentRef.current) setLoading(true);
         const [t, divs] = await Promise.all([
           fetchTournamentById(id),
           fetchDivisionsForTournament(id),
@@ -466,6 +484,46 @@ export default function TournamentDetail() {
   );
 
   if (loading || !tournament) {
+    // F7 fix: same shell treatment as community/[id].tsx. A cache hit (the
+    // card that navigated here already knew title/photo/date/venue) shows
+    // that hero immediately instead of a full-screen loader over a screen
+    // the user just saw; a cache miss (cold entry, deep link) falls back to
+    // the original full-screen loader, unchanged.
+    if (shell) {
+      return (
+        <View style={{ flex: 1, backgroundColor: colors.page }}>
+          <StatusBar style="light" />
+          <View style={[s.topControls, { top: insets.top + 8 }]} pointerEvents="box-none">
+            <TouchableOpacity style={s.topCircle} onPress={() => goBack()} activeOpacity={0.8}>
+              <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+          <View style={[s.hero, { height: HERO_H }]}>
+            <Image source={shell.photo} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            <LinearGradient
+              colors={['rgba(0,0,0,0.25)', 'rgba(0,0,0,0.10)', 'rgba(0,0,0,0.72)']}
+              locations={[0, 0.4, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={[s.heroContent, { paddingTop: insets.top + 60 }]}>
+              <Text style={s.heroLine1}>{splitHeroName(shell.name)[0]}</Text>
+              <Text style={s.heroLine2}>{splitHeroName(shell.name)[1]}</Text>
+              <View style={s.heroUnderline} />
+              <View style={s.datePill}>
+                <Text style={s.datePillText}>{shell.datetime}</Text>
+              </View>
+              <View style={s.locationRow}>
+                <Ionicons name="location" size={14} color="rgba(255,255,255,0.9)" />
+                <Text style={s.locationName}>{shell.venue}</Text>
+              </View>
+            </View>
+          </View>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator size="large" color={colors.gold} />
+          </View>
+        </View>
+      );
+    }
     return (
       <View style={{ flex: 1, backgroundColor: colors.page, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" color={colors.gold} />
@@ -546,7 +604,7 @@ export default function TournamentDetail() {
         {/* HERO */}
         <View style={[s.hero, { height: HERO_H }]}>
           <Animated.Image
-            source={{ uri: HERO_PHOTO }}
+            source={{ uri: tournament.coverImgUrl ?? HERO_PHOTO }}
             style={[StyleSheet.absoluteFill, { transform: [{ scale: heroScale }] }]}
             resizeMode="cover"
           />

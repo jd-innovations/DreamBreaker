@@ -1,3 +1,7 @@
+// PERF-TRACE (Phase 0, temporary — see PERFORMANCE_REGRESSION_AUDIT.md)
+// MUST be the first import: it patches fetch on load, and lib/supabase.ts
+// captures fetch when createClient() runs at module scope.
+import '@/lib/devPerfTrace';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -16,6 +20,7 @@ import { initSentry, setSentryUser, withCrashReporting } from '@/lib/observabili
 import { OfflineBanner } from '@/components/states/OfflineBanner';
 import { initAnalytics, identifyUser, resetAnalytics } from '@/lib/analytics';
 import '../global.css';
+import { PerfTraceOverlay } from '@/components/dev/PerfTraceOverlay';
 
 // StripeProvider requires a custom Expo dev client build — @stripe/stripe-react-native
 // is a native module unavailable in Expo Go and unsupported on the web target
@@ -36,6 +41,7 @@ initSentry();
 // opened would be the wrong trade. Events fired before it settles are dropped
 // rather than queued, which is why nothing here reports app launch.
 void initAnalytics();
+
 
 function RootLayout() {
   const [fontsLoaded] = useFonts({ BebasNeue_400Regular });
@@ -271,6 +277,8 @@ function RootLayout() {
           this needs to be readable. Renders nothing while online. */}
       <OfflineBanner />
       </StripeProvider>
+      {/* PERF-TRACE: last child so paint order (not only zIndex) keeps it on top. Temporary. */}
+      <PerfTraceOverlay />
     </GestureHandlerRootView>
   );
 }

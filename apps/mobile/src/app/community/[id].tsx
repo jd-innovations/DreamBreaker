@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity, Image,
   ScrollView, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
   Modal, Pressable, Alert, Linking, Animated,
   type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType,
@@ -38,6 +38,8 @@ import {
   type PlayEventWithOrganizer,
 } from '@/lib/supabase/playEvents';
 import { fetchEventWeather, type EventWeatherResult } from '@/lib/supabase/weather';
+import { notifyPlayEventsUpdated } from '@/lib/playEventsEvents';   // F3 fix
+import { getEventShell } from '@/lib/eventShellCache';   // F7 fix
 import { EventWeatherCard } from '@/components/EventWeatherCard';
 import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilities';
 import { VenueMapCard } from '@/components/VenueMapCard';
@@ -368,6 +370,11 @@ export default function CommunityEventScreen() {
   const [tabsPinned, setTabsPinned] = useState(false);
 
   const isUUID = UUID_RE.test(id as string ?? '');
+  // F7 fix: a hint for the FIRST paint only — read once on mount, never a
+  // source of truth. If the card that navigated here already knew the title/
+  // photo/datetime/venue (Home's community feed does), show that immediately
+  // instead of a full-screen loader over a screen the user just saw.
+  const [shell] = useState(() => getEventShell(id as string));
   const [liveEvent,    setLiveEvent]    = useState<EventShape | null>(null);
   const [pageLoading,  setPageLoading]  = useState(isUUID);
   const [pageError,    setPageError]    = useState<string | null>(
@@ -717,6 +724,7 @@ export default function CommunityEventScreen() {
       setGuestName(''); setGuestInitial(''); setGuestEmail('');
       setUserStatus('joined');
       setShowCelebration(true);
+      notifyPlayEventsUpdated();   // F3 fix — Home's community list must not stay stale on return
       await refetchAfterJoin();
     } catch (e: unknown) {
       platformAlert('Could not join', joinEventErrorMessage(e));
@@ -771,6 +779,7 @@ export default function CommunityEventScreen() {
       await removePlayParticipant(myParticipantId);
       setUserStatus('not_joined');
       setMyParticipantId(null);
+      notifyPlayEventsUpdated();   // F3 fix — Home's community list must not stay stale on return
       await refetchAfterJoin();
     } catch {
       platformAlert('Could not leave', 'Please try again.');
@@ -854,6 +863,7 @@ export default function CommunityEventScreen() {
         });
         setUserStatus('joined');
         setShowCelebration(true);
+        notifyPlayEventsUpdated();   // F3 fix — Home's community list must not stay stale on return
         await refetchAfterJoin();
       } catch (e: unknown) {
         platformAlert('Could not join', joinEventErrorMessage(e));
@@ -1546,6 +1556,48 @@ export default function CommunityEventScreen() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (pageLoading) {
+    // F7 fix: a full-screen loader over a screen the user already recognizes
+    // (they just tapped this card) reads as broken, not as loading. If the
+    // card that navigated here already told us the title/photo/date/venue,
+    // show that immediately — same hero treatment as the loaded page below,
+    // just without the scroll-driven animation — and a contained spinner for
+    // the body that hasn't arrived yet. Falls back to the full-screen loader
+    // only for a truly cold entry (deep link, push notification, fresh app
+    // open on this route) where nothing is known yet.
+    if (shell) {
+      return (
+        <View style={s.root}>
+          <StatusBar style="light" />
+          <View style={s.hero}>
+            <Image source={shell.photo} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
+            <LinearGradient
+              colors={['rgba(0,0,0,0.22)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.70)']}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={[s.topControls, { marginTop: insets.top + 8 }]}>
+              <TouchableOpacity style={s.circleBtn} onPress={() => goBack()} activeOpacity={0.85}>
+                <Ionicons name="chevron-back" size={20} color={colors.white} />
+              </TouchableOpacity>
+            </View>
+            <View style={s.heroContent}>
+              <Text style={s.heroTitle}>{shell.name}</Text>
+              <View style={s.heroMeta}>
+                <Ionicons name="calendar-outline" size={13} color="rgba(255,255,255,0.85)" />
+                <Text style={s.heroMetaText}>{shell.datetime}</Text>
+              </View>
+              <View style={s.heroMeta}>
+                <Ionicons name="location-outline" size={13} color="rgba(255,255,255,0.85)" />
+                <Text style={s.heroMetaText}>{shell.venue}</Text>
+              </View>
+            </View>
+          </View>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator size="large" color={t.accent} />
+          </View>
+        </View>
+      );
+    }
     return (
       <View style={[s.root, { alignItems: 'center', justifyContent: 'center' }]}>
         <StatusBar style={statusBarStyle} />

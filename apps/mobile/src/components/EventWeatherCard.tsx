@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, type StyleProp, type ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, useThemedStyles, type ThemeRoles } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import type { EventWeatherResult } from '@/lib/supabase/weather';
+import { ShimmerOverlay } from './ShimmerOverlay';
 
 // The weather card, shared by the community-event and facility screens.
 //
@@ -71,9 +72,26 @@ function WeatherWidget({ w, style }: { w: EventWeatherResult | 'loading' | null;
   if (w == null) return null;
 
   if (w === 'loading') {
+    // F7 fix: an intentional skeleton shaped like the loaded card (icon +
+    // temp block, divider, condition + pill row) instead of a bare spinner in
+    // an otherwise-empty box — reserves the exact same layout so nothing
+    // shifts when real data lands, and reads as "fetching weather" rather
+    // than "empty."
     return (
-      <View style={[ww.card, ww.centered, style]}>
-        <ActivityIndicator size="small" color={colors.gold} />
+      <View style={[ww.card, style]}>
+        <View style={ww.left}>
+          <View style={ww.skeletonIcon} />
+          <View>
+            <View style={[ww.skeletonBar, { width: 30, height: 20, marginBottom: 4 }]} />
+            <View style={[ww.skeletonBar, { width: 24, height: 16 }]} />
+          </View>
+        </View>
+        <View style={ww.divider} />
+        <View style={ww.right}>
+          <View style={[ww.skeletonBar, { width: '60%', height: 16, marginBottom: 8 }]} />
+          <View style={[ww.skeletonBar, { width: 64, height: 20, borderRadius: shape.pill }]} />
+        </View>
+        <ShimmerOverlay />
       </View>
     );
   }
@@ -119,8 +137,10 @@ function WeatherWidget({ w, style }: { w: EventWeatherResult | 'loading' | null;
 }
 
 const wwStyles = (t: ThemeRoles) => StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: t.border, borderRadius: shape.card, padding: spacing.lg, gap: spacing.lg, backgroundColor: t.surface },
+  card: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: t.border, borderRadius: shape.card, padding: spacing.lg, gap: spacing.lg, backgroundColor: t.surface, overflow: 'hidden' },
   centered: { justifyContent: 'center', gap: spacing.sm, minHeight: 60 },
+  skeletonIcon: { width: 40, height: 40, borderRadius: shape.pill, backgroundColor: t.background },
+  skeletonBar: { borderRadius: 4, backgroundColor: t.background },
   unavailableText: { color: t.textSecondary, fontSize: text.caption.size, fontWeight: '500' },
   left: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   hiTemp: { color: t.textPrimary, fontSize: text.statNumber.size, fontWeight: '900', lineHeight: 28 },

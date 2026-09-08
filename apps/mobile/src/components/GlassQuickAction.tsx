@@ -1,7 +1,6 @@
 import React from 'react';
 import { Pressable, View, Text, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
-  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -14,7 +13,14 @@ import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { text } from '@shared/tokens';
 
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
+// F2 fix (PERFORMANCE_REGRESSION_AUDIT.md): the blur used to animate its own
+// `intensity` prop on press, which forces iOS to re-composite the blur every
+// frame of the animation — one of the most expensive effects available, and
+// with up to 13 of these mounted on Home simultaneously (F2's finding). Blur
+// is now a static, non-animated layer at a fixed intensity; the "press"
+// feedback comes from a plain `View`'s `opacity`, a compositor-only property,
+// which fakes the same darkening near-identically without re-blurring.
+const REST_BLUR_INTENSITY = 44;
 
 function hexToRgba(hex: string, alpha: number): string {
   const h = hex.replace('#', '');
@@ -42,7 +48,7 @@ export type GlassQuickActionProps = {
  */
 export function GlassQuickAction({ icon, label, tintColor, onPress, size = 76, style }: GlassQuickActionProps) {
   const scale = useSharedValue(1);
-  const blur = useSharedValue(38);
+  const pressDarken = useSharedValue(0);
   const shadowOpacity = useSharedValue(0.16);
 
   const pressableStyle = useAnimatedStyle(() => ({
@@ -53,19 +59,19 @@ export function GlassQuickAction({ icon, label, tintColor, onPress, size = 76, s
     shadowOpacity: shadowOpacity.value,
   }));
 
-  const blurProps = useAnimatedProps(() => ({
-    intensity: blur.value,
+  const pressOverlayStyle = useAnimatedStyle(() => ({
+    opacity: pressDarken.value,
   }));
 
   const handlePressIn = () => {
     scale.value = withTiming(0.96, { duration: 90 });
-    blur.value = withTiming(58, { duration: 120 });
+    pressDarken.value = withTiming(1, { duration: 120 });
     shadowOpacity.value = withTiming(0.24, { duration: 120 });
   };
 
   const handlePressOut = () => {
     scale.value = withSpring(1, { damping: 14, stiffness: 220 });
-    blur.value = withTiming(38, { duration: 200 });
+    pressDarken.value = withTiming(0, { duration: 200 });
     shadowOpacity.value = withTiming(0.16, { duration: 200 });
   };
 
@@ -84,7 +90,14 @@ export function GlassQuickAction({ icon, label, tintColor, onPress, size = 76, s
       >
         <Animated.View style={[styles.shadowLayer, { width: size, height: size, borderRadius: radius }, shadowStyle, pressableStyle]}>
           <View style={[styles.clip, { width: size, height: size, borderRadius: radius }]}>
-            <AnimatedBlurView animatedProps={blurProps} tint="light" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={REST_BLUR_INTENSITY} tint="light" style={StyleSheet.absoluteFill} />
+
+            {/* Press feedback: darkens on press-in via opacity only (compositor-only,
+                no re-blur) instead of the blur re-compositing every frame. */}
+            <Animated.View
+              pointerEvents="none"
+              style={[StyleSheet.absoluteFill, styles.pressOverlay, pressOverlayStyle]}
+            />
 
             {/* Tinted glass wash */}
             <View
@@ -132,6 +145,11 @@ export function GlassQuickAction({ icon, label, tintColor, onPress, size = 76, s
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', gap: 8 },
+  pressOverlay: {
+    // Same tone as the inner-shadow gradient below, at its max alpha —
+    // opacity animates 0→1 to reveal it, rather than re-blurring on press.
+    backgroundColor: 'rgba(10,18,40,0.10)',
+  },
   shadowLayer: {
     shadowColor: colors.navy,
     shadowOffset: { width: 0, height: 6 },

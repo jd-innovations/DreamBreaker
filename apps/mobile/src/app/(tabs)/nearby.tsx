@@ -20,6 +20,10 @@ import {
   type PlayEventWithMapFacility,
   type PlayEventType,
 } from '@/lib/supabase/playEvents';
+import {
+  fetchNearbyTournaments,
+  type TournamentWithMapFacility,
+} from '@/lib/supabase/tournaments';
 import { FALLBACK_LOCATION_LABEL, useCurrentLocation, type Coordinates } from '@/lib/location';
 import { ExploreMap } from '@/components/ExploreMap';
 import type { Region } from '@/components/ExploreMap.types';
@@ -27,6 +31,8 @@ import { PickleballIcon, AppIcon } from '@/components';
 import { useSlideMenu } from '@/components/SlideMenu';
 import { SKILL_RANGES, DISTANCE_STEPS } from '@/components/FindGamesFilterModal';
 import { tabBarClearance } from '@/constants/tabBar';
+import { setEventShell } from '@/lib/eventShellCache';   // F7 fix
+import { eventCoverSource } from '@/lib/eventCover';
 
 const SHEET_H = 230;
 const DEFAULT_RADIUS_MILES = 20;
@@ -133,6 +139,32 @@ function playEventToPin(e: PlayEventWithMapFacility, origin: Coordinates): Explo
   };
 }
 
+function tournamentToPin(t: TournamentWithMapFacility, origin: Coordinates): ExplorePin | null {
+  if (!t.facility) return null;
+  const skillStr = t.skillMin > 0 && t.skillMax > 0
+    ? `${t.skillMin} – ${t.skillMax}`
+    : t.skillMin > 0 ? `${t.skillMin}+` : 'All Levels';
+  const tCoords = { lat: t.facility.latitude, lng: t.facility.longitude };
+  const distMi = distanceMiles(origin, tCoords);
+  return {
+    id: t.id,
+    category: 'tournament',
+    name: t.name,
+    photo: t.coverImgUrl ?? '',
+    datetime: t.date,
+    distance: `${distMi.toFixed(1)} mi away`,
+    distanceMi: distMi,
+    skillLevel: skillStr,
+    skillMin: t.skillMin > 0 ? t.skillMin : null,
+    skillMax: t.skillMax > 0 ? t.skillMax : null,
+    players: t.spotsFilled,
+    maxPlayers: t.drawSize,
+    latitude: tCoords.lat,
+    longitude: tCoords.lng,
+    detailRoute: `/tournament/${t.id}`,
+  };
+}
+
 function facilityToPin(f: FacilityWithPrimaryPhoto): ExplorePin {
   const access = facilityAccessType(f);
   const distLabel = f.distanceMeters != null
@@ -156,25 +188,6 @@ function facilityToPin(f: FacilityWithPrimaryPhoto): ExplorePin {
     facilityData: f,
   };
 }
-
-const PINS: ExplorePin[] = [
-  {
-    id: 't1', category: 'tournament',
-    name: 'Summer Slam',
-    photo: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=300&fit=crop&q=80',
-    datetime: 'Jul 12 – 14, 2025', distance: '8.2 miles away',
-    skillLevel: '3.5 – 5.0', players: 238, maxPlayers: 300,
-    latitude: 27.37268, longitude: -82.46929, detailRoute: '/tournament/summer-slam',
-  },
-  {
-    id: 't2', category: 'tournament',
-    name: 'Bradenton Open',
-    photo: 'https://images.unsplash.com/photo-1529832393073-e362750f78b3?w=400&h=300&fit=crop&q=80',
-    datetime: 'Aug 3 – 4, 2025', distance: '11.5 miles away',
-    skillLevel: '3.0 – 4.5', players: 96, maxPlayers: 128,
-    latitude: 27.47978, longitude: -82.58812, detailRoute: '/tournament/summer-slam',
-  },
-];
 
 const TABS: { key: Category; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'community',  label: 'Community Play', icon: 'people-outline'  },
@@ -595,6 +608,7 @@ export default function ExploreScreen() {
   const [facilities,    setFacilities]    = useState<FacilityWithPrimaryPhoto[]>([]);
   const [facLoading,    setFacLoading]    = useState(false);
   const [liveCommunity, setLiveCommunity] = useState<ExplorePin[] | null>(null);
+  const [liveTournaments, setLiveTournaments] = useState<ExplorePin[] | null>(null);
   const [region,        setRegion]        = useState<Region>(() => locationToRegion(location));
   const refreshLocation = location.refresh;
 
@@ -671,8 +685,30 @@ export default function ExploreScreen() {
           if (!active) return;
           const pins = data.map(e => playEventToPin(e, effectiveOrigin)).filter((pin): pin is ExplorePin => pin != null);
           setLiveCommunity(pins.length > 0 ? pins : null);
+          // F7 fix: seed the shell cache, same as Home/Events tab, so tapping
+          // a community pin here also skips the full-screen loader on
+          // community/[id]. No venue on ExplorePin — left blank, degrades
+          // gracefully (an empty meta line in the shell hero).
+          for (const pin of pins) {
+            setEventShell(pin.id, { name: pin.name, photo: eventCoverSource(pin.photo), datetime: pin.datetime, venue: '' });
+          }
         })
         .catch(() => { if (active) setLiveCommunity(null); });
+      // Nearby's Tournaments filter previously showed two hardcoded
+      // placeholder pins with stale dates and was never connected to real
+      // data — this replaces that with a real fetch, same pattern as
+      // community events above.
+      fetchNearbyTournaments(20)
+        .then(data => {
+          if (!active) return;
+          const pins = data.map(t => tournamentToPin(t, effectiveOrigin)).filter((pin): pin is ExplorePin => pin != null);
+          setLiveTournaments(pins.length > 0 ? pins : null);
+          // F7 fix: seed the shell cache from here too, same as Home.
+          for (const pin of pins) {
+            setEventShell(pin.id, { name: pin.name, photo: eventCoverSource(pin.photo), datetime: pin.datetime, venue: '' });
+          }
+        })
+        .catch(() => { if (active) setLiveTournaments(null); });
       return () => { active = false; };
     }, [effectiveOrigin, radiusMiles]),
   );
@@ -687,7 +723,7 @@ export default function ExploreScreen() {
 
   const communityPinsRaw = category === 'community'
     ? (liveCommunity ?? [])
-    : PINS.filter(p => p.category === category);
+    : (liveTournaments ?? []);
 
   // Skill/hide-full/distance only apply to Community Play, where we have real
   // skill_min/skill_max, live participant counts, and computed distance to

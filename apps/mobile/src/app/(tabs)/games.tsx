@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  FlatList,
   Image,
   ActivityIndicator,
   Alert,
@@ -39,6 +40,8 @@ import { fetchPlayerRegistrations } from '@/lib/supabase/registrations';
 import { fetchTournamentsByIds } from '@/lib/supabase/tournaments';
 import { TournamentTrendingCard, tournamentToTrending } from '@/components/TournamentTrendingCard';
 import type { Tournament } from '@/lib/tournamentTypes';
+import { setEventShell } from '@/lib/eventShellCache';   // F7 fix
+import { eventCoverSource } from '@/lib/eventCover';
 import { useTournamentBookmarks } from '@/hooks/useTournamentBookmarks';
 import {
   fetchReceivedInvites,
@@ -539,6 +542,7 @@ function UpcomingContent({
   tournaments,
   isBookmarked,
   onToggleBookmark,
+  loading,
 }: {
   pendingInvite: ReceivedPlayEventInvite | null;
   respondingInvite: boolean;
@@ -549,8 +553,12 @@ function UpcomingContent({
   tournaments: Tournament[];
   isBookmarked: (id: string) => boolean;
   onToggleBookmark: (id: string) => void;
+  loading: boolean;
 }) {
-  const isEmpty = events.length === 0 && tournaments.length === 0;
+  // F7 fix: never show the empty state until the initial fetch has settled —
+  // otherwise a legitimately-empty in-flight fetch reads as "no events" for a
+  // moment before the real cards (or the real empty state) appear.
+  const isEmpty = !loading && events.length === 0 && tournaments.length === 0;
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 140 }}>
@@ -565,7 +573,11 @@ function UpcomingContent({
 
       <SectionHeader title="UP NEXT" />
 
-      {isEmpty ? (
+      {loading ? (
+        <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+          <ActivityIndicator size="small" color={L.textMuted} />
+        </View>
+      ) : isEmpty ? (
         <View style={{ alignItems: 'center', paddingVertical: 48, gap: 12 }}>
           <Ionicons name="calendar-outline" size={48} color={L.textMuted} />
           <Text style={{ color: L.text, fontSize: text.titleSm.size, fontWeight: '800' }}>No upcoming events</Text>
@@ -796,11 +808,39 @@ function PastContent({
   // the filter.
   const shownTournaments = typeFilter === 'all' ? tournaments : [];
 
-  if (filtered.length === 0 && shownTournaments.length === 0) {
-    return (
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 140 }}>
-        <PastRangeFilter value={range} onChange={onRangeChange} />
-        <PastTypeFilterDropdown value={typeFilter} onChange={onTypeFilterChange} />
+  // F4 fix (PERFORMANCE_REGRESSION_AUDIT.md): FlatList instead of a
+  // ScrollView + .map() over the full history — this list only grows over a
+  // player's lifetime, unlike Upcoming/Joined/Held Spots which stay small.
+  // Two different card shapes were previously two separate .map() calls
+  // appended in sequence; merged into one discriminated-union list so a
+  // single FlatList/renderItem can windows both instead of mounting all of
+  // them eagerly.
+  type PastItem =
+    | { kind: 'card'; card: GameCard | SBGameCard }
+    | { kind: 'tournament'; tournament: Tournament };
+  const data: PastItem[] = [
+    ...filtered.map((card): PastItem => ({ kind: 'card', card })),
+    ...shownTournaments.map((tournament): PastItem => ({ kind: 'tournament', tournament })),
+  ];
+
+  return (
+    <FlatList
+      data={data}
+      keyExtractor={(item) => item.kind === 'card' ? item.card.id : item.tournament.id}
+      // isBookmarked/onToggleBookmark aren't part of `data`, so a bookmark
+      // toggle (which changes isBookmarked's identity, per useTournamentBookmarks)
+      // wouldn't otherwise re-render an already-mounted tournament row.
+      extraData={isBookmarked}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ padding: 16, paddingBottom: 140, flexGrow: 1 }}
+      ListHeaderComponent={
+        <>
+          <PastRangeFilter value={range} onChange={onRangeChange} />
+          <PastTypeFilterDropdown value={typeFilter} onChange={onTypeFilterChange} />
+          {data.length > 0 && <SectionHeader title="PAST EVENTS" />}
+        </>
+      }
+      ListEmptyComponent={
         <View style={{ alignItems: 'center', paddingVertical: 48, gap: 12 }}>
           <Ionicons name="time-outline" size={52} color={L.textMuted} />
           <Text style={{ color: L.text, fontSize: text.titleSm.size, fontWeight: '800' }}>
@@ -814,18 +854,23 @@ function PastContent({
             </Text>
           )}
         </View>
-      </ScrollView>
-    );
-  }
-  return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 140 }}>
-      <PastRangeFilter value={range} onChange={onRangeChange} />
-      <PastTypeFilterDropdown value={typeFilter} onChange={onTypeFilterChange} />
-      <SectionHeader title="PAST EVENTS" />
-      {filtered.map(card =>
-        card.source === 'supabase' ? (
+      }
+      renderItem={({ item }) => {
+        if (item.kind === 'tournament') {
+          const t = item.tournament;
+          return (
+            <TournamentTrendingCard
+              item={tournamentToTrending(t)}
+              style={{ marginBottom: 10 }}
+              saved={isBookmarked(t.id)}
+              onSave={() => onToggleBookmark(t.id)}
+              registered
+            />
+          );
+        }
+        const card = item.card;
+        return card.source === 'supabase' ? (
           <CommunityCard
-            key={card.id}
             type={card.type}
             typeTagBg={card.typeTagBg}
             typeTagColor={card.typeTagColor}
@@ -844,7 +889,6 @@ function PastContent({
           />
         ) : (
           <EventRow
-            key={card.id}
             type={card.type}
             logoBg={card.logoBg}
             logoColor={card.logoColor}
@@ -860,21 +904,9 @@ function PastContent({
             result={'result' in card ? card.result : undefined}
             onPress={() => router.push(card.route as never)}
           />
-        )
-      )}
-
-      {/* Past registered tournaments, same card as Upcoming and Home. */}
-      {shownTournaments.map(t => (
-        <TournamentTrendingCard
-          key={t.id}
-          item={tournamentToTrending(t)}
-          style={{ marginBottom: 10 }}
-          saved={isBookmarked(t.id)}
-          onSave={() => onToggleBookmark(t.id)}
-          registered
-        />
-      ))}
-    </ScrollView>
+        );
+      }}
+    />
   );
 }
 
@@ -1168,6 +1200,10 @@ export default function GamesScreen() {
   const [pastRange, setPastRange]       = useState<PastRange>('30d');
   const [pastTypeFilter, setPastTypeFilter] = useState<PastTypeFilter>('all');
   const [pastLoading, setPastLoading]   = useState(false);
+  // F7 fix: only true until the first fetch settles, never flipped back to
+  // true on a later focus — otherwise this would reintroduce an F3-style
+  // loading flip over data already on screen.
+  const [upcomingLoading, setUpcomingLoading] = useState(true);
   const [heldSpots, setHeldSpots]       = useState<HeldSpot[]>([]);
   const [unreadEventIds, setUnreadEventIds] = useState<Set<string>>(new Set());
   const { setTriggerVisible } = useSlideMenu();
@@ -1206,7 +1242,10 @@ export default function GamesScreen() {
       setHeldSpots(getHeldSpots());
 
       // If logged in, overlay with Supabase events
-      if (!user?.id) return;
+      if (!user?.id) {
+        setUpcomingLoading(false);   // F7 fix: nothing more will load for a guest
+        return;
+      }
 
       fetchUnreadPlayEventIds(user.id).then(setUnreadEventIds).catch(() => {});
 
@@ -1235,6 +1274,12 @@ export default function GamesScreen() {
         const merged = [...hostCards, ...joinCards.filter(c => !hostIds.has(c.id))];
 
         setUpcoming(byDate(mergeEvents(localUpcoming, merged)));
+        // F7 fix: seed the shell cache from this tab too, same as Home's
+        // community feed — so tapping a card here also skips the full-screen
+        // loader on community/[id].
+        for (const c of merged) {
+          setEventShell(c.id, { name: c.title, photo: eventCoverSource(c.imageUri), datetime: c.date, venue: c.location });
+        }
 
         // Registrations carry only a thin projection - no draw size, fees,
         // cover image or divisions - so the ids are resolved back to full
@@ -1244,7 +1289,12 @@ export default function GamesScreen() {
         fetchTournamentsByIds(ids)
           .then(rows => setRegTournaments(rows))
           .catch(() => { /* leave the play events alone */ });
-      }).catch(() => { /* keep local on error */ });
+      }).catch(() => { /* keep local on error */ })
+        // F7 fix: flips once, on the first settle (success or failure) of the
+        // very first fetch. Never set back to true on a later focus, so a
+        // background refresh can't re-trigger the loading/empty state over
+        // data already on screen.
+        .finally(() => setUpcomingLoading(false));
 
       // Joined tab: all events where user is participant
       fetchJoinedPlayEvents(user.id)
@@ -1324,6 +1374,7 @@ export default function GamesScreen() {
             tournaments={upcomingTournaments}
             isBookmarked={isBookmarked}
             onToggleBookmark={toggleBookmark}
+            loading={upcomingLoading}
           />
         )}
         {subTab === 'Held Spots' && (

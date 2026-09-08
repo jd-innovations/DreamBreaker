@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   Image, Dimensions, NativeScrollEvent, NativeSyntheticEvent, ActivityIndicator,
@@ -7,6 +7,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
+// PERF-TRACE (Phase 0, temporary — see PERFORMANCE_REGRESSION_AUDIT.md)
+import { traceHomeFocus, traceHomeLoadingFlip } from '@/lib/devPerfTrace';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '@/theme';
@@ -25,12 +27,21 @@ import { getProfileCompletion } from '@/lib/profileCompletion';
 import { getProfileSetupTasks, hasRegisteredPushToken } from '@/lib/profileSetup';
 import { eventCoverSource } from '@/lib/eventCover';
 import { claimGuestParticipants, fetchJoinedPlayEvents, fetchOpenPlayEvents, gameTypePillStyle, skillLabel, type PlayEventWithCount, type PlayEventType } from '@/lib/supabase/playEvents';
+import { onPlayEventsUpdated } from '@/lib/playEventsEvents';   // F3 fix
+import { setEventShell } from '@/lib/eventShellCache';   // F7 fix
 import { fetchTournaments } from '@/lib/supabase/tournaments';
 import { isTournamentExpired, type Tournament } from '@/lib/tournamentTypes';
 import { TournamentTrendingCard, tournamentToTrending } from '@/components/TournamentTrendingCard';
 
 const { width: SW } = Dimensions.get('window');
 const CARD_W  = SW - 56;
+
+// F3 fix (PERFORMANCE_REGRESSION_AUDIT.md): same floor as F1's profile-store
+// freshness window. A focus within this long of the effect's own last
+// successful fetch is a no-op instead of a re-fetch — the effects still exist
+// to catch real staleness (registering/joining elsewhere and coming back), but
+// stop re-running on every tab-switch or modal blur/refocus a few seconds apart.
+const HOME_FOCUS_FRESHNESS_MS = 30_000;
 
 // Theme-backed alias — brand values resolve from @/theme.
 function readAuthMetadataString(metadata: unknown, keys: string[]): string | null {
@@ -596,24 +607,58 @@ export default function HomeScreen() {
   };
 
   const [communityCards,   setCommunityCards]   = useState<CommunityCardData[]>([]);
+  const communityCardsRef = useRef<CommunityCardData[]>([]);   // PERF-TRACE
+  communityCardsRef.current = communityCards;                   // PERF-TRACE
   const [communityLoading, setCommunityLoading] = useState(true);
   const [communityError,   setCommunityError]   = useState(false);
 
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const tournamentsRef = useRef<Tournament[]>([]);   // F3 fix
+  tournamentsRef.current = tournaments;               // F3 fix
 
   // Refetch on focus, not just mount — same reason the community list below
   // does. Registering or holding a spot happens on another screen, and a
   // mount-only fetch left this section showing the fill bar and % filled from
   // whenever the tab first mounted, so a registration only appeared after a
   // full app restart.
+  const lastTournamentsFetchAtRef = useRef(0);   // F3 fix
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
+      traceHomeFocus('tournaments');   // PERF-TRACE
+      // F3 fix: skip a focus refetch inside the freshness window instead of
+      // re-hitting the network every time Home regains focus.
+      if (Date.now() - lastTournamentsFetchAtRef.current < HOME_FOCUS_FRESHNESS_MS) {
+        return () => { cancelled = true; };
+      }
+      const hadData = tournamentsRef.current.length > 0;
       fetchTournaments()
         // Past events keep a visible status in the DB, and the list arrives
         // oldest-first — so without this they'd permanently own the home slots.
-        .then(rows => { if (!cancelled) setTournaments(rows.filter(t => !isTournamentExpired(t))); })
-        .catch(() => { if (!cancelled) setTournaments([]); });
+        .then(rows => {
+          if (cancelled) return;
+          const active = rows.filter(t => !isTournamentExpired(t));
+          setTournaments(active);
+          // F7 fix: seed the shell cache (same one community events use) so
+          // tapping into a tournament card also skips the full-screen loader.
+          for (const t of active) {
+            setEventShell(t.id, {
+              name: t.name,
+              photo: { uri: t.coverImgUrl ?? FALLBACK_TOURNEY_PHOTO },
+              datetime: formatDateRange(t.eventDate),
+              venue: t.venue,
+            });
+          }
+          lastTournamentsFetchAtRef.current = Date.now();
+        })
+        .catch(() => {
+          if (cancelled) return;
+          // Un-scoped bug found while implementing F3, fixed alongside it (same
+          // class as the F1 profile-store fix): a failed BACKGROUND refresh must
+          // not wipe a list that was already showing good data. Only a failed
+          // COLD load (nothing on screen yet) clears to empty.
+          if (!hadData) setTournaments([]);
+        });
       return () => { cancelled = true; };
     }, []),
   );
@@ -706,16 +751,30 @@ export default function HomeScreen() {
   const applyFindGamesFilters = (items: CommunityCardData[]) =>
     filterByFullness(filterBySkill(filterByDate(filterByType(filterByDistance(items)))));
 
+  const lastPushTokenFetchRef = useRef<{ at: number; userId: string | null }>({ at: 0, userId: null });   // F3 fix
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
+      traceHomeFocus('pushToken');   // PERF-TRACE
       if (!user?.id) {
         setHasPushToken(false);
+        lastPushTokenFetchRef.current = { at: 0, userId: null };
         return () => { cancelled = true; };
       }
 
+      // F3 fix: skip inside the freshness window, but never across an identity
+      // change — a different signed-in user is never "fresh" from the previous
+      // one's fetch.
+      const fresh = lastPushTokenFetchRef.current.userId === user.id
+        && Date.now() - lastPushTokenFetchRef.current.at < HOME_FOCUS_FRESHNESS_MS;
+      if (fresh) return () => { cancelled = true; };
+
       hasRegisteredPushToken(user.id)
-        .then(value => { if (!cancelled) setHasPushToken(value); })
+        .then(value => {
+          if (cancelled) return;
+          setHasPushToken(value);
+          lastPushTokenFetchRef.current = { at: Date.now(), userId: user.id };
+        })
         .catch(() => { if (!cancelled) setHasPushToken(false); });
 
       return () => { cancelled = true; };
@@ -723,11 +782,41 @@ export default function HomeScreen() {
   );
   // Refetch on focus (not just mount) — otherwise leaving/joining an event on
   // another screen leaves this list showing stale "Joined" status and counts.
+  const lastCommunityFetchRef = useRef<{ at: number; userId: string | null }>({ at: 0, userId: null });   // F3 fix
+  // F3 regression fix: the freshness window above defeats exactly the
+  // staleness case the comment above documents — join/leave an event, return
+  // to Home inside 30s, and the stale status would otherwise survive the
+  // window untouched. `notifyPlayEventsUpdated()` (called by
+  // community/[id].tsx after a real join/leave) sets this flag; it forces the
+  // next focus to bypass the freshness window, the same way F1's `force`
+  // bypasses its freshness window on an explicit event.
+  const communityDirtyRef = useRef(false);
+  useEffect(() => onPlayEventsUpdated(() => { communityDirtyRef.current = true; }), []);
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       (async () => {
-        setCommunityLoading(true);
+        traceHomeFocus('communityCards');            // PERF-TRACE
+        const hadData = communityCardsRef.current.length > 0;
+        // Post-fix, a "true" reading here means data existed at focus time —
+        // it no longer implies a loading-state clobber, since the branch below
+        // never sets communityLoading over already-known data. Kept for
+        // before/after comparison against the Phase 0 baseline.
+        traceHomeLoadingFlip(hadData);   // PERF-TRACE
+
+        // F3 fix: skip inside the freshness window, but never across an
+        // identity change (switching accounts is never "fresh") and never when
+        // an explicit join/leave invalidation is pending.
+        const fresh = !communityDirtyRef.current
+          && lastCommunityFetchRef.current.userId === (user?.id ?? null)
+          && Date.now() - lastCommunityFetchRef.current.at < HOME_FOCUS_FRESHNESS_MS;
+        if (fresh) return;
+        communityDirtyRef.current = false;
+
+        // F3 fix: a refetch over cards already on screen is a background
+        // refresh — it must not tear the list back into a loading state. Only
+        // a genuinely cold load (nothing on screen yet) shows the loading UI.
+        if (!hadData) setCommunityLoading(true);
         setCommunityError(false);
         try {
           if (user?.id && user.email) {
@@ -739,10 +828,17 @@ export default function HomeScreen() {
           ]);
           if (cancelled) return;
           const joinedIds = new Set(joinedEvents.map(e => e.id));
-          setCommunityCards(events.map(e => playEventToCard(
+          const cards = events.map(e => playEventToCard(
             e,
             user?.id && e.organizer_id === user.id ? 'hosting' : joinedIds.has(e.id) ? 'joined' : undefined,
-          )));
+          ));
+          setCommunityCards(cards);
+          // F7 fix: seed the shell cache so tapping into a card doesn't show a
+          // full-screen loader over a screen the user just saw the contents of.
+          for (const card of cards) {
+            setEventShell(card.id, { name: card.name, photo: card.photo, datetime: card.datetime, venue: card.venue });
+          }
+          lastCommunityFetchRef.current = { at: Date.now(), userId: user?.id ?? null };
         } catch {
           if (!cancelled) setCommunityError(true);
         } finally {

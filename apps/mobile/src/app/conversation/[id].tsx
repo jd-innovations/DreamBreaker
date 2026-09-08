@@ -3,6 +3,7 @@ import {
   View,
   Text,
   ScrollView,
+  FlatList,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -825,7 +826,11 @@ function fmtTime(iso: string): string {
 function RealDMScreen({ conversationId }: { conversationId: string }) {
   const router    = useRouter();
   const insets    = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
+  // F4 fix (PERFORMANCE_REGRESSION_AUDIT.md): FlatList, not ScrollView — see
+  // the render below. FlatList exposes the same scrollToEnd() this ref was
+  // already using, so nothing else about the scroll-to-bottom behavior
+  // changes.
+  const scrollRef = useRef<FlatList<DbMessage>>(null);
   const { user }  = useSession();
 
   const [draft, setDraft]       = useState('');
@@ -1097,39 +1102,50 @@ function RealDMScreen({ conversationId }: { conversationId: string }) {
 
       <View style={s.headerBorder} />
 
-      <ScrollView
-        ref={scrollRef}
-        style={s.messageList}
-        contentContainerStyle={[s.messageContent, { paddingBottom: 16, flexGrow: 1 }]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
-        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
-      >
-        {loading ? (
-          <View style={rd.centered}>
-            <ActivityIndicator size="large" color={L.gold} />
-          </View>
-        ) : msgError ? (
-          <View style={rd.centered}>
-            <Ionicons name="alert-circle-outline" size={36} color={L.textMuted} />
-            <Text style={rd.stateText}>{msgError}</Text>
-            <TouchableOpacity onPress={loadMessages} style={{ marginTop: 8 }}>
-              <Text style={{ color: L.gold, fontWeight: '600' }}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        ) : messages.length === 0 ? (
-          <View style={rd.centered}>
-            <Ionicons name="chatbubble-outline" size={36} color={L.textMuted} />
-            <Text style={rd.stateText}>Start the conversation</Text>
-          </View>
-        ) : (
-          messages.map((msg) => {
+      {loading ? (
+        <View style={rd.centered}>
+          <ActivityIndicator size="large" color={L.gold} />
+        </View>
+      ) : msgError ? (
+        <View style={rd.centered}>
+          <Ionicons name="alert-circle-outline" size={36} color={L.textMuted} />
+          <Text style={rd.stateText}>{msgError}</Text>
+          <TouchableOpacity onPress={loadMessages} style={{ marginTop: 8 }}>
+            <Text style={{ color: L.gold, fontWeight: '600' }}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        // F4 fix: FlatList instead of a ScrollView + .map() over every message
+        // — an unbounded, user-visible-as-slow list per the audit (F4). Only
+        // rows near the viewport mount now, instead of the whole history at
+        // once. extraData carries everything renderItem reads besides `msg`
+        // itself (reactions, current user id, partner photo) so a row still
+        // re-renders when one of those changes even though the message object
+        // it's keyed on didn't — matching the old .map()'s always-re-render
+        // behavior exactly, just windowed.
+        <FlatList
+          ref={scrollRef}
+          data={messages}
+          keyExtractor={(msg) => msg.id}
+          extraData={[reactions, user?.id, partner?.photoUri]}
+          style={s.messageList}
+          contentContainerStyle={[s.messageContent, { paddingBottom: 16, flexGrow: 1 }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
+          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
+          ListEmptyComponent={
+            <View style={rd.centered}>
+              <Ionicons name="chatbubble-outline" size={36} color={L.textMuted} />
+              <Text style={rd.stateText}>Start the conversation</Text>
+            </View>
+          }
+          renderItem={({ item: msg }) => {
             const isSent = msg.sender_id === user?.id;
             const msgReactions = reactions.filter(r => r.message_id === msg.id);
             if (isSent) {
               return (
-                <View key={msg.id} style={s.sentRow}>
+                <View style={s.sentRow}>
                   <View style={s.sentGroup}>
                     <TouchableOpacity
                       activeOpacity={0.85}
@@ -1161,7 +1177,7 @@ function RealDMScreen({ conversationId }: { conversationId: string }) {
               );
             }
             return (
-              <View key={msg.id} style={s.receivedRow}>
+              <View style={s.receivedRow}>
                 <View style={s.receivedAvatarSlot}>
                   {partner?.photoUri
                     ? <Image source={{ uri: partner.photoUri }} style={s.msgAvatar} />
@@ -1194,9 +1210,9 @@ function RealDMScreen({ conversationId }: { conversationId: string }) {
                 </View>
               </View>
             );
-          })
-        )}
-      </ScrollView>
+          }}
+        />
+      )}
 
       <View style={[s.inputArea, { paddingBottom: insets.bottom + 6 }]}>
         <View style={s.inputRow}>
@@ -1289,7 +1305,8 @@ function RealGroupChat({
   initialTitle?: string;
 }) {
   const insets    = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
+  // F4 fix: FlatList, not ScrollView — see the render below.
+  const scrollRef = useRef<FlatList<DbMessage>>(null);
   const { user }  = useSession();
 
   const [convId, setConvId]     = useState<string | null>(null);
@@ -1492,44 +1509,50 @@ function RealGroupChat({
       <View style={eg.headerBorder} />
 
       {/* Messages */}
-      <ScrollView
-        ref={scrollRef}
-        style={eg.messageList}
-        contentContainerStyle={[eg.messageContent, { paddingBottom: 16, flexGrow: 1 }]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
-        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
-      >
-        {loading ? (
-          <View style={rd.centered}>
-            <ActivityIndicator size="large" color={L.gold} />
-          </View>
-        ) : error ? (
-          <View style={rd.centered}>
-            <Ionicons name="alert-circle-outline" size={36} color={L.textMuted} />
-            <Text style={rd.stateText}>{error}</Text>
-            <TouchableOpacity onPress={load} style={{ marginTop: 8 }}>
-              <Text style={{ color: L.gold, fontWeight: '600' }}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        ) : !user ? (
-          <View style={rd.centered}>
-            <Ionicons name="lock-closed-outline" size={36} color={L.textMuted} />
-            <Text style={rd.stateText}>Sign in to view tournament chat</Text>
-          </View>
-        ) : messages.length === 0 ? (
-          <View style={rd.centered}>
-            <Ionicons name="chatbubble-outline" size={36} color={L.textMuted} />
-            <Text style={rd.stateText}>No messages yet. Start the conversation.</Text>
-          </View>
-        ) : (
-          messages.map((msg) => {
+      {loading ? (
+        <View style={rd.centered}>
+          <ActivityIndicator size="large" color={L.gold} />
+        </View>
+      ) : error ? (
+        <View style={rd.centered}>
+          <Ionicons name="alert-circle-outline" size={36} color={L.textMuted} />
+          <Text style={rd.stateText}>{error}</Text>
+          <TouchableOpacity onPress={load} style={{ marginTop: 8 }}>
+            <Text style={{ color: L.gold, fontWeight: '600' }}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : !user ? (
+        <View style={rd.centered}>
+          <Ionicons name="lock-closed-outline" size={36} color={L.textMuted} />
+          <Text style={rd.stateText}>Sign in to view tournament chat</Text>
+        </View>
+      ) : (
+        // F4 fix: FlatList instead of a ScrollView + .map() — same reasoning
+        // as RealDMScreen above. extraData covers everything renderItem reads
+        // besides `msg` itself (reactions, senders map, current user id).
+        <FlatList
+          ref={scrollRef}
+          data={messages}
+          keyExtractor={(msg) => msg.id}
+          extraData={[reactions, senders, user.id]}
+          style={eg.messageList}
+          contentContainerStyle={[eg.messageContent, { paddingBottom: 16, flexGrow: 1 }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
+          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
+          ListEmptyComponent={
+            <View style={rd.centered}>
+              <Ionicons name="chatbubble-outline" size={36} color={L.textMuted} />
+              <Text style={rd.stateText}>No messages yet. Start the conversation.</Text>
+            </View>
+          }
+          renderItem={({ item: msg }) => {
             const isSent = msg.sender_id === user.id;
             const msgReactions = reactions.filter(r => r.message_id === msg.id);
             if (isSent) {
               return (
-                <View key={msg.id} style={eg.sentRow}>
+                <View style={eg.sentRow}>
                   <View style={eg.sentGroup}>
                     <TouchableOpacity
                       activeOpacity={0.85}
@@ -1562,7 +1585,7 @@ function RealGroupChat({
             }
             const authorName = senders[msg.sender_id] ?? 'Player';
             return (
-              <View key={msg.id} style={eg.receivedRow}>
+              <View style={eg.receivedRow}>
                 <View style={[eg.msgAvatar, { backgroundColor: groupColor(msg.sender_id) }]}>
                   <Text style={eg.msgAvatarText}>{groupInitials(authorName)}</Text>
                 </View>
@@ -1591,9 +1614,9 @@ function RealGroupChat({
                 </View>
               </View>
             );
-          })
-        )}
-      </ScrollView>
+          }}
+        />
+      )}
 
       {/* Input bar */}
       <View style={[eg.inputArea, { paddingBottom: insets.bottom + 6 }]}>
