@@ -13,7 +13,8 @@ export type TournamentStatusKey =
   | 'filling_fast'
   | 'closing_soon'
   | 'registration_closed'
-  | 'completed';
+  | 'completed'
+  | 'cancelled';
 
 export type PlayerRegStatusKey =
   | 'held'
@@ -39,6 +40,7 @@ const TOURNAMENT_STATUS_INFO: Record<TournamentStatusKey, StatusInfo> = {
   closing_soon:        { label: 'Closing Soon',        variant: 'gold',  priority: 4 },
   registration_closed: { label: 'Registration Closed', variant: 'gray',  priority: 5 },
   completed:           { label: 'Completed',           variant: 'navy',  priority: 6 },
+  cancelled:           { label: 'Cancelled',           variant: 'red',   priority: 7 },
 };
 
 const PLAYER_REG_STATUS_INFO: Record<PlayerRegStatusKey, StatusInfo> = {
@@ -66,6 +68,12 @@ export function isTournamentPast(eventDate: string): boolean {
 export function getTournamentStatus(tournament: Tournament): TournamentStatusKey {
   if (tournament.status === 'draft') return 'draft';
   if (tournament.status === 'pending_approval') return 'pending_approval';
+  // Checked before the completed/past-date fallthrough below: cancelled is a
+  // terminal state in its own right, not a variant of completed. Previously
+  // absent entirely, so a cancelled tournament fell through every check here
+  // — a future-dated one landed on the final `return 'open'`, badging a
+  // cancelled tournament as accepting registrations.
+  if (tournament.status === 'cancelled') return 'cancelled';
   if (
     isTournamentCompleted(tournament.id) ||
     tournament.status === 'completed' ||
