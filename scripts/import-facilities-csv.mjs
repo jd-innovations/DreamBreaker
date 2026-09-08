@@ -1,5 +1,36 @@
 #!/usr/bin/env node
 /*
+  ⚠ NOT the preferred path for routine facility-record imports anymore.
+
+  As of 2026-09-08, /admin/facility-import (web/src/app/admin/facility-import,
+  backed by admin_stage_facility_import / admin_commit_facility_import —
+  see supabase/migrations/20260908010000_facility_import_pipeline.sql) is the
+  authoritative way to create or update facility records from a CSV. That
+  workflow gives you what this script does not: a mandatory dry run, real
+  geo+name deduplication against every existing facility (not just an exact
+  google_place_id match), a three-way match review (confident / possible /
+  invalid) with per-row admin decisions on uncertain matches, and a permanent
+  batch-history record of who imported what and when.
+
+  This script bypasses ALL of that — it goes straight from CSV to a migration
+  file applied with elevated DB access, with no staging, no review step, no
+  dedup against non-google_place_id facilities, and no audit trail beyond the
+  migration itself. Running it against a CSV of new/updated facility records
+  is exactly the "routine import" case /admin/facility-import exists to
+  replace. Don't use it for that.
+
+  What this script is still the right tool for:
+    - Facility PHOTO imports. /admin/facility-import deliberately does not
+      touch facility_photos (see that migration's header) — this script's
+      photo-proxy logic (below) remains the only import path for photos.
+    - Recovery / controlled developer operations — e.g. restoring a batch
+      from a raw CSV outside the admin UI, or a one-off fix that genuinely
+      needs a hand-reviewed SQL migration instead of the staged workflow.
+    - Legacy reference for how the dedup-on-google_place_id / upsert-on-id
+      logic worked before /admin/facility-import existed.
+
+  If you're not sure which applies, it doesn't — use /admin/facility-import.
+
   Turns a curated facilities CSV export into a reviewable Supabase upsert
   migration. Idempotent: rows WITH a google_place_id upsert on google_place_id
   (preserving existing facility ids + their event/tournament links); rows
