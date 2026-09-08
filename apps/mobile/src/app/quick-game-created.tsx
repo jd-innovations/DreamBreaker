@@ -1023,6 +1023,7 @@ const s = StyleSheet.create({
   hero: {
     height: Math.round(SW * 0.72),
     position: 'relative',
+    overflow: 'hidden',
     backgroundColor: L.navy,
     marginHorizontal: -spacing.screenH,
   },
