@@ -129,6 +129,38 @@ export async function fetchTournaments(): Promise<Tournament[]> {
   return data.map(dbRowToTournament);
 }
 
+export type TournamentMapFacility = { id: string; latitude: number; longitude: number };
+export type TournamentWithMapFacility = Tournament & { facility: TournamentMapFacility | null };
+
+/**
+ * For the Nearby tab's Tournaments filter, which previously showed two
+ * hardcoded placeholder pins and was never connected to real data.
+ * Excludes past events client-side via `isTournamentExpired`, matching the
+ * same filter Home applies to `fetchTournaments()`. A tournament with no
+ * facility (and therefore no coordinates) can't be placed on the map and is
+ * dropped, same as `fetchNearbyPlayEvents`/`playEventToPin` do for play events.
+ */
+export async function fetchNearbyTournaments(limit = 20): Promise<TournamentWithMapFacility[]> {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('id,name,venue_name,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,registration_opens_at,registration_closes_at,featured,cover_img_url,facility_id,divisions(format,skill_min,skill_max),facility:facilities!tournaments_facility_id_fkey(id,latitude,longitude)')
+    .in('status', VISIBLE_STATUSES)
+    .order('event_date', { ascending: true })
+    .limit(limit);
+
+  if (error || !data) return [];
+  return data
+    .map(row => {
+      const t = dbRowToTournament(row as Record<string, unknown>);
+      const f = row.facility as { id: unknown; latitude: unknown; longitude: unknown } | null;
+      const facility = f && f.latitude != null && f.longitude != null
+        ? { id: String(f.id), latitude: Number(f.latitude), longitude: Number(f.longitude) }
+        : null;
+      return { ...t, facility };
+    })
+    .filter(t => !isTournamentExpired(t));
+}
+
 /**
  * Batch sibling of fetchTournamentById, for screens that already know which
  * tournaments they need - the Events tab resolves the user's registrations
@@ -239,6 +271,61 @@ export async function fetchDirectorTournaments(directorId: string): Promise<Tour
   cachedDirectorId = directorId;
   cachedDirectorTournamentIds = new Set(tournaments.map(t => t.id));
   return tournaments;
+}
+
+export type DirectorTournamentMetricsRow = {
+  divCount: number;
+  total: number;
+  registered: number;
+  checkedIn: number;
+  waitlisted: number;
+  noShow: number;
+  cancelled: number;
+  revenueCents: number;
+  outstandingCents: number;
+};
+
+/**
+ * F5 (PERFORMANCE_REGRESSION_AUDIT.md): one query replacing director.tsx's
+ * loadSnapshots() per-tournament fetchDivisionsForTournament +
+ * fetchTournamentRegistrations fan-out (2N requests for N tournaments,
+ * re-run on every focus). Backed by the get_director_tournament_metrics
+ * Postgres function (migration 20260907120000) — same metric math as before,
+ * computed in one round trip instead of N.
+ *
+ * Returns a Map keyed by tournament id so a director rendering a filtered
+ * subset can look up each row directly; a tournament id passed in that the
+ * caller doesn't actually direct (or that RLS doesn't return, e.g. an id
+ * that isn't theirs) simply has no entry.
+ */
+export async function fetchDirectorTournamentMetrics(
+  tournamentIds: string[],
+): Promise<Map<string, DirectorTournamentMetricsRow>> {
+  if (tournamentIds.length === 0) return new Map();
+
+  // `as any`: get_director_tournament_metrics is new (migration 20260907120000)
+  // and isn't in the generated Supabase types yet — same pattern as
+  // search_facilities_nearby in facilities.ts. Remove the cast once the
+  // migration is applied and `supabase gen types` is re-run.
+  const { data, error } = await (supabase as any)
+    .rpc('get_director_tournament_metrics', { p_tournament_ids: tournamentIds });
+
+  if (error || !data) return new Map();
+
+  return new Map((data as Record<string, unknown>[]).map(row => [
+    row.tournament_id as string,
+    {
+      divCount:         Number(row.div_count),
+      total:            Number(row.total),
+      registered:       Number(row.registered),
+      checkedIn:        Number(row.checked_in),
+      waitlisted:       Number(row.waitlisted),
+      noShow:           Number(row.no_show),
+      cancelled:        Number(row.cancelled),
+      revenueCents:     Number(row.revenue_cents),
+      outstandingCents: Number(row.outstanding_cents),
+    },
+  ]));
 }
 
 const CREATED_SELECT =

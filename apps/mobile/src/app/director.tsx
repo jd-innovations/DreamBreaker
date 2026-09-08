@@ -14,9 +14,7 @@ import { type Tournament } from '@/lib/tournamentTypes';
 import { getAllBrackets } from '@/lib/directorBracketStore';
 import { type TournamentMetrics } from '@/lib/directorRegistrationAdapter';
 import { useProfile } from '@/hooks/useProfile';
-import { fetchDirectorTournaments } from '@/lib/supabase/tournaments';
-import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
-import { fetchTournamentRegistrations } from '@/lib/supabase/registrations';
+import { fetchDirectorTournaments, fetchDirectorTournamentMetrics } from '@/lib/supabase/tournaments';
 import {
   getTournamentStatus,
   getTournamentStatusInfo,
@@ -66,10 +64,18 @@ function pct(n: number, d: number): number {
   return d > 0 ? Math.round((n / d) * 100) : 0;
 }
 
-type TournamentGroup = 'active' | 'upcoming' | 'completed';
+type TournamentGroup = 'active' | 'upcoming' | 'completed' | 'cancelled';
 
 function getGroup(t: Tournament): TournamentGroup {
   const s = getTournamentStatus(t);
+  // Checked first, same reasoning as getTournamentStatus itself: cancelled
+  // isn't a variant of completed or upcoming. Before getTournamentStatus
+  // recognized 'cancelled' at all, a cancelled tournament fell into whichever
+  // of the three buckets its (wrong) derived status happened to match —
+  // 'upcoming' for one still in the future. There is no CANCELLED summary
+  // card, so it is simply excluded from all three counts below rather than
+  // miscounted into one.
+  if (s === 'cancelled') return 'cancelled';
   if (s === 'completed') return 'completed';
   if (t.status === 'filling_fast' || t.status === 'full' || s === 'registration_closed') return 'active';
   return 'upcoming';
@@ -453,6 +459,12 @@ export default function DirectorDashboard() {
     if (!authLoading && !user) router.replace('/sign-in' as never);
   }, [user, authLoading]);
 
+  // F5 fix (PERFORMANCE_REGRESSION_AUDIT.md): previously fetched divisions +
+  // registrations per tournament in a Promise.all fan-out (2N requests for N
+  // tournaments, re-run on every focus). Now one aggregate query
+  // (get_director_tournament_metrics, migration 20260907120000) does the same
+  // metric math server-side. bracketCount stays a local lookup
+  // (getAllBrackets) — that was never a network request.
   const loadSnapshots = useCallback(async () => {
     if (!user?.id) return;
     const tournaments = await fetchDirectorTournaments(user.id);
@@ -461,26 +473,15 @@ export default function DirectorDashboard() {
     const filtered = statusFilter === 'all'
       ? tournaments
       : tournaments.filter(t => t.rawStatus === statusFilter);
-    const snaps = await Promise.all(
-      filtered.map(async t => {
-        const [divs, regs] = await Promise.all([
-          fetchDivisionsForTournament(t.id),
-          fetchTournamentRegistrations(t.id),
-        ]);
-        const active = regs.filter(r => r.status !== 'cancelled');
-        const metrics: TournamentMetrics = {
-          total:            active.length,
-          registered:       active.filter(r => r.status === 'registered').length,
-          checkedIn:        active.filter(r => r.status === 'checked_in').length,
-          waitlisted:       active.filter(r => r.status === 'waitlisted').length,
-          noShow:           active.filter(r => r.status === 'no_show').length,
-          cancelled:        regs.filter(r => r.status === 'cancelled').length,
-          revenueCents:     active.reduce((s, r) => s + r.amountPaid, 0),
-          outstandingCents: active.filter(r => r.status !== 'no_show').reduce((s, r) => s + r.balanceDue, 0),
-        };
-        return { tournament: t, metrics, bracketCount: getAllBrackets(t.id).length, divCount: divs.length };
-      }),
-    );
+    const metricsById = await fetchDirectorTournamentMetrics(filtered.map(t => t.id));
+    const snaps = filtered.map(t => {
+      const row = metricsById.get(t.id);
+      const metrics: TournamentMetrics = row ?? {
+        total: 0, registered: 0, checkedIn: 0, waitlisted: 0,
+        noShow: 0, cancelled: 0, revenueCents: 0, outstandingCents: 0,
+      };
+      return { tournament: t, metrics, bracketCount: getAllBrackets(t.id).length, divCount: row?.divCount ?? 0 };
+    });
     setSnapshots(snaps);
     setLoading(false);
   }, [user?.id, statusFilter]);
