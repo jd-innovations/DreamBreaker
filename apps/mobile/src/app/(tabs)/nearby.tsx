@@ -603,6 +603,12 @@ export default function ExploreScreen() {
   const [category,      setCategory]      = useState<Category>('community');
   const [view,          setView]          = useState<'map' | 'list'>('map');
   const [search,        setSearch]        = useState('');
+  // Debounce before the courts search reaches the network — every keystroke
+  // used to just re-filter the already-fetched, radius-limited pins, which
+  // never found anything outside the current radius. See the facilities
+  // fetch below: a non-empty query switches to fetchFacilities' non-proximity
+  // search (name/city/state/postal_code/address, no radius bound).
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedId,    setSelectedId]    = useState<string | null>(null);
   const [accessFilter,  setAccessFilter]  = useState<AccessFilter>('all');
   const [facilities,    setFacilities]    = useState<FacilityWithPrimaryPhoto[]>([]);
@@ -620,6 +626,11 @@ export default function ExploreScreen() {
   // (index.tsx), so "5 mi / 25 mi / 50 mi / Any distance" means the same
   // thing everywhere in the app.
   const [distanceIdx,        setDistanceIdx]          = useState(DISTANCE_STEPS.length - 1);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   function toggleSkillLabel(label: string) {
     setSelectedSkillLabels(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]);
@@ -676,7 +687,15 @@ export default function ExploreScreen() {
     React.useCallback(() => {
       let active = true;
       setFacLoading(true);
-      fetchFacilities({ lat: effectiveOrigin.lat, lng: effectiveOrigin.lng, radiusMiles, limit: 50 })
+      const trimmedQuery = debouncedSearch.trim();
+      // A search query switches to the non-proximity path (no lat/lng/radius)
+      // so courts outside the current radius can still be found by
+      // name/city/state/postal_code/address, not just filtered out of an
+      // already radius-limited list.
+      const facilitiesParams = trimmedQuery
+        ? { query: trimmedQuery, limit: 50 }
+        : { lat: effectiveOrigin.lat, lng: effectiveOrigin.lng, radiusMiles, limit: 50 };
+      fetchFacilities(facilitiesParams)
         .then(data => { if (active) setFacilities(data); })
         .catch(err => console.warn('[Nearby] fetchFacilities error:', err))
         .finally(() => { if (active) setFacLoading(false); });
@@ -710,7 +729,7 @@ export default function ExploreScreen() {
         })
         .catch(() => { if (active) setLiveTournaments(null); });
       return () => { active = false; };
-    }, [effectiveOrigin, radiusMiles]),
+    }, [effectiveOrigin, radiusMiles, debouncedSearch]),
   );
 
   const courtPins: ExplorePin[] = React.useMemo(() => {
@@ -751,9 +770,16 @@ export default function ExploreScreen() {
   const eventPins = communityPins;
   const pins = category === 'court' ? courtPins : eventPins;
 
-  const filteredPins = search.trim()
-    ? pins.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-    : pins;
+  // Courts are already server-filtered by debouncedSearch (name/city/state/
+  // postal_code/address — see the facilities fetch above), so re-filtering
+  // by name here would wrongly drop matches found by city/state/address.
+  // Community/tournament pins have no server-side search, so keep the
+  // client-side name filter for those.
+  const filteredPins = category === 'court'
+    ? pins
+    : search.trim()
+      ? pins.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+      : pins;
 
   const selectedPin = filteredPins.find(p => p.id === selectedId) ?? null;
 
