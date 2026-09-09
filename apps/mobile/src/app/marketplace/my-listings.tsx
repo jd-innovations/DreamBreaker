@@ -206,7 +206,9 @@ function expiryHint(item: MarketplaceListingCard): string | null {
   if (item.status !== 'active' && item.status !== 'pending') return null;
   if (!item.expires_at) return null;
   const days = Math.floor((new Date(item.expires_at).getTime() - Date.now()) / 86_400_000);
-  if (days > 14) return null;          // only speak up when it matters
+  // 7, matching the warning email. At a 30-day lifetime a 14-day threshold
+  // would label a listing for half its life, which stops meaning anything.
+  if (days > 7) return null;
   if (days < 0) return 'Expired';
   if (days === 0) return 'Expires today';
   return `Expires in ${days} day${days === 1 ? '' : 's'}`;
