@@ -44,12 +44,15 @@ const MAP_PROVIDER = Platform.OS === 'ios' ? PROVIDER_DEFAULT : PROVIDER_GOOGLE;
 // child view at all, which is the actually-safe way to customize marker
 // artwork under Fabric.
 function pinColorFor(pin: MapPinLike): string {
+  // An explicit colour wins — Marketplace uses it for price bands. Everything
+  // below is the original category behaviour, unchanged.
+  if (pin.color) return pin.color;
   const gameType = pin.category === 'community' && pin.eventType ? gameTypePillStyle(pin.eventType) : null;
   return gameType ? gameType.bg : (pin.category === 'community' ? L.gold : L.navy);
 }
 
 export function ExploreMap({
-  pins, selectedId, onSelectPin, region, onRegionChangeComplete, onLocate,
+  pins, selectedId, onSelectPin, region, onRegionChangeComplete, onLocate, onMapPress, overlay,
 }: ExploreMapProps) {
   const mapRef = React.useRef<MapView | null>(null);
   const initialRegion = React.useRef(region).current;
@@ -72,6 +75,7 @@ export function ExploreMap({
         provider={MAP_PROVIDER}
         initialRegion={initialRegion}
         onRegionChangeComplete={onRegionChangeComplete}
+        onPress={onMapPress}
         showsUserLocation
         showsMyLocationButton={false}
         toolbarEnabled={false}
@@ -87,6 +91,8 @@ export function ExploreMap({
           />
         ))}
       </MapView>
+
+      {overlay}
 
       <TouchableOpacity
         style={[mp.gpsBtn, { bottom: barClearance + 20 }]}

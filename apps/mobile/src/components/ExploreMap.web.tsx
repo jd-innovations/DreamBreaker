@@ -10,7 +10,7 @@ import type { ExploreMapProps } from './ExploreMap.types';
 // bundle-able while the native build still renders the real map.
 const L = { gold: colors.gold, navy: colors.navy, white: colors.white, textSub: colors.textSub, page: colors.page };
 
-export function ExploreMap({ pins, selectedId: _selectedId, onSelectPin: _onSelectPin, onLocate }: ExploreMapProps) {
+export function ExploreMap({ pins, selectedId: _selectedId, onSelectPin: _onSelectPin, onLocate, overlay }: ExploreMapProps) {
   return (
     <View style={s.root}>
       <View style={s.placeholder}>
@@ -20,6 +20,7 @@ export function ExploreMap({ pins, selectedId: _selectedId, onSelectPin: _onSele
           {pins.length} pin{pins.length === 1 ? '' : 's'} nearby — use the list below.
         </Text>
       </View>
+      {overlay}
       <TouchableOpacity style={s.gpsBtn} onPress={onLocate} activeOpacity={0.85}>
         <Ionicons name="locate" size={20} color={L.navy} />
       </TouchableOpacity>

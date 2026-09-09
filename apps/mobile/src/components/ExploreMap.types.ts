@@ -1,3 +1,5 @@
+import type React from 'react';
+
 export type Region = {
   latitude: number;
   longitude: number;
@@ -7,10 +9,19 @@ export type Region = {
 
 export type MapPinLike = {
   id: string;
-  category: 'community' | 'tournament' | 'court';
+  category: 'community' | 'tournament' | 'court' | 'listing';
   latitude: number;
   longitude: number;
   eventType?: 'open_play' | 'round_robin' | 'mini_tournament' | 'mixer' | 'ladder' | 'kings_court' | 'clinic';
+  /**
+   * Overrides the category-derived pin tint. Marketplace uses it to encode a
+   * price band, which the category union has no way to express.
+   *
+   * Still just `pinColor` on a childless <Marker> — the only marker shape
+   * proven safe under Fabric (react-native-maps#5378). Nothing here opens the
+   * door to custom marker content.
+   */
+  color?: string;
 };
 
 export type ExploreMapProps = {
@@ -26,4 +37,11 @@ export type ExploreMapProps = {
   region: Region;
   onRegionChangeComplete?: (nextRegion: Region) => void;
   onLocate: () => void;
+  /** Tapping the map itself, e.g. to dismiss a selection. Optional. */
+  onMapPress?: () => void;
+  /**
+   * Rendered above the map, inside the same container. Used for a legend or
+   * controls that must sit over the map without being map children.
+   */
+  overlay?: React.ReactNode;
 };

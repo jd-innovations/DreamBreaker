@@ -3,7 +3,7 @@
 // didn't match the spec's Browse section, so it now lives only inside Listing
 // Detail's photo viewer). See MARKETPLACE_V1_SPEC.md "Browse" / "Search" /
 // "Filters" / "Sorting".
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList,
   Animated, Dimensions, Image, TextInput, ActivityIndicator, RefreshControl,
@@ -14,6 +14,9 @@ import { Tabs, router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useSlideMenu } from '@/components/SlideMenu';
 import { useLocationSettings } from '@/hooks/useLocationSettings';
+import { ExploreMap } from '@/components/ExploreMap';
+import type { Region, MapPinLike } from '@/components/ExploreMap.types';
+import { PRICE_BANDS, priceBandFor } from '@/lib/marketplace/priceBands';
 import { useCurrentLocation } from '@/lib/location';
 import {
   fetchListings, fetchListingsNearby, type MarketplaceListingCard, type ListingSort,
@@ -27,6 +30,17 @@ import { colors, useTheme, useThemeRoles, useThemedStyles, type ThemeRoles } fro
 import { radius as shape, text } from '@shared/tokens';
 
 const { width: SW } = Dimensions.get('window');
+// Rough great-circle miles, used only to decide whether a pan has drifted far
+// enough to offer a re-search. Not a display value.
+function haversineMilesRough(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * 3958.8 * Math.asin(Math.sqrt(h));
+}
+
 const CARD_W = (SW - 16 * 2 - 12) / 2;
 const FILTER_HEIGHT = 690;
 
@@ -304,6 +318,14 @@ export default function MarketplaceScreen() {
   const [sort, setSort] = useState<ListingSort>('newest');
   const [radiusMiles, setRadiusMiles] = useState<number | null>(null);
   const [offers, setOffers] = useState<Offers | null>(null);
+  const [view, setView] = useState<'grid' | 'map'>('grid');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [region, setRegion] = useState<Region | null>(null);
+  // Where the user has panned to, and where results were last fetched from.
+  // Same Zillow-style shape as Nearby's courts tab: panning never refetches by
+  // itself, a pill offers it once the drift is meaningful.
+  const [searchCenter, setSearchCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [pannedCenter, setPannedCenter] = useState<{ lat: number; lng: number } | null>(null);
 
   // Defaults from Location & Discovery settings, which already carried
   // marketplaceRadius and willingToShip and which this screen ignored.
@@ -326,6 +348,17 @@ export default function MarketplaceScreen() {
   // earlier request must not overwrite a faster later one.
   const requestSeq = useRef(0);
 
+  // The map fetches around wherever the user is looking, falling back to GPS.
+  //
+  // useMemo is load-bearing, not tidiness: `origin` is in load()'s dependency
+  // array, and a fresh object literal every render would give load() a new
+  // identity every render, which the `useEffect(..., [load])` below would turn
+  // into an unbounded refetch loop.
+  const origin = useMemo(
+    () => searchCenter ?? (myLat != null && myLng != null ? { lat: myLat, lng: myLng } : null),
+    [searchCenter, myLat, myLng],
+  );
+
   const load = useCallback(async () => {
     const seq = ++requestSeq.current;
     setRefetching(true);
@@ -335,12 +368,16 @@ export default function MarketplaceScreen() {
       // ST_DWithin + GiST shape facilities have always used. Without a radius
       // (or without a location fix) the plain query still runs, so sorting by
       // price/newest is unchanged.
-      const useNearby = radiusMiles != null && myLat != null && myLng != null;
+      // In map view we always query by proximity, around wherever the user is
+      // looking — a map with no distance constraint would fetch the world.
+      const centre = view === 'map' ? origin : (myLat != null && myLng != null ? { lat: myLat, lng: myLng } : null);
+      const useNearby = centre != null && (view === 'map' || radiusMiles != null);
       const rows = useNearby
         ? await fetchListingsNearby({
-            lat: myLat,
-            lng: myLng,
-            radiusMiles,
+            lat: centre.lat,
+            lng: centre.lng,
+            // The map needs a radius even when no distance filter is set.
+            radiusMiles: radiusMiles ?? 50,
             query: debouncedSearch || undefined,
             brand: brand ?? undefined,
             condition: condition ?? undefined,
@@ -369,7 +406,7 @@ export default function MarketplaceScreen() {
         setRefreshing(false);
       }
     }
-  }, [debouncedSearch, brand, condition, priceBucket?.min, priceBucket?.max, sort, radiusMiles, myLat, myLng, offers]);
+  }, [debouncedSearch, brand, condition, priceBucket?.min, priceBucket?.max, sort, radiusMiles, myLat, myLng, offers, view, origin]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -387,6 +424,36 @@ export default function MarketplaceScreen() {
   // "keep listings that have no coordinate" rule it existed for now lives in
   // search_listings_nearby's include_unlocated parameter.
   const listings = rawListings;
+
+  // Seed the camera on the first real fix, then leave it alone — re-centring on
+  // every coords change is what made Nearby's map appear to scroll by itself.
+  const cameraSeeded = useRef(false);
+  useEffect(() => {
+    if (cameraSeeded.current || myLat == null || myLng == null) return;
+    cameraSeeded.current = true;
+    setRegion({ latitude: myLat, longitude: myLng, latitudeDelta: 0.25, longitudeDelta: 0.25 });
+  }, [myLat, myLng]);
+
+  const pins: MapPinLike[] = useMemo(
+    () => listings
+      .filter((l) => l.location_lat != null && l.location_lng != null)
+      .map((l) => ({
+        id: l.id,
+        category: 'listing' as const,
+        latitude: l.location_lat as number,
+        longitude: l.location_lng as number,
+        color: priceBandFor(l.asking_price_cents).color,
+      })),
+    [listings],
+  );
+
+  const selected = selectedId ? listings.find((l) => l.id === selectedId) ?? null : null;
+  const unlocatedCount = listings.length - pins.length;
+
+  // Only offer "search this area" once the pan is worth a round trip.
+  const showSearchArea =
+    pannedCenter != null && origin != null &&
+    haversineMilesRough(pannedCenter, origin) > 2;
 
   const activeFilterCount = [brand, condition, priceLabel, radiusMiles, offers].filter((v) => v != null).length;
 
@@ -427,6 +494,15 @@ export default function MarketplaceScreen() {
               returnKeyType="search"
             />
           </View>
+          <TouchableOpacity
+            style={s.filterBtn}
+            onPress={() => { setView((v) => (v === 'grid' ? 'map' : 'grid')); setSelectedId(null); }}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={view === 'grid' ? 'Show map' : 'Show grid'}
+          >
+            <Ionicons name={view === 'grid' ? 'map-outline' : 'grid-outline'} size={18} color={t.textPrimary} />
+          </TouchableOpacity>
           <TouchableOpacity style={s.filterBtn} onPress={openFilter} activeOpacity={0.8}>
             <Ionicons name="options-outline" size={18} color={t.textPrimary} />
             {activeFilterCount > 0 && (
@@ -435,7 +511,91 @@ export default function MarketplaceScreen() {
           </TouchableOpacity>
         </View>
 
-        {loading ? (
+        {view === 'map' ? (
+          region == null ? (
+            <View style={s.centerFill}><ActivityIndicator color={t.primary} /></View>
+          ) : (
+            <View style={{ flex: 1 }}>
+              <ExploreMap
+                pins={pins}
+                selectedId={selectedId}
+                onSelectPin={(id) => setSelectedId((prev) => (prev === id ? null : id))}
+                onMapPress={() => setSelectedId(null)}
+                region={region}
+                onRegionChangeComplete={(next) =>
+                  setPannedCenter({ lat: next.latitude, lng: next.longitude })
+                }
+                onLocate={() => {
+                  setSearchCenter(null);
+                  setPannedCenter(null);
+                  if (myLat != null && myLng != null) {
+                    setRegion({ latitude: myLat, longitude: myLng, latitudeDelta: 0.25, longitudeDelta: 0.25 });
+                  }
+                }}
+                overlay={
+                  <>
+                    <View style={s.legend} pointerEvents="none">
+                      {PRICE_BANDS.map((b) => (
+                        <View key={b.key} style={s.legendItem}>
+                          <View style={[s.legendDot, { backgroundColor: b.color }]} />
+                          <Text style={s.legendText}>{b.label}</Text>
+                        </View>
+                      ))}
+                    </View>
+
+                    {showSearchArea && (
+                      <TouchableOpacity
+                        style={s.searchAreaBtn}
+                        activeOpacity={0.85}
+                        onPress={() => { setSearchCenter(pannedCenter); setPannedCenter(null); setSelectedId(null); }}
+                      >
+                        <Ionicons name="search" size={14} color={t.onPrimary} />
+                        <Text style={s.searchAreaText}>Search this area</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {unlocatedCount > 0 && !selected && (
+                      <View style={s.mapNote} pointerEvents="none">
+                        <Text style={s.mapNoteText}>
+                          {unlocatedCount} listing{unlocatedCount === 1 ? '' : 's'} with no pickup spot
+                          {' '}— see the grid
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                }
+              />
+
+              {selected && (
+                <View style={[s.mapCard, { bottom: insets.bottom + 16 }]}>
+                  <TouchableOpacity
+                    style={s.mapCardInner}
+                    activeOpacity={0.9}
+                    onPress={() => router.push(`/marketplace/${selected.id}` as never)}
+                  >
+                    {selected.primaryPhotoUrl ? (
+                      <Image source={{ uri: selected.primaryPhotoUrl }} style={s.mapCardImage} />
+                    ) : (
+                      <View style={[s.mapCardImage, s.mapCardImagePlaceholder]}>
+                        <Ionicons name="pricetag-outline" size={20} color={t.textMuted} />
+                      </View>
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.mapCardTitle} numberOfLines={1}>{selected.title}</Text>
+                      <Text style={s.mapCardPrice}>{formatPriceCents(selected.asking_price_cents)}</Text>
+                      <Text style={s.mapCardMeta} numberOfLines={1}>
+                        {selected.distanceMiles != null
+                          ? `${selected.distanceMiles < 0.1 ? '<0.1' : selected.distanceMiles.toFixed(1)} mi away`
+                          : [selected.location_city, selected.location_state].filter(Boolean).join(', ')}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={t.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )
+        ) : loading ? (
           <View style={s.centerFill}><ActivityIndicator color={t.primary} /></View>
         ) : listings.length === 0 ? (
           <View style={s.centerFill}>
@@ -488,5 +648,48 @@ const screenStyles = (t: ThemeRoles) => StyleSheet.create({
   filterBadge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   filterBadgeText: { color: t.onAccent, fontSize: 10, fontWeight: '800' },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
+
+  // ── Map view ───────────────────────────────────────────────────────────────
+  // Pins carry a price BAND by colour, not the price itself — see
+  // lib/marketplace/priceBands.ts and the spike result in
+  // MARKETPLACE_MAP_AUDIT.md §5.1a. The legend is what makes the colours mean
+  // something, so it is not optional chrome.
+  legend: {
+    position: 'absolute', top: 12, left: 12,
+    backgroundColor: t.surface, borderRadius: 10, borderWidth: 1, borderColor: t.border,
+    paddingHorizontal: 10, paddingVertical: 8, gap: 5,
+  },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 9, height: 9, borderRadius: 5 },
+  legendText: { color: t.textSecondary, fontSize: text.microLabel.size, fontWeight: '600' },
+
+  searchAreaBtn: {
+    position: 'absolute', top: 12, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: t.primary, borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 9,
+  },
+  searchAreaText: { color: t.onPrimary, fontSize: text.action.size, fontWeight: '800' },
+
+  mapNote: {
+    position: 'absolute', bottom: 16, left: 16, right: 16,
+    backgroundColor: t.surface, borderRadius: 10, borderWidth: 1, borderColor: t.border,
+    paddingHorizontal: 12, paddingVertical: 8,
+  },
+  mapNoteText: { color: t.textSecondary, fontSize: text.caption.size, textAlign: 'center' },
+
+  mapCard: { position: 'absolute', left: 16, right: 16 },
+  mapCardInner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: t.surface, borderRadius: 14, borderWidth: 1, borderColor: t.border,
+    padding: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.16, shadowRadius: 8, elevation: 6,
+  },
+  mapCardImage: { width: 56, height: 56, borderRadius: 10 },
+  mapCardImagePlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: t.surfaceElevated },
+  mapCardTitle: { color: t.textPrimary, fontSize: text.rowTitle.size, fontWeight: '700' },
+  mapCardPrice: { color: t.textPrimary, fontSize: text.cardTitle.size, fontWeight: '800', marginTop: 1 },
+  mapCardMeta: { color: t.textMuted, fontSize: text.caption.size, marginTop: 1 },
   emptyText: { color: t.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 });
