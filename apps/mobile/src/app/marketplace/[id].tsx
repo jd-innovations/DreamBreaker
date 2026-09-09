@@ -534,7 +534,11 @@ function MakeOfferModal({ visible, onClose, listing, onSubmit }: {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ width: '100%' }}
         >
-          <Pressable style={[s.offerSheet, { paddingBottom: insets.bottom + 32 }]} onPress={() => {}}>
+          {/* insets.bottom matters only when the keyboard is down (the sheet
+              then sits on the home indicator); while it's up the keypad already
+              covers that area, so keep the extra padding small or it reads as
+              dead space under the CTA. */}
+          <Pressable style={[s.offerSheet, { paddingBottom: insets.bottom + 12 }]} onPress={() => {}}>
           <View style={s.reportHeader}>
             <Text style={s.reportTitle}>Make Offer</Text>
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={L.navy} /></TouchableOpacity>
@@ -550,8 +554,13 @@ function MakeOfferModal({ visible, onClose, listing, onSubmit }: {
               This seller does not accept offers below {formatPriceCents(minCents)}.
             </Text>
           )}
+          {/* offerBtn's flex:1 is for ctaRow, where it shares a ROW with the
+              Message button. Here the parent is a column, so flex:1 would mean
+              flexBasis:0 on the vertical axis -- the button contributes no
+              height and clips its own label away, rendering as an empty navy
+              bar. Reset it and stretch to the sheet's width instead. */}
           <TouchableOpacity
-            style={[s.offerBtn, !canSend && s.offerBtnDisabled]}
+            style={[s.offerBtn, s.offerBtnBlock, !canSend && s.offerBtnDisabled]}
             disabled={!canSend}
             onPress={() => { if (canSend) onSubmit(cents); }}
           >
@@ -612,6 +621,9 @@ const s = StyleSheet.create({
 
   ctaRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
   offerBtn: { flex: 1, backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 14, alignItems: 'center' },
+  // Undoes offerBtn's row-oriented flex:1 when the button is a column child
+  // (the Make Offer sheet) — see the comment at its usage.
+  offerBtnBlock: { flex: 0, alignSelf: 'stretch' },
   offerBtnText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
   msgBtn: { flex: 1, flexDirection: 'row', gap: 6, borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
   msgBtnText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
