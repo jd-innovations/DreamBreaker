@@ -4,6 +4,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, TextInput, Image,
+  KeyboardAvoidingView, Platform, Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -507,6 +508,7 @@ function MakeOfferModal({ visible, onClose, listing, onSubmit }: {
   onSubmit: (offerCents: number) => void;
 }) {
   const [amount, setAmount] = useState(String(Math.round(listing.asking_price_cents / 100)));
+  const insets = useSafeAreaInsets();
 
   // min_offer_cents was collected at listing creation, stored, and constrained
   // (<= asking price) but never read by anything -- any offer above $0 was
@@ -517,10 +519,22 @@ function MakeOfferModal({ visible, onClose, listing, onSubmit }: {
   const tooLow = cents > 0 && cents < minCents;
   const canSend = cents > 0 && !tooLow;
 
+  // The sheet is bottom-anchored, which is exactly where the keypad opens, so
+  // without this the amount field, the too-low warning and Send Offer are all
+  // behind the keyboard. Worse than a normal overlap: decimal-pad has no Done
+  // key on iOS and the scrim used to be a plain View, so there was no way to
+  // dismiss either the keyboard or the sheet — the only escape was backgrounding
+  // the app. Same structure as community/[id].tsx's "Join as Guest" sheet:
+  // backdrop Pressable closes, inner Pressable swallows taps so touching the
+  // sheet doesn't dismiss it, KeyboardAvoidingView lifts it clear.
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={s.modalScrim}>
-        <View style={s.offerSheet}>
+      <Pressable style={s.modalScrim} onPress={onClose}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ width: '100%' }}
+        >
+          <Pressable style={[s.offerSheet, { paddingBottom: insets.bottom + 32 }]} onPress={() => {}}>
           <View style={s.reportHeader}>
             <Text style={s.reportTitle}>Make Offer</Text>
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={L.navy} /></TouchableOpacity>
@@ -543,8 +557,9 @@ function MakeOfferModal({ visible, onClose, listing, onSubmit }: {
           >
             <Text style={s.offerBtnText}>Send Offer</Text>
           </TouchableOpacity>
-        </View>
-      </View>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Pressable>
     </Modal>
   );
 }
