@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs, router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useSlideMenu } from '@/components/SlideMenu';
+import { useLocationSettings } from '@/hooks/useLocationSettings';
 import { useCurrentLocation } from '@/lib/location';
 import {
   fetchListings, fetchListingsNearby, type MarketplaceListingCard, type ListingSort,
@@ -30,6 +31,22 @@ const CARD_W = (SW - 16 * 2 - 12) / 2;
 const FILTER_HEIGHT = 690;
 
 const RADIUS_OPTIONS = [5, 10, 25, 50] as const;
+
+type Offers = 'local_pickup' | 'shipping';
+
+const HANDOFF_OPTIONS: { value: Offers; label: string }[] = [
+  { value: 'local_pickup', label: 'Local pickup' },
+  { value: 'shipping',     label: 'Ships to me' },
+];
+
+// location_settings stores these as display strings ('50 mi', 'Local Only').
+// Parse rather than add a parallel numeric column: the settings screen owns the
+// vocabulary, and "Local Only" has no number in it to read.
+function radiusSettingToMiles(value: string): number | null {
+  if (/local only/i.test(value)) return 10;
+  const n = parseInt(value, 10);
+  return Number.isFinite(n) ? n : null;
+}
 
 // The local `const L` palette this screen used to carry is gone — it was eight
 // hardcoded values, two of which (#16A34A / #DCFCE7) were duplicates of the
@@ -134,6 +151,7 @@ const cardStyles = (t: ThemeRoles) => StyleSheet.create({
 function FilterSheet({
   filterY, onClose, brand, setBrand, condition, setCondition, priceLabel, setPriceLabel, sort, setSort,
   radiusMiles, setRadiusMiles,
+  offers, setOffers,
 }: {
   filterY: Animated.Value; onClose: () => void;
   brand: string | null; setBrand: (b: string | null) => void;
@@ -141,6 +159,7 @@ function FilterSheet({
   priceLabel: string | null; setPriceLabel: (p: string | null) => void;
   sort: ListingSort; setSort: (s: ListingSort) => void;
   radiusMiles: number | null; setRadiusMiles: (r: number | null) => void;
+  offers: Offers | null; setOffers: (o: Offers | null) => void;
 }) {
   const t = useThemeRoles();
   const fs = useThemedStyles(filterSheetStyles);
@@ -189,6 +208,14 @@ function FilterSheet({
           {RADIUS_OPTIONS.map((r) => (
             <Chip key={r} label={`Within ${r} mi`} active={radiusMiles === r}
               onPress={() => setRadiusMiles(radiusMiles === r ? null : r)} />
+          ))}
+        </View>
+
+        <Text style={fs.sectionLabel}>HANDOFF</Text>
+        <View style={fs.chipRow}>
+          {HANDOFF_OPTIONS.map((o) => (
+            <Chip key={o.value} label={o.label} active={offers === o.value}
+              onPress={() => setOffers(offers === o.value ? null : o.value)} />
           ))}
         </View>
 
@@ -276,6 +303,22 @@ export default function MarketplaceScreen() {
   const [priceLabel, setPriceLabel] = useState<string | null>(null);
   const [sort, setSort] = useState<ListingSort>('newest');
   const [radiusMiles, setRadiusMiles] = useState<number | null>(null);
+  const [offers, setOffers] = useState<Offers | null>(null);
+
+  // Defaults from Location & Discovery settings, which already carried
+  // marketplaceRadius and willingToShip and which this screen ignored.
+  // Applied once, when settings resolve, so a later manual change here is not
+  // clobbered -- these are defaults, not a controlled binding.
+  const { settings, loaded: settingsLoaded } = useLocationSettings();
+  const settingsAppliedRef = useRef(false);
+  useEffect(() => {
+    if (!settingsLoaded || settingsAppliedRef.current) return;
+    settingsAppliedRef.current = true;
+    setRadiusMiles(radiusSettingToMiles(settings.marketplaceRadius));
+    // "Willing to Ship" reads "Show listings that offer shipping". Off means
+    // show only what the buyer can collect in person.
+    if (!settings.willingToShip) setOffers('local_pickup');
+  }, [settingsLoaded, settings.marketplaceRadius, settings.willingToShip]);
 
   const priceBucket = PRICE_BUCKETS.find((p) => p.label === priceLabel);
 
@@ -303,6 +346,7 @@ export default function MarketplaceScreen() {
             condition: condition ?? undefined,
             minPriceCents: priceBucket?.min,
             maxPriceCents: priceBucket?.max,
+            offers: offers ?? undefined,
           })
         : await fetchListings({
             query: debouncedSearch || undefined,
@@ -310,6 +354,7 @@ export default function MarketplaceScreen() {
             condition: condition ?? undefined,
             minPriceCents: priceBucket?.min,
             maxPriceCents: priceBucket?.max,
+            offers: offers ?? undefined,
             sort,
           });
       if (seq !== requestSeq.current) return; // superseded
@@ -324,7 +369,7 @@ export default function MarketplaceScreen() {
         setRefreshing(false);
       }
     }
-  }, [debouncedSearch, brand, condition, priceBucket?.min, priceBucket?.max, sort, radiusMiles, myLat, myLng]);
+  }, [debouncedSearch, brand, condition, priceBucket?.min, priceBucket?.max, sort, radiusMiles, myLat, myLng, offers]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -343,7 +388,7 @@ export default function MarketplaceScreen() {
   // search_listings_nearby's include_unlocated parameter.
   const listings = rawListings;
 
-  const activeFilterCount = [brand, condition, priceLabel, radiusMiles].filter((v) => v != null).length;
+  const activeFilterCount = [brand, condition, priceLabel, radiusMiles, offers].filter((v) => v != null).length;
 
   return (
     <>
@@ -419,6 +464,7 @@ export default function MarketplaceScreen() {
             priceLabel={priceLabel} setPriceLabel={setPriceLabel}
             sort={sort} setSort={setSort}
             radiusMiles={radiusMiles} setRadiusMiles={setRadiusMiles}
+            offers={offers} setOffers={setOffers}
           />
         )}
       </View>

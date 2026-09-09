@@ -8489,6 +8489,7 @@ export type Database = {
         Args: {
           brand_filter?: string
           condition_filter?: string
+          fulfillment_filter?: string
           include_unlocated?: boolean
           lat: number
           lng: number

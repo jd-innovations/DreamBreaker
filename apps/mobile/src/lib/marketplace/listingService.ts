@@ -45,6 +45,8 @@ export type FetchListingsParams = {
   maxPriceCents?: number;
   sort?: ListingSort;
   sellerId?: string; // "My Listings" — includes non-active statuses for that seller
+  /** Same "offers this" semantics as fetchListingsNearby. */
+  offers?: 'local_pickup' | 'shipping';
   limit?: number;
 };
 
@@ -61,6 +63,9 @@ export async function fetchListings(params: FetchListingsParams = {}): Promise<M
   if (params.minPriceCents != null) q = q.gte('asking_price_cents', params.minPriceCents);
   if (params.maxPriceCents != null) q = q.lte('asking_price_cents', params.maxPriceCents);
   if (params.query) q = q.or(`title.ilike.%${params.query}%,brand.ilike.%${params.query}%,model.ilike.%${params.query}%`);
+  // Mirrors the RPC's fulfillment_filter: 'both' satisfies either side, so a
+  // listing offering both is never hidden by one of them.
+  if (params.offers) q = q.in('fulfillment', [params.offers, 'both']);
 
   switch (params.sort) {
     case 'price_asc':  q = q.order('asking_price_cents', { ascending: true }); break;
@@ -117,6 +122,12 @@ export type FetchListingsNearbyParams = {
    * no listing in production had coordinates.
    */
   includeUnlocated?: boolean;
+  /**
+   * What the BUYER needs, not the listing's stored value: 'local_pickup'
+   * matches listings marked local_pickup OR both, 'shipping' matches shipping
+   * OR both. Undefined means no constraint.
+   */
+  offers?: 'local_pickup' | 'shipping';
   limit?: number;
 };
 
@@ -136,6 +147,7 @@ export async function fetchListingsNearby(
     max_price_cents: params.maxPriceCents ?? undefined,
     include_unlocated: params.includeUnlocated ?? true,
     result_limit: params.limit ?? 100,
+    fulfillment_filter: params.offers ?? undefined,
   });
   if (error) throw error;
 
