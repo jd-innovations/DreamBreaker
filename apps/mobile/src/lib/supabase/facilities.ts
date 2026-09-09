@@ -177,6 +177,63 @@ export async function fetchFacilities(
 
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TIERED SEARCH (in-radius first, then everywhere else)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Nearby's court search needs two things that pull against each other: results
+// ordered by how close they are, and the ability to find a court outside the
+// current radius at all. Doing it as one query means picking one — dropping
+// lat/lng to search globally loses distance and distance ordering entirely,
+// which is what the search box used to do.
+//
+// So: two passes over the SAME proximity RPC. `near` is the user's real
+// radius; `wider` is everything else, found with a deliberately huge radius
+// rather than the non-proximity plain-SELECT path. That distinction matters —
+// the plain SELECT applies its LIMIT after ordering by name, so a national
+// fallback through it would return the alphabetically-first N matches and no
+// amount of client-side sorting could recover the nearest ones. Going through
+// the RPC lets Postgres order by distance first, so the limit slices the
+// CLOSEST out-of-radius matches, and every row still carries distance_meters.
+//
+// Callers that just want a plain search keep using fetchFacilities directly —
+// this is additive, nothing else changes shape.
+
+/**
+ * Effectively "anywhere" for a US + territories directory (CONUS is ~2,800 mi
+ * corner to corner; PR is ~1,600 mi from Miami, HI ~2,400 mi from CA). Big
+ * enough that the second tier is a true fallback, not another radius the user
+ * has to think about.
+ */
+export const WIDE_SEARCH_RADIUS_MILES = 6000;
+
+export type TieredFacilityResults = {
+  /** Matches inside the caller's own radius, nearest first. */
+  near: FacilityWithPrimaryPhoto[];
+  /** Matches outside it, nearest first. Never repeats anything in `near`. */
+  wider: FacilityWithPrimaryPhoto[];
+};
+
+export async function searchFacilitiesTiered(params: {
+  lat: number;
+  lng: number;
+  radiusMiles: number;
+  query: string;
+  limit?: number;
+}): Promise<TieredFacilityResults> {
+  const { lat, lng, radiusMiles, query, limit = 50 } = params;
+
+  const [near, wide] = await Promise.all([
+    fetchFacilities({ lat, lng, radiusMiles, query, limit }),
+    fetchFacilities({ lat, lng, radiusMiles: WIDE_SEARCH_RADIUS_MILES, query, limit }),
+  ]);
+
+  // The wide pass is a superset of the near one by definition — subtract.
+  const nearIds = new Set(near.map(f => f.id));
+  return { near, wider: wide.filter(f => !nearIds.has(f.id)) };
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
 // FETCH FACILITY BY ID
 // ─────────────────────────────────────────────────────────────────────────────
 

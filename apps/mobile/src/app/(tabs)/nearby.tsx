@@ -12,6 +12,7 @@ import { colors, spacing } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import {
   fetchFacilities,
+  searchFacilitiesTiered,
   facilityAccessType,
   type FacilityWithPrimaryPhoto,
 } from '@/lib/supabase/facilities';
@@ -36,6 +37,10 @@ import { eventCoverSource } from '@/lib/eventCover';
 
 const SHEET_H = 230;
 const DEFAULT_RADIUS_MILES = 20;
+// Below this, a query is too broad to be worth a round trip — a single
+// character matches most of the directory through the RPC's ilike, so we stay
+// on the plain proximity fetch until there's something to actually search for.
+const MIN_SEARCH_LEN = 2;
 const DEFAULT_REGION_DELTA = 0.22;
 
 // Theme-backed alias
@@ -167,9 +172,15 @@ function tournamentToPin(t: TournamentWithMapFacility, origin: Coordinates): Exp
 
 function facilityToPin(f: FacilityWithPrimaryPhoto): ExplorePin {
   const access = facilityAccessType(f);
-  const distLabel = f.distanceMeters != null
-    ? `${(f.distanceMeters / 1609.344).toFixed(1)} mi away`
-    : `${f.city}, ${f.state}`;
+  const distMi = f.distanceMeters != null ? f.distanceMeters / 1609.344 : null;
+  // Out-of-radius search results can be a thousand miles out, where "1266.0 mi
+  // away" is both hard to read and less useful than knowing where it actually
+  // is — so far results lead with the place and round the distance off.
+  const distLabel = distMi == null
+    ? `${f.city}, ${f.state}`
+    : distMi >= 100
+      ? `${f.city}, ${f.state} · ${Math.round(distMi).toLocaleString()} mi`
+      : `${distMi.toFixed(1)} mi away`;
   const accessLabel = access === 'public' ? 'Public' : access === 'membership' ? 'Membership' : 'Private';
   return {
     id:          f.id,
@@ -178,6 +189,9 @@ function facilityToPin(f: FacilityWithPrimaryPhoto): ExplorePin {
     photo:       f.primaryPhotoUrl ?? '',
     datetime:    accessLabel,
     distance:    distLabel,
+    // Both search tiers now come from the proximity RPC, so a court always has
+    // a real distance to sort and label with — including out-of-radius ones.
+    distanceMi:  distMi ?? undefined,
     skillLevel:  `${f.court_count} Court${f.court_count !== 1 ? 's' : ''}`,
     players:     0,
     maxPlayers:  0,
@@ -606,12 +620,17 @@ export default function ExploreScreen() {
   // Debounce before the courts search reaches the network — every keystroke
   // used to just re-filter the already-fetched, radius-limited pins, which
   // never found anything outside the current radius. See the facilities
-  // fetch below: a non-empty query switches to fetchFacilities' non-proximity
-  // search (name/city/state/postal_code/address, no radius bound).
+  // fetch below: a query long enough to be worth searching switches to
+  // searchFacilitiesTiered (in-radius matches first, then everywhere else).
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedId,    setSelectedId]    = useState<string | null>(null);
   const [accessFilter,  setAccessFilter]  = useState<AccessFilter>('all');
   const [facilities,    setFacilities]    = useState<FacilityWithPrimaryPhoto[]>([]);
+  // Tier 2: matches outside radiusMiles, only ever populated while searching.
+  // Deliberately kept out of the map (pins thousands of miles away either sit
+  // offscreen or force a zoom-out that makes the local results unreadable) —
+  // the list surfaces them under their own header instead.
+  const [widerFacilities, setWiderFacilities] = useState<FacilityWithPrimaryPhoto[]>([]);
   const [facLoading,    setFacLoading]    = useState(false);
   const [liveCommunity, setLiveCommunity] = useState<ExplorePin[] | null>(null);
   const [liveTournaments, setLiveTournaments] = useState<ExplorePin[] | null>(null);
@@ -683,22 +702,45 @@ export default function ExploreScreen() {
     }, [refreshLocation]),
   );
 
+  // Courts. Split out from the events/tournaments fetch below so that typing in
+  // the search box doesn't also re-request two lists that don't depend on the
+  // query — it used to fire all three per keystroke burst, two of them wasted.
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
       setFacLoading(true);
       const trimmedQuery = debouncedSearch.trim();
-      // A search query switches to the non-proximity path (no lat/lng/radius)
-      // so courts outside the current radius can still be found by
-      // name/city/state/postal_code/address, not just filtered out of an
-      // already radius-limited list.
-      const facilitiesParams = trimmedQuery
-        ? { query: trimmedQuery, limit: 50 }
-        : { lat: effectiveOrigin.lat, lng: effectiveOrigin.lng, radiusMiles, limit: 50 };
-      fetchFacilities(facilitiesParams)
-        .then(data => { if (active) setFacilities(data); })
-        .catch(err => console.warn('[Nearby] fetchFacilities error:', err))
+
+      // A real query searches in two tiers: matches inside radiusMiles, then
+      // the nearest matches beyond it. Both come from the proximity RPC, so
+      // both keep distance and distance ordering — the old single-query search
+      // dropped lat/lng entirely to reach outside the radius, which cost every
+      // result its distance and left them ordered alphabetically instead.
+      const request = trimmedQuery.length >= MIN_SEARCH_LEN
+        ? searchFacilitiesTiered({
+            lat: effectiveOrigin.lat, lng: effectiveOrigin.lng, radiusMiles, query: trimmedQuery, limit: 50,
+          })
+        : fetchFacilities({ lat: effectiveOrigin.lat, lng: effectiveOrigin.lng, radiusMiles, limit: 50 })
+            .then(near => ({ near, wider: [] }));
+
+      request
+        .then(({ near, wider }) => {
+          if (!active) return;
+          setFacilities(near);
+          setWiderFacilities(wider);
+        })
+        .catch(err => console.warn('[Nearby] facilities search error:', err))
         .finally(() => { if (active) setFacLoading(false); });
+
+      return () => { active = false; };
+    }, [effectiveOrigin, radiusMiles, debouncedSearch]),
+  );
+
+  // Community events + tournaments. Location-anchored only — no query dep, on
+  // purpose (see above); their search stays client-side over these pins.
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
       fetchNearbyPlayEvents(20)
         .then(data => {
           if (!active) return;
@@ -729,7 +771,7 @@ export default function ExploreScreen() {
         })
         .catch(() => { if (active) setLiveTournaments(null); });
       return () => { active = false; };
-    }, [effectiveOrigin, radiusMiles, debouncedSearch]),
+    }, [effectiveOrigin]),
   );
 
   const courtPins: ExplorePin[] = React.useMemo(() => {
@@ -739,6 +781,16 @@ export default function ExploreScreen() {
     }
     return facs.map(facilityToPin);
   }, [facilities, accessFilter]);
+
+  // Tier 2, same access filter. List-only — never merged into `pins`, which is
+  // what the map renders.
+  const widerCourtPins: ExplorePin[] = React.useMemo(() => {
+    let facs = widerFacilities;
+    if (accessFilter !== 'all') {
+      facs = facs.filter(f => facilityAccessType(f) === accessFilter);
+    }
+    return facs.map(facilityToPin);
+  }, [widerFacilities, accessFilter]);
 
   const communityPinsRaw = category === 'community'
     ? (liveCommunity ?? [])
@@ -780,6 +832,10 @@ export default function ExploreScreen() {
     : search.trim()
       ? pins.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
       : pins;
+
+  // Out-of-radius results exist for courts only; the list shows them under
+  // their own header, the map never does.
+  const widerPins = category === 'court' ? widerCourtPins : [];
 
   const selectedPin = filteredPins.find(p => p.id === selectedId) ?? null;
 
@@ -858,6 +914,9 @@ export default function ExploreScreen() {
               size={20}
               color={L.gold}
             />
+            {/* The map deliberately omits out-of-radius matches; without this
+                the only cue that they exist is switching to the list. */}
+            {view === 'map' && widerPins.length > 0 && <View style={s.headerBtnDot} />}
           </TouchableOpacity>
         </View>
       </View>
@@ -987,14 +1046,28 @@ export default function ExploreScreen() {
             </Text>
             {facLoading && category === 'court' ? (
               <ActivityIndicator style={{ marginTop: 40 }} color={L.navy} />
-            ) : filteredPins.length === 0 ? (
+            ) : filteredPins.length === 0 && widerPins.length === 0 ? (
               <View style={s.empty}>
                 <Ionicons name="search-outline" size={36} color={L.border} />
                 <Text style={s.emptyText}>No results found</Text>
               </View>
-            ) : filteredPins.map(pin => (
-              <ListCard key={pin.id} pin={pin} />
-            ))}
+            ) : (
+              <>
+                {filteredPins.length === 0 ? (
+                  <Text style={s.listNote}>Nothing within {radiusMiles} miles.</Text>
+                ) : filteredPins.map(pin => (
+                  <ListCard key={pin.id} pin={pin} />
+                ))}
+                {widerPins.length > 0 && (
+                  <>
+                    <Text style={[s.listCount, s.listSectionGap]}>OUTSIDE YOUR AREA</Text>
+                    {widerPins.map(pin => (
+                      <ListCard key={pin.id} pin={pin} />
+                    ))}
+                  </>
+                )}
+              </>
+            )}
           </ScrollView>
         )}
       </View>
@@ -1287,6 +1360,15 @@ const s = StyleSheet.create({
   listCount: {
     color: L.textMuted, fontSize: 10, fontWeight: '800',
     letterSpacing: 1.2, marginBottom: 14,
+  },
+  // Separates the out-of-radius section from the in-radius results above it.
+  listSectionGap: {
+    marginTop: 10, paddingTop: 18,
+    borderTopWidth: 1, borderTopColor: L.border,
+  },
+  listNote: {
+    color: L.textMuted, fontSize: text.caption.size,
+    fontWeight: '500', marginBottom: 4,
   },
 
   // Empty state
