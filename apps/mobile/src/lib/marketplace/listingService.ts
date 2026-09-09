@@ -11,8 +11,20 @@ import { notifyListingsUpdated } from './listingEvents';
 export type MarketplaceListing = Tables<'marketplace_listings'>;
 export type MarketplaceListingPhoto = Tables<'marketplace_listing_photos'>;
 
+/** The public handoff spot, joined from facilities via pickup_facility_id. */
+export type ListingPickupFacility = {
+  id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  address: string | null;
+  latitude: number;
+  longitude: number;
+};
+
 export type MarketplaceListingWithPhotos = MarketplaceListing & {
   photos: MarketplaceListingPhoto[];
+  pickupFacility: ListingPickupFacility | null;
 };
 
 export type MarketplaceListingCard = MarketplaceListing & {
@@ -156,14 +168,28 @@ export async function fetchListingsNearby(
 export async function fetchListingDetail(id: string): Promise<MarketplaceListingWithPhotos | null> {
   const { data, error } = await supabase
     .from('marketplace_listings')
-    .select(LISTING_WITH_PHOTOS_SELECT)
+    .select(
+      `${LISTING_WITH_PHOTOS_SELECT}, pickup_facility:facilities!marketplace_listings_pickup_facility_id_fkey(id, name, city, state, address, latitude, longitude)`,
+    )
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
 
-  const row = data as unknown as MarketplaceListingWithPhotos;
-  return { ...row, photos: [...row.photos].sort((a, b) => a.sort_order - b.sort_order) };
+  const row = data as unknown as MarketplaceListingWithPhotos & {
+    pickup_facility: (Omit<ListingPickupFacility, 'latitude' | 'longitude'> & {
+      latitude: number | string;
+      longitude: number | string;
+    }) | null;
+  };
+  const f = row.pickup_facility;
+  return {
+    ...row,
+    photos: [...row.photos].sort((a, b) => a.sort_order - b.sort_order),
+    // facilities.latitude/longitude are numeric in Postgres, so PostgREST hands
+    // them back as strings.
+    pickupFacility: f ? { ...f, latitude: Number(f.latitude), longitude: Number(f.longitude) } : null,
+  };
 }
 
 // ── Listing limit (narrow free-tier bolt-on, not a general entitlement system) ─
@@ -274,6 +300,11 @@ export async function updateListing(id: string, updates: Partial<{
   askingPriceCents: number;
   minOfferCents: number;
   description: string | null;
+  /** Pass null to clear the pickup court and fall back to city/state only. */
+  pickupFacilityId: string | null;
+  fulfillment: Database['public']['Enums']['marketplace_fulfillment'];
+  locationCity: string | null;
+  locationState: string | null;
 }>): Promise<void> {
   const patch: Partial<MarketplaceListing> = {};
   if (updates.brand !== undefined) patch.brand = updates.brand;
@@ -284,6 +315,21 @@ export async function updateListing(id: string, updates: Partial<{
   if (updates.askingPriceCents !== undefined) patch.asking_price_cents = updates.askingPriceCents;
   if (updates.minOfferCents !== undefined) patch.min_offer_cents = updates.minOfferCents;
   if (updates.description !== undefined) patch.description = updates.description;
+  if (updates.fulfillment !== undefined) patch.fulfillment = updates.fulfillment;
+  if (updates.locationCity !== undefined) patch.location_city = updates.locationCity;
+  if (updates.locationState !== undefined) patch.location_state = updates.locationState;
+  if (updates.pickupFacilityId !== undefined) {
+    patch.pickup_facility_id = updates.pickupFacilityId;
+    // Setting pickup_source is what makes the trigger re-derive the coordinate
+    // from the facility. Clearing the court clears the coordinate with it,
+    // rather than leaving the listing pinned to a court it no longer names.
+    patch.pickup_source = updates.pickupFacilityId ? 'facility' : null;
+    if (!updates.pickupFacilityId) {
+      patch.location_lat = null;
+      patch.location_lng = null;
+      patch.location_precision = null;
+    }
+  }
 
   if (updates.brand !== undefined || updates.model !== undefined) {
     const { data: current, error: fetchError } = await supabase

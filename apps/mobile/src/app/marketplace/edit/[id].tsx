@@ -1,7 +1,8 @@
 // Edit Listing — a single-screen form (not the create flow's stepper) since
 // every field already has a value to correct rather than being chosen fresh.
-// Photos and location aren't editable here yet (updateListing() only covers
-// brand/model/condition/pricing/description) — flagged, not silently dropped.
+// Photos still aren't editable here (updateListing() doesn't cover them) —
+// flagged, not silently dropped. Pickup court, handoff method and city/state
+// ARE editable, using the same PickupCourtPicker the create flow uses.
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput,
@@ -15,9 +16,19 @@ import {
   generateListingTitle, normalizeModelName, type MarketplaceCondition,
 } from '@/lib/marketplace/constants';
 import { fetchListingDetail, updateListing } from '@/lib/marketplace/listingService';
+import { PickupCourtPicker, type PickupFacility } from '@/components/marketplace/PickupCourtPicker';
+import type { Database } from '@shared/database.types';
 
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
+
+type Fulfillment = Database['public']['Enums']['marketplace_fulfillment'];
+
+const FULFILLMENT_OPTIONS: { value: Fulfillment; label: string }[] = [
+  { value: 'local_pickup', label: 'Local pickup' },
+  { value: 'shipping',     label: 'Shipping' },
+  { value: 'both',         label: 'Either' },
+];
 
 const L = {
   navy: '#0A1228', gold: '#C9A84C', text: '#0A1228', textMuted: '#9AAABF',
@@ -37,6 +48,10 @@ export default function EditListingScreen() {
   const [askingPrice, setAskingPrice] = useState('');
   const [minOffer, setMinOffer] = useState('');
   const [description, setDescription] = useState('');
+  const [pickupFacility, setPickupFacility] = useState<PickupFacility | null>(null);
+  const [fulfillment, setFulfillment] = useState<Fulfillment>('local_pickup');
+  const [locationCity, setLocationCity] = useState('');
+  const [locationState, setLocationState] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -52,6 +67,10 @@ export default function EditListingScreen() {
       setAskingPrice(String(listing.asking_price_cents / 100));
       setMinOffer(String(listing.min_offer_cents / 100));
       setDescription(listing.description ?? '');
+      setPickupFacility(listing.pickupFacility);
+      setFulfillment(listing.fulfillment);
+      setLocationCity(listing.location_city ?? '');
+      setLocationState(listing.location_state ?? '');
     }).catch((err) => {
       console.error('[EditListing] load failed:', err);
       Alert.alert('Could not load listing', err instanceof Error ? err.message : 'Please try again.');
@@ -76,6 +95,12 @@ export default function EditListingScreen() {
         askingPriceCents: Math.round(asking * 100),
         minOfferCents: Math.round(min * 100),
         description: description.trim() || null,
+        // null clears the court and its coordinate with it, rather than leaving
+        // the listing pinned to a court it no longer names.
+        pickupFacilityId: pickupFacility?.id ?? null,
+        fulfillment,
+        locationCity: locationCity.trim() || null,
+        locationState: locationState.trim() || null,
       });
       router.back();
     } catch (err) {
@@ -156,6 +181,41 @@ export default function EditListingScreen() {
           onChangeText={setDescription}
         />
         <Text style={s.charCount}>{description.length}/{DESCRIPTION_MAX_LENGTH}</Text>
+
+        <Text style={[s.fieldLabel, { marginTop: 20 }]}>Pickup court</Text>
+        <PickupCourtPicker
+          facility={pickupFacility}
+          onPick={(f) => {
+            setPickupFacility(f);
+            if (!locationCity && f.city) setLocationCity(f.city);
+            if (!locationState && f.state) setLocationState(f.state);
+          }}
+          onClear={() => setPickupFacility(null)}
+          hint="Buyers see this public court, never your home address."
+        />
+
+        <Text style={[s.fieldLabel, { marginTop: 20 }]}>Handoff</Text>
+        <View style={s.chipRow}>
+          {FULFILLMENT_OPTIONS.map((opt) => (
+            <TouchableOpacity
+              key={opt.value}
+              style={[s.chip, fulfillment === opt.value && s.chipActive]}
+              onPress={() => setFulfillment(opt.value)}
+              activeOpacity={0.8}
+            >
+              <Text style={[s.chipText, fulfillment === opt.value && s.chipTextActive]}>{opt.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={[s.fieldLabel, { marginTop: 20 }]}>City</Text>
+        <TextInput style={s.textInput} value={locationCity} onChangeText={setLocationCity} placeholder="Sarasota" placeholderTextColor={L.textMuted} />
+        <Text style={[s.fieldLabel, { marginTop: 16 }]}>State</Text>
+        <TextInput
+          style={s.textInput} value={locationState}
+          onChangeText={(v) => setLocationState(v.toUpperCase().slice(0, 2))}
+          placeholder="FL" placeholderTextColor={L.textMuted} autoCapitalize="characters" maxLength={2}
+        />
       </ScrollView>
 
       <View style={[s.footer, { paddingBottom: insets.bottom + 12 }]}>
@@ -200,6 +260,14 @@ const s = StyleSheet.create({
   descInput: { borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, padding: 16, fontSize: text.body.size, fontWeight: '500', color: L.text, minHeight: 100, textAlignVertical: 'top' },
   charCount: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'right', marginTop: 4 },
 
+  chipRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  chip: {
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.pill ?? 20,
+    paddingHorizontal: 14, paddingVertical: 9,
+  },
+  chipActive: { backgroundColor: L.navy, borderColor: L.navy },
+  chipText: { color: L.text, fontSize: text.caption.size, fontWeight: '700' },
+  chipTextActive: { color: '#FFFFFF' },
   saveBtn: { backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 16, alignItems: 'center' },
   saveBtnDisabled: { opacity: 0.4 },
   saveBtnText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },

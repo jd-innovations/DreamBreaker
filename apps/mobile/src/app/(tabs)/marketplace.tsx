@@ -15,9 +15,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useSlideMenu } from '@/components/SlideMenu';
 import { useCurrentLocation } from '@/lib/location';
 import {
-  fetchListings, type MarketplaceListingCard, type ListingSort,
+  fetchListings, fetchListingsNearby, type MarketplaceListingCard, type ListingSort,
 } from '@/lib/marketplace/listingService';
-import { fetchListingsNearby } from '@/lib/marketplace/listingService';
 import { onListingsUpdated } from '@/lib/marketplace/listingEvents';
 import {
   MARKETPLACE_BRANDS, CONDITION_OPTIONS, conditionLabel, formatPriceCents,
@@ -63,7 +62,11 @@ const chipStyles = (t: ThemeRoles) => StyleSheet.create({
 
 // ─── Listing card ───────────────────────────────────────────────────────────
 
-function ListingCard({ listing }: { listing: MarketplaceListingCard }) {
+// Either shape the grid can hold: a plain card, or a nearby result that also
+// knows how far away its pickup court is.
+type ListingRow = MarketplaceListingCard & { distanceMiles?: number | null };
+
+function ListingCard({ listing }: { listing: ListingRow }) {
   const t = useThemeRoles();
   const card = useThemedStyles(cardStyles);
   return (
@@ -91,11 +94,13 @@ function ListingCard({ listing }: { listing: MarketplaceListingCard }) {
           <Text style={card.price}>{formatPriceCents(listing.asking_price_cents)}</Text>
           <Text style={card.age}>{listingAgeLabel(listing.created_at)}</Text>
         </View>
-        {(listing.location_city || listing.location_state) && (
+        {(listing.distanceMiles != null || listing.location_city || listing.location_state) && (
           <View style={card.locRow}>
             <Ionicons name="location-outline" size={11} color={t.textMuted} />
             <Text style={card.loc} numberOfLines={1}>
-              {[listing.location_city, listing.location_state].filter(Boolean).join(', ')}
+              {listing.distanceMiles != null
+                ? `${listing.distanceMiles < 0.1 ? '<0.1' : listing.distanceMiles.toFixed(1)} mi away`
+                : [listing.location_city, listing.location_state].filter(Boolean).join(', ')}
             </Text>
           </View>
         )}
@@ -235,7 +240,9 @@ export default function MarketplaceScreen() {
     }, [setTriggerVisible]),
   );
 
-  const [rawListings, setRawListings] = useState<MarketplaceListingCard[]>([]);
+  // Nearby results carry distanceMiles; the plain query does not. One optional
+  // field rather than two list types, so the card renders either shape.
+  const [rawListings, setRawListings] = useState<ListingRow[]>([]);
   // `loading` covers the first load only. Later queries set `refetching` and
   // leave the current grid on screen.
   const [loading, setLoading] = useState(true);

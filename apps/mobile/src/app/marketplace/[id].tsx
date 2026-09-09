@@ -19,6 +19,7 @@ import { blockUser } from '@/lib/services/blocking';
 import { fetchProfile, type UserProfile } from '@/lib/services/profile';
 import { conditionLabel, formatPriceCents, listingAgeLabel, type MarketplaceBrand } from '@/lib/marketplace/constants';
 import { BRAND_LOGOS } from '@/lib/marketplace/brandLogos';
+import LocationCard from '@/components/LocationCard';
 import { haptics } from '@/lib/haptics';
 import { shareEntity } from '@/lib/share';
 
@@ -292,9 +293,14 @@ function CollapsedContent({ listing, isOwner, onExpand, onMakeOffer, onMessageSe
         <Text style={s.price}>{formatPriceCents(listing.asking_price_cents)}</Text>
         <View style={s.conditionBadge}><Text style={s.conditionText}>{conditionLabel(listing.condition)}</Text></View>
       </View>
-      {(listing.location_city || listing.location_state) && (
+      {listing.pickupFacility ? (
+        <Text style={s.locationText}>
+          Pickup at {listing.pickupFacility.name}
+          {listing.location_city ? ` · ${listing.location_city}, ${listing.location_state ?? ''}`.trimEnd() : ''}
+        </Text>
+      ) : (listing.location_city || listing.location_state) ? (
         <Text style={s.locationText}>{[listing.location_city, listing.location_state].filter(Boolean).join(', ')}</Text>
-      )}
+      ) : null}
       {!isOwner && (
         <View style={s.ctaRow}>
           <TouchableOpacity style={s.offerBtn} onPress={onMakeOffer}>
@@ -356,12 +362,41 @@ function FullContent({ listing, seller, onReport }: {
       <Text style={s.sellerName}>{seller?.full_name ?? 'Pickleball App user'}</Text>
       <Text style={s.meta}>Member since {memberSinceLabel(seller?.created_at ?? null)}</Text>
 
+      {listing.pickupFacility && (
+        <>
+          <Text style={s.sectionLabel}>PICKUP</Text>
+          <Text style={s.pickupHint}>
+            A public court the seller chose for the handoff — not their address. Agree the exact
+            spot and time in chat.
+          </Text>
+          <LocationCard
+            name={listing.pickupFacility.name}
+            addressLines={[
+              listing.pickupFacility.address,
+              [listing.pickupFacility.city, listing.pickupFacility.state].filter(Boolean).join(', '),
+            ]}
+            latitude={listing.pickupFacility.latitude}
+            longitude={listing.pickupFacility.longitude}
+            directionsQuery={`${listing.pickupFacility.latitude},${listing.pickupFacility.longitude}`}
+            onViewFacility={() => router.push(`/facility/${listing.pickupFacility!.id}` as never)}
+          />
+        </>
+      )}
+
       <Text style={s.sectionLabel}>LISTING DETAILS</Text>
       <DetailRow label="Condition" value={conditionLabel(listing.condition)} />
       <DetailRow label="Listed" value={listingAgeLabel(listing.created_at)} />
       {(listing.location_city || listing.location_state) && (
         <DetailRow label="Location" value={[listing.location_city, listing.location_state].filter(Boolean).join(', ')} />
       )}
+      <DetailRow
+        label="Handoff"
+        value={
+          listing.fulfillment === 'shipping' ? 'Ships to buyer'
+          : listing.fulfillment === 'both' ? 'Local pickup or shipping'
+          : 'Local pickup'
+        }
+      />
 
       <TouchableOpacity style={s.reportLink} onPress={onReport}>
         <Ionicons name="flag-outline" size={14} color={L.textMuted} />
@@ -445,6 +480,7 @@ const s = StyleSheet.create({
   conditionText: { color: L.navy, fontSize: text.chipValue.size, fontWeight: '800' },
   meta: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginBottom: 4 },
   locationText: { color: L.text, fontSize: text.caption.size, fontWeight: '500', marginBottom: 4 },
+  pickupHint: { color: L.textMuted, fontSize: text.caption.size, lineHeight: 17, marginBottom: 10 },
   description: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 20, marginTop: 12 },
   sectionLabel: { color: L.textMuted, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginTop: 20, marginBottom: 8 },
   sellerRow: { marginTop: 14 },
