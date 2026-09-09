@@ -166,13 +166,26 @@ EAS computes in its own environment, so do not compare hashes; diff the inputs
 instead):
 
 ```
-git diff <commit-of-installed-build>..HEAD -- \
-  apps/mobile/app.config.js apps/mobile/package.json apps/mobile/eas.json \
+BASE=<commit-of-installed-build>
+
+# 1. Whole-file inputs
+git diff $BASE..HEAD --name-only -- \
+  apps/mobile/app.config.js apps/mobile/eas.json \
   apps/mobile/.easignore apps/mobile/.gitignore apps/mobile/assets/images/
+
+# 2. package.json — only the scripts block and the react-native version are
+#    hashed, so diff those, NOT the file. A devDependency change makes the file
+#    differ while the fingerprint is untouched.
+diff <(git show $BASE:apps/mobile/package.json | python -c "import json,sys;print(json.dumps(json.load(sys.stdin).get('scripts'),indent=2,sort_keys=True))") \
+     <(git show HEAD:apps/mobile/package.json  | python -c "import json,sys;print(json.dumps(json.load(sys.stdin).get('scripts'),indent=2,sort_keys=True))")
+git diff $BASE..HEAD -- apps/mobile/package.json | grep -E '^[+-].*"react-native"'
+
+# 3. Native deps / config plugins
+git diff $BASE..HEAD -- apps/mobile/package.json | grep -E '^[+-] +"(expo|react-native|@react-native|@sentry|@stripe)[^"]*":'
 ```
 
-Empty output ⇒ the OTA will reach the installed build. Non-empty ⇒ it will
-reach nobody, silently, and a new build is required.
+All quiet ⇒ the OTA will reach the installed build. Any hit ⇒ it will reach
+nobody, silently, and a new build is required.
 
 After publishing, confirm the `Runtime Version` line in the CLI output matches
 the installed build's. The current preview build's runtime is **`9e5109d0…`**,
