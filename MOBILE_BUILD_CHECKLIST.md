@@ -126,3 +126,89 @@ write.
 - `SENTRY_AUTH_TOKEN` in Vercel — production stack traces are unsymbolicated
   until it is set. One environment variable, no code change.
 - Light-theme destructive red is 3.62:1, below AA. Pre-existing, two values.
+
+## OTA vs rebuild — what actually forces a new build
+
+Added 2026-09-09 after two OTA publishes reached nobody. The rule was
+discoverable but nowhere written down, so it got guessed at instead.
+
+`runtimeVersion.policy` is `fingerprint` (app.config.js, with the reasoning).
+An `eas update` is only offered to installed builds whose runtime matches. So:
+
+**OTA-safe — publish freely, no rebuild:**
+anything under `apps/mobile/src/**`. All screens, components, hooks, lib code,
+new expo-router routes. This is the overwhelming majority of day-to-day work.
+
+**Forces a rebuild — the complete project-level input list**, produced by
+`npx @expo/fingerprint@latest fingerprint:generate --platform ios` on
+2026-09-09 (128 sources; the other 118 are node_modules autolinking and config
+plugins, i.e. dependency changes):
+
+| Input | Reason |
+| --- | --- |
+| `apps/mobile/app.config.js` | `expoConfig` |
+| `apps/mobile/package.json` → **`scripts`** | `packageJson:scripts` |
+| `apps/mobile/package.json` → `react-native` version | `package:react-native` |
+| `apps/mobile/eas.json` | `easBuild` |
+| `apps/mobile/.easignore` | `easBuild` |
+| `apps/mobile/.gitignore` | `bareGitIgnore` |
+| `apps/mobile/assets/images/icon.png` | `expoConfigExternalFile` |
+| `apps/mobile/assets/images/pickleballapp-logo-light.png` | `expoConfigExternalFile` |
+| any native dependency add/remove/version bump | autolinking |
+| any config plugin change | `expoConfigPlugins` |
+
+Note `packageJson:scripts` in particular — the scripts block is hashed, but
+`devDependencies` are **not**. Adding a devDependency is OTA-safe; adding an
+npm script is not, which is not intuitive.
+
+**Pre-publish check** (local fingerprint hashes are NOT comparable to EAS's —
+EAS computes in its own environment, so do not compare hashes; diff the inputs
+instead):
+
+```
+BASE=<commit-of-installed-build>
+
+# 1. Whole-file inputs
+git diff $BASE..HEAD --name-only -- \
+  apps/mobile/app.config.js apps/mobile/eas.json \
+  apps/mobile/.easignore apps/mobile/.gitignore apps/mobile/assets/images/
+
+# 2. package.json — only the scripts block and the react-native version are
+#    hashed, so diff those, NOT the file. A devDependency change makes the file
+#    differ while the fingerprint is untouched.
+diff <(git show $BASE:apps/mobile/package.json | python -c "import json,sys;print(json.dumps(json.load(sys.stdin).get('scripts'),indent=2,sort_keys=True))") \
+     <(git show HEAD:apps/mobile/package.json  | python -c "import json,sys;print(json.dumps(json.load(sys.stdin).get('scripts'),indent=2,sort_keys=True))")
+git diff $BASE..HEAD -- apps/mobile/package.json | grep -E '^[+-].*"react-native"'
+
+# 3. Native deps / config plugins
+git diff $BASE..HEAD -- apps/mobile/package.json | grep -E '^[+-] +"(expo|react-native|@react-native|@sentry|@stripe)[^"]*":'
+```
+
+All quiet ⇒ the OTA will reach the installed build. Any hit ⇒ it will reach
+nobody, silently, and a new build is required.
+
+After publishing, confirm the `Runtime Version` line in the CLI output matches
+the installed build's. The current preview build's runtime is **`9e5109d0…`**,
+named in app.config.js's `userInterfaceStyle` comment.
+
+**What broke it on 2026-09-08:** `f7e8f7d` added `"test": "vitest run"` to
+`apps/mobile/package.json` scripts. From that commit on, every OTA — the WIP
+consolidation, Marketplace Map Phase 0, the marker spike — targeted a runtime
+no installed build had. Nothing was wrong with the updates; the device was
+correctly ignoring them.
+
+**Publish with the wrapper, never bare `eas update`:**
+
+```
+node ./scripts/publish-update.js preview --message "..."
+```
+
+It loads `EXPO_PUBLIC_*` from the EAS environment. A bare `eas update` ships
+`EXPO_PUBLIC_APP_ENV` unset, `resolveAppEnv()` falls back to `production`, and
+every `internal-only` feature vanishes from the internal build. It is iOS-only
+by design — `expo export --platform=all` includes web, and web dies on Stripe
+importing React Native internals.
+
+**To iterate without any of this:** the `development` profile build loads JS
+from Metro, so `npx expo start --dev-client` picks up every JS change with no
+publish and no fingerprint involvement at all.
