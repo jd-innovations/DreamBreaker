@@ -312,6 +312,56 @@ All three tiers carry text, which is exactly what the documented crash forbids i
 
 **Bail-out rule:** if smooth tracking cannot be demonstrated in the spike, **use the pre-rendered `<Marker image>` presentation instead of building fragile projection math.** Do not iterate on the projection to rescue it. The exact price on the pin is a nice-to-have; a map that drifts or crashes is not shippable.
 
+### 5.1a SPIKE RESULT — 2026-09-09: overlay REJECTED, fallback adopted
+
+Run on a physical iPhone against Apple MapKit, via OTA to the preview build.
+Branch `spike/marketplace-map-marker-overlay`, cherry-picked onto
+`feature/marketplace-map` as `d8e34e9` / `514ecf7` / `bbdcb8b`.
+
+**Fabric safety: CONFIRMED.** An absolutely-positioned badge over `MapView`
+with a childless `<Marker pinColor>` underneath survived 1008 region-change
+events, 21 badge taps, and navigate-away/return with no crash and no stale
+badge. The original worry — that anything badge-like re-enters the
+react-native-maps#5378 path — is settled. It does not.
+
+**Smoothness: PASSED.** Reported as smooth on device; no lag or judder during
+pan, pinch or zoom.
+
+**Accuracy: FAILED, twice.**
+
+| Run | mapPadding | MAX delta vs `pointForCoordinate()` | Gate |
+| --- | --- | --- | --- |
+| 1 | on (top 16 / bottom ~144) | **28.42px** | fail (<2px) |
+| 2 | off | **19.44px** | fail (<2px) |
+
+The error is entirely vertical — run 1 read `badge x 156.8 y 361.4` against
+`sdk x 156.8 y 340.8`. Longitude is exact to the tenth of a pixel; latitude is
+not. `mapPadding` was the obvious suspect because it is the only vertically
+asymmetric input, and disabling it moved the number without fixing it, so the
+model is wrong independently of padding.
+
+**Decision: use the pre-rendered `<Marker image>` presentation** (§5.1's named
+fallback) — price bands rather than exact prices, count pins rather than exact
+counts. Per the bail-out rule this audit set before the spike ran, the
+projection math is not being iterated on. Two failed measurements is the signal
+to switch presentations, not to keep tuning.
+
+**What this costs:** a pin reads `$100–199` instead of `$145`. Tier 2 and 3
+(§5.3) are unaffected — those were always going to be small fixed sets
+(`2`,`3`,`4`,`5+`,`9+`), which pre-rendered assets serve exactly as well.
+
+**A path back, if exact prices ever become load-bearing:** stop projecting and
+ask the SDK. `mapRef.pointForCoordinate()` is ground truth — it is what proved
+the overlay wrong — and it could position badges directly. It is async and one
+call per marker, so it suits a settle-time layout (badges hidden during
+gesture, placed on `onRegionChangeComplete`) rather than per-frame tracking.
+That is a different design, not a correction to this one, and it should be
+costed on its own rather than reached for reflexively.
+
+**Android: never tested.** No Android hardware and no emulator available. The
+fallback is provider-independent by construction — it uses the library's own
+native rendering path — which is a further point in its favour.
+
 **Android verification caveat:** no physical Android device is available. The Android gate may be satisfied on an emulator initially, but **the spike result must be recorded as "unverified on physical Android hardware"** and re-checked before release. Emulators do not reproduce real GPU compositing, frame pacing, or touch timing.
 
 ### 5.2 Location model — no precise seller coordinates, ever
