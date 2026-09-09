@@ -453,6 +453,7 @@ export default function MarketplaceScreen() {
   // tab bar (tabBarClearance) and above ExploreMap's own locate button, which
   // sits at clearance + 20 and is 46 tall.
   const mapControlsBottom = tabBarClearance(insets.bottom) + 76;
+  const lastPinPressRef = useRef(0);
   const unlocatedCount = listings.length - pins.length;
 
   // Only offer "search this area" once the pan is worth a round trip.
@@ -524,8 +525,18 @@ export default function MarketplaceScreen() {
               <ExploreMap
                 pins={pins}
                 selectedId={selectedId}
-                onSelectPin={(id) => setSelectedId((prev) => (prev === id ? null : id))}
-                onMapPress={() => setSelectedId(null)}
+                onSelectPin={(id) => {
+                  lastPinPressRef.current = Date.now();
+                  setSelectedId((prev) => (prev === id ? null : id));
+                }}
+                // Belt and braces with ExploreMap's own marker-press guard: if
+                // a build ever delivers the background press without the
+                // marker-press tag, this still stops the same tap that opened
+                // the card from closing it.
+                onMapPress={() => {
+                  if (Date.now() - lastPinPressRef.current < 300) return;
+                  setSelectedId(null);
+                }}
                 region={region}
                 onRegionChangeComplete={(next) =>
                   setPannedCenter({ lat: next.latitude, lng: next.longitude })

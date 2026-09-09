@@ -75,7 +75,13 @@ export function ExploreMap({
         provider={MAP_PROVIDER}
         initialRegion={initialRegion}
         onRegionChangeComplete={onRegionChangeComplete}
-        onPress={onMapPress}
+        // A tap on a marker also delivers MapView's own onPress on iOS, so a
+        // naive handler here clears the selection in the very same tap that set
+        // it -- the card would never appear. react-native-maps tags that case,
+        // so only a genuine map-background press dismisses.
+        onPress={onMapPress ? (e) => {
+          if (e.nativeEvent?.action !== 'marker-press') onMapPress();
+        } : undefined}
         showsUserLocation
         showsMyLocationButton={false}
         toolbarEnabled={false}
