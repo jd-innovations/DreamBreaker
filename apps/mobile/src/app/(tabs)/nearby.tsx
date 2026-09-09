@@ -551,7 +551,13 @@ function ListCard({ pin }: { pin: ExplorePin }) {
         <Text style={lc.title} numberOfLines={1}>{pin.name}</Text>
         <View style={lc.metaRow}>
           <View style={lc.metaItem}>
-            <Ionicons name="calendar-outline" size={11} color={L.textMuted} />
+            {/* A court has no date — facilityToPin puts the access type
+                ("Public"/"Membership"/"Private") in this slot, so the calendar
+                glyph only belongs on the event categories that really do
+                carry a datetime here. */}
+            {pin.category !== 'court' && (
+              <Ionicons name="calendar-outline" size={11} color={L.textMuted} />
+            )}
             <Text style={lc.metaText}>{pin.datetime}</Text>
           </View>
           <View style={lc.metaItem}>
