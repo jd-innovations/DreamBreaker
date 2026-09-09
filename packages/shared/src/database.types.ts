@@ -1794,6 +1794,151 @@ export type Database = {
           },
         ]
       }
+      facility_import_batches: {
+        Row: {
+          committed_at: string | null
+          committed_by: string | null
+          committed_row_count: number | null
+          confident_count: number
+          created_at: string
+          created_by: string
+          filename: string
+          id: string
+          invalid_count: number
+          new_count: number
+          notes: string | null
+          possible_count: number
+          row_count: number
+          status: string
+          storage_path: string
+        }
+        Insert: {
+          committed_at?: string | null
+          committed_by?: string | null
+          committed_row_count?: number | null
+          confident_count?: number
+          created_at?: string
+          created_by: string
+          filename: string
+          id?: string
+          invalid_count?: number
+          new_count?: number
+          notes?: string | null
+          possible_count?: number
+          row_count?: number
+          status?: string
+          storage_path: string
+        }
+        Update: {
+          committed_at?: string | null
+          committed_by?: string | null
+          committed_row_count?: number | null
+          confident_count?: number
+          created_at?: string
+          created_by?: string
+          filename?: string
+          id?: string
+          invalid_count?: number
+          new_count?: number
+          notes?: string | null
+          possible_count?: number
+          row_count?: number
+          status?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facility_import_batches_committed_by_fkey"
+            columns: ["committed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facility_import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facility_import_rows: {
+        Row: {
+          admin_decision: string | null
+          applied: boolean
+          applied_facility_id: string | null
+          apply_error: string | null
+          batch_id: string
+          created_at: string
+          error: string | null
+          id: string
+          mapped: Json
+          match_reason: string | null
+          match_score: number | null
+          match_type: string
+          matched_facility_id: string | null
+          raw: Json
+          row_number: number
+        }
+        Insert: {
+          admin_decision?: string | null
+          applied?: boolean
+          applied_facility_id?: string | null
+          apply_error?: string | null
+          batch_id: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          mapped: Json
+          match_reason?: string | null
+          match_score?: number | null
+          match_type: string
+          matched_facility_id?: string | null
+          raw: Json
+          row_number: number
+        }
+        Update: {
+          admin_decision?: string | null
+          applied?: boolean
+          applied_facility_id?: string | null
+          apply_error?: string | null
+          batch_id?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          mapped?: Json
+          match_reason?: string | null
+          match_score?: number | null
+          match_type?: string
+          matched_facility_id?: string | null
+          raw?: Json
+          row_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facility_import_rows_applied_facility_id_fkey"
+            columns: ["applied_facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facility_import_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "facility_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facility_import_rows_matched_facility_id_fkey"
+            columns: ["matched_facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       facility_manager_applications: {
         Row: {
           applicant_id: string
@@ -2721,13 +2866,24 @@ export type Database = {
           condition: Database["public"]["Enums"]["marketplace_condition"]
           created_at: string
           description: string | null
+          fulfillment: Database["public"]["Enums"]["marketplace_fulfillment"]
           id: string
           location_city: string | null
+          location_coords: unknown
           location_lat: number | null
           location_lng: number | null
+          location_postal: string | null
+          location_precision:
+            | Database["public"]["Enums"]["marketplace_location_precision"]
+            | null
           location_state: string | null
+          location_visibility: Database["public"]["Enums"]["marketplace_location_visibility"]
           min_offer_cents: number
           model: string
+          pickup_facility_id: string | null
+          pickup_source:
+            | Database["public"]["Enums"]["marketplace_pickup_source"]
+            | null
           seller_id: string
           status: Database["public"]["Enums"]["marketplace_listing_status"]
           title: string
@@ -2739,13 +2895,24 @@ export type Database = {
           condition: Database["public"]["Enums"]["marketplace_condition"]
           created_at?: string
           description?: string | null
+          fulfillment?: Database["public"]["Enums"]["marketplace_fulfillment"]
           id?: string
           location_city?: string | null
+          location_coords?: unknown
           location_lat?: number | null
           location_lng?: number | null
+          location_postal?: string | null
+          location_precision?:
+            | Database["public"]["Enums"]["marketplace_location_precision"]
+            | null
           location_state?: string | null
+          location_visibility?: Database["public"]["Enums"]["marketplace_location_visibility"]
           min_offer_cents: number
           model: string
+          pickup_facility_id?: string | null
+          pickup_source?:
+            | Database["public"]["Enums"]["marketplace_pickup_source"]
+            | null
           seller_id: string
           status?: Database["public"]["Enums"]["marketplace_listing_status"]
           title: string
@@ -2757,19 +2924,37 @@ export type Database = {
           condition?: Database["public"]["Enums"]["marketplace_condition"]
           created_at?: string
           description?: string | null
+          fulfillment?: Database["public"]["Enums"]["marketplace_fulfillment"]
           id?: string
           location_city?: string | null
+          location_coords?: unknown
           location_lat?: number | null
           location_lng?: number | null
+          location_postal?: string | null
+          location_precision?:
+            | Database["public"]["Enums"]["marketplace_location_precision"]
+            | null
           location_state?: string | null
+          location_visibility?: Database["public"]["Enums"]["marketplace_location_visibility"]
           min_offer_cents?: number
           model?: string
+          pickup_facility_id?: string | null
+          pickup_source?:
+            | Database["public"]["Enums"]["marketplace_pickup_source"]
+            | null
           seller_id?: string
           status?: Database["public"]["Enums"]["marketplace_listing_status"]
           title?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "marketplace_listings_pickup_facility_id_fkey"
+            columns: ["pickup_facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "marketplace_listings_seller_id_fkey"
             columns: ["seller_id"]
@@ -3328,6 +3513,53 @@ export type Database = {
             foreignKeyName: "partner_preferences_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_methods: {
+        Row: {
+          brand: string
+          created_at: string
+          exp_month: number
+          exp_year: number
+          id: string
+          is_default: boolean
+          last4: string
+          profile_id: string
+          stripe_payment_method_id: string
+          updated_at: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          exp_month: number
+          exp_year: number
+          id?: string
+          is_default?: boolean
+          last4: string
+          profile_id: string
+          stripe_payment_method_id: string
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          exp_month?: number
+          exp_year?: number
+          id?: string
+          is_default?: boolean
+          last4?: string
+          profile_id?: string
+          stripe_payment_method_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -6761,6 +6993,14 @@ export type Database = {
             }
             Returns: string
           }
+      admin_commit_facility_import: {
+        Args: { p_admin_id: string; p_batch_id: string; p_decisions?: Json }
+        Returns: {
+          applied_count: number
+          error_count: number
+          skipped_count: number
+        }[]
+      }
       admin_delete_tournament: {
         Args: { p_tournament_id: string }
         Returns: undefined
@@ -6783,6 +7023,10 @@ export type Database = {
           refund_id: string
           severity: string
         }[]
+      }
+      admin_stage_facility_import: {
+        Args: { p_filename: string; p_rows: Json; p_storage_path: string }
+        Returns: string
       }
       apply_to_be_director: {
         Args: never
@@ -7385,9 +7629,27 @@ export type Database = {
         Args: { p_offer_id: string; p_quantity: number }
         Returns: undefined
       }
+      find_facility_match: {
+        Args: {
+          p_google_place_id: string
+          p_lat: number
+          p_lng: number
+          p_name: string
+        }
+        Returns: {
+          facility_id: string
+          match_type: string
+          reason: string
+          score: number
+        }[]
+      }
       fn_send_transactional_email: {
         Args: { p_payload: Json }
         Returns: undefined
+      }
+      fn_snap_coordinate: {
+        Args: { p_lat: number; p_lng: number }
+        Returns: Record<string, unknown>
       }
       fn_sync_tournament_division_rollup: {
         Args: { p_tournament_id: string }
@@ -7495,6 +7757,21 @@ export type Database = {
         Returns: boolean
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
+      get_director_tournament_metrics: {
+        Args: { p_tournament_ids: string[] }
+        Returns: {
+          cancelled: number
+          checked_in: number
+          div_count: number
+          no_show: number
+          outstanding_cents: number
+          registered: number
+          revenue_cents: number
+          total: number
+          tournament_id: string
+          waitlisted: number
+        }[]
+      }
       get_or_create_direct_conversation: {
         Args: { p_partner_id: string }
         Returns: string
@@ -7502,6 +7779,14 @@ export type Database = {
       get_or_create_play_event_conversation: {
         Args: { p_event_id: string }
         Returns: string
+      }
+      get_partner_looking_for: {
+        Args: { candidate_ids: string[] }
+        Returns: {
+          actively_looking: boolean
+          game_types: string[]
+          user_id: string
+        }[]
       }
       gettransactionid: { Args: never; Returns: unknown }
       has_pending_group_invite: {
@@ -7924,7 +8209,11 @@ export type Database = {
       }
       release_reservation_slots: {
         Args: { p_profile_id: string; p_reservation_id: string }
-        Returns: undefined
+        Returns: {
+          players_left: number
+          released: boolean
+          reservation_cancelled: boolean
+        }[]
       }
       reservation_asset_hourly_rate_cents: {
         Args: {
@@ -8196,6 +8485,63 @@ export type Database = {
               website: string
             }[]
           }
+      search_listings_nearby: {
+        Args: {
+          brand_filter?: string
+          condition_filter?: string
+          include_unlocated?: boolean
+          lat: number
+          lng: number
+          max_price_cents?: number
+          min_price_cents?: number
+          radius_meters?: number
+          result_limit?: number
+          search_query?: string
+        }
+        Returns: {
+          asking_price_cents: number
+          brand: string
+          condition: Database["public"]["Enums"]["marketplace_condition"]
+          created_at: string
+          description: string
+          distance_meters: number
+          fulfillment: Database["public"]["Enums"]["marketplace_fulfillment"]
+          id: string
+          location_city: string
+          location_lat: number
+          location_lng: number
+          location_precision: Database["public"]["Enums"]["marketplace_location_precision"]
+          location_state: string
+          min_offer_cents: number
+          model: string
+          pickup_facility_id: string
+          seller_id: string
+          status: Database["public"]["Enums"]["marketplace_listing_status"]
+          title: string
+          updated_at: string
+        }[]
+      }
+      set_default_payment_method: {
+        Args: { p_payment_method_id: string }
+        Returns: {
+          brand: string
+          created_at: string
+          exp_month: number
+          exp_year: number
+          id: string
+          is_default: boolean
+          last4: string
+          profile_id: string
+          stripe_payment_method_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payment_methods"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       settle_coach_payout_batch: {
         Args: { p_batch_id: string; p_failure?: string; p_transfer_id: string }
         Returns: undefined
@@ -8870,7 +9216,11 @@ export type Database = {
       facility_asset_owner_type: "facility" | "court" | "ball_machine"
       facility_member_role: "owner" | "manager" | "staff"
       marketplace_condition: "new" | "like_new" | "excellent" | "good" | "fair"
+      marketplace_fulfillment: "local_pickup" | "shipping" | "both"
       marketplace_listing_status: "active" | "pending" | "sold" | "deleted"
+      marketplace_location_precision: "facility" | "neighborhood" | "city"
+      marketplace_location_visibility: "map" | "city_only" | "hidden"
+      marketplace_pickup_source: "facility" | "city" | "map_area"
       match_direction: "like" | "pass" | "super"
       payment_status:
         | "requires_confirmation"
@@ -8980,468 +9330,6 @@ export type Database = {
         reason: string | null
         location: unknown
       }
-    }
-  }
-  storage: {
-    Tables: {
-      buckets: {
-        Row: {
-          allowed_mime_types: string[] | null
-          avif_autodetection: boolean | null
-          created_at: string | null
-          file_size_limit: number | null
-          id: string
-          name: string
-          owner: string | null
-          owner_id: string | null
-          public: boolean | null
-          type: Database["storage"]["Enums"]["buckettype"]
-          updated_at: string | null
-          versioning_status: string
-        }
-        Insert: {
-          allowed_mime_types?: string[] | null
-          avif_autodetection?: boolean | null
-          created_at?: string | null
-          file_size_limit?: number | null
-          id: string
-          name: string
-          owner?: string | null
-          owner_id?: string | null
-          public?: boolean | null
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string | null
-          versioning_status?: string
-        }
-        Update: {
-          allowed_mime_types?: string[] | null
-          avif_autodetection?: boolean | null
-          created_at?: string | null
-          file_size_limit?: number | null
-          id?: string
-          name?: string
-          owner?: string | null
-          owner_id?: string | null
-          public?: boolean | null
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string | null
-          versioning_status?: string
-        }
-        Relationships: []
-      }
-      buckets_analytics: {
-        Row: {
-          created_at: string
-          deleted_at: string | null
-          format: string
-          id: string
-          name: string
-          type: Database["storage"]["Enums"]["buckettype"]
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          deleted_at?: string | null
-          format?: string
-          id?: string
-          name: string
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          deleted_at?: string | null
-          format?: string
-          id?: string
-          name?: string
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      buckets_vectors: {
-        Row: {
-          created_at: string
-          id: string
-          type: Database["storage"]["Enums"]["buckettype"]
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id: string
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      migrations: {
-        Row: {
-          executed_at: string | null
-          hash: string
-          id: number
-          name: string
-        }
-        Insert: {
-          executed_at?: string | null
-          hash: string
-          id: number
-          name: string
-        }
-        Update: {
-          executed_at?: string | null
-          hash?: string
-          id?: number
-          name?: string
-        }
-        Relationships: []
-      }
-      objects: {
-        Row: {
-          archived_at: string | null
-          bucket_id: string | null
-          created_at: string | null
-          id: string
-          is_delete_marker: boolean
-          is_versioned: boolean
-          last_accessed_at: string | null
-          metadata: Json | null
-          name: string | null
-          owner: string | null
-          owner_id: string | null
-          path_tokens: string[] | null
-          updated_at: string | null
-          user_metadata: Json | null
-          version: string | null
-        }
-        Insert: {
-          archived_at?: string | null
-          bucket_id?: string | null
-          created_at?: string | null
-          id?: string
-          is_delete_marker?: boolean
-          is_versioned?: boolean
-          last_accessed_at?: string | null
-          metadata?: Json | null
-          name?: string | null
-          owner?: string | null
-          owner_id?: string | null
-          path_tokens?: string[] | null
-          updated_at?: string | null
-          user_metadata?: Json | null
-          version?: string | null
-        }
-        Update: {
-          archived_at?: string | null
-          bucket_id?: string | null
-          created_at?: string | null
-          id?: string
-          is_delete_marker?: boolean
-          is_versioned?: boolean
-          last_accessed_at?: string | null
-          metadata?: Json | null
-          name?: string | null
-          owner?: string | null
-          owner_id?: string | null
-          path_tokens?: string[] | null
-          updated_at?: string | null
-          user_metadata?: Json | null
-          version?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "objects_bucketId_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      s3_multipart_uploads: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          id: string
-          in_progress_size: number
-          key: string
-          metadata: Json | null
-          owner_id: string | null
-          upload_signature: string
-          user_metadata: Json | null
-          version: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          id: string
-          in_progress_size?: number
-          key: string
-          metadata?: Json | null
-          owner_id?: string | null
-          upload_signature: string
-          user_metadata?: Json | null
-          version: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          id?: string
-          in_progress_size?: number
-          key?: string
-          metadata?: Json | null
-          owner_id?: string | null
-          upload_signature?: string
-          user_metadata?: Json | null
-          version?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "s3_multipart_uploads_bucket_id_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      s3_multipart_uploads_parts: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          etag: string
-          id: string
-          key: string
-          owner_id: string | null
-          part_number: number
-          size: number
-          upload_id: string
-          version: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          etag: string
-          id?: string
-          key: string
-          owner_id?: string | null
-          part_number: number
-          size?: number
-          upload_id: string
-          version: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          etag?: string
-          id?: string
-          key?: string
-          owner_id?: string | null
-          part_number?: number
-          size?: number
-          upload_id?: string
-          version?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "s3_multipart_uploads_parts_bucket_id_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "s3_multipart_uploads_parts_upload_id_fkey"
-            columns: ["upload_id"]
-            isOneToOne: false
-            referencedRelation: "s3_multipart_uploads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      vector_indexes: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          data_type: string
-          dimension: number
-          distance_metric: string
-          id: string
-          metadata_configuration: Json | null
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          data_type: string
-          dimension: number
-          distance_metric: string
-          id?: string
-          metadata_configuration?: Json | null
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          data_type?: string
-          dimension?: number
-          distance_metric?: string
-          id?: string
-          metadata_configuration?: Json | null
-          name?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vector_indexes_bucket_id_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets_vectors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      allow_any_operation: {
-        Args: { expected_operations: string[] }
-        Returns: boolean
-      }
-      allow_only_operation: {
-        Args: { expected_operation: string }
-        Returns: boolean
-      }
-      can_insert_object: {
-        Args: { bucketid: string; metadata: Json; name: string; owner: string }
-        Returns: undefined
-      }
-      extension: { Args: { name: string }; Returns: string }
-      filename: { Args: { name: string }; Returns: string }
-      foldername: { Args: { name: string }; Returns: string[] }
-      get_common_prefix: {
-        Args: { p_delimiter: string; p_key: string; p_prefix: string }
-        Returns: string
-      }
-      get_size_by_bucket: {
-        Args: never
-        Returns: {
-          bucket_id: string
-          size: number
-        }[]
-      }
-      list_multipart_uploads_with_delimiter: {
-        Args: {
-          bucket_id: string
-          delimiter_param: string
-          max_keys?: number
-          next_key_token?: string
-          next_upload_token?: string
-          prefix_param: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          key: string
-        }[]
-      }
-      list_objects_with_delimiter: {
-        Args: {
-          _bucket_id: string
-          delimiter_param: string
-          max_keys?: number
-          next_token?: string
-          prefix_param: string
-          sort_order?: string
-          start_after?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      operation: { Args: never; Returns: string }
-      search: {
-        Args: {
-          bucketname: string
-          levels?: number
-          limits?: number
-          offsets?: number
-          prefix: string
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      search_by_timestamp: {
-        Args: {
-          p_bucket_id: string
-          p_level: number
-          p_limit: number
-          p_prefix: string
-          p_sort_column: string
-          p_sort_column_after: string
-          p_sort_order: string
-          p_start_after: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          key: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      search_v2: {
-        Args: {
-          bucket_name: string
-          levels?: number
-          limits?: number
-          prefix: string
-          sort_column?: string
-          sort_column_after?: string
-          sort_order?: string
-          start_after?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          key: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-    }
-    Enums: {
-      buckettype: "STANDARD" | "ANALYTICS" | "VECTOR"
-    }
-    CompositeTypes: {
-      [_ in never]: never
     }
   }
 }
@@ -9604,7 +9492,11 @@ export const Constants = {
       facility_asset_owner_type: ["facility", "court", "ball_machine"],
       facility_member_role: ["owner", "manager", "staff"],
       marketplace_condition: ["new", "like_new", "excellent", "good", "fair"],
+      marketplace_fulfillment: ["local_pickup", "shipping", "both"],
       marketplace_listing_status: ["active", "pending", "sold", "deleted"],
+      marketplace_location_precision: ["facility", "neighborhood", "city"],
+      marketplace_location_visibility: ["map", "city_only", "hidden"],
+      marketplace_pickup_source: ["facility", "city", "map_area"],
       match_direction: ["like", "pass", "super"],
       payment_status: [
         "requires_confirmation",
@@ -9705,11 +9597,6 @@ export const Constants = {
         "platform_fee",
       ],
       user_role: ["player", "director", "player_director", "admin"],
-    },
-  },
-  storage: {
-    Enums: {
-      buckettype: ["STANDARD", "ANALYTICS", "VECTOR"],
     },
   },
 } as const

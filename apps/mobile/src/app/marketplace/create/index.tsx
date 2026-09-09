@@ -21,6 +21,8 @@ import {
 } from '@/lib/marketplace/constants';
 import { draftListingId, uploadListingPhoto, cleanupAbandonedPhotos } from '@/lib/marketplace/photos';
 import { canCreateListing, publishListing } from '@/lib/marketplace/listingService';
+import { fetchFacilities, type FacilityWithPrimaryPhoto } from '@/lib/supabase/facilities';
+import { useCurrentLocation } from '@/lib/location';
 import { improveListing } from '@/lib/marketplace/improveListing';
 import { isFeatureEnabled } from '@/lib/featureFlags';
 
@@ -46,6 +48,19 @@ type Draft = {
   description: string;
   locationCity: string;
   locationState: string;
+  pickupFacility: PickupFacility | null;
+};
+
+// The public handoff spot. Only what the UI shows plus what the server needs
+// to identify the facility -- the coordinate is derived server-side from
+// pickup_facility_id, so these lat/lng are advisory only.
+type PickupFacility = {
+  id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  latitude: number;
+  longitude: number;
 };
 
 export default function CreateListingScreen() {
@@ -57,7 +72,7 @@ export default function CreateListingScreen() {
   const [draft, setDraft] = useState<Draft>(() => ({
     id: draftListingId(), photoUris: [], photoUrls: [], brand: null, model: '',
     condition: null, askingPrice: '', minOffer: '', description: '',
-    locationCity: '', locationState: '',
+    locationCity: '', locationState: '', pickupFacility: null,
   }));
   const [uploading, setUploading] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -162,8 +177,15 @@ export default function CreateListingScreen() {
         description: draft.description.trim() || null,
         locationCity: draft.locationCity.trim() || null,
         locationState: draft.locationState.trim() || null,
-        locationLat: profile?.location_lat ?? null,
-        locationLng: profile?.location_lng ?? null,
+        // Pickup location, not the seller's. For a facility pick the server
+        // derives the coordinate from pickup_facility_id and ignores these;
+        // with no pick, the listing simply has no coordinate rather than
+        // inheriting the seller's profile point (audit v3 5.2).
+        pickupSource: draft.pickupFacility ? 'facility' : null,
+        pickupFacilityId: draft.pickupFacility?.id ?? null,
+        fulfillment: 'local_pickup',
+        locationLat: draft.pickupFacility?.latitude ?? null,
+        locationLng: draft.pickupFacility?.longitude ?? null,
         photoUrls: draft.photoUrls,
       });
       // Photos are now owned by the published row — flip the ref synchronously
@@ -236,6 +258,14 @@ export default function CreateListingScreen() {
         {STEPS[step] === 'Location' && (
           <LocationStep
             city={draft.locationCity} state={draft.locationState}
+            facility={draft.pickupFacility}
+            onPickFacility={(f) => setDraft((d) => ({
+              ...d,
+              pickupFacility: f,
+              locationCity: d.locationCity || f.city || '',
+              locationState: d.locationState || f.state || '',
+            }))}
+            onClearFacility={() => setDraft((d) => ({ ...d, pickupFacility: null }))}
             onCityChange={(v) => setDraft((d) => ({ ...d, locationCity: v }))}
             onStateChange={(v) => setDraft((d) => ({ ...d, locationState: v }))}
           />
@@ -442,13 +472,95 @@ function DescriptionStep({ draft, onChange }: { draft: Draft; onChange: (v: stri
   );
 }
 
-function LocationStep({ city, state, onCityChange, onStateChange }: {
+function LocationStep({
+  city, state, onCityChange, onStateChange,
+  facility, onPickFacility, onClearFacility,
+}: {
   city: string; state: string; onCityChange: (v: string) => void; onStateChange: (v: string) => void;
+  facility: PickupFacility | null;
+  onPickFacility: (f: PickupFacility) => void;
+  onClearFacility: () => void;
 }) {
+  const { lat, lng } = useCurrentLocation();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<FacilityWithPrimaryPhoto[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Same proximity search the log-session picker uses — public courts from the
+  // facilities directory, nearest first.
+  useEffect(() => {
+    let active = true;
+    const timer = setTimeout(() => {
+      setLoading(true);
+      fetchFacilities({ lat, lng, radiusMiles: 50, query: query.trim() || undefined, limit: 12 })
+        .then((rows) => { if (active) setResults(rows); })
+        .catch(() => { if (active) setResults([]); })
+        .finally(() => { if (active) setLoading(false); });
+    }, query ? 300 : 0);
+    return () => { active = false; clearTimeout(timer); };
+  }, [lat, lng, query]);
+
   return (
     <View>
-      <Text style={s.stepHint}>Buyers see your approximate location only — never your exact address.</Text>
-      <Text style={s.fieldLabel}>City</Text>
+      <Text style={s.stepHint}>
+        Pick a public court for the handoff. Buyers see that spot — never your home address.
+        You can agree on the exact meeting point in chat.
+      </Text>
+
+      {facility ? (
+        <View style={s.pickupSelected}>
+          <Ionicons name="location" size={18} color={L.gold} />
+          <View style={{ flex: 1 }}>
+            <Text style={s.pickupSelectedName} numberOfLines={1}>{facility.name}</Text>
+            <Text style={s.pickupSelectedSub} numberOfLines={1}>
+              {[facility.city, facility.state].filter(Boolean).join(', ')}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={onClearFacility} accessibilityRole="button" accessibilityLabel="Change pickup court">
+            <Text style={s.pickupChange}>Change</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <TextInput
+            style={s.textInput}
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search courts near you"
+            placeholderTextColor={L.textMuted}
+          />
+          {loading && <ActivityIndicator style={{ marginTop: 12 }} color={L.gold} />}
+          {!loading && results.length === 0 && (
+            <Text style={s.pickupEmpty}>No courts found. You can skip this and just use your city.</Text>
+          )}
+          {results.map((f) => (
+            <TouchableOpacity
+              key={f.id}
+              style={s.pickupRow}
+              activeOpacity={0.75}
+              onPress={() => onPickFacility({
+                id: f.id,
+                name: f.name,
+                city: f.city,
+                state: f.state,
+                latitude: Number(f.latitude),
+                longitude: Number(f.longitude),
+              })}
+            >
+              <Ionicons name="tennisball-outline" size={18} color={L.navy} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.pickupRowName} numberOfLines={1}>{f.name}</Text>
+                <Text style={s.pickupRowSub} numberOfLines={1}>
+                  {[f.city, f.state].filter(Boolean).join(', ')}
+                  {f.distanceMeters != null ? ` · ${(f.distanceMeters / 1609.344).toFixed(1)} mi` : ''}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
+
+      <Text style={[s.fieldLabel, { marginTop: 20 }]}>City</Text>
       <TextInput style={s.textInput} value={city} onChangeText={onCityChange} placeholder="Sarasota" placeholderTextColor={L.textMuted} />
       <Text style={[s.fieldLabel, { marginTop: 16 }]}>State</Text>
       <TextInput
@@ -514,6 +626,23 @@ const s = StyleSheet.create({
   pickChipText: { color: L.text, fontSize: text.controlLabel.size, fontWeight: '700' },
   pickChipTextActive: { color: '#FFFFFF' },
 
+  // Pickup-court picker (Location step).
+  pickupSelected: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1, borderColor: L.gold, borderRadius: shape.card,
+    paddingHorizontal: 14, paddingVertical: 12, backgroundColor: '#FFFBF0',
+  },
+  pickupSelectedName: { color: L.text, fontWeight: '800', fontSize: text.rowTitle.size },
+  pickupSelectedSub: { color: L.textMuted, fontSize: text.caption.size, marginTop: 2 },
+  pickupChange: { color: L.gold, fontWeight: '800', fontSize: text.caption.size },
+  pickupRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.card,
+    paddingHorizontal: 14, paddingVertical: 12, marginTop: 8,
+  },
+  pickupRowName: { color: L.text, fontWeight: '700', fontSize: text.rowTitle.size },
+  pickupRowSub: { color: L.textMuted, fontSize: text.caption.size, marginTop: 2 },
+  pickupEmpty: { color: L.textMuted, fontSize: text.caption.size, marginTop: 12 },
   textInput: { borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, paddingHorizontal: 16, paddingVertical: 14, fontSize: text.body.size, fontWeight: '500', color: L.text },
   titlePreview: { marginTop: 16, padding: 14, backgroundColor: '#F5F7FB', borderRadius: shape.panel },
   titlePreviewLabel: { color: L.textMuted, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing, marginBottom: 4 },

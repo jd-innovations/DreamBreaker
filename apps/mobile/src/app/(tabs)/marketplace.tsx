@@ -17,7 +17,7 @@ import { useCurrentLocation } from '@/lib/location';
 import {
   fetchListings, type MarketplaceListingCard, type ListingSort,
 } from '@/lib/marketplace/listingService';
-import { filterListingsByRadius } from '@/lib/marketplace/listingDistance';
+import { fetchListingsNearby } from '@/lib/marketplace/listingService';
 import {
   MARKETPLACE_BRANDS, CONDITION_OPTIONS, conditionLabel, formatPriceCents,
   listingAgeLabel, type MarketplaceCondition,
@@ -279,14 +279,31 @@ export default function MarketplaceScreen() {
     const seq = ++requestSeq.current;
     setRefetching(true);
     try {
-      const rows = await fetchListings({
-        query: debouncedSearch || undefined,
-        brand: brand ?? undefined,
-        condition: condition ?? undefined,
-        minPriceCents: priceBucket?.min,
-        maxPriceCents: priceBucket?.max,
-        sort,
-      });
+      // Phase 1 (MARKETPLACE_MAP_AUDIT.md): when a radius is chosen the
+      // database does the distance work via search_listings_nearby -- the same
+      // ST_DWithin + GiST shape facilities have always used. Without a radius
+      // (or without a location fix) the plain query still runs, so sorting by
+      // price/newest is unchanged.
+      const useNearby = radiusMiles != null && myLat != null && myLng != null;
+      const rows = useNearby
+        ? await fetchListingsNearby({
+            lat: myLat,
+            lng: myLng,
+            radiusMiles,
+            query: debouncedSearch || undefined,
+            brand: brand ?? undefined,
+            condition: condition ?? undefined,
+            minPriceCents: priceBucket?.min,
+            maxPriceCents: priceBucket?.max,
+          })
+        : await fetchListings({
+            query: debouncedSearch || undefined,
+            brand: brand ?? undefined,
+            condition: condition ?? undefined,
+            minPriceCents: priceBucket?.min,
+            maxPriceCents: priceBucket?.max,
+            sort,
+          });
       if (seq !== requestSeq.current) return; // superseded
       setRawListings(rows);
     } catch (err) {
@@ -299,28 +316,17 @@ export default function MarketplaceScreen() {
         setRefreshing(false);
       }
     }
-  }, [debouncedSearch, brand, condition, priceBucket?.min, priceBucket?.max, sort]);
+  }, [debouncedSearch, brand, condition, priceBucket?.min, priceBucket?.max, sort, radiusMiles, myLat, myLng]);
 
   useEffect(() => { void load(); }, [load]);
 
   const onRefresh = useCallback(() => { setRefreshing(true); void load(); }, [load]);
 
-  // Distance filtering happens client-side (no server-side geo query for
-  // listings yet, unlike facilities' search_facilities_nearby RPC).
-  //
-  // Phase 0 of MARKETPLACE_MAP_AUDIT.md §4.2: listings with no coordinates are
-  // now KEPT rather than excluded. Excluding them emptied the grid on every
-  // radius, because no listing in production has coordinates at all. See
-  // filterListingsByRadius for the full reasoning and the trade-off.
-  const listings = React.useMemo(
-    () =>
-      filterListingsByRadius(
-        rawListings,
-        myLat == null || myLng == null ? null : { lat: myLat, lng: myLng },
-        radiusMiles,
-      ),
-    [rawListings, myLat, myLng, radiusMiles],
-  );
+  // Distance filtering is server-side now (see `load` above), so nothing to
+  // post-filter. The Phase 0 client-side haversine pass is gone with it; the
+  // "keep listings that have no coordinate" rule it existed for now lives in
+  // search_listings_nearby's include_unlocated parameter.
+  const listings = rawListings;
 
   const activeFilterCount = [brand, condition, priceLabel, radiusMiles].filter((v) => v != null).length;
 

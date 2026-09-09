@@ -65,6 +65,93 @@ export async function fetchListings(params: FetchListingsParams = {}): Promise<M
   }));
 }
 
+// ── Proximity search ─────────────────────────────────────────────────────────
+// Phase 1 of MARKETPLACE_MAP_AUDIT.md. Replaces the client-side haversine pass
+// the browse grid used to run over every fetched listing (§4.2): the database
+// now does the distance work through search_listings_nearby, the same
+// ST_DWithin + GiST shape facilities have used all along.
+//
+// Deliberately a SEPARATE function from fetchListings rather than a parameter
+// on it. fetchListings is also what "My Listings" uses, and that has to return
+// the seller's non-active listings; the RPC is active-only by design. Merging
+// the two would mean one of those callers gets the wrong rows.
+
+export type ListingDistanceFields = {
+  location_precision: Database['public']['Enums']['marketplace_location_precision'] | null;
+  fulfillment: Database['public']['Enums']['marketplace_fulfillment'];
+  pickup_facility_id: string | null;
+  /** Null when the listing has no pickup coordinate yet — see fetchListingsNearby. */
+  distance_meters: number | null;
+};
+
+export type MarketplaceListingNearby = MarketplaceListingCard & ListingDistanceFields & {
+  distanceMiles: number | null;
+};
+
+export type FetchListingsNearbyParams = {
+  lat: number;
+  lng: number;
+  radiusMiles: number;
+  query?: string;
+  brand?: string;
+  condition?: MarketplaceCondition;
+  minPriceCents?: number;
+  maxPriceCents?: number;
+  /**
+   * Keep listings that have no pickup coordinate. Defaults to true, and must
+   * stay that way until every listing carries one: excluding them is exactly
+   * the defect Phase 0 fixed, where picking any radius emptied the grid because
+   * no listing in production had coordinates.
+   */
+  includeUnlocated?: boolean;
+  limit?: number;
+};
+
+const METERS_PER_MILE = 1609.344;
+
+export async function fetchListingsNearby(
+  params: FetchListingsNearbyParams,
+): Promise<MarketplaceListingNearby[]> {
+  const { data, error } = await supabase.rpc('search_listings_nearby', {
+    lat: params.lat,
+    lng: params.lng,
+    radius_meters: params.radiusMiles * METERS_PER_MILE,
+    search_query: params.query ?? undefined,
+    brand_filter: params.brand ?? undefined,
+    condition_filter: params.condition ?? undefined,
+    min_price_cents: params.minPriceCents ?? undefined,
+    max_price_cents: params.maxPriceCents ?? undefined,
+    include_unlocated: params.includeUnlocated ?? true,
+    result_limit: params.limit ?? 100,
+  });
+  if (error) throw error;
+
+  const rows = (data ?? []) as (MarketplaceListing & ListingDistanceFields)[];
+  if (rows.length === 0) return [];
+
+  // The RPC returns listing columns only. Photos come from one batched query
+  // rather than a join, so the function keeps a fixed, reviewable column list
+  // (audit §5.5) instead of returning whole rows.
+  const { data: photoRows, error: photoError } = await supabase
+    .from('marketplace_listing_photos')
+    .select('listing_id, url, sort_order')
+    .in('listing_id', rows.map((r) => r.id))
+    .order('sort_order', { ascending: true });
+  if (photoError) throw photoError;
+
+  // Rows arrive sort_order-ascending, so the first seen per listing is primary.
+  const primaryByListing = new Map<string, string>();
+  for (const p of photoRows ?? []) {
+    if (!primaryByListing.has(p.listing_id)) primaryByListing.set(p.listing_id, p.url);
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    primaryPhotoUrl: primaryByListing.get(row.id) ?? null,
+    distanceMiles: row.distance_meters == null ? null : row.distance_meters / METERS_PER_MILE,
+  }));
+}
+
 export async function fetchListingDetail(id: string): Promise<MarketplaceListingWithPhotos | null> {
   const { data, error } = await supabase
     .from('marketplace_listings')
@@ -123,6 +210,16 @@ export type CreateListingInput = {
   locationState: string | null;
   locationLat: number | null;
   locationLng: number | null;
+  /**
+   * Where the paddle changes hands — a PUBLIC place the seller picked, never
+   * their home. 'facility' is the preferred path: the server derives the
+   * coordinate from the facilities row and ignores whatever is sent here, so a
+   * modified client cannot pin an exact address. See the trigger
+   * fn_marketplace_sync_listing_location.
+   */
+  pickupSource: Database['public']['Enums']['marketplace_pickup_source'] | null;
+  pickupFacilityId: string | null;
+  fulfillment: Database['public']['Enums']['marketplace_fulfillment'];
   photoUrls: string[]; // already-uploaded URLs, in display order
 };
 
@@ -143,8 +240,14 @@ export async function publishListing(input: CreateListingInput): Promise<Marketp
       description: input.description,
       location_city: input.locationCity,
       location_state: input.locationState,
+      // For 'facility' these two are ignored — the trigger overwrites them from
+      // the facility record. Sent anyway so the row is sane if the trigger is
+      // ever missing on a branch database.
       location_lat: input.locationLat,
       location_lng: input.locationLng,
+      pickup_source: input.pickupSource,
+      pickup_facility_id: input.pickupFacilityId,
+      fulfillment: input.fulfillment,
       status: 'active',
     })
     .select()
