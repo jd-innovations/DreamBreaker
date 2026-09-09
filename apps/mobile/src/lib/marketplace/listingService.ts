@@ -6,6 +6,7 @@ import {
   normalizeModelName,
   type MarketplaceCondition,
 } from './constants';
+import { notifyListingsUpdated } from './listingEvents';
 
 export type MarketplaceListing = Tables<'marketplace_listings'>;
 export type MarketplaceListingPhoto = Tables<'marketplace_listing_photos'>;
@@ -259,6 +260,10 @@ export async function publishListing(input: CreateListingInput): Promise<Marketp
   );
   if (photosError) throw photosError;
 
+  // Every mounted listing surface refetches. Without this the Marketplace tab
+  // keeps showing the grid it loaded on mount -- publishing ends on a
+  // router.replace() to the detail screen, so the tab is never remounted.
+  notifyListingsUpdated();
   return listing;
 }
 
@@ -294,6 +299,7 @@ export async function updateListing(id: string, updates: Partial<{
 
   const { error } = await supabase.from('marketplace_listings').update(patch).eq('id', id);
   if (error) throw error;
+  notifyListingsUpdated();
 }
 
 export async function setListingStatus(
@@ -302,6 +308,8 @@ export async function setListingStatus(
 ): Promise<void> {
   const { error } = await supabase.from('marketplace_listings').update({ status }).eq('id', id);
   if (error) throw error;
+  // Covers deleteListing() too, which routes through here.
+  notifyListingsUpdated();
 }
 
 export async function deleteListing(id: string): Promise<void> {

@@ -18,6 +18,7 @@ import {
   fetchListings, type MarketplaceListingCard, type ListingSort,
 } from '@/lib/marketplace/listingService';
 import { fetchListingsNearby } from '@/lib/marketplace/listingService';
+import { onListingsUpdated } from '@/lib/marketplace/listingEvents';
 import {
   MARKETPLACE_BRANDS, CONDITION_OPTIONS, conditionLabel, formatPriceCents,
   listingAgeLabel, type MarketplaceCondition,
@@ -319,6 +320,13 @@ export default function MarketplaceScreen() {
   }, [debouncedSearch, brand, condition, priceBucket?.min, priceBucket?.max, sort, radiusMiles, myLat, myLng]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Publishing ends on router.replace() to the new listing's detail screen, so
+  // this tab is never remounted and its useFocusEffect only toggles the slide
+  // menu -- the grid kept showing whatever it loaded on mount. Subscribe to
+  // listing mutations so a publish, status change or delete refetches straight
+  // away, with no navigation and no pull-to-refresh.
+  useEffect(() => onListingsUpdated(() => { void load(); }), [load]);
 
   const onRefresh = useCallback(() => { setRefreshing(true); void load(); }, [load]);
 
