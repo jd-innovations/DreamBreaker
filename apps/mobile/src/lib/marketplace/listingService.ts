@@ -376,6 +376,36 @@ export async function setListingStatus(
  * "listing not found" for someone else's id as well as a missing one, so the
  * error cannot be used to probe which listing ids exist.
  */
+/**
+ * Replace a listing's photo set, in display order.
+ *
+ * Full replace rather than a diff, because marketplace_listing_photos has
+ * owner INSERT and DELETE policies but no UPDATE policy — so sort_order cannot
+ * be edited in place, and reordering has to be expressed as delete + insert
+ * anyway. Delete runs first for the same reason: a partial insert leaves fewer
+ * photos, whereas insert-then-delete could momentarily double them.
+ *
+ * The storage objects are NOT touched here. The caller owns that, because only
+ * it knows which URLs the user actually removed versus merely reordered —
+ * deleting a file that is still referenced would break a live listing.
+ */
+export async function setListingPhotos(listingId: string, urls: string[]): Promise<void> {
+  const { error: delError } = await supabase
+    .from('marketplace_listing_photos')
+    .delete()
+    .eq('listing_id', listingId);
+  if (delError) throw delError;
+
+  if (urls.length > 0) {
+    const { error: insError } = await supabase.from('marketplace_listing_photos').insert(
+      urls.map((url, i) => ({ listing_id: listingId, url, sort_order: i })),
+    );
+    if (insError) throw insError;
+  }
+
+  notifyListingsUpdated();
+}
+
 export async function renewListing(id: string): Promise<void> {
   const { error } = await supabase.rpc('renew_listing', { p_listing_id: id });
   if (error) throw error;

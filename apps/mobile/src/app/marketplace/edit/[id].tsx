@@ -1,11 +1,11 @@
 // Edit Listing — a single-screen form (not the create flow's stepper) since
 // every field already has a value to correct rather than being chosen fresh.
-// Photos still aren't editable here (updateListing() doesn't cover them) —
-// flagged, not silently dropped. Pickup court, handoff method and city/state
-// ARE editable, using the same PickupCourtPicker the create flow uses.
-import React, { useEffect, useState } from 'react';
+// Photos, pickup court, handoff method and city/state are all editable here.
+// Photos go through setListingPhotos() rather than updateListing(), because
+// they live in their own table with their own owner policies.
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image,
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +15,11 @@ import {
   MARKETPLACE_BRANDS, CONDITION_OPTIONS, DESCRIPTION_MAX_LENGTH,
   generateListingTitle, normalizeModelName, type MarketplaceCondition,
 } from '@/lib/marketplace/constants';
-import { fetchListingDetail, updateListing } from '@/lib/marketplace/listingService';
+import { fetchListingDetail, updateListing, setListingPhotos } from '@/lib/marketplace/listingService';
+import { uploadListingPhoto, cleanupAbandonedPhotos } from '@/lib/marketplace/photos';
+import { MIN_LISTING_PHOTOS, MAX_LISTING_PHOTOS } from '@/lib/marketplace/constants';
+import * as ImagePicker from 'expo-image-picker';
+import { useSession } from '@/hooks/useSession';
 import { PickupCourtPicker, type PickupFacility } from '@/components/marketplace/PickupCourtPicker';
 import type { Database } from '@shared/database.types';
 
@@ -38,6 +42,7 @@ const L = {
 export default function EditListingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const { user } = useSession();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,6 +57,16 @@ export default function EditListingScreen() {
   const [fulfillment, setFulfillment] = useState<Fulfillment>('local_pickup');
   const [locationCity, setLocationCity] = useState('');
   const [locationState, setLocationState] = useState('');
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  // The set the listing had when the screen opened. Anything dropped from it
+  // is only deleted from storage once the save succeeds -- a photo removed and
+  // then abandoned by backing out must survive.
+  const [originalPhotoUrls, setOriginalPhotoUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  // Every URL uploaded during THIS edit. Needed because a photo added and then
+  // removed before saving is in neither the original set nor the saved set, so
+  // without tracking it, it would orphan in storage forever.
+  const sessionUploadsRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -71,6 +86,9 @@ export default function EditListingScreen() {
       setFulfillment(listing.fulfillment);
       setLocationCity(listing.location_city ?? '');
       setLocationState(listing.location_state ?? '');
+      const urls = listing.photos.map((ph) => ph.url);
+      setPhotoUrls(urls);
+      setOriginalPhotoUrls(urls);
     }).catch((err) => {
       console.error('[EditListing] load failed:', err);
       Alert.alert('Could not load listing', err instanceof Error ? err.message : 'Please try again.');
@@ -81,8 +99,40 @@ export default function EditListingScreen() {
   const asking = parseFloat(askingPrice);
   const min = parseFloat(minOffer);
   const priceInvalid = !askingPrice || !minOffer || !(asking > 0) || !(min > 0) || min > asking;
-  const canSave = !!brand && normalizeModelName(model).length > 0 && !!condition && !priceInvalid;
+  const canSave = !!brand && normalizeModelName(model).length > 0 && !!condition && !priceInvalid
+    && photoUrls.length >= MIN_LISTING_PHOTOS;
   const title = brand && model ? generateListingTitle(brand, model) : '';
+
+  async function pickPhotos() {
+    const remaining = MAX_LISTING_PHOTOS - photoUrls.length;
+    if (remaining <= 0) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      selectionLimit: remaining,
+      quality: 0.9,
+    });
+    if (result.canceled || !result.assets.length || !id) return;
+
+    setUploading(true);
+    try {
+      for (const asset of result.assets) {
+        const url = await uploadListingPhoto(asset.uri, id);
+        sessionUploadsRef.current.push(url);
+        setPhotoUrls((prev) => [...prev, url]);
+      }
+    } catch (err) {
+      Alert.alert('Upload failed', err instanceof Error ? err.message : 'Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  // Removes from the list only. Storage deletion waits for a successful save,
+  // so backing out of the screen leaves the listing exactly as it was.
+  function removePhoto(url: string) {
+    setPhotoUrls((prev) => prev.filter((u) => u !== url));
+  }
 
   async function handleSave() {
     if (!id || !canSave) return;
@@ -102,6 +152,16 @@ export default function EditListingScreen() {
         locationCity: locationCity.trim() || null,
         locationState: locationState.trim() || null,
       });
+      await setListingPhotos(id, photoUrls);
+
+      // Only now is it safe to drop files: the row no longer references them.
+      // Orphans are everything this screen ever held minus what was just
+      // saved -- which covers both photos the listing started with and photos
+      // uploaded during this edit then removed again.
+      const everHeld = [...new Set([...originalPhotoUrls, ...sessionUploadsRef.current])];
+      const orphans = everHeld.filter((u) => !photoUrls.includes(u));
+      if (user && orphans.length) void cleanupAbandonedPhotos(orphans, user.id);
+
       router.back();
     } catch (err) {
       Alert.alert('Could not save changes', err instanceof Error ? err.message : 'Please try again.');
@@ -125,7 +185,40 @@ export default function EditListingScreen() {
       </View>
 
       <ScrollView contentContainerStyle={s.body} keyboardShouldPersistTaps="handled">
-        <Text style={s.fieldLabel}>Brand</Text>
+        <Text style={s.fieldLabel}>Photos</Text>
+        <Text style={s.photoHint}>
+          First photo is the cover. {MIN_LISTING_PHOTOS}–{MAX_LISTING_PHOTOS} required.
+        </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+          {photoUrls.map((url, i) => (
+            <View key={url} style={s.photoWrap}>
+              <Image source={{ uri: url }} style={s.photo} />
+              {i === 0 && (
+                <View style={s.coverBadge}><Text style={s.coverBadgeText}>COVER</Text></View>
+              )}
+              <TouchableOpacity
+                style={s.photoRemove}
+                onPress={() => removePhoto(url)}
+                accessibilityRole="button"
+                accessibilityLabel="Remove photo"
+              >
+                <Ionicons name="close" size={13} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          ))}
+          {photoUrls.length < MAX_LISTING_PHOTOS && (
+            <TouchableOpacity style={s.photoAdd} onPress={pickPhotos} disabled={uploading} activeOpacity={0.8}>
+              {uploading
+                ? <ActivityIndicator color={L.navy} />
+                : <Ionicons name="add" size={22} color={L.navy} />}
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+        {photoUrls.length < MIN_LISTING_PHOTOS && (
+          <Text style={s.errorText}>At least {MIN_LISTING_PHOTOS} photos are required.</Text>
+        )}
+
+        <Text style={[s.fieldLabel, { marginTop: 20 }]}>Brand</Text>
         <View style={s.chipWrap}>
           {MARKETPLACE_BRANDS.map((b) => (
             <TouchableOpacity key={b} style={[s.pickChip, brand === b && s.pickChipActive]} onPress={() => setBrand(b)}>
@@ -260,6 +353,25 @@ const s = StyleSheet.create({
   descInput: { borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, padding: 16, fontSize: text.body.size, fontWeight: '500', color: L.text, minHeight: 100, textAlignVertical: 'top' },
   charCount: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'right', marginTop: 4 },
 
+  photoHint: { color: L.textMuted, fontSize: text.caption.size, marginBottom: 10 },
+  photoWrap: { marginRight: 10, position: 'relative' },
+  photo: { width: 92, height: 92, borderRadius: shape.card, backgroundColor: L.border },
+  coverBadge: {
+    position: 'absolute', left: 6, bottom: 6,
+    backgroundColor: 'rgba(10,18,40,0.78)', borderRadius: 4,
+    paddingHorizontal: 5, paddingVertical: 2,
+  },
+  coverBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.4 },
+  photoRemove: {
+    position: 'absolute', top: -6, right: -6,
+    width: 22, height: 22, borderRadius: 11, backgroundColor: L.danger,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  photoAdd: {
+    width: 92, height: 92, borderRadius: shape.card,
+    borderWidth: 1.5, borderColor: L.border, borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center',
+  },
   chipRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   chip: {
     borderWidth: 1, borderColor: L.border, borderRadius: shape.pill ?? 20,

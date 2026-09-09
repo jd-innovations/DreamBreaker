@@ -98,8 +98,16 @@ export const FEATURE_VISIBILITY: Record<FeatureKey, FeatureVisibility> = {
   // Redemption is built (Phase 5): a voucher shows a QR and an 8-character
   // code, and a coach can consume it.
   wallet: 'included',
-  // Anthropic-backed listing rewrite; key provisioning is unverified.
-  marketplaceAiAssist: 'hidden',
+  // Anthropic-backed listing rewrite. Key provisioning VERIFIED 2026-09-09:
+  // the deployed marketplace-improve-listing function returns
+  // {available:true, description:"..."} against production, so CLAUDE_API is
+  // set. It was only ever gated on that being unproven.
+  //
+  // Fails soft by design — improveListing() never blocks publish, and the
+  // function answers {available:false, reason} rather than throwing, so a
+  // revoked or rate-limited key degrades to "no suggestion" instead of a
+  // broken create flow.
+  marketplaceAiAssist: 'included',
   // Read-only, real-data, and the destination the working log-session flow
   // hands off to — hiding it would break a shipping loop, not de-risk one. No
   // PAR value is computed client-side; the screen renders what the server

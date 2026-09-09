@@ -18,6 +18,7 @@ import { makeOffer, messageSellerAboutListing } from '@/lib/marketplace/offers';
 import { blockUser } from '@/lib/services/blocking';
 import { fetchProfile, type UserProfile } from '@/lib/services/profile';
 import { conditionLabel, formatPriceCents, listingAgeLabel, type MarketplaceBrand } from '@/lib/marketplace/constants';
+import { renewListing } from '@/lib/marketplace/listingService';
 import { BRAND_LOGOS } from '@/lib/marketplace/brandLogos';
 import LocationCard from '@/components/LocationCard';
 import { haptics } from '@/lib/haptics';
@@ -99,6 +100,18 @@ export default function ListingDetailScreen() {
   const photos = listing.photos.map((p) => p.url);
   const isOwner = user?.id === listing.seller_id;
 
+  // listing is non-null past the guard above, but TS narrowing does not survive
+  // into a closure, so capture the id rather than re-asserting.
+  const listingId = listing.id;
+  async function handleRenew() {
+    try {
+      await renewListing(listingId);
+      await load();
+    } catch (err) {
+      Alert.alert('Could not renew', err instanceof Error ? err.message : 'Please try again.');
+    }
+  }
+
   const handleMessageSeller = async () => {
     if (!user) return;
     try {
@@ -177,7 +190,7 @@ export default function ListingDetailScreen() {
         bottomInset={insets.bottom}
         collapsedBackgroundColor="rgba(255,255,255,0.5)"
         renderCollapsed={() => (
-          <CollapsedContent listing={listing} isOwner={isOwner}
+          <CollapsedContent listing={listing} isOwner={isOwner} onRenew={handleRenew}
             onExpand={() => setSnap('half')}
             onMakeOffer={() => setOfferOpen(true)}
             onMessageSeller={handleMessageSeller}
@@ -185,7 +198,7 @@ export default function ListingDetailScreen() {
           />
         )}
         renderHalf={() => (
-          <HalfContent listing={listing} seller={seller} isOwner={isOwner}
+          <HalfContent listing={listing} seller={seller} isOwner={isOwner} onRenew={handleRenew}
             onExpand={() => setSnap('full')}
             onMakeOffer={() => setOfferOpen(true)}
             onMessageSeller={handleMessageSeller}
@@ -265,8 +278,8 @@ export default function ListingDetailScreen() {
 
 // ── Sheet tiers ──────────────────────────────────────────────────────────────
 
-function CollapsedContent({ listing, isOwner, onExpand, onMakeOffer, onMessageSeller, onMeasure }: {
-  listing: MarketplaceListingWithPhotos; isOwner: boolean;
+function CollapsedContent({ listing, isOwner, onExpand, onMakeOffer, onMessageSeller, onRenew, onMeasure }: {
+  listing: MarketplaceListingWithPhotos; isOwner: boolean; onRenew: () => void;
   onExpand: () => void; onMakeOffer: () => void; onMessageSeller: () => void;
   onMeasure?: (height: number) => void;
 }) {
@@ -313,11 +326,43 @@ function CollapsedContent({ listing, isOwner, onExpand, onMakeOffer, onMessageSe
         </View>
       )}
       {isOwner && (
-        <View style={s.ctaRow}>
-          <TouchableOpacity style={s.offerBtn} onPress={() => router.push(`/marketplace/edit/${listing.id}` as never)}>
-            <Text style={s.offerBtnText}>Edit Listing</Text>
-          </TouchableOpacity>
-        </View>
+        <>
+          {/* Owner-only. Without this an expired or sold listing looks entirely
+              normal to the person who owns it -- no sign that buyers cannot
+              see it, and no way back. Buyers never reach this screen for a
+              non-active listing: RLS returns nothing and the screen shows
+              "no longer available". */}
+          {listing.status !== 'active' && (
+            <View style={s.ownerBanner}>
+              <Ionicons
+                name={listing.status === 'expired' ? 'time-outline'
+                  : listing.status === 'sold' ? 'checkmark-circle-outline' : 'pause-circle-outline'}
+                size={16}
+                color={L.navy}
+              />
+              <Text style={s.ownerBannerText}>
+                {listing.status === 'expired'
+                  ? 'Expired — buyers can no longer see this. Renew to relist it.'
+                  : listing.status === 'sold'
+                    ? 'Marked sold. Only you can see this.'
+                    : 'Paused — hidden from the Marketplace.'}
+              </Text>
+            </View>
+          )}
+          <View style={s.ctaRow}>
+            {listing.status === 'expired' && (
+              <TouchableOpacity style={s.offerBtn} onPress={onRenew}>
+                <Text style={s.offerBtnText}>Renew</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={listing.status === 'expired' ? s.msgBtn : s.offerBtn}
+              onPress={() => router.push(`/marketplace/edit/${listing.id}` as never)}
+            >
+              <Text style={listing.status === 'expired' ? s.msgBtnText : s.offerBtnText}>Edit Listing</Text>
+            </TouchableOpacity>
+          </View>
+        </>
       )}
     </TouchableOpacity>
   );
@@ -326,6 +371,7 @@ function CollapsedContent({ listing, isOwner, onExpand, onMakeOffer, onMessageSe
 function HalfContent(props: {
   listing: MarketplaceListingWithPhotos; seller: UserProfile | null; isOwner: boolean;
   onExpand: () => void; onMakeOffer: () => void; onMessageSeller: () => void;
+  onRenew: () => void;
 }) {
   const { listing, seller } = props;
   return (
@@ -479,6 +525,13 @@ const s = StyleSheet.create({
   conditionBadge: { backgroundColor: '#F0F4FF', borderRadius: shape.pill, paddingHorizontal: 10, paddingVertical: 3 },
   conditionText: { color: L.navy, fontSize: text.chipValue.size, fontWeight: '800' },
   meta: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginBottom: 4 },
+  ownerBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(201,168,76,0.12)',
+    borderRadius: shape.card, paddingHorizontal: 12, paddingVertical: 10,
+    marginBottom: 10,
+  },
+  ownerBannerText: { flex: 1, color: L.text, fontSize: text.caption.size, fontWeight: '600' },
   locationText: { color: L.text, fontSize: text.caption.size, fontWeight: '500', marginBottom: 4 },
   pickupHint: { color: L.textMuted, fontSize: text.caption.size, lineHeight: 17, marginBottom: 10 },
   description: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 20, marginTop: 12 },
