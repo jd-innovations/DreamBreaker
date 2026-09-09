@@ -17,6 +17,7 @@ import { useLocationSettings } from '@/hooks/useLocationSettings';
 import { ExploreMap } from '@/components/ExploreMap';
 import type { Region, MapPinLike } from '@/components/ExploreMap.types';
 import { PRICE_BANDS, priceBandFor } from '@/lib/marketplace/priceBands';
+import { tabBarClearance } from '@/constants/tabBar';
 import { useCurrentLocation } from '@/lib/location';
 import {
   fetchListings, fetchListingsNearby, type MarketplaceListingCard, type ListingSort,
@@ -448,6 +449,10 @@ export default function MarketplaceScreen() {
   );
 
   const selected = selectedId ? listings.find((l) => l.id === selectedId) ?? null : null;
+  // Everything the map floats on top of shares one baseline: above the floating
+  // tab bar (tabBarClearance) and above ExploreMap's own locate button, which
+  // sits at clearance + 20 and is 46 tall.
+  const mapControlsBottom = tabBarClearance(insets.bottom) + 76;
   const unlocatedCount = listings.length - pins.length;
 
   // Only offer "search this area" once the pan is worth a round trip.
@@ -543,9 +548,9 @@ export default function MarketplaceScreen() {
                       ))}
                     </View>
 
-                    {showSearchArea && (
+                    {showSearchArea && !selected && (
                       <TouchableOpacity
-                        style={s.searchAreaBtn}
+                        style={[s.searchAreaBtn, { bottom: mapControlsBottom }]}
                         activeOpacity={0.85}
                         onPress={() => { setSearchCenter(pannedCenter); setPannedCenter(null); setSelectedId(null); }}
                       >
@@ -555,7 +560,10 @@ export default function MarketplaceScreen() {
                     )}
 
                     {unlocatedCount > 0 && !selected && (
-                      <View style={s.mapNote} pointerEvents="none">
+                      <View
+                        style={[s.mapNote, { bottom: mapControlsBottom + (showSearchArea ? 52 : 0) }]}
+                        pointerEvents="none"
+                      >
                         <Text style={s.mapNoteText}>
                           {unlocatedCount} listing{unlocatedCount === 1 ? '' : 's'} with no pickup spot
                           {' '}— see the grid
@@ -567,7 +575,7 @@ export default function MarketplaceScreen() {
               />
 
               {selected && (
-                <View style={[s.mapCard, { bottom: insets.bottom + 16 }]}>
+                <View style={[s.mapCard, { bottom: mapControlsBottom }]}>
                   <TouchableOpacity
                     style={s.mapCardInner}
                     activeOpacity={0.9}
@@ -663,8 +671,10 @@ const screenStyles = (t: ThemeRoles) => StyleSheet.create({
   legendDot: { width: 9, height: 9, borderRadius: 5 },
   legendText: { color: t.textSecondary, fontSize: text.microLabel.size, fontWeight: '600' },
 
+  // Bottom-centre, not top: at the top it overlapped the legend on a normal
+  // phone width. Bottom also puts the one tappable map control in thumb reach.
   searchAreaBtn: {
-    position: 'absolute', top: 12, alignSelf: 'center',
+    position: 'absolute', alignSelf: 'center',
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: t.primary, borderRadius: 20,
     paddingHorizontal: 14, paddingVertical: 9,
@@ -672,7 +682,7 @@ const screenStyles = (t: ThemeRoles) => StyleSheet.create({
   searchAreaText: { color: t.onPrimary, fontSize: text.action.size, fontWeight: '800' },
 
   mapNote: {
-    position: 'absolute', bottom: 16, left: 16, right: 16,
+    position: 'absolute', left: 16, right: 16,
     backgroundColor: t.surface, borderRadius: 10, borderWidth: 1, borderColor: t.border,
     paddingHorizontal: 12, paddingVertical: 8,
   },
