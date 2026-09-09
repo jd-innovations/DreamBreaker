@@ -405,3 +405,114 @@ export async function fetchMyMatchHistory(profileId: string): Promise<PersonalMa
 }
 
 
+
+// ─── Career totals (Profile tab stats row) ──────────────────────────────────
+//
+// The Profile screen's WIN RATE and PARTNERS tiles were hardcoded to '58%' and
+// '4'. These are the real numbers behind them, aggregated across every logged
+// session the player actually played in — not the per-session record
+// fetchMyMatchHistory() already returns, which is scoped to one session.
+//
+// "Partners" is distinct teammates: anyone who shared a team_number with the
+// player in the same game. Guests count (they're real people the player
+// played with, just without an account), keyed by guest_player_id so a guest
+// never collides with a registered profile. In singles there is no teammate,
+// so those games contribute games/wins but no partners — which is correct.
+//
+// Deliberately client-side over four `.in()` queries rather than an RPC: the
+// RLS policies on all three tables key off is_personal_session_visible(), so a
+// player can already read every participant row of a session they played in,
+// and this file's existing helpers join in JS the same way.
+
+export type PlayerCareerStats = {
+  gamesPlayed: number;
+  wins: number;
+  /** Whole-percent win rate; 0 when no completed games (never NaN). */
+  winRatePct: number;
+  /** Distinct teammates across all logged games, registered players + guests. */
+  partners: number;
+};
+
+const EMPTY_CAREER_STATS: PlayerCareerStats = { gamesPlayed: 0, wins: 0, winRatePct: 0, partners: 0 };
+
+export async function fetchPlayerCareerStats(profileId: string): Promise<PlayerCareerStats> {
+  // Sessions the player actually played in — not ones they merely recorded for
+  // others (fetchPersonalMatchHistoryForPlayer's `created_by` arm), which would
+  // credit them with games they never took part in.
+  const { data: myParticipantRows, error: myErr } = await db
+    .from('personal_session_participants')
+    .select('id, session_id')
+    .eq('profile_id', profileId);
+  if (myErr) throw myErr;
+
+  const mine = (myParticipantRows ?? []) as { id: string; session_id: string }[];
+  if (mine.length === 0) return EMPTY_CAREER_STATS;
+
+  const myParticipantIds = new Set(mine.map((row) => row.id));
+  const sessionIds = Array.from(new Set(mine.map((row) => row.session_id)));
+
+  const { data: gameRows, error: gamesErr } = await db
+    .from('personal_games')
+    .select('id, winning_team')
+    .in('session_id', sessionIds);
+  if (gamesErr) throw gamesErr;
+
+  // Only decided games count — an abandoned or in-progress game has no winner
+  // and must not drag the win rate down.
+  const decided = ((gameRows ?? []) as { id: string; winning_team: number | null }[])
+    .filter((game) => game.winning_team != null);
+  if (decided.length === 0) return EMPTY_CAREER_STATS;
+
+  const winningTeamByGame = new Map(decided.map((game) => [game.id, game.winning_team as number]));
+  const gameIds = decided.map((game) => game.id);
+
+  const [participantsRes, identitiesRes] = await Promise.all([
+    db.from('personal_game_participants').select('game_id, team_number, session_participant_id').in('game_id', gameIds),
+    db.from('personal_session_participants').select('id, profile_id, guest_player_id').in('session_id', sessionIds),
+  ]);
+  if (participantsRes.error) throw participantsRes.error;
+  if (identitiesRes.error) throw identitiesRes.error;
+
+  const gameParticipants = (participantsRes.data ?? []) as {
+    game_id: string; team_number: number; session_participant_id: string;
+  }[];
+
+  // A guest and a registered player can never produce the same key, so counting
+  // distinct keys never conflates two different people.
+  const identityByParticipantId = new Map<string, string>();
+  for (const row of (identitiesRes.data ?? []) as {
+    id: string; profile_id: string | null; guest_player_id: string | null;
+  }[]) {
+    const identity = row.profile_id ?? (row.guest_player_id ? `guest:${row.guest_player_id}` : null);
+    if (identity) identityByParticipantId.set(row.id, identity);
+  }
+
+  // My own team per game — the games I actually appeared in.
+  const myTeamByGame = new Map<string, number>();
+  for (const gp of gameParticipants) {
+    if (myParticipantIds.has(gp.session_participant_id)) myTeamByGame.set(gp.game_id, gp.team_number);
+  }
+
+  let gamesPlayed = 0;
+  let wins = 0;
+  for (const [gameId, myTeam] of myTeamByGame) {
+    gamesPlayed += 1;
+    if (winningTeamByGame.get(gameId) === myTeam) wins += 1;
+  }
+
+  const partners = new Set<string>();
+  for (const gp of gameParticipants) {
+    const myTeam = myTeamByGame.get(gp.game_id);
+    if (myTeam == null || gp.team_number !== myTeam) continue;
+    if (myParticipantIds.has(gp.session_participant_id)) continue; // that's me
+    const identity = identityByParticipantId.get(gp.session_participant_id);
+    if (identity && identity !== profileId) partners.add(identity);
+  }
+
+  return {
+    gamesPlayed,
+    wins,
+    winRatePct: gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0,
+    partners: partners.size,
+  };
+}

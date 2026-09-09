@@ -12,6 +12,7 @@ import { tabBarClearance } from '@/constants/tabBar';
 import { SettingsRow, ProfileCompletionRing } from '@/components';
 import { useSlideMenu } from '@/components/SlideMenu';
 import { fetchPlayerRegistrations } from '@/lib/supabase/registrations';
+import { fetchPlayerCareerStats, type PlayerCareerStats } from '@/lib/supabase/personalSessions';
 import { signOut } from '@/lib/auth';
 import { useProfile } from '@/hooks/useProfile';
 import type { UserProfile } from '@/lib/services/profile';
@@ -169,6 +170,11 @@ export default function ProfileScreen() {
   }, [user, loading]);
 
   const [tournamentCount, setTournamentCount] = useState(0);
+  // WIN RATE and PARTNERS were hardcoded to '58%' and '4'. Real figures now,
+  // zeroed until the player has logged a decided game — never a placeholder.
+  const [careerStats, setCareerStats] = useState<PlayerCareerStats>({
+    gamesPlayed: 0, wins: 0, winRatePct: 0, partners: 0,
+  });
   const { setTriggerVisible } = useSlideMenu();
 
   // Hide the floating hamburger trigger while this screen is focused â€” the
@@ -186,6 +192,7 @@ export default function ProfileScreen() {
 
     if (!user?.id) {
       setTournamentCount(0);
+      setCareerStats({ gamesPlayed: 0, wins: 0, winRatePct: 0, partners: 0 });
       return () => {
         active = false;
       };
@@ -198,6 +205,17 @@ export default function ProfileScreen() {
       .catch((error) => {
         if (active) setTournamentCount(0);
         console.error('[ProfileScreen] registrations load failed:', error);
+      });
+
+    // Failure leaves the tiles at zero rather than showing a stale or invented
+    // number — the whole point of replacing the hardcoded values.
+    fetchPlayerCareerStats(user.id)
+      .then((stats) => {
+        if (active) setCareerStats(stats);
+      })
+      .catch((error) => {
+        if (active) setCareerStats({ gamesPlayed: 0, wins: 0, winRatePct: 0, partners: 0 });
+        console.error('[ProfileScreen] career stats load failed:', error);
       });
 
     return () => {
@@ -295,8 +313,8 @@ export default function ProfileScreen() {
           <View style={styles.statsRow}>
             {[
               { label: 'EVENTS',      value: String(tournamentCount) },
-              { label: 'WIN RATE',    value: '58%' },
-              { label: 'PARTNERS',    value: '4' },
+              { label: 'WIN RATE',    value: `${careerStats.winRatePct}%` },
+              { label: 'PARTNERS',    value: String(careerStats.partners) },
             ].map((s) => (
               <View key={s.label} style={styles.statBox}>
                 <Text style={styles.statValue}>{s.value}</Text>
