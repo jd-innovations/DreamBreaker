@@ -16,7 +16,7 @@ import {
   fetchListingDetail, reportListing, type MarketplaceListingWithPhotos, type ListingReportReason,
 } from '@/lib/marketplace/listingService';
 import { makeOffer, messageSellerAboutListing } from '@/lib/marketplace/offers';
-import { blockUser } from '@/lib/services/blocking';
+import { blockUser, hasBlocked } from '@/lib/services/blocking';
 import { fetchProfile, type UserProfile } from '@/lib/services/profile';
 import { conditionLabel, formatPriceCents, listingAgeLabel, type MarketplaceBrand } from '@/lib/marketplace/constants';
 import { renewListing } from '@/lib/marketplace/listingService';
@@ -69,6 +69,13 @@ export default function ListingDetailScreen() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [offerOpen, setOfferOpen] = useState(false);
+  // Whether the VIEWER has blocked this seller. Without this, Make Offer stays
+  // enabled through the whole flow and fails only on the final tap, with a
+  // message ("This conversation is unavailable.") kept deliberately vague so it
+  // can't out a block. That vagueness is right for someone who has been
+  // blocked; it's just confusing for the person who did the blocking, and only
+  // that direction is knowable here — see hasBlocked().
+  const [blockedSeller, setBlockedSeller] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -100,6 +107,19 @@ export default function ListingDetailScreen() {
       .catch(() => {});
     return () => { active = false; };
   }, [user?.id, id]);
+
+  // Keyed on the seller rather than the listing, so it re-runs once the listing
+  // loads and the seller id is actually known.
+  useEffect(() => {
+    const viewer = user?.id;
+    const sellerId = listing?.seller_id;
+    if (!viewer || !sellerId || viewer === sellerId) { setBlockedSeller(false); return; }
+    let active = true;
+    hasBlocked(viewer, sellerId)
+      .then((blocked) => { if (active) setBlockedSeller(blocked); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [user?.id, listing?.seller_id]);
 
   if (loading) {
     return <View style={s.centerFill}><ActivityIndicator color="#FFFFFF" /></View>;
@@ -191,6 +211,9 @@ export default function ListingDetailScreen() {
         text: 'Block', style: 'destructive', onPress: async () => {
           try {
             await blockUser(user.id, listing.seller_id);
+            // Reflect it immediately — the CTAs below would otherwise stay live
+            // until the screen remounts.
+            setBlockedSeller(true);
             setMoreOpen(false);
           } catch (err) {
             Alert.alert('Could not block user', err instanceof Error ? err.message : 'Please try again.');
@@ -233,6 +256,7 @@ export default function ListingDetailScreen() {
         collapsedBackgroundColor="rgba(255,255,255,0.5)"
         renderCollapsed={() => (
           <CollapsedContent listing={listing} isOwner={isOwner} onRenew={handleRenew}
+            blockedSeller={blockedSeller}
             onExpand={() => setSnap('half')}
             onMakeOffer={() => setOfferOpen(true)}
             onMessageSeller={handleMessageSeller}
@@ -241,6 +265,7 @@ export default function ListingDetailScreen() {
         )}
         renderHalf={() => (
           <HalfContent listing={listing} seller={seller} isOwner={isOwner} onRenew={handleRenew}
+            blockedSeller={blockedSeller}
             onExpand={() => setSnap('full')}
             onMakeOffer={() => setOfferOpen(true)}
             onMessageSeller={handleMessageSeller}
@@ -320,8 +345,8 @@ export default function ListingDetailScreen() {
 
 // ── Sheet tiers ──────────────────────────────────────────────────────────────
 
-function CollapsedContent({ listing, isOwner, onExpand, onMakeOffer, onMessageSeller, onRenew, onMeasure }: {
-  listing: MarketplaceListingWithPhotos; isOwner: boolean; onRenew: () => void;
+function CollapsedContent({ listing, isOwner, blockedSeller, onExpand, onMakeOffer, onMessageSeller, onRenew, onMeasure }: {
+  listing: MarketplaceListingWithPhotos; isOwner: boolean; blockedSeller: boolean; onRenew: () => void;
   onExpand: () => void; onMakeOffer: () => void; onMessageSeller: () => void;
   onMeasure?: (height: number) => void;
 }) {
@@ -356,7 +381,23 @@ function CollapsedContent({ listing, isOwner, onExpand, onMakeOffer, onMessageSe
       ) : (listing.location_city || listing.location_state) ? (
         <Text style={s.locationText}>{[listing.location_city, listing.location_state].filter(Boolean).join(', ')}</Text>
       ) : null}
-      {!isOwner && (
+      {!isOwner && blockedSeller && (
+        // Both CTAs open a conversation with the seller, and the server will
+        // refuse every message while the block stands. Saying so up front beats
+        // a dead button that only fails after the offer is typed -- and naming
+        // it plainly leaks nothing, since this state is only ever reachable by
+        // the person who did the blocking.
+        <View style={s.blockedNotice}>
+          <Ionicons name="hand-left-outline" size={16} color={L.textMuted} />
+          <Text style={s.blockedNoticeText}>
+            You blocked this seller, so you can&rsquo;t contact them about this listing.{' '}
+            <Text style={s.blockedNoticeLink} onPress={() => router.push('/blocked-accounts' as never)}>
+              Manage blocked accounts
+            </Text>
+          </Text>
+        </View>
+      )}
+      {!isOwner && !blockedSeller && (
         <View style={s.ctaRow}>
           <TouchableOpacity style={s.offerBtn} onPress={onMakeOffer}>
             <Text style={s.offerBtnText}>Make Offer</Text>
@@ -411,7 +452,7 @@ function CollapsedContent({ listing, isOwner, onExpand, onMakeOffer, onMessageSe
 }
 
 function HalfContent(props: {
-  listing: MarketplaceListingWithPhotos; seller: UserProfile | null; isOwner: boolean;
+  listing: MarketplaceListingWithPhotos; seller: UserProfile | null; isOwner: boolean; blockedSeller: boolean;
   onExpand: () => void; onMakeOffer: () => void; onMessageSeller: () => void;
   onRenew: () => void;
 }) {
@@ -620,6 +661,12 @@ const s = StyleSheet.create({
   sellerName: { color: L.text, fontSize: text.rowTitle.size, fontWeight: '700' },
 
   ctaRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  blockedNotice: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 14,
+    backgroundColor: '#F5F7FB', borderRadius: shape.cta, padding: 12,
+  },
+  blockedNoticeText: { flex: 1, color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18 },
+  blockedNoticeLink: { color: L.navy, fontWeight: '800' },
   offerBtn: { flex: 1, backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 14, alignItems: 'center' },
   // Undoes offerBtn's row-oriented flex:1 when the button is a column child
   // (the Make Offer sheet) — see the comment at its usage.

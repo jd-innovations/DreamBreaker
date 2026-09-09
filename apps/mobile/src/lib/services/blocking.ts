@@ -54,6 +54,31 @@ export async function unblockUser(blockerId: string, blockedId: string): Promise
 }
 
 /**
+ * Whether the caller has blocked this specific person.
+ *
+ * Only answers the OUTGOING direction, and that is a hard limit rather than an
+ * omission: the SELECT policy on blocked_users is `blocker_id = auth.uid()`, so
+ * "has this person blocked me?" is deliberately unanswerable from any client.
+ * Screens can therefore explain a block the user made themselves — which leaks
+ * nothing, they already know — but must let the reverse case fall through to
+ * the server's deliberately vague rejection (fn_block_message_send, see
+ * 20260831040000_enforce_blocks.sql).
+ *
+ * Returns false on error: this gates a display state, never enforcement, and a
+ * failed lookup should not make a listing look blocked.
+ */
+export async function hasBlocked(blockerId: string, blockedId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('blocked_users')
+    .select('blocker_id')
+    .eq('blocker_id', blockerId)
+    .eq('blocked_id', blockedId)
+    .maybeSingle();
+  if (error) return false;
+  return !!data;
+}
+
+/**
  * The caller's own blocks, newest first.
  *
  * Only blocks the caller MADE — RLS exposes nothing else, and that is
