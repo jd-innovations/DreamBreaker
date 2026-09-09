@@ -78,13 +78,6 @@ const CELL_ROUTES: Record<string, string> = {
 
 const DEV_TOOLS = [
   {
-    // SPIKE — throwaway, goes with spike/marketplace-map-marker-overlay.
-    route: '/spike-marker-overlay',
-    icon: 'pricetag-outline',
-    label: 'Marker Overlay Spike',
-    sub: 'Price-badge projection over MapView. Read MAX delta.',
-  },
-  {
     route: '/dev-diagnostics',
     icon: 'pulse-outline',
     label: 'Diagnostics',

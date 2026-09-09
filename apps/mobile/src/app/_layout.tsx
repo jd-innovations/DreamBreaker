@@ -112,8 +112,6 @@ function RootLayout() {
         <Stack.Screen name="dev-qr-scan" options={{ headerShown: false }} />
         <Stack.Screen name="dev-diagnostics" options={{ headerShown: false }} />
         <Stack.Screen name="dev-theme" options={{ headerShown: false }} />
-        {/* SPIKE — throwaway, goes with spike/marketplace-map-marker-overlay. */}
-        <Stack.Screen name="spike-marker-overlay" options={{ headerShown: true, title: 'Marker overlay spike' }} />
         <Stack.Screen name="blocked-accounts" options={{ headerShown: false }} />
         <Stack.Screen
           name="tournament/[id]"
