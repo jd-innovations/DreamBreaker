@@ -57,12 +57,19 @@ export default function SpikeMarkerOverlayScreen() {
   const [sdkPoint, setSdkPoint] = useState<ScreenPoint | null>(null);
   const [maxDelta, setMaxDelta] = useState(0);
   const [regionEvents, setRegionEvents] = useState(0);
+  // First run showed x exact and y off by 20-28px -- a one-axis systematic
+  // error, and mapPadding is the only asymmetric input (left/right both 16 and
+  // cancel; top 16 vs bottom ~144 do not). This toggle settles whether padding
+  // is the cause in one run instead of guessing at the model.
+  const [padded, setPadded] = useState(true);
 
   // The real ExploreMap padding, so the projection is exercised against the
   // values Nearby actually uses rather than a convenient zero.
   const padding: MapPadding = useMemo(
-    () => ({ top: 16, right: 16, bottom: insets.bottom + 110, left: 16 }),
-    [insets.bottom],
+    () => (padded
+      ? { top: 16, right: 16, bottom: insets.bottom + 110, left: 16 }
+      : { top: 0, right: 0, bottom: 0, left: 0 }),
+    [insets.bottom, padded],
   );
 
   const onLayout = useCallback((e: LayoutChangeEvent) => {
@@ -167,6 +174,9 @@ export default function SpikeMarkerOverlayScreen() {
         <Text style={s.hudRow}>
           region events {regionEvents}   taps {tapCount}   selected {String(selected)}
         </Text>
+        <Text style={s.hudRow}>
+          mapPadding {padded ? `ON (top 16 / bottom ${Math.round(insets.bottom + 110)})` : 'OFF'}
+        </Text>
         <Text style={s.hudDim}>PASS: MAX delta stays under ~2px after gesturing.</Text>
       </View>
 
@@ -185,8 +195,14 @@ export default function SpikeMarkerOverlayScreen() {
         </TouchableOpacity>
         {/* Navigation test: the original Fabric crash fired on tap-to-navigate.
             Go and come back, then confirm the badge is present and not stale. */}
+        <TouchableOpacity
+          style={s.btn}
+          onPress={() => { setPadded((v) => !v); setMaxDelta(0); setSdkPoint(null); }}
+        >
+          <Text style={s.btnText}>{padded ? 'Padding OFF' : 'Padding ON'}</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={s.btn} onPress={() => router.push('/location-settings')}>
-          <Text style={s.btnText}>Navigate away</Text>
+          <Text style={s.btnText}>Away</Text>
         </TouchableOpacity>
       </View>
     </View>
