@@ -6,6 +6,7 @@ import * as Crypto from 'expo-crypto';
 import { supabase } from './supabase';
 import { deleteCurrentDevicePushToken } from './pushNotifications';
 import { updateProfile } from './services/profile';
+import { APP_LINK_ORIGIN } from './appLinks';
 import { track } from './analytics';
 
 // No-op on native; required once for the OAuth browser session to resolve on web.
@@ -42,7 +43,26 @@ export async function signUp(
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName, ...extraMetadata } },
+    options: {
+      // Without this, GoTrue falls back to the project Site URL and the
+      // confirmation link lands on the marketing homepage, which has no
+      // token-redemption logic -- so the token is never consumed and the
+      // account stays unconfirmed forever. Signing in then fails with "Email
+      // not confirmed" no matter how many times the link is clicked, and the
+      // account is permanently stuck.
+      //
+      // web/src/app/auth/confirm already redeems the token correctly (it was
+      // built for this exact bug on the web side, see its header) and is
+      // already on the project's redirect allow-list, since web signUp points
+      // at the same route. Reused rather than duplicated here.
+      //
+      // Confirming therefore finishes in the browser; the user returns to the
+      // app to sign in. A pickleballapp:// deep link would keep it in-app but
+      // needs token handling on this side plus an allow-list entry -- worth
+      // doing, deliberately not bundled into an outage fix.
+      emailRedirectTo: `${APP_LINK_ORIGIN}/auth/confirm`,
+      data: { full_name: fullName, ...extraMetadata },
+    },
   });
   if (error) {
     track('auth_failed', { method: 'email', source: 'sign_up' });
