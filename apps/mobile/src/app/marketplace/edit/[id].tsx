@@ -189,7 +189,14 @@ export default function EditListingScreen() {
         <Text style={s.photoHint}>
           First photo is the cover. {MIN_LISTING_PHOTOS}–{MAX_LISTING_PHOTOS} required.
         </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+        {/* paddingTop leaves room for the remove badges, which sit at top: -6
+            and were being clipped by the scroll view's own bounds. */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginBottom: 4 }}
+          contentContainerStyle={{ paddingTop: 10, paddingRight: 16, paddingBottom: 2 }}
+        >
           {photoUrls.map((url, i) => (
             <View key={url} style={s.photoWrap}>
               <Image source={{ uri: url }} style={s.photo} />

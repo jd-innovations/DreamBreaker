@@ -19,6 +19,7 @@ import { blockUser } from '@/lib/services/blocking';
 import { fetchProfile, type UserProfile } from '@/lib/services/profile';
 import { conditionLabel, formatPriceCents, listingAgeLabel, type MarketplaceBrand } from '@/lib/marketplace/constants';
 import { renewListing } from '@/lib/marketplace/listingService';
+import { isListingSaved, saveListing, unsaveListing } from '@/lib/marketplace/savedListings';
 import { BRAND_LOGOS } from '@/lib/marketplace/brandLogos';
 import LocationCard from '@/components/LocationCard';
 import { haptics } from '@/lib/haptics';
@@ -54,7 +55,10 @@ export default function ListingDetailScreen() {
   const [seller, setSeller] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [photoIndex, setPhotoIndex] = useState(0);
+  // Persisted per viewer in marketplace_saved_listings. This was useState only
+  // until 2026-09-09 -- the heart filled in and forgot on the next navigation.
   const [favorited, setFavorited] = useState(false);
+  const [favoritePending, setFavoritePending] = useState(false);
   const [snap, setSnap] = useState<SheetSnap>('collapsed');
   // Collapsed content's height varies (owner vs buyer CTAs, location present or
   // not), so it's measured from the actual rendered content on layout rather
@@ -83,6 +87,19 @@ export default function ListingDetailScreen() {
 
   useEffect(() => { void load(); }, [load]);
 
+  // Seed the heart from the server. Separate from load() because it depends on
+  // the viewer, not the listing -- and a failure here must not blank the screen,
+  // so an unreadable save state just reads as "not saved".
+  useEffect(() => {
+    const viewer = user?.id;
+    if (!viewer || !id) return;
+    let active = true;
+    isListingSaved(viewer, id)
+      .then((saved) => { if (active) setFavorited(saved); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [user?.id, id]);
+
   if (loading) {
     return <View style={s.centerFill}><ActivityIndicator color="#FFFFFF" /></View>;
   }
@@ -103,6 +120,24 @@ export default function ListingDetailScreen() {
   // listing is non-null past the guard above, but TS narrowing does not survive
   // into a closure, so capture the id rather than re-asserting.
   const listingId = listing.id;
+  const viewerId = user?.id ?? null;
+
+  async function toggleFavorite() {
+    if (!viewerId) return;
+    // Optimistic: the heart is a one-bit toggle and a round trip makes it feel
+    // broken. Reverted on failure rather than left lying.
+    const next = !favorited;
+    setFavorited(next);
+    setFavoritePending(true);
+    try {
+      if (next) await saveListing(viewerId, listingId);
+      else await unsaveListing(viewerId, listingId);
+    } catch {
+      setFavorited(!next);
+    } finally {
+      setFavoritePending(false);
+    }
+  }
   async function handleRenew() {
     try {
       await renewListing(listingId);
@@ -172,7 +207,13 @@ export default function ListingDetailScreen() {
             <Ionicons name="close" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <View style={s.topRight}>
-            <TouchableOpacity style={s.topBtn} onPress={() => setFavorited((f) => !f)}>
+            <TouchableOpacity
+              style={s.topBtn}
+              onPress={toggleFavorite}
+              disabled={favoritePending}
+              accessibilityRole="button"
+              accessibilityLabel={favorited ? 'Remove from saved' : 'Save listing'}
+            >
               <Ionicons name={favorited ? 'heart' : 'heart-outline'} size={18} color={favorited ? L.gold : '#FFFFFF'} />
             </TouchableOpacity>
             <TouchableOpacity style={s.topBtn} onPress={() => setMoreOpen(true)}>
@@ -467,6 +508,15 @@ function MakeOfferModal({ visible, onClose, listing, onSubmit }: {
 }) {
   const [amount, setAmount] = useState(String(Math.round(listing.asking_price_cents / 100)));
 
+  // min_offer_cents was collected at listing creation, stored, and constrained
+  // (<= asking price) but never read by anything -- any offer above $0 was
+  // accepted. A field the seller fills in that does nothing is worse than one
+  // that is missing, so it is now the actual floor.
+  const cents = Math.round(parseFloat(amount || '0') * 100);
+  const minCents = listing.min_offer_cents;
+  const tooLow = cents > 0 && cents < minCents;
+  const canSend = cents > 0 && !tooLow;
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={s.modalScrim}>
@@ -476,16 +526,20 @@ function MakeOfferModal({ visible, onClose, listing, onSubmit }: {
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={L.navy} /></TouchableOpacity>
           </View>
           <Text style={s.meta}>Asking price: {formatPriceCents(listing.asking_price_cents)}</Text>
+          <Text style={s.meta}>Seller accepts offers from {formatPriceCents(minCents)}</Text>
           <View style={s.amountRow}>
             <Text style={s.amountPrefix}>$</Text>
             <TextInputAmount value={amount} onChangeText={setAmount} />
           </View>
+          {tooLow && (
+            <Text style={s.offerError}>
+              This seller does not accept offers below {formatPriceCents(minCents)}.
+            </Text>
+          )}
           <TouchableOpacity
-            style={s.offerBtn}
-            onPress={() => {
-              const cents = Math.round(parseFloat(amount || '0') * 100);
-              if (cents > 0) onSubmit(cents);
-            }}
+            style={[s.offerBtn, !canSend && s.offerBtnDisabled]}
+            disabled={!canSend}
+            onPress={() => { if (canSend) onSubmit(cents); }}
           >
             <Text style={s.offerBtnText}>Send Offer</Text>
           </TouchableOpacity>
@@ -525,6 +579,8 @@ const s = StyleSheet.create({
   conditionBadge: { backgroundColor: '#F0F4FF', borderRadius: shape.pill, paddingHorizontal: 10, paddingVertical: 3 },
   conditionText: { color: L.navy, fontSize: text.chipValue.size, fontWeight: '800' },
   meta: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginBottom: 4 },
+  offerError: { color: L.danger, fontSize: text.caption.size, fontWeight: '600', marginBottom: 8 },
+  offerBtnDisabled: { opacity: 0.4 },
   ownerBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: 'rgba(201,168,76,0.12)',

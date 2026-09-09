@@ -23,6 +23,8 @@ import {
   fetchListings, fetchListingsNearby, type MarketplaceListingCard, type ListingSort,
 } from '@/lib/marketplace/listingService';
 import { onListingsUpdated } from '@/lib/marketplace/listingEvents';
+import { fetchSavedListings } from '@/lib/marketplace/savedListings';
+import { useSession } from '@/hooks/useSession';
 import {
   MARKETPLACE_BRANDS, CONDITION_OPTIONS, conditionLabel, formatPriceCents,
   listingAgeLabel, type MarketplaceCondition,
@@ -320,6 +322,9 @@ export default function MarketplaceScreen() {
   const [radiusMiles, setRadiusMiles] = useState<number | null>(null);
   const [offers, setOffers] = useState<Offers | null>(null);
   const [view, setView] = useState<'grid' | 'map'>('grid');
+  const [savedOnly, setSavedOnly] = useState(false);
+  const [unavailableSaved, setUnavailableSaved] = useState(0);
+  const { user } = useSession();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [region, setRegion] = useState<Region | null>(null);
   // Where the user has panned to, and where results were last fetched from.
@@ -369,6 +374,19 @@ export default function MarketplaceScreen() {
       // ST_DWithin + GiST shape facilities have always used. Without a radius
       // (or without a location fix) the plain query still runs, so sorting by
       // price/newest is unchanged.
+      // Saved is its own list, not a filter on the browse query: it is ordered
+      // by when you saved it and is scoped to one viewer, so brand/price/radius
+      // would be filtering someone's private shortlist rather than a catalogue.
+      if (savedOnly) {
+        if (!user) { setRawListings([]); setUnavailableSaved(0); return; }
+        const saved = await fetchSavedListings(user.id);
+        if (seq !== requestSeq.current) return;
+        setRawListings(saved.listings);
+        setUnavailableSaved(saved.unavailableCount);
+        return;
+      }
+      setUnavailableSaved(0);
+
       // In map view we always query by proximity, around wherever the user is
       // looking — a map with no distance constraint would fetch the world.
       const centre = view === 'map' ? origin : (myLat != null && myLng != null ? { lat: myLat, lng: myLng } : null);
@@ -407,7 +425,7 @@ export default function MarketplaceScreen() {
         setRefreshing(false);
       }
     }
-  }, [debouncedSearch, brand, condition, priceBucket?.min, priceBucket?.max, sort, radiusMiles, myLat, myLng, offers, view, origin]);
+  }, [debouncedSearch, brand, condition, priceBucket?.min, priceBucket?.max, sort, radiusMiles, myLat, myLng, offers, view, origin, savedOnly, user]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -500,6 +518,19 @@ export default function MarketplaceScreen() {
               returnKeyType="search"
             />
           </View>
+          <TouchableOpacity
+            style={[s.filterBtn, savedOnly && s.filterBtnActive]}
+            onPress={() => { setSavedOnly((v) => !v); setView('grid'); setSelectedId(null); }}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={savedOnly ? 'Show all listings' : 'Show saved listings'}
+          >
+            <Ionicons
+              name={savedOnly ? 'heart' : 'heart-outline'}
+              size={18}
+              color={savedOnly ? t.onPrimary : t.textPrimary}
+            />
+          </TouchableOpacity>
           <TouchableOpacity
             style={s.filterBtn}
             onPress={() => { setView((v) => (v === 'grid' ? 'map' : 'grid')); setSelectedId(null); }}
@@ -618,8 +649,14 @@ export default function MarketplaceScreen() {
           <View style={s.centerFill}><ActivityIndicator color={t.primary} /></View>
         ) : listings.length === 0 ? (
           <View style={s.centerFill}>
-            <Ionicons name="pricetag-outline" size={32} color={t.textMuted} />
-            <Text style={s.emptyText}>No listings match yet.</Text>
+            <Ionicons name={savedOnly ? 'heart-outline' : 'pricetag-outline'} size={32} color={t.textMuted} />
+            <Text style={s.emptyText}>
+              {savedOnly
+                ? unavailableSaved > 0
+                  ? `The ${unavailableSaved} listing${unavailableSaved === 1 ? '' : 's'} you saved ${unavailableSaved === 1 ? 'is' : 'are'} no longer available.`
+                  : 'Nothing saved yet. Tap the heart on a listing to keep it here.'
+                : 'No listings match yet.'}
+            </Text>
           </View>
         ) : (
           <FlatList
@@ -663,6 +700,7 @@ const screenStyles = (t: ThemeRoles) => StyleSheet.create({
   searchInput: { flex: 1, fontSize: text.body.size, color: t.textPrimary },
   // Matches the search icon's footprint so swapping the two doesn't shift the input.
   searchSpinner: { width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
+  filterBtnActive: { backgroundColor: t.primary, borderColor: t.primary },
   filterBtn: { width: 42, height: 42, borderRadius: shape.cta, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, alignItems: 'center', justifyContent: 'center' },
   filterBadge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   filterBadgeText: { color: t.onAccent, fontSize: 10, fontWeight: '800' },
