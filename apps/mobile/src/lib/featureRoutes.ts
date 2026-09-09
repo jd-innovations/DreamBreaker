@@ -10,6 +10,8 @@ const GATED_ROUTE_PREFIXES: { prefix: string; feature: FeatureKey }[] = [
   { prefix: '/dev-diagnostics', feature: 'devTools' },
   { prefix: '/dev-theme', feature: 'devTools' },
   { prefix: '/onboarding-preview', feature: 'devTools' },
+  // SPIKE — throwaway, goes with spike/marketplace-map-marker-overlay.
+  { prefix: '/spike-marker-overlay', feature: 'devTools' },
   { prefix: '/coach', feature: 'coachMarketplace' },
   { prefix: '/lessons', feature: 'lessonMarketplace' },
   { prefix: '/wallet', feature: 'wallet' },

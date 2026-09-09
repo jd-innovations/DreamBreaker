@@ -150,7 +150,9 @@ export default function SpikeMarkerOverlayScreen() {
         </TouchableOpacity>
       )}
 
-      <View style={[s.hud, { top: insets.top + 8 }]} pointerEvents="box-none">
+      {/* Header is shown for this route (registered in _layout), so the HUD sits
+          just below it rather than offsetting by the raw safe-area inset. */}
+      <View style={[s.hud, { top: 8 }]} pointerEvents="box-none">
         <Text style={s.hudTitle}>{PROVIDER_LABEL}</Text>
         <Text style={s.hudRow}>
           badge  x {badgePoint.x.toFixed(1)}  y {badgePoint.y.toFixed(1)}
