@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useSession } from '@/hooks/useSession';
 import {
-  fetchListings, setListingStatus, deleteListing, fetchListingLimit,
+  fetchListings, setListingStatus, deleteListing, fetchListingLimit, renewListing,
   type MarketplaceListingCard,
 } from '@/lib/marketplace/listingService';
 import { conditionLabel, formatPriceCents } from '@/lib/marketplace/constants';
@@ -23,8 +23,8 @@ const L = {
   green: '#16A34A', gold: '#C9A84C', danger: '#EF4444', bg: '#FFFFFF',
 };
 
-const STATUS_LABEL: Record<string, string> = { active: 'Active', pending: 'Pending', sold: 'Sold', deleted: 'Deleted' };
-const STATUS_COLOR: Record<string, string> = { active: L.green, pending: L.gold, sold: L.textMuted, deleted: L.danger };
+const STATUS_LABEL: Record<string, string> = { active: 'Active', pending: 'Pending', sold: 'Sold', expired: 'Expired', deleted: 'Deleted' };
+const STATUS_COLOR: Record<string, string> = { active: L.green, pending: L.gold, sold: L.textMuted, expired: L.danger, deleted: L.danger };
 
 export default function MyListingsScreen() {
   const insets = useSafeAreaInsets();
@@ -52,6 +52,15 @@ export default function MyListingsScreen() {
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   const activeCount = listings.filter((l) => l.status === 'active' || l.status === 'pending').length;
+
+  async function handleRenew(id: string) {
+    try {
+      await renewListing(id);
+      void load();
+    } catch (err) {
+      Alert.alert('Could not renew', err instanceof Error ? err.message : 'Please try again.');
+    }
+  }
 
   async function handleStatusChange(id: string, status: 'active' | 'pending' | 'sold') {
     try {
@@ -86,6 +95,15 @@ export default function MyListingsScreen() {
 
   function menuItemsFor(item: MarketplaceListingCard): MenuItem[] {
     if (item.status === 'sold') return [{ icon: 'trash-outline', label: 'Delete', danger: true }];
+    // An expired listing is not a dead one — renewing is the whole point of
+    // expiring rather than deleting, so it leads.
+    if (item.status === 'expired') {
+      return [
+        { icon: 'refresh-outline', label: 'Renew' },
+        { icon: 'pencil-outline', label: 'Edit' },
+        { icon: 'trash-outline', label: 'Delete', danger: true },
+      ];
+    }
     return [
       { icon: 'pencil-outline', label: 'Edit' },
       { icon: 'time-outline', label: item.status === 'pending' ? 'Mark Active' : 'Mark Pending' },
@@ -114,6 +132,9 @@ export default function MyListingsScreen() {
           break;
         case 'Mark Sold':
           handleStatusChange(item.id, 'sold');
+          break;
+        case 'Renew':
+          handleRenew(item.id);
           break;
         case 'Delete':
           handleDelete(item.id);
@@ -177,6 +198,20 @@ export default function MyListingsScreen() {
   );
 }
 
+// A listing only expires from active/pending, so nothing is said about sold or
+// deleted ones. Days are floored, so "expires today" reads as 0 rather than
+// rounding up to tomorrow.
+function expiryHint(item: MarketplaceListingCard): string | null {
+  if (item.status === 'expired') return 'Renew to relist';
+  if (item.status !== 'active' && item.status !== 'pending') return null;
+  if (!item.expires_at) return null;
+  const days = Math.floor((new Date(item.expires_at).getTime() - Date.now()) / 86_400_000);
+  if (days > 14) return null;          // only speak up when it matters
+  if (days < 0) return 'Expired';
+  if (days === 0) return 'Expires today';
+  return `Expires in ${days} day${days === 1 ? '' : 's'}`;
+}
+
 function ListingRow({
   item, onOpenMenu,
 }: {
@@ -201,6 +236,7 @@ function ListingRow({
         <Text style={s.title} numberOfLines={1}>{item.title}</Text>
         <Text style={s.meta}>{formatPriceCents(item.asking_price_cents)} · {conditionLabel(item.condition)}</Text>
         <Text style={[s.status, { color: STATUS_COLOR[item.status] }]}>{STATUS_LABEL[item.status]}</Text>
+        {expiryHint(item) && <Text style={s.expiry}>{expiryHint(item)}</Text>}
       </View>
       <View ref={triggerRef} collapsable={false}>
         <TouchableOpacity style={s.moreBtn} onPress={handlePress} hitSlop={8}>
@@ -225,6 +261,7 @@ const s = StyleSheet.create({
   thumbPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F7FB' },
   title: { color: L.text, fontSize: text.rowTitle.size, fontWeight: '700', marginBottom: 2 },
   meta: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginBottom: 2 },
+  expiry: { fontSize: text.caption.size, color: L.textMuted, marginTop: 2 },
   status: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   moreBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });

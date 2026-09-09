@@ -2866,6 +2866,8 @@ export type Database = {
           condition: Database["public"]["Enums"]["marketplace_condition"]
           created_at: string
           description: string | null
+          expires_at: string | null
+          expiry_warned_at: string | null
           fulfillment: Database["public"]["Enums"]["marketplace_fulfillment"]
           id: string
           location_city: string | null
@@ -2885,6 +2887,7 @@ export type Database = {
             | Database["public"]["Enums"]["marketplace_pickup_source"]
             | null
           seller_id: string
+          sold_at: string | null
           status: Database["public"]["Enums"]["marketplace_listing_status"]
           title: string
           updated_at: string
@@ -2895,6 +2898,8 @@ export type Database = {
           condition: Database["public"]["Enums"]["marketplace_condition"]
           created_at?: string
           description?: string | null
+          expires_at?: string | null
+          expiry_warned_at?: string | null
           fulfillment?: Database["public"]["Enums"]["marketplace_fulfillment"]
           id?: string
           location_city?: string | null
@@ -2914,6 +2919,7 @@ export type Database = {
             | Database["public"]["Enums"]["marketplace_pickup_source"]
             | null
           seller_id: string
+          sold_at?: string | null
           status?: Database["public"]["Enums"]["marketplace_listing_status"]
           title: string
           updated_at?: string
@@ -2924,6 +2930,8 @@ export type Database = {
           condition?: Database["public"]["Enums"]["marketplace_condition"]
           created_at?: string
           description?: string | null
+          expires_at?: string | null
+          expiry_warned_at?: string | null
           fulfillment?: Database["public"]["Enums"]["marketplace_fulfillment"]
           id?: string
           location_city?: string | null
@@ -2943,6 +2951,7 @@ export type Database = {
             | Database["public"]["Enums"]["marketplace_pickup_source"]
             | null
           seller_id?: string
+          sold_at?: string | null
           status?: Database["public"]["Enums"]["marketplace_listing_status"]
           title?: string
           updated_at?: string
@@ -7573,6 +7582,7 @@ export type Database = {
       }
       expire_registration_group_invites: { Args: never; Returns: number }
       expire_stale_holds: { Args: never; Returns: number }
+      expire_stale_listings: { Args: never; Returns: number }
       expire_stale_reservation_holds: { Args: never; Returns: number }
       facility_commission_pct: {
         Args: { p_facility_id: string }
@@ -8214,6 +8224,47 @@ export type Database = {
           released: boolean
           reservation_cancelled: boolean
         }[]
+      }
+      renew_listing: {
+        Args: { p_listing_id: string }
+        Returns: {
+          asking_price_cents: number
+          brand: string
+          condition: Database["public"]["Enums"]["marketplace_condition"]
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          expiry_warned_at: string | null
+          fulfillment: Database["public"]["Enums"]["marketplace_fulfillment"]
+          id: string
+          location_city: string | null
+          location_coords: unknown
+          location_lat: number | null
+          location_lng: number | null
+          location_postal: string | null
+          location_precision:
+            | Database["public"]["Enums"]["marketplace_location_precision"]
+            | null
+          location_state: string | null
+          location_visibility: Database["public"]["Enums"]["marketplace_location_visibility"]
+          min_offer_cents: number
+          model: string
+          pickup_facility_id: string | null
+          pickup_source:
+            | Database["public"]["Enums"]["marketplace_pickup_source"]
+            | null
+          seller_id: string
+          sold_at: string | null
+          status: Database["public"]["Enums"]["marketplace_listing_status"]
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "marketplace_listings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       reservation_asset_hourly_rate_cents: {
         Args: {
@@ -9218,7 +9269,12 @@ export type Database = {
       facility_member_role: "owner" | "manager" | "staff"
       marketplace_condition: "new" | "like_new" | "excellent" | "good" | "fair"
       marketplace_fulfillment: "local_pickup" | "shipping" | "both"
-      marketplace_listing_status: "active" | "pending" | "sold" | "deleted"
+      marketplace_listing_status:
+        | "active"
+        | "pending"
+        | "sold"
+        | "deleted"
+        | "expired"
       marketplace_location_precision: "facility" | "neighborhood" | "city"
       marketplace_location_visibility: "map" | "city_only" | "hidden"
       marketplace_pickup_source: "facility" | "city" | "map_area"
@@ -9494,7 +9550,13 @@ export const Constants = {
       facility_member_role: ["owner", "manager", "staff"],
       marketplace_condition: ["new", "like_new", "excellent", "good", "fair"],
       marketplace_fulfillment: ["local_pickup", "shipping", "both"],
-      marketplace_listing_status: ["active", "pending", "sold", "deleted"],
+      marketplace_listing_status: [
+        "active",
+        "pending",
+        "sold",
+        "deleted",
+        "expired",
+      ],
       marketplace_location_precision: ["facility", "neighborhood", "city"],
       marketplace_location_visibility: ["map", "city_only", "hidden"],
       marketplace_pickup_source: ["facility", "city", "map_area"],

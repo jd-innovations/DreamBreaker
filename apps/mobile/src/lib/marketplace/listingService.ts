@@ -370,6 +370,18 @@ export async function setListingStatus(
   notifyListingsUpdated();
 }
 
+/**
+ * Push a listing's expiry out another 60 days, and bring it back from
+ * 'expired' if it had lapsed. Owner-only, enforced in the RPC — it reports
+ * "listing not found" for someone else's id as well as a missing one, so the
+ * error cannot be used to probe which listing ids exist.
+ */
+export async function renewListing(id: string): Promise<void> {
+  const { error } = await supabase.rpc('renew_listing', { p_listing_id: id });
+  if (error) throw error;
+  notifyListingsUpdated();
+}
+
 export async function deleteListing(id: string): Promise<void> {
   await setListingStatus(id, 'deleted');
 }
