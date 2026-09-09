@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, KeyboardAvoidingView, Platform, Alert, Modal,
+  TextInput, KeyboardAvoidingView, Platform, Alert, Modal, Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +13,10 @@ import { colors } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import { useProfile } from '@/hooks/useProfile';
-import { createDraftTournament } from '@/lib/supabase/tournaments';
+import { createDraftTournament, setTournamentCover } from '@/lib/supabase/tournaments';
+import { replaceImage } from '@/lib/media';
+import { CoverImagePicker } from '@/components/media/CoverImagePicker';
+import { DEFAULT_EVENT_COVER } from '@/lib/eventCover';
 import AmenityPicker from '@/components/AmenityPicker';
 import { FacilityPicker, type FacilityPickerValue } from '@/components/FacilityPicker';
 import { useSupportContext } from '@/lib/support/supportContext';
@@ -38,12 +41,18 @@ const L = {
 
 // ─── Step definitions ─────────────────────────────────────────────────────────
 
-type StepKey = 'basics' | 'dates' | 'registration' | 'review';
+type StepKey = 'basics' | 'dates' | 'registration' | 'image' | 'review';
 
 const STEPS: { key: StepKey; title: string; icon: string }[] = [
   { key: 'basics',       title: 'Basics',       icon: 'create-outline'       },
   { key: 'dates',        title: 'Dates',         icon: 'calendar-outline'     },
   { key: 'registration', title: 'Registration',  icon: 'card-outline'         },
+  // Optional, and placed last before Review on purpose: it is the only step a
+  // director can skip, and adding it here means the hero lands while the
+  // tournament is still a draft. Doing it after approval instead would send the
+  // tournament back to the approval queue -- updateTournamentDetails sets
+  // revertToPendingApproval for anything that is not a draft.
+  { key: 'image',        title: 'Hero Image',    icon: 'image-outline'        },
   { key: 'review',       title: 'Review',        icon: 'checkmark-circle-outline' },
 ];
 
@@ -373,6 +382,10 @@ export default function CreateTournamentScreen() {
   const [errors, setErrors]     = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
   const [facilityId,   setFacilityId]   = useState<string | null>(null);
+  // Local file:// URI staged by the Hero Image step. Nothing is uploaded until
+  // submit(), because the storage path is keyed on a tournament id that does
+  // not exist yet.
+  const [coverUri,     setCoverUri]     = useState<string | null>(null);
 
   // Multi-step form with its own sticky bottom action bar -- minimized per §7's create-* rule.
   useSupportContext({ feature: 'event_creation', visibility: 'minimized', metadata: { is_director: true } });
@@ -510,6 +523,34 @@ export default function CreateTournamentScreen() {
       Alert.alert('Error', 'Failed to create tournament. Please try again.');
       return;
     }
+
+    // Cover goes up AFTER the insert: the tournamentCover storage path is
+    // keyed on the tournament id, so there is nothing to upload against until
+    // the row exists.
+    //
+    // A failure here must never lose the tournament -- it has already been
+    // created, and the director has filled in five steps. So this is
+    // best-effort: report it, say where to retry, and continue. replaceImage
+    // rolls the uploaded object back if the DB write fails, so a failure
+    // leaves no orphan either way.
+    if (coverUri) {
+      try {
+        await replaceImage(
+          { uri: coverUri, category: 'tournamentCover', entityId: t.id, ownerId: user.id, previousUrl: null },
+          async (uploaded) => {
+            const res = await setTournamentCover(t.id, uploaded.url);
+            if (!res.ok) throw new Error(res.error);
+          },
+        );
+      } catch (err) {
+        console.warn('[create-tournament] cover upload failed:', err);
+        Alert.alert(
+          'Tournament created',
+          'Your hero image could not be uploaded. You can add it from Edit Tournament — the tournament itself saved fine.',
+        );
+      }
+    }
+
     router.replace(`/tournament/${t.id}/command-center` as never);
   }
 
@@ -668,7 +709,32 @@ export default function CreateTournamentScreen() {
             </View>
           )}
 
-          {/* ── STEP 4: Review ── */}
+          {/* ── STEP 4: Hero Image (optional) ── */}
+          {currentStep.key === 'image' && (
+            <View style={s.stepBody}>
+              <View style={s.stepHero}>
+                <Ionicons name="image-outline" size={28} color={L.gold} />
+                <Text style={s.stepHeroTitle}>Hero Image</Text>
+                <Text style={s.stepHeroSub}>
+                  The photo players see on your tournament card and page. Optional — you can add or
+                  change it later from Edit Tournament.
+                </Text>
+              </View>
+
+              <CoverImagePicker
+                value={coverUri}
+                onChange={setCoverUri}
+                badgeLabel={coverUri ? 'Change' : 'Add Photo'}
+              />
+              <Text style={s.coverHint}>
+                {coverUri
+                  ? 'Looks good. Continue to review your tournament.'
+                  : 'No image yet — a default court photo will be used until you add one.'}
+              </Text>
+            </View>
+          )}
+
+          {/* ── STEP 5: Review ── */}
           {currentStep.key === 'review' && (
             <View style={s.stepBody}>
               <View style={s.stepHero}>
@@ -676,6 +742,18 @@ export default function CreateTournamentScreen() {
                 <Text style={s.stepHeroTitle}>Review & Create</Text>
                 <Text style={s.stepHeroSub}>Confirm your tournament details before creating it.</Text>
               </View>
+
+              {/* Show what was picked -- a hero chosen two steps ago is easy to
+                  forget, and this is the last point it can be changed before the
+                  tournament exists. */}
+              <Image
+                source={coverUri ? { uri: coverUri } : DEFAULT_EVENT_COVER}
+                style={s.reviewCover}
+                resizeMode="cover"
+              />
+              <Text style={s.coverHint}>
+                {coverUri ? 'Your hero image' : 'Default hero image'}
+              </Text>
 
               <View style={s.reviewCard}>
                 <Text style={s.reviewSection}>TOURNAMENT DETAILS</Text>
@@ -833,6 +911,14 @@ const s = StyleSheet.create({
   stepHeroTitle: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900', textAlign: 'center' },
   stepHeroSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 19 },
 
+  // No negative margin: this sits under two different elements (the picker
+  // tile, which carries its own 20px bottom margin, and the review preview
+  // below) and a negative top margin made it overlap the second one.
+  coverHint: {
+    color: L.textSub, fontSize: text.caption.size, fontWeight: '500',
+    textAlign: 'center', marginBottom: 16,
+  },
+  reviewCover: { width: '100%', height: 140, borderRadius: shape.panel, marginBottom: 8 },
   reviewCard: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
     borderRadius: shape.card, padding: 16, marginBottom: 16,

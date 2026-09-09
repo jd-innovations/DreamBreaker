@@ -1,20 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, KeyboardAvoidingView, Platform, Alert, Modal, ActivityIndicator, Image,
+  TextInput, KeyboardAvoidingView, Platform, Alert, Modal, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { fetchTournamentForEdit, updateTournamentDetails } from '@/lib/supabase/tournaments';
 import { replaceImage } from '@/lib/media';
-import { eventCoverSource } from '@/lib/eventCover';
+import { CoverImagePicker } from '@/components/media/CoverImagePicker';
 import { useProfile } from '@/hooks/useProfile';
 import type { Tournament } from '@/lib/tournamentTypes';
 import { ErrorState } from '@/components/states/ScreenState';
@@ -253,30 +252,6 @@ function EditTournamentScreen() {
   // existing cover_img_url stays authoritative on screen until save succeeds.
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(null);
-
-  async function pickCoverFromLibrary() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) { Alert.alert('Permission needed', 'Allow photo library access to change the hero image.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [16, 9], quality: 0.85,
-    });
-    if (!result.canceled) setCoverUri(result.assets[0].uri);
-  }
-
-  async function pickCoverFromCamera() {
-    const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) { Alert.alert('Permission needed', 'Allow camera access to take a photo.'); return; }
-    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [16, 9], quality: 0.85 });
-    if (!result.canceled) setCoverUri(result.assets[0].uri);
-  }
-
-  function handleCoverPress() {
-    Alert.alert('Hero Image', undefined, [
-      { text: 'Take Photo', onPress: pickCoverFromCamera },
-      { text: 'Choose from Library', onPress: pickCoverFromLibrary },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  }
 
   // Same auto-fill contract as director/create-tournament.tsx's FacilityPicker
   // wiring — picking a facility fills venue/city/state but leaves them editable.
@@ -584,17 +559,12 @@ function EditTournamentScreen() {
           contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 100 }]}
         >
           <Text style={s.sectionTitle}>Hero Image</Text>
-          <TouchableOpacity style={ph.uploadTile} activeOpacity={0.85} onPress={handleCoverPress}>
-            <Image
-              source={coverUri ? { uri: coverUri } : eventCoverSource(existingCoverUrl)}
-              style={ph.preview}
-              resizeMode="cover"
-            />
-            <View style={ph.editBadge}>
-              <Ionicons name="camera" size={14} color="#FFFFFF" />
-              <Text style={ph.editBadgeText}>Change</Text>
-            </View>
-          </TouchableOpacity>
+          <CoverImagePicker
+            value={coverUri}
+            onChange={setCoverUri}
+            existingUrl={existingCoverUrl}
+            badgeLabel="Change"
+          />
 
           <Text style={s.sectionTitle}>Basics</Text>
           <Field label="Tournament Name *" value={form.name} onChange={v => set('name', v)} error={errors.name} />
@@ -791,21 +761,6 @@ const s = StyleSheet.create({
   },
   pickerCancel: { color: L.textSub, fontSize: text.action.size, fontWeight: '800' },
   pickerDone: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
-});
-
-const ph = StyleSheet.create({
-  uploadTile: {
-    height: 160, borderRadius: shape.panel, overflow: 'hidden',
-    marginBottom: 20, backgroundColor: L.border,
-  },
-  preview: { width: '100%', height: '100%' },
-  editBadge: {
-    position: 'absolute', right: 10, bottom: 10,
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: shape.pill,
-    paddingHorizontal: 10, paddingVertical: 6,
-  },
-  editBadgeText: { color: '#FFFFFF', fontSize: text.caption.size, fontWeight: '700' },
 });
 
 // No wrapper guard. Ownership is enforced by the query itself

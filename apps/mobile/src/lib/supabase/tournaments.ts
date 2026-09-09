@@ -446,6 +446,33 @@ export async function updateTournamentDetails(id: string, input: UpdateTournamen
   return { ok: true };
 }
 
+/**
+ * Writes only the cover image.
+ *
+ * Exists because the create flow uploads the hero AFTER the row is inserted —
+ * the storage path is keyed on the tournament id, so there is nothing to upload
+ * against until the insert returns. Going back through
+ * updateTournamentDetails() for that one column would mean re-sending the whole
+ * form, and every one of its core fields is required.
+ *
+ * Deliberately does NOT touch status: this is only ever called on a tournament
+ * that is still a draft, so there is no approval to revert. Adding a cover to
+ * an approved tournament goes through updateTournamentDetails, which sets
+ * revertToPendingApproval and sends it back to the queue on purpose.
+ */
+export async function setTournamentCover(
+  id: string,
+  coverImgUrl: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await supabase
+    .from('tournaments')
+    .update({ cover_img_url: coverImgUrl })
+    .eq('id', id);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 export async function submitTournamentForApproval(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const { error } = await supabase
     .from('tournaments')
