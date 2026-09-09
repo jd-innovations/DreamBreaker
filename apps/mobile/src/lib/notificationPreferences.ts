@@ -28,6 +28,9 @@ export type NotificationPreferences = {
   newMatch: boolean;
   likedYou: boolean;
   holdExpiry: boolean;
+  /** Honoured today by fn_notify_price_drop (push only; the in-app entry is
+   *  always written, since the list is the record of what happened). */
+  marketplace: boolean;
   /** Stored intent — send-transactional-email does not check it. */
   email: boolean;
 };
@@ -47,11 +50,12 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   newMatch: true,
   likedYou: true,
   holdExpiry: true,
+  marketplace: true,
   email: true,
 };
 
 const COLUMNS =
-  'notif_messages, notif_tournaments, notif_new_match, notif_liked_you, notif_hold_expiry, notif_email_enabled';
+  'notif_messages, notif_tournaments, notif_new_match, notif_liked_you, notif_hold_expiry, notif_marketplace, notif_email_enabled';
 
 export type LoadResult =
   | { ok: true; preferences: NotificationPreferences }
@@ -83,6 +87,7 @@ export async function loadNotificationPreferences(userId: string): Promise<LoadR
       newMatch: row.notif_new_match ?? true,
       likedYou: row.notif_liked_you ?? true,
       holdExpiry: row.notif_hold_expiry ?? true,
+      marketplace: row.notif_marketplace ?? true,
       email: row.notif_email_enabled ?? true,
     },
   };
@@ -115,6 +120,7 @@ export async function saveNotificationPreference(
     : key === 'newMatch' ? { notif_new_match: value }
     : key === 'likedYou' ? { notif_liked_you: value }
     : key === 'holdExpiry' ? { notif_hold_expiry: value }
+    : key === 'marketplace' ? { notif_marketplace: value }
     : { notif_email_enabled: value };
 
   const { error } = await supabase

@@ -299,13 +299,20 @@ export default function NotificationsSettingsScreen() {
             sub="Before a held tournament spot expires"
             value={prefs.holdExpiry}
             onChange={(next) => { void updatePref('holdExpiry', next); }}
+          />
+          <ToggleRow
+            icon="pricetag-outline"
+            label="Marketplace"
+            sub="Price drops on listings you saved"
+            value={prefs.marketplace}
+            onChange={(next) => { void updatePref('marketplace', next); }}
             last
           />
         </Group>
         <Text style={s.groupNote}>
           {prefsStatus === 'loading'
             ? 'Loading your settings...'
-            : 'Messages are delivered according to this setting today. The rest are saved and will apply as those notifications are added.'}
+            : 'Messages and Marketplace are delivered according to these settings today. The rest are saved and will apply as those notifications are added.'}
         </Text>
         {prefsError ? <Text style={s.groupNote}>{prefsError}</Text> : null}
 

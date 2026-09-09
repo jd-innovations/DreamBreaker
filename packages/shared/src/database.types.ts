@@ -4642,6 +4642,7 @@ export type Database = {
           notif_email_enabled: boolean
           notif_hold_expiry: boolean
           notif_liked_you: boolean
+          notif_marketplace: boolean
           notif_messages: boolean
           notif_new_match: boolean
           notif_tournaments: boolean
@@ -4701,6 +4702,7 @@ export type Database = {
           notif_email_enabled?: boolean
           notif_hold_expiry?: boolean
           notif_liked_you?: boolean
+          notif_marketplace?: boolean
           notif_messages?: boolean
           notif_new_match?: boolean
           notif_tournaments?: boolean
@@ -4760,6 +4762,7 @@ export type Database = {
           notif_email_enabled?: boolean
           notif_hold_expiry?: boolean
           notif_liked_you?: boolean
+          notif_marketplace?: boolean
           notif_messages?: boolean
           notif_new_match?: boolean
           notif_tournaments?: boolean
