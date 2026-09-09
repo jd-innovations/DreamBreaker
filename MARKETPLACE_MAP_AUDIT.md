@@ -8,6 +8,16 @@
 
 ---
 
+> **STATUS 2026-09-09 — Phases 0, 1 and 3 are shipped and verified on device.**
+> The spike ran and **rejected** the projected price badge (§5.1a); pins carry a
+> price band instead. Phase 4 (clustering) and the remaining Phase 5 items are
+> deliberately deferred — see `MARKETPLACE_HANDOFF.md` for what exists now, what
+> was deferred and why, and the operational facts (migrations, cron, OTA rules).
+> This document remains the record of the *reasoning*; the handoff is the record
+> of the *result*.
+
+---
+
 ## TL;DR
 
 1. There is **one** interactive map in the app — `ExploreMap`, used only by the Nearby tab — and it is deliberately restricted to react-native-maps' native pin rendering. Custom marker content was removed on 2026-09-07 because it crashed under Fabric.
