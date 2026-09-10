@@ -28,6 +28,46 @@ export async function signIn(email: string, password: string) {
   return data;
 }
 
+/**
+ * Whether an account already exists for these credentials, established by
+ * trying to use them rather than by asking the server "does this email exist"
+ * -- there is no such endpoint that isn't also an account-enumeration oracle.
+ *
+ * Exists because onboarding's finalizeOnboarding() used to call signUp()
+ * unconditionally when it had no session. For an email whose account exists but
+ * is UNCONFIRMED, GoTrue treats a repeat signUp as a re-signup and replaces the
+ * stored password -- so a user who completed onboarding, never opened the
+ * confirmation mail, then came back and went through onboarding again ended up
+ * locked out of their own account with "Invalid login credentials". Observed in
+ * production 2026-09-09.
+ *
+ * Outcomes:
+ *  - 'signed_in'   the account exists, is confirmed, and these credentials are
+ *                  correct. A live session now exists, so callers can do an
+ *                  authenticated write instead of creating anything.
+ *  - 'unconfirmed' the account exists but the email was never confirmed. Do NOT
+ *                  sign up again; send them to confirm and sign in.
+ *  - 'no_account'  no usable account. Safe to create one.
+ *
+ * A wrong password on an existing account also lands in 'no_account' -- GoTrue
+ * deliberately returns the same invalid_credentials for "no such user" and
+ * "wrong password", and disambiguating would mean building the enumeration
+ * oracle this avoids. The subsequent signUp then fails for a confirmed account
+ * (which is safe) and only re-signs-up an unconfirmed one, which is the
+ * pre-existing behaviour rather than something this makes worse.
+ */
+export type ExistingAccountProbe = 'signed_in' | 'unconfirmed' | 'no_account';
+
+export async function probeExistingAccount(
+  email: string,
+  password: string,
+): Promise<ExistingAccountProbe> {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (!error && data.session) return 'signed_in';
+  if (error?.code === 'email_not_confirmed') return 'unconfirmed';
+  return 'no_account';
+}
+
 // extraMetadata rides into auth.users.raw_user_meta_data alongside full_name,
 // where fn_handle_new_user() reads it to populate profiles at insert time.
 // Needed because email/password signups don't get a live session until the

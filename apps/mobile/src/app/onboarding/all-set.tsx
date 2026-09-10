@@ -232,6 +232,20 @@ function FinalCTA() {
     const result = await finalizeOnboarding(draft);
     setSubmitting(false);
 
+    // An account already exists for this email and was never confirmed. Not a
+    // failure -- the account is fine, it just needs confirming -- so route to
+    // sign-in rather than showing an error the user cannot act on. Onboarding
+    // deliberately does NOT re-create it: doing so replaced the password, see
+    // finalizeOnboarding().
+    if (!result.ok && 'alreadyRegistered' in result) {
+      Alert.alert(
+        'You already have an account',
+        result.error,
+        [{ text: 'Go to Sign In', onPress: () => router.replace('/sign-in') }],
+      );
+      return;
+    }
+
     if (!result.ok) {
       haptics.error();
       Alert.alert('Could not finish setup', result.error);

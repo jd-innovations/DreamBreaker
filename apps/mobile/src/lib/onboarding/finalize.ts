@@ -1,6 +1,7 @@
-import { getSession, signUp } from '@/lib/auth';
+import { getSession, signUp, probeExistingAccount } from '@/lib/auth';
 import { track } from '@/lib/analytics';
 import { updateProfile } from '@/lib/services/profile';
+import { supabase } from '@/lib/supabase';
 import { AVAILABILITY_OPTIONS } from './mockData';
 import type { OnboardingDraft } from './state';
 import {
@@ -116,7 +117,14 @@ function draftToProfileFields(draft: OnboardingDraft) {
 
 export type FinalizeOnboardingResult =
   | { ok: true; needsEmailConfirmation: boolean }
-  | { ok: false; error: string };
+  | { ok: false; error: string }
+  /**
+   * An account already exists for this email and its address was never
+   * confirmed. Distinct from `ok: false` because nothing went wrong -- the
+   * account is fine, it just needs confirming, and the caller should route to
+   * sign-in rather than show an error.
+   */
+  | { ok: false; alreadyRegistered: true; error: string };
 
 // Called once, at the true end of onboarding (all-set.tsx's CTA). Writes
 // every collected draft field to Supabase:
@@ -152,6 +160,33 @@ export async function finalizeOnboarding(draft: OnboardingDraft): Promise<Finali
         return { ok: false, error: `Your ${providerLabel} sign-in didn't carry through. Please go back and sign in again to finish creating your account.` };
       }
       return { ok: false, error: 'Missing account details. Please go back and enter your email and password.' };
+    }
+
+    // Do NOT sign up blindly. For an email whose account exists but is
+    // unconfirmed, GoTrue treats a repeat signUp as a re-signup and REPLACES
+    // the password -- which locked a real user out of their own account on
+    // 2026-09-09. Establish what already exists first, using the credentials
+    // the user just gave us. See probeExistingAccount().
+    const existing = await probeExistingAccount(draft.profileEmail, draft.emailPassword);
+
+    if (existing === 'signed_in') {
+      // The account was already created (an earlier onboarding run, or the
+      // sign-up screen) and these credentials work. We now have a session, so
+      // write the profile properly instead of creating anything.
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await updateProfile(user.id, { ...fields, full_name: fullName || undefined });
+        track('profile_completed', { source: 'onboarding', method: draft.authMethod ?? 'email' });
+        return { ok: true, needsEmailConfirmation: false };
+      }
+    }
+
+    if (existing === 'unconfirmed') {
+      return {
+        ok: false,
+        alreadyRegistered: true,
+        error: 'You already have an account with this email. Open the confirmation link we sent you, then sign in.',
+      };
     }
 
     await signUp(draft.profileEmail, draft.emailPassword, fullName, fields);
