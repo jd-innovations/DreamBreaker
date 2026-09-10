@@ -49,11 +49,23 @@ function useTiltParallax() {
       const available = await DeviceMotion.isAvailableAsync().catch(() => false);
       if (!available || cancelled) return;
 
-      const { granted } = await DeviceMotion.getPermissionsAsync().catch(() => ({ granted: true }));
-      if (!granted) {
-        const req = await DeviceMotion.requestPermissionsAsync().catch(() => ({ granted: false }));
-        if (!req.granted || cancelled) return;
-      }
+      // No permission request here, deliberately. addListener() below is
+      // CMMotionManager (gyroscope/accelerometer) via the native module's
+      // OnStartObserving, which iOS does not gate behind any permission -- the
+      // parallax runs either way.
+      //
+      // DeviceMotion.requestPermissionsAsync() used to be called here, and it
+      // does NOT ask for gyroscope access: expo-sensors' EXMotionPermissionRequester
+      // instantiates a CMPedometer and calls queryPedometerDataFromDate:, which
+      // is what makes iOS raise the "Motion & Fitness" dialog. This app counts
+      // no steps and reads no fitness data, so that prompt gated nothing and
+      // asked for something we never use. Same least-privilege reasoning that
+      // keeps expo-calendar's config plugin unregistered in app.config.js.
+      //
+      // It also could not have succeeded: expo-sensors' plugin is not in the
+      // plugins array, so NSMotionUsageDescription is absent from the Info.plist,
+      // and the requester's own getPermissions treats a missing key as EXFatal
+      // and returns denied.
 
       DeviceMotion.setUpdateInterval(UPDATE_INTERVAL_MS);
       subscription = DeviceMotion.addListener((m: DeviceMotionMeasurement) => {
