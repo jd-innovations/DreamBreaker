@@ -30,7 +30,7 @@ import { router } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { completeEmailConfirmation } from '@/lib/auth';
+import { completeEmailConfirmation, describeAuthLink } from '@/lib/auth';
 import { colors, spacing } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 
@@ -39,6 +39,11 @@ type Status = 'verifying' | 'confirmed' | 'invalid';
 export default function ConfirmEmailScreen() {
   const url = Linking.useLinkingURL();
   const [status, setStatus] = useState<Status>('verifying');
+  // What the link actually carried, shown on failure. A generic "didn't work"
+  // gives the same answer for an expired token, a shape this app cannot redeem,
+  // and a GoTrue rejection -- three different problems. Names only, never
+  // values: an implicit link carries a live access token.
+  const [detail, setDetail] = useState<string | null>(null);
   const attempted = useRef(false);
 
   useEffect(() => {
@@ -47,11 +52,10 @@ export default function ConfirmEmailScreen() {
     (async () => {
       try {
         const session = await completeEmailConfirmation(url);
+        if (!session) setDetail(`Link carried: ${describeAuthLink(url)}`);
         setStatus(session ? 'confirmed' : 'invalid');
-      } catch {
-        // A used, expired or malformed link. Deliberately not surfaced as an
-        // error message: the useful thing is a way forward, and the most likely
-        // cause is that the link was already opened once.
+      } catch (err) {
+        setDetail(err instanceof Error ? err.message : describeAuthLink(url));
         setStatus('invalid');
       }
     })();
@@ -93,6 +97,7 @@ export default function ConfirmEmailScreen() {
       <TouchableOpacity style={s.cta} activeOpacity={0.85} onPress={() => router.replace('/sign-in')}>
         <Text style={s.ctaText}>Go to Sign In</Text>
       </TouchableOpacity>
+      {!!detail && <Text style={s.detail}>{detail}</Text>}
     </View>
   );
 }
@@ -115,4 +120,8 @@ const s = StyleSheet.create({
     minWidth: 200, alignItems: 'center',
   },
   ctaText: { color: colors.navy, fontSize: text.action.size, fontWeight: '800' },
+  detail: {
+    color: colors.textSub, fontSize: text.caption.size, fontWeight: '500',
+    textAlign: 'center', marginTop: spacing.md, opacity: 0.8,
+  },
 });

@@ -342,24 +342,34 @@ export async function completePasswordRecovery(url: string) {
 }
 
 /**
- * Redeems a signup-confirmation deep link inside the app.
+ * Redeems a signup-confirmation link inside the app.
  *
- * Mirrors completePasswordRecovery() exactly -- same two shapes, because the
- * same GoTrue emits both and which one arrives depends on project config
- * rather than on anything this app controls:
- *  - implicit: access_token + refresh_token, handed straight to setSession
- *  - token_hash: verifyOtp, here with type 'signup' rather than 'recovery'
+ * GoTrue sends one of FOUR shapes and they are not interchangeable. This
+ * mirrors web/src/lib/auth/redeem-url.ts, whose header documents them; the
+ * mobile side originally handled only two and failed on a real link (2026-09-10,
+ * dhjesus122+demo11 -- app opened via the universal link, could not redeem, and
+ * email_confirmed_at stayed null):
  *
- * Exists so confirmation finishes in the app. Before this, signUp() pointed
- * emailRedirectTo at the WEB /auth/confirm route, so confirming a mobile signup
- * dumped the user in Safari, left the session in the phone's browser instead of
- * the app, and made them come back and sign in by hand.
+ *   1. #access_token + refresh_token  implicit; self-contained -> setSession
+ *   2. ?token_hash + type             stateless -> verifyOtp
+ *   3. ?code                          PKCE -> exchangeCodeForSession
+ *   4. ?error / #error                GoTrue rejected it and said why
  *
- * Returns the session on success, null when the link carries neither shape.
+ * Shape 3 is the one that was missing, and it is the shape a native app is best
+ * placed to handle: the PKCE verifier lives in the storage of whatever client
+ * started the flow, and for a mobile signup that is THIS app. The same shape is
+ * fragile on web precisely because a mail app's WebView is a different storage
+ * context -- see redeem-url.ts.
+ *
+ * Returns the session on success, or null when the link carries none of the
+ * three redeemable shapes. Throws GoTrue's own reason for shape 4 rather than
+ * inventing one.
  */
 export async function completeEmailConfirmation(url: string) {
   const { params, errorCode } = QueryParams.getQueryParams(url);
   if (errorCode) throw new Error(errorCode);
+  if (params.error_description) throw new Error(params.error_description);
+  if (params.error) throw new Error(params.error);
 
   if (params.access_token && params.refresh_token) {
     const { data, error } = await supabase.auth.setSession({
@@ -370,7 +380,7 @@ export async function completeEmailConfirmation(url: string) {
     return data.session;
   }
 
-  if (params.token_hash && (params.type === 'signup' || params.type === 'email')) {
+  if (params.token_hash) {
     const { data, error } = await supabase.auth.verifyOtp({
       type: params.type === 'email' ? 'email' : 'signup',
       token_hash: params.token_hash,
@@ -379,7 +389,31 @@ export async function completeEmailConfirmation(url: string) {
     return data.session;
   }
 
+  if (params.code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(params.code);
+    if (error) throw error;
+    return data.session;
+  }
+
   return null;
+}
+
+/**
+ * The parameter NAMES a link carried, for diagnosing a redemption failure.
+ *
+ * Names only, never values: an implicit link carries a live access token and
+ * this string is rendered on screen. Same reasoning as redeem-url.ts's
+ * describeLinkParams().
+ */
+export function describeAuthLink(url: string | null): string {
+  if (!url) return 'no link';
+  try {
+    const { params } = QueryParams.getQueryParams(url);
+    const keys = Object.keys(params ?? {});
+    return keys.length ? keys.join(', ') : 'no parameters';
+  } catch {
+    return 'unreadable link';
+  }
 }
 
 export async function updatePassword(newPassword: string) {
