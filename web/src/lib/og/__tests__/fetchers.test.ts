@@ -69,19 +69,55 @@ describe('fetchTournamentOg', () => {
 });
 
 describe('fetchCommunityEventOg', () => {
+  const communityRow = {
+    id: UUID, name: 'Sat Round Robin', event_date: '2026-10-04',
+    start_time: '18:30:00', skill_min: 3, skill_max: 4, max_players: 8,
+    venue_name: 'Courts', location: 'Courts', city: 'Bradenton', state: 'FL',
+    cover_url: null, event_type: 'round_robin', notes: null,
+  };
+
   it('labels each event_type', async () => {
+    setup({ play_events: { data: communityRow, error: null } });
+    const result = await fetchCommunityEventOg(UUID);
+    expect(result?.detailLine).toContain('Round Robin');
+  });
+
+  it('carries the start time, skill range and capacity', async () => {
+    setup({ play_events: { data: communityRow, error: null } });
+    const result = await fetchCommunityEventOg(UUID);
+    expect(result?.detailLine).toContain('6:30 PM');
+    expect(result?.detailLine).toContain('3.0–4.0');
+    expect(result?.detailLine).toContain('Up to 8 players');
+  });
+
+  it('renders a whole hour without ":00"', async () => {
+    setup({ play_events: { data: { ...communityRow, start_time: '09:00:00' }, error: null } });
+    expect((await fetchCommunityEventOg(UUID))?.detailLine).toContain('9 AM');
+  });
+
+  it('renders midnight and noon as 12, not 0', async () => {
+    setup({ play_events: { data: { ...communityRow, start_time: '00:15:00' }, error: null } });
+    expect((await fetchCommunityEventOg(UUID))?.detailLine).toContain('12:15 AM');
+    setup({ play_events: { data: { ...communityRow, start_time: '12:00:00' }, error: null } });
+    expect((await fetchCommunityEventOg(UUID))?.detailLine).toContain('12 PM');
+  });
+
+  it('shows a one-sided skill range as a floor', async () => {
+    setup({ play_events: { data: { ...communityRow, skill_max: null }, error: null } });
+    expect((await fetchCommunityEventOg(UUID))?.detailLine).toContain('3.0+');
+  });
+
+  // The blanks must not leave stray separators behind -- a line reading
+  // "Round Robin ·  ·  · Courts" is worse than the one this replaced.
+  it('drops missing parts cleanly', async () => {
     setup({
       play_events: {
-        data: {
-          id: UUID, name: 'Sat Round Robin', event_date: '2026-10-04',
-          venue_name: 'Courts', location: 'Courts', city: 'Bradenton', state: 'FL',
-          cover_url: null, event_type: 'round_robin', notes: null,
-        },
+        data: { ...communityRow, start_time: null, skill_min: null, skill_max: null, max_players: null },
         error: null,
       },
     });
-    const result = await fetchCommunityEventOg(UUID);
-    expect(result?.detailLine).toContain('Round Robin');
+    const line = (await fetchCommunityEventOg(UUID))?.detailLine ?? '';
+    expect(line).toBe('Round Robin · Sun, Oct 4 · Courts · Bradenton, FL');
   });
 
   it('returns null for a cancelled event (RLS hides it from anon)', async () => {
