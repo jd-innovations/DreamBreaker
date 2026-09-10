@@ -240,7 +240,13 @@ export default function SignInScreen() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={s.linkBtn} onPress={() => router.push({ pathname: '/sign-up', params: returnTo ? { returnTo } : {} })} activeOpacity={0.7}>
+          {/* Onboarding, not /sign-up. That screen asks Full name, then creates
+              a profile with ONLY a name -- which cannot satisfy
+              isProfileCompleteForEntry (it wants a name AND a rating, and only
+              onboarding collects a rating). resolveAuthGate then pushes the
+              user straight into onboarding, which asks for the name a second
+              time. Sending them there directly asks once. */}
+          <TouchableOpacity style={s.linkBtn} onPress={() => router.push({ pathname: '/onboarding/welcome', params: returnTo ? { returnTo } : {} })} activeOpacity={0.7}>
             <Text style={s.linkText}>{"Don't have an account?"} <Text style={s.linkAccent}>Create one</Text></Text>
           </TouchableOpacity>
         </View>
