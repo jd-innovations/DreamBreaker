@@ -6,7 +6,6 @@ import * as Crypto from 'expo-crypto';
 import { supabase } from './supabase';
 import { deleteCurrentDevicePushToken } from './pushNotifications';
 import { updateProfile } from './services/profile';
-import { APP_LINK_ORIGIN } from './appLinks';
 import { track } from './analytics';
 
 // No-op on native; required once for the OAuth browser session to resolve on web.
@@ -91,16 +90,19 @@ export async function signUp(
       // not confirmed" no matter how many times the link is clicked, and the
       // account is permanently stuck.
       //
-      // web/src/app/auth/confirm already redeems the token correctly (it was
-      // built for this exact bug on the web side, see its header) and is
-      // already on the project's redirect allow-list, since web signUp points
-      // at the same route. Reused rather than duplicated here.
+      // Deep-links back into the app rather than the web /auth/confirm route it
+      // pointed at before. Routing to web did confirm the account, but the
+      // session landed in the phone's browser and the user had to switch back
+      // and sign in by hand -- confirming a mobile signup should finish on
+      // mobile. app/confirm-email.tsx redeems the token; see
+      // completeEmailConfirmation().
       //
-      // Confirming therefore finishes in the browser; the user returns to the
-      // app to sign in. A pickleballapp:// deep link would keep it in-app but
-      // needs token handling on this side plus an allow-list entry -- worth
-      // doing, deliberately not bundled into an outage fix.
-      emailRedirectTo: `${APP_LINK_ORIGIN}/auth/confirm`,
+      // REQUIRES `pickleballapp://confirm-email` on the project's redirect
+      // allow-list (Dashboard -> Authentication -> URL Configuration).
+      // Without it GoTrue rejects the redirect and silently falls back to the
+      // Site URL, dropping the user on the marketing homepage with the token
+      // unredeemed -- which is the original bug, not a graceful degradation.
+      emailRedirectTo: 'pickleballapp://confirm-email',
       data: { full_name: fullName, ...extraMetadata },
     },
   });
@@ -323,6 +325,47 @@ export async function completePasswordRecovery(url: string) {
   if (params.token_hash && params.type === 'recovery') {
     const { data, error } = await supabase.auth.verifyOtp({
       type: 'recovery',
+      token_hash: params.token_hash,
+    });
+    if (error) throw error;
+    return data.session;
+  }
+
+  return null;
+}
+
+/**
+ * Redeems a signup-confirmation deep link inside the app.
+ *
+ * Mirrors completePasswordRecovery() exactly -- same two shapes, because the
+ * same GoTrue emits both and which one arrives depends on project config
+ * rather than on anything this app controls:
+ *  - implicit: access_token + refresh_token, handed straight to setSession
+ *  - token_hash: verifyOtp, here with type 'signup' rather than 'recovery'
+ *
+ * Exists so confirmation finishes in the app. Before this, signUp() pointed
+ * emailRedirectTo at the WEB /auth/confirm route, so confirming a mobile signup
+ * dumped the user in Safari, left the session in the phone's browser instead of
+ * the app, and made them come back and sign in by hand.
+ *
+ * Returns the session on success, null when the link carries neither shape.
+ */
+export async function completeEmailConfirmation(url: string) {
+  const { params, errorCode } = QueryParams.getQueryParams(url);
+  if (errorCode) throw new Error(errorCode);
+
+  if (params.access_token && params.refresh_token) {
+    const { data, error } = await supabase.auth.setSession({
+      access_token: params.access_token,
+      refresh_token: params.refresh_token,
+    });
+    if (error) throw error;
+    return data.session;
+  }
+
+  if (params.token_hash && (params.type === 'signup' || params.type === 'email')) {
+    const { data, error } = await supabase.auth.verifyOtp({
+      type: params.type === 'email' ? 'email' : 'signup',
       token_hash: params.token_hash,
     });
     if (error) throw error;
