@@ -18,20 +18,11 @@ export const SELF_RATING_OPTIONS = [
   { key: '4.5-plus', label: '4.5+' },
 ];
 
-export const PLAYING_STYLE_OPTIONS = [
-  { key: 'competitive',     label: 'Competitive',     icon: 'flash-outline' as const },
-  { key: 'recreational',    label: 'Recreational',    icon: 'happy-outline' as const },
-  { key: 'social',          label: 'Social',          icon: 'people-outline' as const },
-  { key: 'tournament_play', label: 'Tournament Play', icon: 'trophy-outline' as const },
-  { key: 'ladder',          label: 'Ladder',          icon: 'trending-up-outline' as const },
-  { key: 'round_robin',     label: 'Round Robin',     icon: 'sync-outline' as const },
-  { key: 'mixed_doubles',   label: 'Mixed Doubles',   icon: 'people-circle-outline' as const },
-  { key: 'mens_doubles',    label: "Men's Doubles",   icon: 'man-outline' as const },
-  { key: 'womens_doubles',  label: "Women's Doubles", icon: 'woman-outline' as const },
-  { key: 'singles',         label: 'Singles',         icon: 'person-outline' as const },
-];
-
-export const PLAYING_STYLE_MAX = 3;
+// PLAYING_STYLE_OPTIONS / PLAYING_STYLE_MAX lived here until 2026-09-10. Every
+// option in that list was a preferred_format or a play_intensity -- none was a
+// play_style key -- so profiles.play_style was never populated by onboarding.
+// The screen now reads the real vocabulary from @shared/play-profile; see
+// playing-style.tsx.
 
 export const AVAILABILITY_OPTIONS = [
   { key: 'weekdays',  label: 'Weekdays',  icon: 'briefcase-outline' as const },
