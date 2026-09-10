@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing, iconCircle } from '@/theme';
+import { isFeatureEnabled, type FeatureKey } from '@/lib/featureFlags';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 
@@ -18,6 +19,18 @@ type Row = {
   sub: string;
   badge?: string;
   route: string;
+  /**
+   * Gate this row on a feature flag. Absent means always shown.
+   *
+   * Rows are filtered rather than commented out because a row here is a
+   * promise: every one of these looked identical to the user, and two of them
+   * led to routes that do not exist (`/new-list`, `/weekly-game`), where
+   * expo-router falls through to its built-in Unmatched view -- there is no
+   * `+not-found` in this app. That is the dead-end CTA class TODO 1.1 item 6.2
+   * closed and Rule 7 forbids: hide or flag an incomplete feature, never
+   * half-ship it.
+   */
+  feature?: FeatureKey;
 };
 
 const SECTIONS: { title: string; rows: Row[] }[] = [
@@ -33,19 +46,31 @@ const SECTIONS: { title: string; rows: Row[] }[] = [
   {
     title: 'ORGANIZE',
     rows: [
-      { icon: 'people-outline',           label: 'New Group',  sub: 'Create a group to play with.',    route: '/new-group' },
-      { icon: 'reorder-four-outline',      label: 'New List',   sub: 'Create a private player list.',   route: '/new-list' },
+      // /new-group never existed. groups/create.tsx did, and is registered in
+      // _layout.tsx -- the row was simply pointing at the wrong path.
+      { icon: 'people-outline',           label: 'New Group',  sub: 'Create a group to play with.',    route: '/groups/create' },
+      { icon: 'reorder-four-outline',      label: 'New List',   sub: 'Create a private player list.',   route: '/new-list', feature: 'playerLists' },
     ],
   },
   {
     title: 'PRO',
     rows: [
-      { icon: 'calendar-outline',         label: 'Weekly Game', sub: 'Automatic recurring invites.', badge: 'PRO', route: '/weekly-game' },
+      { icon: 'calendar-outline',         label: 'Weekly Game', sub: 'Automatic recurring invites.', badge: 'PRO', route: '/weekly-game', feature: 'weeklyGame' },
     ],
   },
 ];
 
 // ─── Screen ────────────────────────────────────────────────────────────────────
+
+// Sections with their disabled rows removed, and any section left empty
+// dropped entirely -- otherwise turning off the only PRO row would leave a
+// bare "PRO" heading above nothing.
+const VISIBLE_SECTIONS = SECTIONS
+  .map((section) => ({
+    ...section,
+    rows: section.rows.filter((row) => !row.feature || isFeatureEnabled(row.feature)),
+  }))
+  .filter((section) => section.rows.length > 0);
 
 export default function PlayPickleballScreen() {
   const insets = useSafeAreaInsets();
@@ -75,7 +100,7 @@ export default function PlayPickleballScreen() {
         <Text style={s.title}>Play Pickleball</Text>
         <Text style={s.subtitle}>Choose what you want to create.</Text>
 
-        {SECTIONS.map((section) => (
+        {VISIBLE_SECTIONS.map((section) => (
           <View key={section.title} style={s.section}>
             <Text style={s.sectionLabel}>{section.title}</Text>
 

@@ -74,6 +74,8 @@ export type FeatureKey =
   | 'wallet'
   | 'marketplaceAiAssist'
   | 'myStats'
+  | 'playerLists'
+  | 'weeklyGame'
   | 'devTools';
 
 export const FEATURE_VISIBILITY: Record<FeatureKey, FeatureVisibility> = {
@@ -113,6 +115,19 @@ export const FEATURE_VISIBILITY: Record<FeatureKey, FeatureVisibility> = {
   // PAR value is computed client-side; the screen renders what the server
   // already stores.
   myStats: 'included',
+  // "New List" on Play Pickleball. Nothing exists behind it -- no screen, and
+  // no table in production either (checked 2026-09-10: no player_lists, no
+  // roster table of any shape). The row shipped pointing at /new-list, which
+  // expo-router resolved to its built-in Unmatched view. Kept as a flag rather
+  // than deleted so the intent stays recorded where the other scope decisions
+  // live.
+  playerLists: 'deferred',
+  // "Weekly Game", badged PRO. Same as playerLists -- no screen and no
+  // recurring-schedule table -- with the extra problem that the badge
+  // advertises a paid tier that does not exist anywhere in the codebase (no
+  // subscription concept, no entitlement check). Promoting this needs the tier
+  // first, not just the screen.
+  weeklyGame: 'deferred',
   // design-lab, dev-qr-scan, dev-theme, onboarding-preview.
   devTools: 'internal-only',
 };
