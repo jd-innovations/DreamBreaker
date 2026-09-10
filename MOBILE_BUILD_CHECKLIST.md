@@ -23,27 +23,62 @@ with `node ./scripts/publish-update.js preview` and verify on the phone.
 So the *only* build still required is a **production** one, and it is required
 for signing and distribution, not because the native project has drifted.
 
-## Next: TestFlight
+## Next: TestFlight — and it is NOT the App Store
 
-**No production-profile build has ever existed.** Confirmed 2026-09-10 against
-`eas build:list` — every iOS build to date is `preview` or `development`, all
-`INTERNAL` distribution. A Store build cannot be installed any other way, which
-is why TestFlight comes before the App Store: it is the only way to see the
-binary that will actually be submitted.
+These are two different gates and conflating them invents blockers. They share
+exactly one thing: **the binary**. A TestFlight build and an App Store build are
+the same artifact, signed the same way — `eas build --profile production`. What
+differs is everything around it.
 
-### Two blockers, both needing an Apple login
+| | TestFlight **internal** | TestFlight **external** | App Store |
+| --- | --- | --- | --- |
+| Apple review | **none** | Beta App Review (light) | Full App Review |
+| Testers | up to 100, on your ASC team | up to 10,000 | public |
+| Screenshots | **not needed** | not needed | **required** (6.5", 5.5") |
+| Description / keywords / age rating / pricing | **not needed** | beta description only | **required** |
+| Demo account | **not needed** | required if sign-in is | **required** |
+| App Privacy labels | not needed | not needed | **required** |
+| Typical wait | minutes after processing | ~24h first submission | days |
 
-1. **Distribution certificate + App Store provisioning profile.**
+**Internal TestFlight is the near-term target.** It needs no Apple review, no
+screenshots, no store copy, and no demo account. Most of TODO 1.1 item 7.1 is an
+**App Store** prerequisite, not a TestFlight one — do not let it block a build.
+
+### What internal TestFlight actually requires
+
+1. **Apple Developer Program membership**, active.
+2. **An App Store Connect app record** for `app.pickleballapp`. Existence not
+   knowable from this repo — check before assuming.
+3. **Distribution certificate + App Store provisioning profile.**
    `eas build --profile production --platform ios` fails non-interactively with
    "Distribution Certificate is not validated for non-interactive builds". Run
-   it **interactively once**; EAS stores both afterwards.
-2. **`submit.production` in `eas.json` is `{}`** — no App Store Connect app id,
-   no Apple team id. `eas submit` needs those, or an interactive first run.
-   Whether an App Store Connect app record exists at all is not knowable from
-   this repo.
+   it **interactively once**; EAS stores both afterwards. *This is the one real
+   blocker.*
+4. **`submit.production` in `eas.json` is `{}`** — no ASC app id, no Apple team
+   id. `eas submit` needs them, or an interactive first run.
+5. **Export compliance** — already answered: `ITSAppUsesNonExemptEncryption:
+   false` is in `app.config.js`, so the upload does not stop to ask.
+6. **Internal testers added** in App Store Connect.
+
+Version is `1.0.0` with `appVersionSource: "remote"` and `autoIncrement` on the
+production profile, so build numbers take care of themselves.
 
 Everything else is configured: the EAS `production` environment already holds
 all eight `EXPO_PUBLIC_*` vars plus `SENTRY_AUTH_TOKEN`.
+
+### Deferred to the App Store, NOT to TestFlight
+
+Recorded here so they stop looking like build blockers:
+
+- Screenshots, description, keywords, age rating, pricing, App Privacy labels
+  (`STORE_SUBMISSION.md` covers all of it).
+- A demo account with a reachable **free** event.
+- **Production content volume.** 2 future open tournaments, 3 future play
+  events, 2 marketplace listings, 2 groups, 48 profiles (489 facilities is the
+  one healthy set), counted 2026-09-10. Thin data reads as an abandoned app in
+  *screenshots* and to a *reviewer* — neither of which internal TestFlight has.
+  It still matters for your own testing being meaningful, but it does not gate
+  the build.
 
 ### What a production build actually changes — 2026-08-31's warning is stale
 
@@ -64,6 +99,10 @@ updated through 2026-09-09. Verified against the flag map and
 `/wallet` and `/stats` all stay reachable. **No main-flow link bounces to the
 root gate**, which was the specific risk flagged earlier.
 
+This matters more for TestFlight than for the App Store: a TestFlight build is
+the first time anyone sees the production flag set, and it is the only chance to
+find a feature that vanished by accident before a reviewer does.
+
 ### Three things that bite only in a production build
 
 - **No diagnostics screen.** `devTools` is `internal-only`, so
@@ -72,23 +111,27 @@ root gate**, which was the specific risk flagged earlier.
 - **A different OTA channel.** A production build reads the **`production`**
   channel; every update so far has gone to `preview`. That path has never been
   exercised, so a TestFlight hotfix is untested ground —
-  `node ./scripts/publish-update.js production`, and confirm the runtime
-  matches the production build, not the preview one.
-- **Production content is thin.** Counted 2026-09-10: 2 future open
-  tournaments, 3 future play events, 2 marketplace listings, 2 groups, 48
-  profiles (489 facilities is the one healthy set). A reviewer walkthrough and
-  any screenshot will read as an abandoned app. **Seed before building**, not
-  after — this gates TODO 1.1 item 7.1 as much as the screenshots themselves.
+  `node ./scripts/publish-update.js production`, and confirm the runtime matches
+  the production build, not the preview one.
+- **Feature-flag surface.** See the table above — check the tab bar and the
+  slide-in menu against it on first launch.
 
 ### Order
 
+**To internal TestFlight:**
+
 1. Finish the parked items from the 2026-09-10 session (see
    `AUTH_ONBOARDING_HANDOFF.md` §4 and the share-card layout pass).
-2. Seed production events, listings and groups.
-3. `eas build --profile production --platform ios`, **interactively**.
-4. `eas submit`, then work the verification list below against the TestFlight
-   build — that also closes TODO 1.1's 5.1, 7.2 and 7.3 device halves.
-5. Demo account + screenshots closes 7.1.
+2. Confirm the App Store Connect app record exists for `app.pickleballapp`.
+3. `eas build --profile production --platform ios`, **interactively**, once.
+4. `eas submit --platform ios`, add internal testers, install from TestFlight.
+5. Work the verification list below against that build. This is where TODO 1.1's
+   5.1, 7.2 and 7.3 device halves close.
+
+**Then, and only then, toward the App Store:** seed production content, take
+screenshots, prepare the demo account, and work `STORE_SUBMISSION.md`. External
+TestFlight sits between the two if you want outside testers first — it needs the
+beta description and a demo account, but still no screenshots.
 
 ---
 
