@@ -1,4 +1,12 @@
-// Where a signup-confirmation deep link lands.
+// Where a signup-confirmation link lands ON THE PHONE.
+//
+// Deliberately at /auth/confirm, mirroring the WEB route of the same path. That
+// is not cosmetic: iOS opens the app for a universal link only when the path is
+// listed in the domain's apple-app-site-association file, and the app must have
+// a route at that exact path or the user lands on a blank screen with
+// force-quit as the only way out (see that file's own history). One path, two
+// implementations -- web/src/app/auth/confirm for anyone without the app
+// installed, this for anyone with it.
 //
 // signUp() used to point emailRedirectTo at the WEB /auth/confirm route, so
 // confirming a mobile signup opened Safari: the session ended up in the phone's

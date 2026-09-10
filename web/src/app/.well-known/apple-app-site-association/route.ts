@@ -35,7 +35,23 @@ const TEAM_ID = process.env.APPLE_TEAM_ID ?? process.env.APPLE_DEVELOPER_TEAM_ID
 // create.tsx and [id]/edit.tsx exist. Apple evaluates these paths in order and
 // stops at the first match, so the NOT-exclusion has to come before '/coach/*'
 // or it does nothing.
+// Added 2026-09-10: '/auth/confirm', the signup-confirmation link.
+//
+// Meets both conditions this file's history says to check first -- a real web
+// page (web/src/app/auth/confirm) AND a matching app screen
+// (apps/mobile/src/app/auth/confirm.tsx), added in the same change.
+//
+// Why it has to be an HTTPS path rather than the app's own scheme: a
+// `pickleballapp://` emailRedirectTo was tried and shipped a confirmation email
+// with NO LINK IN IT -- mail clients will not linkify a non-http(s) scheme, so
+// Gmail dropped it silently and the account could not be confirmed at all.
+// A claimed HTTPS path is the only shape that works in email AND opens the app.
+//
+// Exact path, not '/auth/*': nothing else under /auth has an app screen.
+// '/auth/callback' in particular is the web OAuth handler and MUST stay with
+// the browser -- claiming it would hand a web sign-in to the app mid-flow.
 const PATHS = [
+  '/auth/confirm',
   '/conversation/*',
   '/groups/*',
   '/tournament/*',
