@@ -6,6 +6,7 @@ import * as Crypto from 'expo-crypto';
 import { supabase } from './supabase';
 import { deleteCurrentDevicePushToken } from './pushNotifications';
 import { updateProfile } from './services/profile';
+import { APP_LINK_ORIGIN } from './appLinks';
 import { track } from './analytics';
 
 // No-op on native; required once for the OAuth browser session to resolve on web.
@@ -90,19 +91,25 @@ export async function signUp(
       // not confirmed" no matter how many times the link is clicked, and the
       // account is permanently stuck.
       //
-      // Deep-links back into the app rather than the web /auth/confirm route it
-      // pointed at before. Routing to web did confirm the account, but the
-      // session landed in the phone's browser and the user had to switch back
-      // and sign in by hand -- confirming a mobile signup should finish on
-      // mobile. app/confirm-email.tsx redeems the token; see
-      // completeEmailConfirmation().
+      // MUST be http(s). A `pickleballapp://confirm-email` custom scheme was
+      // tried on 2026-09-10 and shipped a confirmation email with NO LINK IN IT
+      // -- Gmail (and mail clients generally) will not linkify or even render a
+      // non-http(s) scheme, so the address was unconfirmable and the tap
+      // produced no request at all. Verified in the auth logs: signup 200, then
+      // no /verify, ever.
       //
-      // REQUIRES `pickleballapp://confirm-email` on the project's redirect
-      // allow-list (Dashboard -> Authentication -> URL Configuration).
-      // Without it GoTrue rejects the redirect and silently falls back to the
-      // Site URL, dropping the user on the marketing homepage with the token
-      // unredeemed -- which is the original bug, not a graceful degradation.
-      emailRedirectTo: 'pickleballapp://confirm-email',
+      // So confirmation goes to the web route, which does redeem the token
+      // correctly. The cost is that it opens in the browser rather than the
+      // app: /auth/confirm is not in the universal-link path list
+      // (web/src/app/.well-known/apple-app-site-association/route.ts), so iOS
+      // hands it to Safari and the session lands there instead of here.
+      //
+      // Finishing confirmation inside the app needs an HTTPS path the app
+      // CLAIMS -- an AASA entry plus a web page at that path for the
+      // not-installed case. app/confirm-email.tsx and completeEmailConfirmation()
+      // are already written and stay in place for that; only this URL and the
+      // AASA list are missing.
+      emailRedirectTo: `${APP_LINK_ORIGIN}/auth/confirm`,
       data: { full_name: fullName, ...extraMetadata },
     },
   });
