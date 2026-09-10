@@ -17,6 +17,18 @@ const ENTITY_LABEL: Record<OgEntityType, string> = {
 const NAVY = "#0A1228";
 const GOLD = "#C9A84C";
 
+// Type here is sized for a PHONE, not for this canvas.
+//
+// The card is 1200x630, but iMessage renders it around 300pt wide in a message
+// bubble -- a 0.25 scale. Everything was originally sized as if the reader saw
+// 1200px, which put the detail line at 30px => ~7.5pt on screen and the labels
+// at 24-28px => ~6-7pt, well under the ~11pt floor for readable body text. The
+// title was the only element anyone could actually read.
+//
+// Rule of thumb: divide any px value below by four to get what a phone shows.
+// The detail line at 46px lands at ~11.5pt, the eyebrow labels at 34-36px at
+// ~8.5-9pt (acceptable for short all-caps), the title at 68px at ~17pt.
+
 // The card rendered when there's no cover photo to use directly, AND the
 // generic safe fallback for anything fetchOgPayload can't (or won't) describe
 // — missing, private, inactive, cancelled, or deleted. Both paths render
@@ -34,7 +46,7 @@ function branded(typeLabel: string | null, title: string | null, detail: string 
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "80px",
+          padding: "68px 80px",
           background: `linear-gradient(135deg, ${NAVY} 0%, #162041 100%)`,
           fontFamily: "sans-serif",
         }}
@@ -42,14 +54,14 @@ function branded(typeLabel: string | null, title: string | null, detail: string 
         <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "40px" }}>
           <div
             style={{
-              width: "14px",
-              height: "14px",
+              width: "18px",
+              height: "18px",
               borderRadius: "999px",
               background: GOLD,
               display: "flex",
             }}
           />
-          <span style={{ color: GOLD, fontSize: "28px", fontWeight: 800, letterSpacing: "4px" }}>
+          <span style={{ color: GOLD, fontSize: "36px", fontWeight: 800, letterSpacing: "5px" }}>
             PICKLEBALL APP
           </span>
         </div>
@@ -58,9 +70,9 @@ function branded(typeLabel: string | null, title: string | null, detail: string 
           <span
             style={{
               color: GOLD,
-              fontSize: "24px",
+              fontSize: "34px",
               fontWeight: 700,
-              letterSpacing: "3px",
+              letterSpacing: "4px",
               marginBottom: "18px",
               display: "flex",
             }}
@@ -85,10 +97,11 @@ function branded(typeLabel: string | null, title: string | null, detail: string 
         {detail && (
           <span
             style={{
-              color: "rgba(255,255,255,0.75)",
-              fontSize: "30px",
+              color: "rgba(255,255,255,0.88)",
+              fontSize: "44px",
               fontWeight: 500,
-              marginTop: "26px",
+              lineHeight: 1.3,
+              marginTop: "28px",
               display: "flex",
             }}
           >
@@ -99,10 +112,10 @@ function branded(typeLabel: string | null, title: string | null, detail: string 
         {!title && (
           <span
             style={{
-              color: "rgba(255,255,255,0.7)",
-              fontSize: "30px",
+              color: "rgba(255,255,255,0.85)",
+              fontSize: "40px",
               fontWeight: 500,
-              marginTop: "10px",
+              marginTop: "14px",
               display: "flex",
             }}
           >
