@@ -1,49 +1,85 @@
 # Auth & Onboarding — Handoff
 
-**Session:** 2026-09-09 evening → 2026-09-10 early hours
+**Session:** 2026-09-09 evening → 2026-09-10 morning
 **Branch:** `feature/marketplace-map`
-**Status:** signup / confirmation / onboarding verified working end to end. **Password reset is broken — that is the next job.**
+**Status:** signup / confirmation / onboarding **and password reset** all verified working end to end on device. No known broken auth path.
 
 ---
 
-## 1. Start here: password reset is broken
+## 1. Password reset — FIXED and verified (2026-09-10)
 
-Confirmed broken by Nate. The diagnosis is already done and the fix is a known shape — the *same* shape as the email-confirmation fix completed at the end of this session.
+Done in `20324e1`, on production, verified on device at 09:25. Kept here
+because the failure mode is subtle and the *verification* method is the
+reusable part.
 
-### The bug
+### What was wrong
 
-`apps/mobile/src/lib/auth.ts` → `requestPasswordReset()`:
+`requestPasswordReset()` sent `makeRedirectUri({ path: 'reset-password' })`,
+which in a standalone build is `pickleballapp://reset-password`. Mail clients
+will not linkify or even render a non-`http(s)` scheme, so the email shipped
+with **no link in it at all** — the same failure that killed the custom-scheme
+attempt at signup confirmation (`b16ad44`).
 
-```ts
-const redirectTo = makeRedirectUri({ path: 'reset-password' });
-await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+### The fix — four coupled changes
+
+1. `requestPasswordReset()` sends `` `${APP_LINK_ORIGIN}/auth/reset` ``.
+2. `'/auth/reset'` added to `PATHS` in the AASA route — exact path, never
+   `/auth/*`, because `/auth/callback` is the web OAuth handler.
+3. `app/reset-password.tsx` moved to `app/auth/reset.tsx` so a route exists at
+   the claimed path. Same commit as (2), deliberately.
+4. `completePasswordRecovery()` now handles all four GoTrue link shapes; the
+   missing `?code` (PKCE) branch is the one that becomes reachable the moment a
+   real universal link starts arriving. Its `token_hash` branch also no longer
+   requires `type=recovery` to be *present*, only that it not contradict.
+
+Also updated: the support-widget visibility rule in `supportContext.ts` matched
+`/^\/reset-password$/` and would have silently started showing the widget on
+the reset screen after the rename.
+
+### How to verify a link fix like this — read this before debugging the next one
+
+**Three test cycles were lost to device-side theories because the origin was
+checked and Apple's CDN was not.** iOS does **not** read the AASA from
+`pickleballapp.app`. It reads:
+
+```
+curl https://app-site-association.cdn-apple.com/a/v1/pickleballapp.app
 ```
 
-In a standalone build `makeRedirectUri()` resolves to **`pickleballapp://reset-password`** — a custom URL scheme.
+That is the only copy the phone ever sees, and it can lag a promote by up to an
+hour. A claimed path missing there opens in Safari, and **no reinstall can fix
+it** — the reinstall faithfully re-fetches the stale file. Check the `Age`
+header to predict the wait: `3600 - Age` seconds. (Item 3 below reduced the
+`max-age` to 300 so this is minutes, not an hour.)
 
-**A custom scheme cannot be used in an email.** Mail clients will not linkify, and often will not render, a non-`http(s)` scheme. We proved this earlier in the session: pointing signup confirmation at `pickleballapp://confirm-email` shipped a confirmation email **with no link in it at all**. Gmail dropped it silently, the tap produced no request, and `email_confirmed_at` stayed null. Reverted in `b16ad44`.
+**A reinstall is never one step.** A fresh install boots the build's EMBEDDED JS
+bundle, reverting any OTA. expo-updates downloads on first launch but applies on
+the NEXT one. So: delete, reinstall, launch, wait ~20s, force-quit, relaunch —
+*then* test. One cycle here produced a linkless email that looked exactly like
+the original bug because the app had silently reverted to old code.
 
-The comment above that function is wrong and should be deleted with the fix — it claims "expo-router opens [it] automatically via the app's custom scheme when the user taps the emailed link". There is no link to tap.
+The two requirements pull against each other, which is what made this confusing:
+the reinstall is needed for the AASA, and it is also what undoes the OTA.
 
-### The fix (mirror `446801b` + `a256a20`)
+**`auth_logs` settles it without guessing.** The successful run:
 
-Four steps. All of the hard thinking is already done.
+```
+09:25:30  POST /recover   referer=https://pickleballapp.app/auth/reset   200
+09:25:47  POST /verify    referer=https://pickleballapp.app             200
+09:26:05  PUT  /user      referer=https://pickleballapp.app             200
+```
 
-1. **Point at HTTPS.** In `requestPasswordReset()`, replace `makeRedirectUri(...)` with `` `${APP_LINK_ORIGIN}/auth/reset` `` (import `APP_LINK_ORIGIN` from `@/lib/appLinks`). The web page **already exists** at `web/src/app/auth/reset/page.tsx` and already redeems recovery links, so anyone without the app installed keeps working.
-2. **Claim the path.** Add `'/auth/reset'` to `PATHS` in
-   `web/src/app/.well-known/apple-app-site-association/route.ts`.
-   Use the exact path, never `/auth/*` — `/auth/callback` is the web OAuth handler and **must** stay with the browser.
-3. **Give the app a route at that exact path.** Today the screen is `apps/mobile/src/app/reset-password.tsx`. Move it to `apps/mobile/src/app/auth/reset.tsx` and update the `<Stack.Screen name="reset-password">` registration in `_layout.tsx` to `name="auth/reset"`. **This must land in the same change as step 2** — that AASA file's own history records that a claimed path with no matching app screen strands users on a blank branded page with force-quit as the only exit.
-4. **Handle all four link shapes.** `completePasswordRecovery()` in `lib/auth.ts` currently handles only two (`access_token`/`refresh_token`, and `token_hash` with `type: 'recovery'`). It needs the `?code` (PKCE) branch too — that is exactly what broke the confirm screen after the universal link started working. Copy the structure of `completeEmailConfirmation()` in the same file, which now handles all four and is commented with the reasoning.
-
-### Then
-
-- **Deploy web** (step 2 is served by Next) and **promote the preview** — production is a promoted preview of the feature branch, not a push to `main`.
-- Verify: `curl https://pickleballapp.app/.well-known/apple-app-site-association` should list `/auth/reset`. The route sets `Cache-Control: max-age=3600`, so a stale read right after deploying is expected — check `X-Vercel-Cache` / `Age`.
-- **Reinstall the app on the device.** iOS caches the association file at install time; an OTA will not refresh it.
-- Also confirm `https://pickleballapp.app/auth/reset` is on the Supabase redirect allow-list (Authentication → URL Configuration). `pickleballapp://reset-password` is already there and can stay — it becomes inert.
-
----
+- `/recover`'s `referer` is the `redirect_to` GoTrue was handed — it proves
+  which JS the device is running (`pickleballapp://…` means the OTA has not
+  applied).
+- `/verify`'s `referer` **without** a trailing slash is the native app; **with**
+  one is the phone's browser. That single character is what distinguishes
+  "opened in the app" from "opened in Safari".
+- `PUT /user` (not `GET`) is the password actually being written. Every failed
+  attempt managed only a `GET`.
+- `POST /verify` rather than `GET` also proved the emailed link points straight
+  at `pickleballapp.app`, not through `supabase.co/auth/v1/verify` — which ruled
+  out an email-template theory without touching the dashboard.
 
 ## 2. What was fixed this session
 
@@ -61,6 +97,7 @@ All live on the `preview` channel, runtime `9e5109d0…`. Verified end to end on
 | `10b7f55` | welcome screen / name step | "Sign In" shown to signed-in users; known name re-asked |
 | `446801b` | `/auth/confirm` not claimed | confirmation opened Safari instead of the app |
 | `a256a20` | only 2 of 4 link shapes handled | confirmation opened the app, then failed to redeem |
+| `20324e1` | password reset sent a `pickleballapp://` link | reset email had no link; reset impossible on mobile |
 
 ### Two migrations — applied, but NOT recorded in history
 
@@ -111,8 +148,13 @@ Bookkeeping only — the fixes are already in effect.
 
 ## 5. Repo state
 
-- **13 commits ahead of `origin/feature/marketplace-map`.** Working tree clean. `git push` when ready.
-- Web change in those commits: one file — the AASA route (already deployed and verified live).
+- **All work pushed to `origin/feature/marketplace-map`** (through `20324e1`). Working tree clean.
+- Web changes: one file — the AASA route. Deployed and promoted; production is
+  `dpl_GHhizcDps6CmLwMrBcnx`. Remember production is a **promoted preview**, so a
+  push alone deploys nothing, and promoting before your commit has finished
+  building promotes the *previous* commit — that happened once tonight.
+- OTA live on `preview`: update group `42bad065-c518-4f52-b362-27595aeee59a`,
+  runtime `9e5109d0…` (unchanged, so no rebuild was needed).
 - OTA publishing: `cd apps/mobile && node ./scripts/publish-update.js preview --message "..." --non-interactive`. **Never a bare `eas update`** — it loses `EXPO_PUBLIC_APP_ENV`. Confirm `EXPO_PUBLIC_APP_ENV` appears in the CLI's "loaded from" line, and never pipe that output through `tail`.
 - Production writes via MCP are refused by a permission classifier. Migrations must be run by Nate in the Supabase SQL editor:
   `https://supabase.com/dashboard/project/fbzetvkbhneptvfruilw/sql/new`

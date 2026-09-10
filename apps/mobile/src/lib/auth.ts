@@ -97,17 +97,12 @@ export async function signUp(
       // produced no request at all. Verified in the auth logs: signup 200, then
       // no /verify, ever.
       //
-      // So confirmation goes to the web route, which does redeem the token
-      // correctly. The cost is that it opens in the browser rather than the
-      // app: /auth/confirm is not in the universal-link path list
-      // (web/src/app/.well-known/apple-app-site-association/route.ts), so iOS
-      // hands it to Safari and the session lands there instead of here.
-      //
-      // Finishing confirmation inside the app needs an HTTPS path the app
-      // CLAIMS -- an AASA entry plus a web page at that path for the
-      // not-installed case. app/confirm-email.tsx and completeEmailConfirmation()
-      // are already written and stay in place for that; only this URL and the
-      // AASA list are missing.
+      // /auth/confirm IS claimed as a universal link (446801b -- it is in PATHS
+      // in web/src/app/.well-known/apple-app-site-association/route.ts, and
+      // app/auth/confirm.tsx exists at that exact path), so on a phone with the
+      // app installed iOS opens the app and completeEmailConfirmation() redeems
+      // the token there. Anyone without the app gets web/src/app/auth/confirm,
+      // which redeems it too. Same arrangement as /auth/reset.
       emailRedirectTo: `${APP_LINK_ORIGIN}/auth/confirm`,
       data: { full_name: fullName, ...extraMetadata },
     },

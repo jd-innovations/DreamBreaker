@@ -98,7 +98,21 @@ export function GET() {
     {
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=3600',
+        // 300s, not 3600s. iOS never reads this origin -- it reads Apple's CDN
+        // copy at https://app-site-association.cdn-apple.com/a/v1/<domain>,
+        // which honours this header. At max-age=3600 a change to PATHS above
+        // stayed invisible to every phone for up to an hour after the promote,
+        // and a reinstall could not fix it: the reinstall faithfully re-fetched
+        // the stale CDN file, so a newly claimed path kept opening in Safari.
+        // That cost three test cycles and most of an hour on 2026-09-10 while
+        // '/auth/reset' was being verified.
+        //
+        // The file is a few hundred bytes and changes only when PATHS does, so
+        // the extra origin traffic is nothing next to being able to test a
+        // path change in minutes. To check what phones can actually see:
+        //   curl -sD- https://app-site-association.cdn-apple.com/a/v1/pickleballapp.app
+        // and read the Age header -- the wait left is (max-age - Age) seconds.
+        'Cache-Control': 'public, max-age=300',
       },
     },
   );
