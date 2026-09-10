@@ -22,7 +22,14 @@ export const ALL_QUICK_ACTIONS: QuickAction[] = [
   { id: 'create',      label: 'Create\nGame',   icon: 'add-circle-outline',    active: true,  route: '/play-pickleball'    },
   { id: 'partner',     label: 'Partner\nFinder', icon: 'person-add-outline',   active: false, route: '/(tabs)/finder'      },
   { id: 'find',        label: 'Find\nGames',    icon: 'search-outline',        active: false, route: '/(tabs)/nearby'      },
-  { id: 'lesson',      label: 'Take\nLesson',   icon: 'school-outline',        active: false, route: null,                 feature: 'lessonMarketplace' },
+  // /lessons, not /coach: LessonMarketplaceScreen is the player-facing browse
+  // of coach offers, while /coach is the Coach Mode activation hub -- the
+  // opposite audience. This tile was `route: null`, and the handler is
+  // `qa.route && router.push(...)`, so it rendered exactly like the working
+  // tiles and a tap did nothing at all -- no navigation, no feedback.
+  // featureRoutes.ts already gates /lessons on the same lessonMarketplace flag
+  // this tile carries, so the tile and the deep-link guard cannot disagree.
+  { id: 'lesson',      label: 'Take\nLesson',   icon: 'school-outline',        active: false, route: '/lessons',           feature: 'lessonMarketplace' },
   { id: 'learn',       label: 'Learn to\nPlay', icon: 'body-outline',          active: true,  route: '/create-clinic'      },
   { id: 'groups',      label: 'My\nGroups',     icon: 'people-circle-outline', active: false, route: '/(tabs)/partner'     },
   { id: 'stats',       label: 'My\nStats',      icon: 'bar-chart-outline',     active: false, route: '/(tabs)/stats',      feature: 'myStats' },
