@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +17,7 @@ import { colors, spacing } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import { OnboardingCTA, OnboardingProgressBar } from '@/lib/onboarding/components';
 import { useOnboarding, validators } from '@/lib/onboarding/state';
+import { useProfile } from '@/hooks/useProfile';
 
 const L = colors;
 const SCREEN_BG = '#F8F5EF';
@@ -24,7 +25,31 @@ const SCREEN_BG = '#F8F5EF';
 export default function YourNameScreen() {
   const insets = useSafeAreaInsets();
   const { draft, update } = useOnboarding();
+  const { profile } = useProfile();
   const canContinue = validators.yourName(draft);
+
+  // Prefill from the account when it already knows the name. resolveAuthGate
+  // routes a SIGNED-IN user through onboarding whenever their profile is
+  // incomplete, so someone whose full_name is already set can land here and be
+  // asked to type it again.
+  //
+  // Deliberately prefills rather than skipping the step: skipping changes
+  // navigation, and a wrong guess there strands the user on a screen with no
+  // way forward. Filling the fields keeps every route reachable and still means
+  // nobody retypes what the app already has.
+  //
+  // Only fills EMPTY fields, and only once anything is present -- it must never
+  // overwrite what the user is in the middle of typing, and the create-account
+  // step already prefills these from OAuth metadata.
+  useEffect(() => {
+    const full = profile?.full_name?.trim();
+    if (!full) return;
+    if (draft.firstName || draft.lastName) return;
+    const [first, ...rest] = full.split(/\s+/);
+    if (first) update('firstName', first);
+    if (rest.length) update('lastName', rest.join(' '));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.full_name]);
 
   function continueNext() {
     update('firstName', draft.firstName.trim());

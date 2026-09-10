@@ -8,6 +8,7 @@ import { DeviceMotion, type DeviceMotionMeasurement } from 'expo-sensors';
 import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
+import { useSession } from '@/hooks/useSession';
 
 const L = colors;
 
@@ -81,6 +82,7 @@ function useTiltParallax() {
 
 export default function OnboardingWelcome() {
   const insets = useSafeAreaInsets();
+  const { isAuthenticated } = useSession();
   const { width, height } = useWindowDimensions();
   const isCompact = height < 760;
   const pulsePoint = getCoveredImagePoint(width, height, COURT_PIN_BASE.x, COURT_PIN_BASE.y);
@@ -114,9 +116,17 @@ export default function OnboardingWelcome() {
             <Text style={s.getStartedText}>Get Started</Text>
             <Ionicons name="arrow-forward" size={18} color={L.navy} />
           </TouchableOpacity>
-          <TouchableOpacity style={s.signIn} activeOpacity={0.8} onPress={() => router.push('/sign-in')}>
-            <Text style={s.signInText}>Sign In</Text>
-          </TouchableOpacity>
+          {/* Hidden when a session already exists. resolveAuthGate routes a
+              SIGNED-IN user here whenever their profile is incomplete, so this
+              screen is not only reached by new visitors -- and offering "Sign
+              In" to someone who just signed in reads as though the sign-in
+              failed. Get Started is the correct action for them: it finishes
+              the profile the gate is waiting on. */}
+          {!isAuthenticated && (
+            <TouchableOpacity style={s.signIn} activeOpacity={0.8} onPress={() => router.push('/sign-in')}>
+              <Text style={s.signInText}>Sign In</Text>
+            </TouchableOpacity>
+          )}
           <View style={s.pagerSpacer} />
         </View>
       </View>
