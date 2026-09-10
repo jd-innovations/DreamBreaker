@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -12,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { fetchFacilities, type FacilityWithPrimaryPhoto } from '@/lib/supabase/facilities';
 import { fetchNearbyPlayEvents } from '@/lib/supabase/playEvents';
 import { fetchTournaments } from '@/lib/supabase/tournaments';
+import { useCurrentLocation } from '@/lib/location';
 
 const L = colors;
 const SCREEN_BG = '#F8F5EF';
@@ -41,6 +43,13 @@ const FALLBACK_AREA: IpEstimate = {
 export default function AreaRecommendationsScreen() {
   const insets = useSafeAreaInsets();
   const { draft, update } = useOnboarding();
+  // Same source as select-home-court, the very next screen -- which is how the
+  // two came to disagree about where the user was, seconds apart on the same
+  // device. The hook REQUESTS permission (not just checks), so this screen is
+  // where onboarding actually asks: enable-location.tsx is unreachable
+  // (nothing routes to date-of-birth, its only entry point) and this is the
+  // first screen that needs a location at all.
+  const location = useCurrentLocation();
   const [area, setArea] = useState<IpEstimate>({
     city: draft.estimatedCity,
     state: draft.estimatedState,
@@ -51,11 +60,20 @@ export default function AreaRecommendationsScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Wait for the fix before deciding. Acting while the hook is still
+    // resolving would read isFallback === true (its initial value) and take the
+    // IP branch every time -- reintroducing the bug this screen is being fixed
+    // for, but only as a race, which is worse than the original.
+    if (location.loading) return;
+
     let cancelled = false;
 
     async function load() {
       setLoading(true);
-      const estimated = await estimateFromIp();
+      // IP only when there is no real fix -- permission denied, or no provider.
+      const estimated = location.isFallback
+        ? await estimateFromIp()
+        : await describeCoords(location.lat, location.lng);
       if (cancelled) return;
 
       setArea(estimated);
@@ -73,7 +91,7 @@ export default function AreaRecommendationsScreen() {
 
     load();
     return () => { cancelled = true; };
-  }, [update]);
+  }, [update, location.loading, location.isFallback, location.lat, location.lng]);
 
   const areaLabel = useMemo(() => {
     if (area.city && area.state) return `${area.city}, ${area.state}`;
@@ -127,6 +145,41 @@ export default function AreaRecommendationsScreen() {
       </View>
     </View>
   );
+}
+
+/**
+ * Reverse-geocodes a real GPS fix into the { city, state, lat, lng } this
+ * screen shows and, via draftToProfileFields, writes to the profile.
+ *
+ * The screen used to be IP-only (estimateFromIp below). On a cellular
+ * connection that reports the CARRIER'S egress hub rather than the user --
+ * observed 2026-09-09/10 giving Orlando, then Miami twice, for a user in
+ * Lakewood Ranch. Not a lookup failure to retry: ipapi.co answers correctly,
+ * it is answering a different question. The wrong city then rode into
+ * location_city on every account created this way.
+ *
+ * Coordinates are the part that matters -- the stats query below and
+ * location_lat/lng both use them -- so a failed reverse geocode still returns
+ * the fix and only the label falls back.
+ */
+async function describeCoords(lat: number, lng: number): Promise<IpEstimate> {
+  let city: string | null = null;
+  let state: string | null = null;
+  try {
+    const [place] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+    if (place) {
+      city = place.city ?? place.subregion ?? place.district ?? null;
+      state = place.region ?? null;
+    }
+  } catch {
+    // Reverse geocoding unavailable (offline / no provider).
+  }
+  return {
+    city: city ?? FALLBACK_AREA.city,
+    state: state ?? FALLBACK_AREA.state,
+    lat,
+    lng,
+  };
 }
 
 async function estimateFromIp(): Promise<IpEstimate> {
