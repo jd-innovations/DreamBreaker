@@ -243,6 +243,94 @@ export async function markPersonalGuestShareInitiated(guestShareId: string): Pro
   return data as PersonalGuestShare;
 }
 
+/**
+ * Per-participant guest-share and claim state for one session.
+ *
+ * Deliberately a SEPARATE call rather than an addition to
+ * fetchPersonalSessionWithGames(): that function is on the path that already
+ * works, and this is read-only enrichment that must never be able to break it.
+ * A failure here returns an empty map, so the screen renders exactly as it did
+ * before rather than erroring.
+ *
+ * RLS scopes both tables to `created_by = auth.uid()`, so only the person who
+ * RECORDED the session sees any of this. Anyone else — including a participant
+ * who claimed their spot — gets an empty map and no claim UI, which is correct:
+ * only the recorder can re-send an invite.
+ *
+ * A participant can have several claim rows (a revoked link plus its
+ * replacement, for instance), so the most meaningful one wins: claimed first,
+ * then a live pending one, then whatever is left.
+ */
+export type PersonalGuestClaimState = {
+  sessionParticipantId: string;
+  guestShareId: string | null;
+  shareStatus: PersonalGuestShare['share_status'] | null;
+  claimStatus: 'pending' | 'claimed' | 'expired' | 'revoked' | null;
+  claimExpiresAt: string | null;
+  claimedAt: string | null;
+};
+
+const CLAIM_PRIORITY: Record<string, number> = { claimed: 0, pending: 1, expired: 2, revoked: 3 };
+
+export async function fetchPersonalGuestClaimStates(
+  sessionId: string,
+): Promise<Map<string, PersonalGuestClaimState>> {
+  const byParticipant = new Map<string, PersonalGuestClaimState>();
+
+  const [sharesRes, claimsRes] = await Promise.all([
+    db.from('personal_guest_shares').select('*').eq('session_id', sessionId),
+    db.from('personal_match_claims').select('*').eq('session_id', sessionId),
+  ]);
+
+  // Never throw. This is additive detail on a screen that works without it.
+  if (sharesRes.error || claimsRes.error) {
+    console.warn('[personalSessions] guest claim state unavailable:',
+      sharesRes.error?.message ?? claimsRes.error?.message);
+    return byParticipant;
+  }
+
+  for (const share of (sharesRes.data ?? []) as PersonalGuestShare[]) {
+    byParticipant.set(share.session_participant_id, {
+      sessionParticipantId: share.session_participant_id,
+      guestShareId: share.id,
+      shareStatus: share.share_status,
+      claimStatus: null,
+      claimExpiresAt: null,
+      claimedAt: null,
+    });
+  }
+
+  type ClaimRow = {
+    session_participant_id: string;
+    guest_share_id: string | null;
+    status: 'pending' | 'claimed' | 'expired' | 'revoked';
+    expires_at: string | null;
+    claimed_at: string | null;
+  };
+
+  const bestClaim = new Map<string, ClaimRow>();
+  for (const claim of (claimsRes.data ?? []) as ClaimRow[]) {
+    const current = bestClaim.get(claim.session_participant_id);
+    const rank = CLAIM_PRIORITY[claim.status] ?? 9;
+    const currentRank = current ? CLAIM_PRIORITY[current.status] ?? 9 : 99;
+    if (rank < currentRank) bestClaim.set(claim.session_participant_id, claim);
+  }
+
+  for (const [participantId, claim] of bestClaim) {
+    const existing = byParticipant.get(participantId);
+    byParticipant.set(participantId, {
+      sessionParticipantId: participantId,
+      guestShareId: existing?.guestShareId ?? claim.guest_share_id ?? null,
+      shareStatus: existing?.shareStatus ?? null,
+      claimStatus: claim.status,
+      claimExpiresAt: claim.expires_at,
+      claimedAt: claim.claimed_at,
+    });
+  }
+
+  return byParticipant;
+}
+
 export async function fetchPersonalSessionWithGames(
   sessionId: string,
 ): Promise<PersonalSessionDetails | null> {

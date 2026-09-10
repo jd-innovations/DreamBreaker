@@ -11,8 +11,8 @@ import { useSession } from '@/hooks/useSession';
 import { OnboardingEntrance } from '@/lib/onboarding/components';
 import { fetchMyStatsPlayerCard, type MyStatsPlayerCard } from '@/lib/stats/myStats';
 import {
-  fetchMyMatchHistory, fetchPersonalSessionWithGames,
-  type PersonalMatchHistoryItem, type PersonalSessionDetails,
+  fetchMyMatchHistory, fetchPersonalSessionWithGames, fetchPersonalGuestClaimStates,
+  type PersonalMatchHistoryItem, type PersonalSessionDetails, type PersonalGuestClaimState,
 } from '@/lib/supabase/personalSessions';
 import { explainParEvent, explainParProcessing, formatParChange } from '@/lib/supabase/par';
 import { onProfileUpdated } from '@/lib/profileEvents';
@@ -423,9 +423,50 @@ function ParImpactLine({ item }: { item: PersonalMatchHistoryItem }) {
   );
 }
 
+/**
+ * What happened to a guest's invitation to claim their half of this match.
+ *
+ * Renders nothing at all when there is no state — which covers both "this
+ * participant is a real app user, there was never a guest share" and "you are
+ * not the recorder, so RLS gave you none of this". Silence is the correct
+ * output for both; a label saying "unknown" would be noise.
+ */
+function ClaimBadge({ state }: { state?: PersonalGuestClaimState }) {
+  if (!state) return null;
+
+  let label: string;
+  let tone: 'done' | 'sent' | 'todo';
+  if (state.claimStatus === 'claimed') {
+    label = 'Claimed';
+    tone = 'done';
+  } else if (state.claimStatus === 'expired' || state.claimStatus === 'revoked') {
+    label = 'Invite expired';
+    tone = 'todo';
+  } else if (state.shareStatus === 'share_initiated' || state.shareStatus === 'claimed') {
+    label = 'Invite sent';
+    tone = 'sent';
+  } else if (state.claimStatus === 'pending') {
+    label = 'Not invited';
+    tone = 'todo';
+  } else {
+    return null;
+  }
+
+  return (
+    <Text style={[dm.claimBadge, tone === 'done' && dm.claimBadgeDone, tone === 'todo' && dm.claimBadgeTodo]}>
+      {label}
+    </Text>
+  );
+}
+
 function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | null; onClose: () => void }) {
   const [detail, setDetail] = useState<PersonalSessionDetails | null>(null);
   const [loading, setLoading] = useState(false);
+  // Kept in its own state + effect rather than folded into the detail fetch:
+  // that fetch is what makes this screen work, and claim state is additive.
+  // If this call fails or returns nothing (anyone who did not RECORD the
+  // session sees nothing, by RLS), the screen renders exactly as before.
+  const [claimStates, setClaimStates] = useState<Map<string, PersonalGuestClaimState>>(new Map());
   const sessionId = item?.session.id ?? null;
 
   useEffect(() => {
@@ -440,6 +481,18 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
       .then((data) => { if (!cancelled) setDetail(data); })
       .catch(() => { if (!cancelled) setDetail(null); })
       .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!sessionId) {
+      setClaimStates(new Map());
+      return;
+    }
+    let cancelled = false;
+    fetchPersonalGuestClaimStates(sessionId)
+      .then((states) => { if (!cancelled) setClaimStates(states); })
+      .catch(() => { if (!cancelled) setClaimStates(new Map()); });
     return () => { cancelled = true; };
   }, [sessionId]);
 
@@ -495,6 +548,7 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
                     <View key={p.id} style={dm.participantChip}>
                       <Text style={dm.participantText}>{p.display_name_snapshot}</Text>
                       {p.estimated_skill ? <Text style={dm.participantSkill}>{p.estimated_skill}</Text> : null}
+                      <ClaimBadge state={claimStates.get(p.id)} />
                     </View>
                   ))}
                 </View>
@@ -826,6 +880,15 @@ const dm = StyleSheet.create({
     color: colors.textMuted,
     fontSize: text.caption.size, fontWeight: '500',
   },
+  // Sits inside the participant chip, after the name and estimated skill.
+  claimBadge: {
+    color: colors.textMuted,
+    fontSize: text.caption.size, fontWeight: '700',
+  },
+  claimBadgeDone: { color: colors.success },
+  // Not an error -- an invitation still worth sending. Gold reads as "your
+  // move" here, where danger red would read as "something broke".
+  claimBadgeTodo: { color: colors.gold },
   emptyGamesText: {
     color: colors.textMuted,
     fontSize: text.caption.size, fontWeight: '500',
