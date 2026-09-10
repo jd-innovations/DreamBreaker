@@ -15,7 +15,7 @@
 // so the account could not be confirmed on mobile in the first place
 // (f541d0e / 20260909235500).
 //
-// Structure deliberately mirrors reset-password.tsx, the app's other
+// Structure deliberately mirrors auth/reset.tsx, the app's other
 // email-link screen: Linking.useLinkingURL() for the incoming url, an
 // `attempted` ref so a re-render cannot redeem the same single-use token twice,
 // and three explicit states rather than a spinner that can hang forever.

@@ -130,7 +130,7 @@ const SUPPORT_VISIBILITY_RULES: VisibilityRule[] = [
   { pattern: /^\/sign-in$/, visibility: 'hidden' },
   { pattern: /^\/sign-up$/, visibility: 'hidden' },
   { pattern: /^\/forgot-password$/, visibility: 'hidden' },
-  { pattern: /^\/reset-password$/, visibility: 'hidden' },
+  { pattern: /^\/auth\/reset$/, visibility: 'hidden' },
   { pattern: /^\/onboarding(-preview)?(\/|$)/, visibility: 'hidden' },
   // Full-bleed swipeable card deck -- the tab bar itself already hides here
   // (see (tabs)/_layout.tsx). A floating button would sit on top of and

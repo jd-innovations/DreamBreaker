@@ -35,7 +35,8 @@ const TEAM_ID = process.env.APPLE_TEAM_ID ?? process.env.APPLE_DEVELOPER_TEAM_ID
 // create.tsx and [id]/edit.tsx exist. Apple evaluates these paths in order and
 // stops at the first match, so the NOT-exclusion has to come before '/coach/*'
 // or it does nothing.
-// Added 2026-09-10: '/auth/confirm', the signup-confirmation link.
+// Added 2026-09-10: '/auth/confirm', the signup-confirmation link, and
+// '/auth/reset', the password-recovery link.
 //
 // Meets both conditions this file's history says to check first -- a real web
 // page (web/src/app/auth/confirm) AND a matching app screen
@@ -47,11 +48,12 @@ const TEAM_ID = process.env.APPLE_TEAM_ID ?? process.env.APPLE_DEVELOPER_TEAM_ID
 // Gmail dropped it silently and the account could not be confirmed at all.
 // A claimed HTTPS path is the only shape that works in email AND opens the app.
 //
-// Exact path, not '/auth/*': nothing else under /auth has an app screen.
+// Exact paths, not '/auth/*': not everything under /auth has an app screen.
 // '/auth/callback' in particular is the web OAuth handler and MUST stay with
 // the browser -- claiming it would hand a web sign-in to the app mid-flow.
 const PATHS = [
   '/auth/confirm',
+  '/auth/reset',
   '/conversation/*',
   '/groups/*',
   '/tournament/*',

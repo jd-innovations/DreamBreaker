@@ -1,4 +1,3 @@
-import { makeRedirectUri } from 'expo-auth-session';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as WebBrowser from 'expo-web-browser';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -299,26 +298,56 @@ export async function signInWithApple() {
   return data.session;
 }
 
-// Sends a password-reset email. redirectTo points at the reset-password screen,
-// which expo-router opens automatically via the app's custom scheme when the
-// user taps the emailed link (path matching works regardless of whatever
-// query/fragment params GoTrue appends).
+// Sends a password-reset email.
+//
+// MUST be http(s), for the same reason signUp()'s emailRedirectTo is. This used
+// to be makeRedirectUri({ path: 'reset-password' }), which in a standalone
+// build resolves to `pickleballapp://reset-password` -- a custom scheme, which
+// mail clients will not linkify or even render. The identical mistake on the
+// confirmation email shipped a mail with NO LINK IN IT (2026-09-10); there was
+// nothing to tap, so no request ever reached the server. The comment that used
+// to sit here claimed expo-router opens the emailed link automatically via the
+// app's scheme. There was no link.
+//
+// /auth/reset is claimed as a universal link
+// (web/src/app/.well-known/apple-app-site-association/route.ts), so on a phone
+// with the app installed iOS opens app/auth/reset.tsx directly. Anyone without
+// it lands on web/src/app/auth/reset/page.tsx, which redeems recovery links
+// itself -- one path, two implementations, same as /auth/confirm.
 export async function requestPasswordReset(email: string) {
-  const redirectTo = makeRedirectUri({ path: 'reset-password' });
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${APP_LINK_ORIGIN}/auth/reset`,
+  });
   if (error) throw error;
 }
 
-// Completes a password-recovery deep link. Supabase's recovery email can land
-// in one of two shapes depending on project auth settings — handle both rather
-// than assume:
-//   1. access_token/refresh_token already issued (GoTrue completed the
-//      exchange server-side before redirecting) -> setSession directly.
-//   2. token_hash + type=recovery (app must complete the exchange) -> verifyOtp.
-// Returns null if the URL has neither shape (invalid/expired/foreign link).
+/**
+ * Completes a password-recovery link inside the app.
+ *
+ * GoTrue sends one of FOUR shapes, documented in web/src/lib/auth/redeem-url.ts
+ * and handled identically by completeEmailConfirmation() below:
+ *
+ *   1. #access_token + refresh_token  implicit; self-contained -> setSession
+ *   2. ?token_hash + type=recovery    stateless -> verifyOtp
+ *   3. ?code                          PKCE -> exchangeCodeForSession
+ *   4. ?error / #error                GoTrue rejected it and said why
+ *
+ * This handled only 1 and 2 until 2026-09-10. That was survivable only while
+ * the reset link pointed at a custom scheme and therefore never arrived at all;
+ * the moment requestPasswordReset() started sending a real universal link,
+ * shape 3 became reachable -- and it is exactly the shape that broke the
+ * confirmation screen the same day. A native app is the RIGHT place to redeem
+ * it: the PKCE verifier lives in the storage of whichever client started the
+ * flow, and for a reset requested in this app, that is this app.
+ *
+ * Returns the session on success, or null when the link carries none of the
+ * three redeemable shapes. Throws GoTrue's own reason for shape 4.
+ */
 export async function completePasswordRecovery(url: string) {
   const { params, errorCode } = QueryParams.getQueryParams(url);
   if (errorCode) throw new Error(errorCode);
+  if (params.error_description) throw new Error(params.error_description);
+  if (params.error) throw new Error(params.error);
 
   if (params.access_token && params.refresh_token) {
     const { data, error } = await supabase.auth.setSession({
@@ -329,11 +358,21 @@ export async function completePasswordRecovery(url: string) {
     return data.session;
   }
 
-  if (params.token_hash && params.type === 'recovery') {
+  // `type` is only checked for a value that CONTRADICTS recovery. A missing
+  // type on a link that landed on the reset screen is a recovery token; the
+  // old `params.type === 'recovery'` equality test dropped it on the floor and
+  // reported "expired" for a perfectly good link.
+  if (params.token_hash && (!params.type || params.type === 'recovery')) {
     const { data, error } = await supabase.auth.verifyOtp({
       type: 'recovery',
       token_hash: params.token_hash,
     });
+    if (error) throw error;
+    return data.session;
+  }
+
+  if (params.code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(params.code);
     if (error) throw error;
     return data.session;
   }

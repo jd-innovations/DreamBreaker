@@ -103,7 +103,7 @@ function RootLayout() {
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
         <Stack.Screen name="sign-up" options={{ headerShown: false }} />
         <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
-        <Stack.Screen name="reset-password" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/reset" options={{ headerShown: false }} />
         <Stack.Screen name="auth/confirm" options={{ headerShown: false }} />
         <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
