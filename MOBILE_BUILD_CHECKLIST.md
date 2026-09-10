@@ -1,28 +1,94 @@
-# Mobile — what the next build needs to verify
+# Mobile — builds, OTA, and the road to TestFlight
 
-**Written 2026-08-27, updated 2026-08-29.** Read the update block first — the
-premise this file was written on has since expired.
+**Written 2026-08-27. Current as of 2026-09-10.** Sections below carry their own
+dates; the OTA rules at the bottom are the ones consulted most often.
 
-## ⚠️ UPDATE 2026-08-29 — the crash section below is history
+## Status 2026-09-10 — nothing needs a rebuild to be verified
 
-The `play_style` crash described next **is fixed and shipped.** `7177bee` went
-out in iOS build **#5** (`4f52e2c5`, `development` profile, 2026-08-28, commit
-`02a0023`), and device testing has run normally since — `58b76bd` was verified
-on device and `e83527c` was written from device screenshots.
+Ran this file's own pre-flight (see "OTA vs rebuild") with
+`BASE=e2311d02`, the commit behind the installed preview build:
 
-**A dev client is installed, so JS changes need no build.** Run
-`npx expo start --dev-client`. Everything committed since `02a0023` — the
-`@shared` imports (`0ce5458`), the clipped tournament title (`7328daf`), the
-header fix (`e83527c`) — is testable that way for free. Build only for native
-changes, or for a shareable `preview`.
+| Fingerprint input | Changed? |
+| --- | --- |
+| `app.config.js`, `eas.json`, `.easignore`, `.gitignore`, `assets/images/` | no |
+| `package.json` → `scripts` | identical |
+| `package.json` → `react-native` version | no |
+| native dependencies / config plugins | none |
 
-Preview build **#6** (`2cacd3a3`, commit `a80fce0`) was cut 2026-08-29. The
-`SENTRY_AUTH_TOKEN` needed to symbolicate crash reports lives only in the EAS
-`preview` environment, so 4.1 wants that build rather than the dev client.
+**All clear.** The ~56 mobile commits since that build — the whole marketplace
+map programme, the sharing framework, and the 2026-09-09/10 auth, onboarding
+and menu work — are JS only and reach the installed build over OTA. Publish
+with `node ./scripts/publish-update.js preview` and verify on the phone.
 
-The verification list further down is still the right list. Keep the crash
-section for the sequencing lesson it records: the migration shipped ahead of the
-client that understood it.
+So the *only* build still required is a **production** one, and it is required
+for signing and distribution, not because the native project has drifted.
+
+## Next: TestFlight
+
+**No production-profile build has ever existed.** Confirmed 2026-09-10 against
+`eas build:list` — every iOS build to date is `preview` or `development`, all
+`INTERNAL` distribution. A Store build cannot be installed any other way, which
+is why TestFlight comes before the App Store: it is the only way to see the
+binary that will actually be submitted.
+
+### Two blockers, both needing an Apple login
+
+1. **Distribution certificate + App Store provisioning profile.**
+   `eas build --profile production --platform ios` fails non-interactively with
+   "Distribution Certificate is not validated for non-interactive builds". Run
+   it **interactively once**; EAS stores both afterwards.
+2. **`submit.production` in `eas.json` is `{}`** — no App Store Connect app id,
+   no Apple team id. `eas submit` needs those, or an interactive first run.
+   Whether an App Store Connect app record exists at all is not knowable from
+   this repo.
+
+Everything else is configured: the EAS `production` environment already holds
+all eight `EXPO_PUBLIC_*` vars plus `SENTRY_AUTH_TOKEN`.
+
+### What a production build actually changes — 2026-08-31's warning is stale
+
+That warning said the marketplace, wallet and coaching all disappear under
+`EXPO_PUBLIC_APP_ENV=production`. **No longer true** — `featureFlags.ts` was
+updated through 2026-09-09. Verified against the flag map and
+`featureRoutes.ts`:
+
+| Feature | Production |
+| --- | --- |
+| `coachMarketplace`, `lessonMarketplace`, `wallet`, `marketplaceAiAssist`, `myStats` | **included** |
+| `paidBooking` | hidden (deliberate — G1, Stripe stays in test mode) |
+| `bookingFilters` | deferred (unimplemented CTAs) |
+| `devTools` | internal-only |
+
+`useFeatureRouteGuard` bounces only `/design-lab`, `/dev-qr-scan`,
+`/dev-diagnostics`, `/dev-theme`, `/onboarding-preview`. `/coach`, `/lessons`,
+`/wallet` and `/stats` all stay reachable. **No main-flow link bounces to the
+root gate**, which was the specific risk flagged earlier.
+
+### Three things that bite only in a production build
+
+- **No diagnostics screen.** `devTools` is `internal-only`, so
+  `dev-diagnostics` is gone exactly when a TestFlight problem would want it.
+  Reproduce on a `preview` build instead.
+- **A different OTA channel.** A production build reads the **`production`**
+  channel; every update so far has gone to `preview`. That path has never been
+  exercised, so a TestFlight hotfix is untested ground —
+  `node ./scripts/publish-update.js production`, and confirm the runtime
+  matches the production build, not the preview one.
+- **Production content is thin.** Counted 2026-09-10: 2 future open
+  tournaments, 3 future play events, 2 marketplace listings, 2 groups, 48
+  profiles (489 facilities is the one healthy set). A reviewer walkthrough and
+  any screenshot will read as an abandoned app. **Seed before building**, not
+  after — this gates TODO 1.1 item 7.1 as much as the screenshots themselves.
+
+### Order
+
+1. Finish the parked items from the 2026-09-10 session (see
+   `AUTH_ONBOARDING_HANDOFF.md` §4 and the share-card layout pass).
+2. Seed production events, listings and groups.
+3. `eas build --profile production --platform ios`, **interactively**.
+4. `eas submit`, then work the verification list below against the TestFlight
+   build — that also closes TODO 1.1's 5.1, 7.2 and 7.3 device halves.
+5. Demo account + screenshots closes 7.1.
 
 ---
 
@@ -59,29 +125,54 @@ Build `preview`/`production` afterwards if needed; get the dev client first.
 
 ## Verify in this order
 
-Each of these is committed and unverified. The first two are the ones that can
-still be wrong in a way that matters.
+### ✅ Closed — the original 2026-08-27 list
 
-1. **Profile saving works at all.** Edit Profile → change anything → Save.
-   Before `7177bee` this failed entirely with `22P02 malformed array literal`,
-   because one bad column failed the whole update. If this works, client and
-   schema agree.
+All five verified on builds #7 and #9 (2026-08-29 / 08-31). Kept only so nobody
+re-runs them: profile saving after the `play_style` array migration, the
+multi-select play-style chips, the native action sheet, the repaired mojibake
+strings, and local-scope sign out.
 
-2. **Play style.** Edit Profile → Play Style. Multi-select chips, **no "Other"
-   free-text box**. Pick two, save, reopen — both should persist. Labels:
-   Aggressive baseliner, Soft game, Dink master, Banger, Counter-puncher,
-   All-court, Third-shot specialist, Net player.
+### Verified on device 2026-09-10
 
-3. **Native action sheet.** Groups → a group → header ⋯. Expect the iOS system
-   sheet from the bottom, destructive item in red, swipe-to-dismiss — not a
-   small popover under the button.
+- **Password reset, end to end.** `/recover` → `/verify` → `PUT /user`, all with
+  the native-app referer shape. Redeemed **in the app**, not Safari.
+- **Signup → confirmation → onboarding → complete profile.**
 
-4. **Corrupted strings** (`e1420c7`). A profile with no name shows `—`, not
-   `â€"`. Same on Account Settings. Onboarding → Enable Location button reads
-   "Requesting…".
+### Outstanding — all OTA-delivered, none needs a build
 
-5. **Sign out** (`ac91859`). Works first tap, and leaves the web session alone —
-   it is `scope: 'local'` now, where it used to sign you out everywhere.
+Publish to `preview`, force-quit, relaunch, then work down. Grouped by the
+programme that produced them.
+
+1. **Slide-in menu contrast** (`4cbd2bc`). Dark navy panel; "QUICK ACTIONS" and
+   "RECENTS" legible. Was 1.11:1 against its background — invisible.
+2. **No Motion & Fitness prompt** (`9103e8f`). **Fresh install only** — iOS
+   remembers the answer per install, so a relaunch proves nothing. The tilt
+   parallax on the onboarding welcome screen must still work.
+3. **Marketplace map (Phase 3)** — price-band pins, no overlay collisions, a pin
+   tap opens the listing card, handoff filter honours Location & Discovery
+   settings.
+4. **Marketplace lifecycle** — 30-day expiry, renew, warning email, saved
+   listings, price-drop alerts, enforced minimum offer, editable photos, AI
+   assist, blocked-seller contact suppressed.
+5. **Offers** — the keypad no longer covers the Make Offer sheet; the Send Offer
+   button renders its label.
+6. **Nearby** — tiered court search (in-radius first, then everywhere else), the
+   search box hits the real backend.
+7. **Saved payment methods** (`ee26a07`, Stripe SetupIntent) — still TEST mode.
+8. **Tournament** — hero image at creation; cancelled tournaments badge as
+   cancelled, not open.
+9. **Activity** — mark-all-read, notification icons, invite read-state synced
+   with the Received tab.
+10. **Share cards** — send an event link to iMessage. Note Apple caches previews
+    **per URL**, so use an event that has never been shared, or a different
+    thread.
+
+### Still unverified from TODO 1.1, and needs the TestFlight build
+
+- **5.1 push**: foreground, background and cold-tap delivery; invalid-token
+  cleanup. (Android is blocked on hardware — D4.)
+- **7.2**: VoiceOver has never been run.
+- **7.3**: performance profiling needs hardware.
 
 ## ~~Then: the deferred workspace work~~ — DONE 2026-08-29, and differently
 
