@@ -257,7 +257,11 @@ export function SlideMenuProvider({ children }: { children: React.ReactNode }) {
           )}
 
           <Animated.View style={[styles.panel, { width: PANEL_WIDTH }, panelStyle]}>
-            <BlurView intensity={50} tint="light" style={StyleSheet.absoluteFill} />
+            {/* tint="dark", not "light". This blurs the app screen behind the
+                panel, and that screen is on colors.bg (#FFFFFF) -- a light tint
+                pushed an already-white surface whiter, under content coloured
+                for a dark one. See panelTint below for the numbers. */}
+            <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, styles.panelTint]} />
             <ScrollView
               showsVerticalScrollIndicator={false}
@@ -385,7 +389,7 @@ export function SlideMenuProvider({ children }: { children: React.ReactNode }) {
                         <Ionicons
                           name={expanded ? 'chevron-up' : 'chevron-down'}
                           size={18}
-                          color={colors.textSub}
+                          color={colors.playerTextSub}
                         />
                       </Pressable>
                       {expanded &&
@@ -440,7 +444,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   panelTint: {
-    backgroundColor: 'rgba(10,18,40,0.45)',
+    // Opacity carries this surface, not the blur.
+    //
+    // The panel's content is built for a DARK navy surface -- white labels,
+    // gold icons -- but what sits behind the panel is the app on colors.bg,
+    // which is pure #FFFFFF. At the previous 0.45 (with the BlurView also set
+    // to tint="light") the stack composited to #91949E, a mid grey, and the
+    // menu was barely readable: white labels 3.03:1, gold icons 1.33:1, and
+    // the section headers 1.11:1 -- indistinguishable from their background.
+    //
+    // 0.88 over white gives #272E42: white 13.50:1, gold 5.91:1,
+    // playerTextSub 7.69:1. The frosted edge survives; the legibility does
+    // not depend on whatever screen happens to be behind it.
+    backgroundColor: 'rgba(10,18,40,0.88)',
   },
   profileRow: {
     flexDirection: 'row',
@@ -465,7 +481,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   sectionHeader: {
-    color: colors.textSub,
+    color: colors.playerTextSub,
     fontSize: text.sectionLabel.size,
     fontWeight: '800',
     letterSpacing: text.sectionLabel.letterSpacing,
@@ -521,12 +537,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   rowSubtitle: {
-    color: colors.textSub,
+    color: colors.playerTextSub,
     fontSize: text.caption.size, fontWeight: '500',
     marginTop: 3,
   },
   emptyText: {
-    color: colors.textSub,
+    color: colors.playerTextSub,
     fontSize: text.caption.size, fontWeight: '500',
     paddingHorizontal: spacing.sm,
   },
@@ -552,7 +568,7 @@ const styles = StyleSheet.create({
     borderRadius: shape.cta,
   },
   subRowLabel: {
-    color: colors.textSub,
+    color: colors.playerTextSub,
     fontSize: text.body.size, fontWeight: '500',
   },
   badge: {
