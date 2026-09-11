@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Linking, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Linking, Platform, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +16,7 @@ import {
 import { markPersonalGuestShareInitiated } from '@/lib/supabase/personalSessions';
 import { createPersonalMatchClaimLink } from '@/lib/supabase/personalMatchClaims';
 import { buildClaimInviteMessage } from '@/lib/personalMatchShare';
+import { ClaimInviteSheet } from '@/components';
 import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -115,46 +116,74 @@ function DeliveryStatusRow({
   recorderName: string;
   onShareInitiated: () => void;
 }) {
-  const [phoneDraft, setPhoneDraft] = useState(delivery.phone ?? '');
-  const [enteringPhone, setEnteringPhone] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [claimUrl, setClaimUrl] = useState<string | null>(null);
+  const [claimToken, setClaimToken] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const isGuest = delivery.participantKind === 'guest';
   const isClaimed = delivery.deliveryStatus === 'claimed' || delivery.claimStatus === 'claimed';
   const isShared = isClaimed || delivery.deliveryStatus === 'share_initiated';
 
-  async function sendSms() {
+  // Opens the sheet first, then mints the link behind it, so the QR appears as
+  // soon as the round trip finishes instead of after a blank pause.
+  async function openInvite() {
     if (!delivery.guestShareId) {
       Alert.alert('Unable to share', 'This guest sharing record is missing.');
       return;
     }
-
-    const phone = phoneDraft.trim();
-    if (!phone) {
-      setEnteringPhone(true);
-      return;
-    }
-
+    setSheetOpen(true);
+    setClaimUrl(null);
+    setClaimToken(null);
     setSharing(true);
     try {
       const claimLink = await createPersonalMatchClaimLink(delivery.guestShareId);
+      setClaimUrl('https://pickleballapp.app/claim/' + claimLink.token);
+      setClaimToken(claimLink.token);
+    } catch (error) {
+      console.warn('[log-session] claim link failed:', error);
+      setSheetOpen(false);
+      Alert.alert('Could not create invite', 'Please try again.');
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  async function sendSms(phone: string) {
+    if (!delivery.guestShareId || !claimToken) return;
+    setSharing(true);
+    try {
       const message = buildClaimInviteMessage({
         guestName: delivery.displayName,
         recorderName,
         facilityName,
         games,
-        appClaimUrl: claimLink.claimUrl,
-        webClaimUrl: 'https://pickleballapp.app/claim/' + claimLink.token,
+        appClaimUrl: 'pickleballapp://claim/' + claimToken,
+        webClaimUrl: 'https://pickleballapp.app/claim/' + claimToken,
       });
       const separator = Platform.OS === 'ios' ? '&' : '?';
       await Linking.openURL(`sms:${phone}${separator}body=${encodeURIComponent(message)}`);
       await markPersonalGuestShareInitiated(delivery.guestShareId);
       onShareInitiated();
-      setEnteringPhone(false);
+      setSheetOpen(false);
     } catch (error) {
       console.warn('[log-session] SMS share failed:', error);
       Alert.alert('Could not open SMS', 'Please try again.');
     } finally {
       setSharing(false);
+    }
+  }
+
+  // Showing the QR is itself an invitation and a scan cannot be observed, so
+  // closing the sheet records that one went out.
+  async function closeInvite() {
+    setSheetOpen(false);
+    if (claimUrl && delivery.guestShareId) {
+      try {
+        await markPersonalGuestShareInitiated(delivery.guestShareId);
+        onShareInitiated();
+      } catch {
+        // Non-fatal: the claim link is already valid either way.
+      }
     }
   }
 
@@ -168,7 +197,7 @@ function DeliveryStatusRow({
         <Text style={styles.playerName}>{delivery.displayName}</Text>
         {isGuest ? (
           <Text style={[styles.statusText, isShared ? styles.statusShared : styles.statusPending]}>
-            {isClaimed ? 'Claimed' : isShared ? 'SMS shared' : 'Send SMS'}
+            {isClaimed ? 'Claimed' : isShared ? 'Invite sent' : 'Not invited yet'}
           </Text>
         ) : (
           <View style={styles.inlineStatus}>
@@ -177,27 +206,6 @@ function DeliveryStatusRow({
           </View>
         )}
 
-        {enteringPhone ? (
-          <View style={styles.phoneRow}>
-            <TextInput
-              style={styles.phoneInput}
-              value={phoneDraft}
-              onChangeText={setPhoneDraft}
-              placeholder="Phone number"
-              placeholderTextColor={colors.textSub}
-              keyboardType="phone-pad"
-              autoFocus
-            />
-            <TouchableOpacity
-              style={[styles.phoneSendButton, (!phoneDraft.trim() || sharing) && styles.phoneSendButtonDisabled]}
-              activeOpacity={0.85}
-              disabled={!phoneDraft.trim() || sharing}
-              onPress={sendSms}
-            >
-              <Text style={styles.phoneSendButtonText}>{sharing ? 'Opening' : 'Send'}</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
       </View>
 
       {isGuest && !isShared ? (
@@ -205,12 +213,22 @@ function DeliveryStatusRow({
           style={styles.smsButton}
           activeOpacity={0.8}
           disabled={sharing}
-          onPress={delivery.phone ? sendSms : () => setEnteringPhone((value) => !value)}
+          onPress={openInvite}
         >
-          <Ionicons name="chatbubble-ellipses-outline" size={14} color={colors.navy} />
-          <Text style={styles.smsButtonText}>{sharing ? 'Opening' : 'Send SMS'}</Text>
+          <Ionicons name="qr-code-outline" size={14} color={colors.navy} />
+          <Text style={styles.smsButtonText}>{sharing ? 'Opening' : 'Invite'}</Text>
         </TouchableOpacity>
       ) : null}
+
+      <ClaimInviteSheet
+        visible={sheetOpen}
+        guestName={delivery.displayName}
+        claimUrl={claimUrl}
+        sending={sharing}
+        initialPhone={delivery.phone}
+        onSendSms={sendSms}
+        onClose={closeInvite}
+      />
     </View>
   );
 }
@@ -329,34 +347,6 @@ const styles = StyleSheet.create({
     color: colors.navy,
     fontWeight: '700',
     fontSize: 11,
-  },
-  phoneRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  phoneInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: shape.panel,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
-    color: colors.navy,
-    fontSize: text.caption.size, fontWeight: '500',
-  },
-  phoneSendButton: {
-    borderRadius: shape.panel,
-    backgroundColor: colors.gold,
-    paddingHorizontal: spacing.md,
-    justifyContent: 'center',
-  },
-  phoneSendButtonDisabled: {
-    opacity: 0.5,
-  },
-  phoneSendButtonText: {
-    color: colors.navy,
-    fontSize: text.caption.size, fontWeight: '500',
   },
   footer: {
     paddingHorizontal: spacing.screenH,

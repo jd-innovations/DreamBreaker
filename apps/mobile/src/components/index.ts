@@ -42,3 +42,5 @@ export type { AddToCalendarButtonProps } from './AddToCalendarButton';
 export { DirectorOnly } from './DirectorOnly';
 export { ShimmerOverlay } from './ShimmerOverlay';
 export { FillBar } from './FillBar';
+export { ClaimInviteSheet } from './ClaimInviteSheet';
+export type { ClaimInviteSheetProps } from './ClaimInviteSheet';

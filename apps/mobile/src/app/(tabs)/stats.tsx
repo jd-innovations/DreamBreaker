@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppHeader, APP_HEADER_HEIGHT } from '@/components/AppHeader';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { PlayerCredentialCard } from '@/components/stats';
+import { ClaimInviteSheet } from '@/components';
 import { useSession } from '@/hooks/useSession';
 import { OnboardingEntrance } from '@/lib/onboarding/components';
 import { fetchMyStatsPlayerCard, type MyStatsPlayerCard } from '@/lib/stats/myStats';
@@ -553,6 +554,12 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
   // this is in flight, so the line is never empty.
   const [freshImpact, setFreshImpact] = useState<MatchParImpact | null>(null);
   const [invitingId, setInvitingId] = useState<string | null>(null);
+  // The sheet is opened first and the link minted behind it, so the QR appears
+  // as soon as the round trip finishes rather than after a blank pause with no
+  // feedback.
+  const [inviteFor, setInviteFor] = useState<PersonalGuestClaimState | null>(null);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
   const sessionId = item?.session.id ?? null;
   const viewerId = item?.session.created_by ?? null;
 
@@ -648,32 +655,56 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
    */
   async function handleInvite(state: PersonalGuestClaimState) {
     if (!detail || !state.guestShareId || invitingId) return;
+    setInviteFor(state);
+    setInviteUrl(null);
+    setInviteToken(null);
     setInvitingId(state.sessionParticipantId);
     try {
       const link = await createPersonalMatchClaimLink(state.guestShareId);
-      const guest = detail.participants.find((p) => p.id === state.sessionParticipantId);
+      setInviteUrl(`${APP_LINK_ORIGIN}/claim/${link.token}`);
+      setInviteToken(link.token);
+    } catch (error) {
+      console.warn('[match-details] claim link failed:', error);
+      setInviteFor(null);
+      Alert.alert('Could not create invite', 'Please try again.');
+    } finally {
+      setInvitingId(null);
+    }
+  }
+
+  async function handleSendInviteSms(phone: string) {
+    if (!detail || !inviteFor?.guestShareId || !inviteToken) return;
+    setInvitingId(inviteFor.sessionParticipantId);
+    try {
+      const guest = detail.participants.find((p) => p.id === inviteFor.sessionParticipantId);
       const recorder = detail.participants.find((p) => p.profile_id === detail.session.created_by);
       const message = buildClaimInviteMessage({
         guestName: guest?.display_name_snapshot ?? 'there',
         recorderName: recorder?.display_name_snapshot ?? 'A player',
         facilityName: item?.facilityName ?? null,
         games: inviteGames(),
-        appClaimUrl: link.claimUrl,
-        webClaimUrl: `${APP_LINK_ORIGIN}/claim/${link.token}`,
+        appClaimUrl: `pickleballapp://claim/${inviteToken}`,
+        webClaimUrl: `${APP_LINK_ORIGIN}/claim/${inviteToken}`,
       });
-      const result = await Share.share({ message });
-      if (result.action === Share.sharedAction) {
-        await markPersonalGuestShareInitiated(state.guestShareId);
-        if (sessionId) {
-          const states = await fetchPersonalGuestClaimStates(sessionId);
-          setClaimStates(states);
-        }
-      }
+      const separator = Platform.OS === 'ios' ? '&' : '?';
+      await Linking.openURL(`sms:${phone}${separator}body=${encodeURIComponent(message)}`);
+      await markPersonalGuestShareInitiated(inviteFor.guestShareId);
+      await refreshClaimStates();
+      setInviteFor(null);
     } catch (error) {
-      console.warn('[match-details] invite failed:', error);
-      Alert.alert('Could not create invite', 'Please try again.');
+      console.warn('[match-details] invite sms failed:', error);
+      Alert.alert('Could not open Messages', 'Please try again.');
     } finally {
       setInvitingId(null);
+    }
+  }
+
+  async function refreshClaimStates() {
+    if (!sessionId) return;
+    try {
+      setClaimStates(await fetchPersonalGuestClaimStates(sessionId));
+    } catch {
+      // Leave the badges as they are; they are additive detail.
     }
   }
 
@@ -791,6 +822,29 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
           </ScrollView>
         )}
       </View>
+
+      <ClaimInviteSheet
+        visible={!!inviteFor}
+        guestName={
+          detail?.participants.find((p) => p.id === inviteFor?.sessionParticipantId)?.display_name_snapshot
+          ?? 'this player'
+        }
+        claimUrl={inviteUrl}
+        sending={!!invitingId}
+        onSendSms={handleSendInviteSms}
+        onClose={() => {
+          setInviteFor(null);
+          // Showing the QR is itself an invitation, and we cannot observe a
+          // scan -- so closing the sheet records that one went out. The channel
+          // stays 'sms' because personal_guest_shares.share_channel is CHECK
+          // constrained to that single value; recording 'qr' needs a migration.
+          if (inviteFor?.guestShareId && inviteUrl) {
+            markPersonalGuestShareInitiated(inviteFor.guestShareId)
+              .then(refreshClaimStates)
+              .catch(() => {});
+          }
+        }}
+      />
     </Modal>
   );
 }
