@@ -7,9 +7,24 @@
 -- source_type = 'seed', including a $25 credit with a live link to a partner
 -- with no agreement. Nobody could tell who created them or why.
 --
--- Posture matches the coach voucher deliberately: SECURITY DEFINER, EXECUTE
--- revoked from anon/authenticated, client never writes to wallet_items. That
--- single-writer-per-purpose arrangement is what makes the table trustworthy.
+-- SECURITY DEFINER, and the client still never writes to wallet_items directly
+-- -- that single-writer-per-purpose arrangement is what makes the table
+-- trustworthy.
+--
+-- EXECUTE is granted to `authenticated`, NOT service_role only. is_admin()
+-- reads auth.uid(), which is NULL under a service-role client, so a
+-- service-role-only grant makes these uncallable: the browser is denied EXECUTE
+-- and the server raises admin_only. The gate is the is_admin() check inside,
+-- evaluated against the CALLER -- the same shape as admin_delete_tournament and
+-- admin_stage_facility_import.
+--
+-- create_coach_voucher_from_finalized_purchase IS service-role-only, correctly:
+-- a Stripe webhook calls it with no user session, so it has no caller to
+-- authenticate. Copying that grant here was a mistake, corrected 2026-09-11.
+--
+-- `anon` is deliberately excluded, unlike admin_payment_reconciliation and
+-- issue_review_invitation which both allow it. They are guarded internally too,
+-- but a logged-out visitor has no business reaching an admin RPC at all.
 
 -- ── Audit columns ────────────────────────────────────────────────────────────
 -- Real columns rather than metadata jsonb: "who gave this person this, and who
@@ -121,7 +136,11 @@ $function$;
 
 revoke execute on function public.admin_grant_wallet_item(
   uuid, text, text, text, text, text, text, uuid, text, text, timestamptz, timestamptz, text
-) from public, anon, authenticated;
+) from public, anon;
+
+grant execute on function public.admin_grant_wallet_item(
+  uuid, text, text, text, text, text, text, uuid, text, text, timestamptz, timestamptz, text
+) to authenticated;
 
 -- ── admin_revoke_wallet_item ─────────────────────────────────────────────────
 
@@ -174,4 +193,6 @@ begin
 end;
 $function$;
 
-revoke execute on function public.admin_revoke_wallet_item(uuid, text) from public, anon, authenticated;
+revoke execute on function public.admin_revoke_wallet_item(uuid, text) from public, anon;
+
+grant execute on function public.admin_revoke_wallet_item(uuid, text) to authenticated;
