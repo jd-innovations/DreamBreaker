@@ -232,8 +232,20 @@ function createSmsMessage({
   appClaimUrl: string;
   webClaimUrl: string;
 }) {
+  // Plain ASCII only, and a hyphen rather than an en dash, on purpose.
+  // This is SMS: one character outside GSM-7 -- an emoji, an en dash --
+  // switches the whole message to UCS-2 and the per-segment limit drops from
+  // 160 to 70. At this length that turns a 3-segment message into 6.
+  //
+  // The score sits on its own line ahead of the teams because it used to run
+  // straight into the last player's name: "Jesus & Cruz Dominguez 11, Demo 6
+  // & Demo 5 0" reads as though someone is called "Demo 5 0". `def.` then
+  // says which side won, which the old comma never did.
   const scoreLines = games.length > 0
-    ? games.map((game) => `Game ${game.gameNumber}: ${game.myTeamLabel} ${game.myScore}, ${game.opponentsLabel} ${game.opponentScore}`).join('\n')
+    ? games.map((game) => [
+      `Game ${game.gameNumber}  ${game.myScore}-${game.opponentScore}`,
+      `${game.myTeamLabel} def. ${game.opponentsLabel}`,
+    ].join('\n')).join('\n')
     : 'Score saved in Pickleball App.';
 
   return [
@@ -241,16 +253,17 @@ function createSmsMessage({
     '',
     `${recorderName} recorded your match${facilityName ? ` at ${facilityName}` : ''}.`,
     '',
-    'Final score:',
     scoreLines,
     '',
     'Claim your match:',
     webClaimUrl,
     '',
+    // Kept deliberately. /claim/* is in the AASA list so the https link above
+    // opens the app when installed -- but that depends on the association
+    // file the device cached, and Apple's CDN served a stale copy for an hour
+    // on 2026-09-10. This scheme link is the fallback for that case.
     'Open in the app:',
     appClaimUrl,
-    '',
-    'Your match is saved on Pickleball App.',
   ].join('\n');
 }
 
