@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -12,11 +12,14 @@ import { OnboardingEntrance } from '@/lib/onboarding/components';
 import { fetchMyStatsPlayerCard, type MyStatsPlayerCard } from '@/lib/stats/myStats';
 import {
   fetchMyMatchHistory, fetchPersonalSessionWithGames, fetchPersonalGuestClaimStates,
+  markPersonalGuestShareInitiated,
   type PersonalMatchHistoryItem, type PersonalSessionDetails, type PersonalGuestClaimState,
 } from '@/lib/supabase/personalSessions';
 import { explainParEvent, explainParProcessing, formatParChange, fetchParImpactForSessions, type MatchParImpact } from '@/lib/supabase/par';
 import { onProfileUpdated } from '@/lib/profileEvents';
 import { appLinks, APP_LINK_ORIGIN } from '@/lib/appLinks';
+import { buildClaimInviteMessage, type ClaimInviteGame } from '@/lib/personalMatchShare';
+import { createPersonalMatchClaimLink } from '@/lib/supabase/personalMatchClaims';
 import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -480,7 +483,13 @@ function ParImpactLine({ item, impactOverride }: { item: PersonalMatchHistoryIte
  * not the recorder, so RLS gave you none of this". Silence is the correct
  * output for both; a label saying "unknown" would be noise.
  */
-function ClaimBadge({ state }: { state?: PersonalGuestClaimState }) {
+function ClaimBadge({
+  state, onInvite, busy,
+}: {
+  state?: PersonalGuestClaimState;
+  onInvite?: (state: PersonalGuestClaimState) => void;
+  busy?: boolean;
+}) {
   if (!state) return null;
 
   let label: string;
@@ -501,10 +510,31 @@ function ClaimBadge({ state }: { state?: PersonalGuestClaimState }) {
     return null;
   }
 
+  // A claimed slot is finished; everything else is still worth an invite,
+  // including one already sent -- the commonest reason a guest never claims is
+  // that the first message got lost, and the claim stays valid for 30 days.
+  const canInvite = !!onInvite && !!state.guestShareId && state.claimStatus !== 'claimed';
+  if (!canInvite) {
+    return (
+      <Text style={[dm.claimBadge, tone === 'done' && dm.claimBadgeDone, tone === 'todo' && dm.claimBadgeTodo]}>
+        {label}
+      </Text>
+    );
+  }
+
   return (
-    <Text style={[dm.claimBadge, tone === 'done' && dm.claimBadgeDone, tone === 'todo' && dm.claimBadgeTodo]}>
-      {label}
-    </Text>
+    <TouchableOpacity
+      onPress={() => onInvite(state)}
+      disabled={busy}
+      activeOpacity={0.7}
+      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+      accessibilityRole="button"
+      accessibilityLabel={tone === 'sent' ? 'Send the invite again' : 'Send an invite to claim this match'}
+    >
+      <Text style={[dm.claimBadge, dm.claimBadgeAction]}>
+        {busy ? 'Opening…' : tone === 'sent' ? 'Send again' : 'Send invite'}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
@@ -522,6 +552,7 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
   // games list beside stale rating text. Falls back to the list's copy while
   // this is in flight, so the line is never empty.
   const [freshImpact, setFreshImpact] = useState<MatchParImpact | null>(null);
+  const [invitingId, setInvitingId] = useState<string | null>(null);
   const sessionId = item?.session.id ?? null;
   const viewerId = item?.session.created_by ?? null;
 
@@ -571,6 +602,79 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
 
   function participantName(participantId: string) {
     return detail?.participants.find((p) => p.id === participantId)?.display_name_snapshot ?? 'Player';
+  }
+
+  /**
+   * Rebuilds the score summary the invite message needs, from the detail this
+   * screen already has. "My team" is the RECORDER's side, matching what the
+   * session-saved screen sends, so the same match reads identically whichever
+   * entry point the invite came from. If the recorder did not play, team 1 is
+   * used -- the message still makes sense, it just is not written from anyone's
+   * point of view in particular.
+   */
+  function inviteGames(): ClaimInviteGame[] {
+    if (!detail) return [];
+    const mine = detail.participants.find((p) => p.profile_id === detail.session.created_by);
+    return detail.games
+      .filter((game) => game.status === 'completed')
+      .map((game) => {
+        const gps = detail.gameParticipants.filter((gp) => gp.game_id === game.id);
+        const myGp = mine ? gps.find((gp) => gp.session_participant_id === mine.id) : undefined;
+        const myTeam = myGp?.team_number ?? 1;
+        const label = (team: number) => gps
+          .filter((gp) => gp.team_number === team)
+          .map((gp) => participantName(gp.session_participant_id))
+          .join(' & ') || 'TBD';
+        return {
+          gameNumber: game.game_number,
+          myScore: myTeam === 1 ? game.team_one_score ?? 0 : game.team_two_score ?? 0,
+          opponentScore: myTeam === 1 ? game.team_two_score ?? 0 : game.team_one_score ?? 0,
+          myTeamLabel: label(myTeam),
+          opponentsLabel: label(myTeam === 1 ? 2 : 1),
+        };
+      });
+  }
+
+  /**
+   * Mints a fresh claim link for one guest and hands it to the OS share sheet.
+   *
+   * Share.share rather than the `sms:` URL the session-saved screen uses: that
+   * screen has the guest's phone number from the log-session flow, and this one
+   * does not. The share sheet also lets the invite go by WhatsApp or anything
+   * else, which is worth more than forcing SMS.
+   *
+   * markPersonalGuestShareInitiated only runs when the sheet reports a send, so
+   * a dismissed sheet does not leave the row claiming an invite went out.
+   */
+  async function handleInvite(state: PersonalGuestClaimState) {
+    if (!detail || !state.guestShareId || invitingId) return;
+    setInvitingId(state.sessionParticipantId);
+    try {
+      const link = await createPersonalMatchClaimLink(state.guestShareId);
+      const guest = detail.participants.find((p) => p.id === state.sessionParticipantId);
+      const recorder = detail.participants.find((p) => p.profile_id === detail.session.created_by);
+      const message = buildClaimInviteMessage({
+        guestName: guest?.display_name_snapshot ?? 'there',
+        recorderName: recorder?.display_name_snapshot ?? 'A player',
+        facilityName: item?.facilityName ?? null,
+        games: inviteGames(),
+        appClaimUrl: link.claimUrl,
+        webClaimUrl: `${APP_LINK_ORIGIN}/claim/${link.token}`,
+      });
+      const result = await Share.share({ message });
+      if (result.action === Share.sharedAction) {
+        await markPersonalGuestShareInitiated(state.guestShareId);
+        if (sessionId) {
+          const states = await fetchPersonalGuestClaimStates(sessionId);
+          setClaimStates(states);
+        }
+      }
+    } catch (error) {
+      console.warn('[match-details] invite failed:', error);
+      Alert.alert('Could not create invite', 'Please try again.');
+    } finally {
+      setInvitingId(null);
+    }
   }
 
   return (
@@ -637,7 +741,11 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
                     <View key={p.id} style={dm.participantChip}>
                       <Text style={dm.participantText}>{p.display_name_snapshot}</Text>
                       {p.estimated_skill ? <Text style={dm.participantSkill}>{p.estimated_skill}</Text> : null}
-                      <ClaimBadge state={claimStates.get(p.id)} />
+                      <ClaimBadge
+                        state={claimStates.get(p.id)}
+                        onInvite={handleInvite}
+                        busy={invitingId === p.id}
+                      />
                     </View>
                   ))}
                 </View>
@@ -992,6 +1100,8 @@ const dm = StyleSheet.create({
   // Not an error -- an invitation still worth sending. Gold reads as "your
   // move" here, where danger red would read as "something broke".
   claimBadgeTodo: { color: colors.gold },
+  // Tappable, so it reads as an action rather than a status.
+  claimBadgeAction: { color: colors.navy, textDecorationLine: 'underline' },
   emptyGamesText: {
     color: colors.textMuted,
     fontSize: text.caption.size, fontWeight: '500',
