@@ -164,13 +164,48 @@ a rate limit. Do not fold this into Phase 1.
 - Confirm `anon` and `authenticated` cannot execute either function.
 - Attempt `action_url = 'javascript:alert(1)'` and `http://…`; both rejected.
 
-## Open questions for Nate
+## Decisions taken 2026-09-11
 
-1. **Partners.** `wallet_items.partner_id` exists — is there a partners table to
-   pick from, or is a partner just free text on the promo for now?
-2. **Expiry.** Should a promo without `expires_at` be allowed, or is an expiry
-   mandatory? The deleted seeds ran to 2027.
-3. ~~**Visibility of revoked items.**~~ **Answered by the existing code, not an
+1. **Partners come from a table, not free text.** `wallet_partners` already
+   exists — `slug`, `name`, `logo_url`, `website_url`, `is_active` — with three
+   rows in production (`pickleball-grip-doctor`, `selkirk-sport`,
+   `premium-membership`). The admin form gets a dropdown. Note those rows carry
+   the `50000000-…` seed prefix, so their branding and `is_active` deserve a
+   look before anything is issued against them; they survived the wallet_items
+   cleanup because partners are reference data, not fake user benefits.
+2. **Expiry is chosen per promo by the admin**, not fixed and not optional.
+3. **The Pickleball Grip Doctor voucher is NOT a Phase 1 admin grant.** It is an
+   automatic entitlement of a **paid membership**, which does not exist — see
+   `MONETIZATION_PLAN.md`. It is issued on membership activation, reusing the
+   pattern that already issues coach vouchers in
+   `web/src/lib/payments/finalizePayment.ts`, and it is blocked until
+   monetization Phase 2.
+
+   It is also **not** the `credit` type: one-time use, no balance tracking,
+   redeemed at Shopify rather than in this app. Shopify enforces the single use,
+   so it needs no redemption engine here — it is an `offer`/`reward` carrying a
+   code, with `external_system = 'shopify'`. Shopify's own
+   `https://<store>/discount/<CODE>` URL applies the discount and lands the user
+   in the store, so `action_url` needs no integration to work.
+
+   **Where codes come from is still open.** A pre-generated pool uploaded as CSV
+   (Shopify enforcing one use each) needs no API credentials and works today;
+   minting per grant through the Shopify Admin API is cleaner but adds an
+   integration and a failure mode mid-grant. A single shared code is not
+   one-time-use and leaks the moment anyone screenshots their wallet.
+
+   **We cannot know when a code is spent** without a Shopify webhook, so the
+   wallet cannot honestly mark it `redeemed` on its own. Either leave it
+   available until expiry or add the webhook later — do not show a status we
+   cannot back up.
+
+4. **Bulk grants are wanted** (Phase 3), but the membership path above is the
+   primary mechanism. Admin grants are for support and exceptions: comping
+   someone, fixing a failed grant, revoking after a refund.
+
+## Open questions for Nate
+1. Shopify code source: pre-generated pool, or Admin API per grant?
+2. ~~**Visibility of revoked items.**~~ **Answered by the existing code, not an
    open question.** `fetchWalletItems` applies no status filter, and
    `walletItemStatus.ts` already maps `revoked` to a red "Revoked" badge while
    `getWalletDashboardSection()` moves it to the `history` section. So a revoked
