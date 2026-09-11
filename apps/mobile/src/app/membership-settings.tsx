@@ -9,6 +9,7 @@ import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/theme';
+import { useMembership } from '@/hooks/useMembership';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 
@@ -181,6 +182,7 @@ function PlanCard({
 
 export default function MembershipSettingsScreen() {
   const insets = useSafeAreaInsets();
+  const { membership, isMember } = useMembership();
   const [selectedPlan, setSelectedPlan] = useState<Plan>('free');
 
   return (
@@ -214,50 +216,66 @@ export default function MembershipSettingsScreen() {
             </View>
             <View style={s.currentInfo}>
               <Text style={s.currentLabel}>CURRENT PLAN</Text>
-              <Text style={s.currentName}>Free Member</Text>
+              <Text style={s.currentName}>{isMember ? 'Plus Member' : 'Free Member'}</Text>
               <Text style={s.currentDesc}>
-                Enjoy the core experience{'\n'}with essential features.
+                {isMember
+                  ? (membership?.expiresAt
+                    ? `Renews ${new Date(membership.expiresAt).toLocaleDateString()}`
+                    : 'No expiry')
+                  : 'Enjoy the core experience with essential features.'}
               </Text>
             </View>
             <View style={s.freeBadge}>
-              <Text style={s.freeBadgeText}>FREE</Text>
+              <Text style={s.freeBadgeText}>{isMember ? 'PLUS' : 'FREE'}</Text>
             </View>
           </View>
 
-          {/* Upgrade row */}
-          <View style={s.upgradeDivider} />
-          <TouchableOpacity style={s.upgradeRow} activeOpacity={0.7}>
-            <Ionicons name="sparkles-outline" size={20} color={L.gold} />
-            <View style={s.upgradeText}>
-              <Text style={s.upgradeLabel}>Upgrade to Plus</Text>
-              <Text style={s.upgradeSub}>Unlock premium features and benefits.</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={L.textMuted} />
-          </TouchableOpacity>
+          {/* Not a tappable row until there is something to tap. Purchase is
+              Phase 5 and needs StoreKit: a membership unlocks in-app
+              functionality for a recurring fee, which guideline 3.1.1 reserves
+              for In-App Purchase. A row that looked tappable and did nothing is
+              exactly what got this screen gated in the first place. */}
+          {!isMember && (
+            <>
+              <View style={s.upgradeDivider} />
+              <View style={s.upgradeRow}>
+                <Ionicons name="sparkles-outline" size={20} color={L.gold} />
+                <View style={s.upgradeText}>
+                  <Text style={s.upgradeLabel}>Plus is coming soon</Text>
+                  <Text style={s.upgradeSub}>$25 a year. Here is what it includes.</Text>
+                </View>
+              </View>
+            </>
+          )}
         </Group>
 
         {/* â”€â”€ Why Upgrade â”€â”€ */}
         <SectionHeader label="WHY UPGRADE?" />
         <Group>
+          {/* The four benefits actually being sold (MONETIZATION_PLAN.md).
+              These replace four placeholders -- priority alerts, listing
+              boosts, advanced matching, early access -- none of which exist.
+              Two are live today for anyone holding a membership; the other two
+              say they are coming rather than implying they are here. */}
           <BenefitRow
-            icon="notifications-outline"
-            label="Priority tournament alerts"
-            sub="Get notified first about tournaments that matter."
+            icon="pricetag-outline"
+            label="$25 Pickleball Grip Doctor credit"
+            sub="A one-time voucher, once membership goes on sale."
           />
           <BenefitRow
-            icon="trending-up-outline"
-            label="Marketplace listing boosts"
-            sub="Increase visibility and sell faster."
+            icon="school-outline"
+            label="Member pricing on lessons"
+            sub="Coaches can set a lower price just for members. Live now."
           />
           <BenefitRow
-            icon="people-outline"
-            label="Advanced partner matching"
-            sub="Better matches with more filters and insights."
+            icon="storefront-outline"
+            label="List up to 10 paddles"
+            sub="Instead of 2 on the free plan. Live now."
           />
           <BenefitRow
-            icon="flash-outline"
-            label="Early access to new features"
-            sub="Be the first to try new tools and updates."
+            icon="eye-off-outline"
+            label="No ads"
+            sub="Coming with the ad-supported experience."
             last
           />
         </Group>
