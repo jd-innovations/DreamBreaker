@@ -82,6 +82,9 @@ export default function AdminWalletPage() {
   const [searching, setSearching] = useState(false);
   const [membership, setMembership] = useState<Membership | null>(null);
   const [membershipExpiry, setMembershipExpiry] = useState("");
+  // Derived when the row arrives, not during render: expiry needs Date.now(),
+  // which is impure and unstable across re-renders (react-hooks/purity).
+  const [isActiveMember, setIsActiveMember] = useState(false);
 
   const [form, setForm] = useState({
     type: "offer" as GrantableType,
@@ -151,14 +154,21 @@ export default function AdminWalletPage() {
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1);
-    setMembership(((data ?? [])[0] as Membership) ?? null);
+    const row = ((data ?? [])[0] as Membership) ?? null;
+    setMembership(row);
+    setIsActiveMember(
+      row?.status === "active"
+      && (!row.expires_at || new Date(row.expires_at).getTime() > Date.now()),
+    );
+    // Prefill with the current expiry so "Extend" starts from what is there
+    // rather than from blank, which would silently mean "no expiry".
+    setMembershipExpiry(row?.expires_at ? String(row.expires_at).slice(0, 10) : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function choose(p: Person) {
     setPerson(p);
     setResults([]);
-    setMembershipExpiry("");
     await Promise.all([loadItems(p.id), loadMembership(p.id)]);
   }
 
@@ -313,57 +323,62 @@ export default function AdminWalletPage() {
 
           <section className="space-y-3 rounded-md border p-4">
             <h2 className="text-lg font-semibold">Membership</h2>
-            {membership && membership.status === "active" ? (
-              <>
-                <p className="text-sm">
-                  <span className="font-medium">Active</span>
-                  <span className="text-muted-foreground">
-                    {" · "}{membership.tier}{" · "}{membership.source}
-                    {membership.expires_at
-                      ? ` · expires ${new Date(membership.expires_at).toLocaleDateString()}`
-                      : " · no expiry"}
-                  </span>
-                </p>
+            {isActiveMember ? (
+              <p className="text-sm">
+                <span className="font-medium">Active</span>
+                <span className="text-muted-foreground">
+                  {" · "}{membership?.tier}{" · "}{membership?.source}
+                  {membership?.expires_at
+                    ? ` · expires ${new Date(membership.expires_at).toLocaleDateString()}`
+                    : " · no expiry"}
+                </span>
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No active membership.
+                {membership?.status === "revoked" && membership.revoke_reason
+                  ? ` Last one revoked: ${membership.revoke_reason}`
+                  : ""}
+              </p>
+            )}
+
+            {/* The date and button render in BOTH states. admin_grant_membership
+                updates an active membership rather than inserting a second one
+                (the partial unique index would reject that anyway), so
+                extending is the same call as comping — it just needs to be
+                reachable, which it was not when this only appeared while
+                inactive. */}
+            <div className="flex items-end gap-2">
+              <label className="text-sm">
+                Expires
+                <input
+                  type="date"
+                  className="mt-1 block rounded-md border px-3 py-2"
+                  value={membershipExpiry}
+                  onChange={(e) => setMembershipExpiry(e.target.value)}
+                />
+              </label>
+              <button
+                className="rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
+                onClick={grantMembership}
+                disabled={busy}
+              >
+                {isActiveMember ? "Extend" : "Comp membership"}
+              </button>
+              {isActiveMember && (
                 <button
-                  className="rounded-md border px-3 py-1 text-xs font-semibold disabled:opacity-50"
+                  className="rounded-md border px-3 py-2 text-sm font-semibold disabled:opacity-50"
                   onClick={revokeMembership}
                   disabled={busy}
                 >
-                  Revoke membership
+                  Revoke
                 </button>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  No active membership.
-                  {membership?.status === "revoked" && membership.revoke_reason
-                    ? ` Last one revoked: ${membership.revoke_reason}`
-                    : ""}
-                </p>
-                <div className="flex items-end gap-2">
-                  <label className="text-sm">
-                    Expires
-                    <input
-                      type="date"
-                      className="mt-1 block rounded-md border px-3 py-2"
-                      value={membershipExpiry}
-                      onChange={(e) => setMembershipExpiry(e.target.value)}
-                    />
-                  </label>
-                  <button
-                    className="rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
-                    onClick={grantMembership}
-                    disabled={busy}
-                  >
-                    Comp membership
-                  </button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Leave the date empty for no expiry. Granting again on an active membership extends it
-                  rather than creating a second one.
-                </p>
-              </>
-            )}
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Leave the date empty for no expiry.
+              {isActiveMember ? " Extending replaces the current expiry." : ""}
+            </p>
           </section>
 
           <section className="space-y-3">
