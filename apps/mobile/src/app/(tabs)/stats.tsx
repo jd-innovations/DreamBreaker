@@ -727,7 +727,7 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
       });
       const separator = Platform.OS === 'ios' ? '&' : '?';
       await Linking.openURL(`sms:${phone}${separator}body=${encodeURIComponent(message)}`);
-      await markPersonalGuestShareInitiated(inviteFor.guestShareId);
+      await markPersonalGuestShareInitiated(inviteFor.guestShareId, 'sms');
       await refreshClaimStates();
       setInviteFor(null);
     } catch (error) {
@@ -879,7 +879,7 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
           // stays 'sms' because personal_guest_shares.share_channel is CHECK
           // constrained to that single value; recording 'qr' needs a migration.
           if (inviteFor?.guestShareId && inviteUrl) {
-            markPersonalGuestShareInitiated(inviteFor.guestShareId)
+            markPersonalGuestShareInitiated(inviteFor.guestShareId, 'qr')
               .then(refreshClaimStates)
               .catch(() => {});
           }

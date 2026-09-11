@@ -162,7 +162,7 @@ function DeliveryStatusRow({
       });
       const separator = Platform.OS === 'ios' ? '&' : '?';
       await Linking.openURL(`sms:${phone}${separator}body=${encodeURIComponent(message)}`);
-      await markPersonalGuestShareInitiated(delivery.guestShareId);
+      await markPersonalGuestShareInitiated(delivery.guestShareId, 'sms');
       onShareInitiated();
       setSheetOpen(false);
     } catch (error) {
@@ -179,7 +179,9 @@ function DeliveryStatusRow({
     setSheetOpen(false);
     if (claimUrl && delivery.guestShareId) {
       try {
-        await markPersonalGuestShareInitiated(delivery.guestShareId);
+        // Reached by closing the sheet with a QR on screen, so that is the
+        // channel -- an SMS send closes it through sendSms() instead.
+        await markPersonalGuestShareInitiated(delivery.guestShareId, 'qr');
         onShareInitiated();
       } catch {
         // Non-fatal: the claim link is already valid either way.

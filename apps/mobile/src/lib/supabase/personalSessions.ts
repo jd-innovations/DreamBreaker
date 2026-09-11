@@ -89,7 +89,7 @@ export type PersonalGuestShare = {
   guest_player_id: string;
   created_by: string;
   share_status: 'not_shared' | 'share_initiated' | 'claimed' | 'expired';
-  share_channel: 'sms';
+  share_channel: 'sms' | 'qr';
   share_initiated_at: string | null;
   created_at: string;
   updated_at: string;
@@ -235,9 +235,22 @@ export async function completePersonalSessionWithDistribution(input: {
   return (data ?? []) as PersonalParticipantDelivery[];
 }
 
-export async function markPersonalGuestShareInitiated(guestShareId: string): Promise<PersonalGuestShare> {
+/**
+ * Records that a guest was invited, and by which route.
+ *
+ * `channel` defaults to 'sms' because that matches the RPC's own default and
+ * every call site that predates the QR sheet. It is worth passing accurately:
+ * the QR path exists to remove the phone-number ask, and whether that converts
+ * better is only answerable if the two are told apart. Migration
+ * 20260911120000 widened share_channel to ('sms','qr') and added the parameter.
+ */
+export async function markPersonalGuestShareInitiated(
+  guestShareId: string,
+  channel: PersonalGuestShare['share_channel'] = 'sms',
+): Promise<PersonalGuestShare> {
   const { data, error } = await db.rpc('mark_personal_guest_share_initiated', {
     p_guest_share_id: guestShareId,
+    p_channel: channel,
   });
   if (error) throw error;
   return data as PersonalGuestShare;
