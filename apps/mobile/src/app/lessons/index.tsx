@@ -8,7 +8,8 @@ import { colors } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import { fetchActiveCoachOffersBrowse, type CoachOfferBrowseCard } from '@/lib/coach/offers';
 import { LoadingState, EmptyState, ErrorState } from '@/components';
-import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent } from '@/lib/coach/constants';
+import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent, effectiveOfferPrice } from '@/lib/coach/constants';
+import { useMembership } from '@/hooks/useMembership';
 import { DEFAULT_LESSON_COVER } from '@/lib/coach/defaultLessonCover';
 
 // Minimal player-facing browse surface for Coach Marketplace offers.
@@ -22,8 +23,33 @@ const L = {
   border: colors.border, bg: colors.bg, page: colors.page,
 };
 
+/**
+ * The card's price, from this buyer's point of view.
+ *
+ * A member sees the member price as THE price, with the public one struck
+ * through, so the benefit is visible while browsing rather than a surprise at
+ * checkout. Everyone else sees what membership would save them on this
+ * specific offer, which is a far better upsell than a generic pitch.
+ */
+function PriceRow({ item, isMember }: { item: CoachOfferBrowseCard; isMember: boolean }) {
+  const price = effectiveOfferPrice(item, isMember);
+  return (
+    <>
+      <View style={s.priceRow}>
+        <Text style={s.priceStrike}>{formatPriceCents(item.regular_price_cents)}</Text>
+        <Text style={s.priceNow}>{formatPriceCents(price.cents)}</Text>
+        <Text style={s.pctOff}>{discountPercent(item.regular_price_cents, price.cents)}% off</Text>
+      </View>
+      {!price.isMemberPrice && item.premium_price_cents != null && (
+        <Text style={s.memberHint}>Members pay {formatPriceCents(item.premium_price_cents)}</Text>
+      )}
+    </>
+  );
+}
+
 export default function LessonMarketplaceScreen() {
   const insets = useSafeAreaInsets();
+  const { isMember } = useMembership();
   const [offers, setOffers] = useState<CoachOfferBrowseCard[]>([]);
   const [loading, setLoading] = useState(true);
   // The catch here used to be `() => {}`, so a failed fetch left `offers` empty
@@ -94,11 +120,7 @@ export default function LessonMarketplaceScreen() {
                       {item.facility.name} · {item.facility.city}, {item.facility.state}
                     </Text>
                   )}
-                  <View style={s.priceRow}>
-                    <Text style={s.priceStrike}>{formatPriceCents(item.regular_price_cents)}</Text>
-                    <Text style={s.priceNow}>{formatPriceCents(item.discounted_price_cents)}</Text>
-                    <Text style={s.pctOff}>{discountPercent(item.regular_price_cents, item.discounted_price_cents)}% off</Text>
-                  </View>
+                  <PriceRow item={item} isMember={isMember} />
                 </View>
                 {item.premium_only && (
                   <View style={s.premiumBadge}><Text style={s.premiumBadgeText}>PREMIUM</Text></View>
@@ -130,6 +152,9 @@ const s = StyleSheet.create({
   thumb: { width: 64, height: 64, borderRadius: shape.cta },
   cardTitle: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
   cardSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+  memberHint: {
+    color: L.gold, fontSize: text.caption.size, fontWeight: '700', marginTop: 2,
+  },
   cardLocation: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
   priceStrike: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textDecorationLine: 'line-through' },

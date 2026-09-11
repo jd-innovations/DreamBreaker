@@ -7,7 +7,8 @@ import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { fetchCoachOfferBrowseDetail, type CoachOfferBrowseCard } from '@/lib/coach/offers';
-import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent } from '@/lib/coach/constants';
+import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent, effectiveOfferPrice } from '@/lib/coach/constants';
+import { useMembership } from '@/hooks/useMembership';
 import { useSession } from '@/hooks/useSession';
 import { useCoachOfferPayment } from '@/lib/payments/useCoachOfferPayment';
 import { coachOfferPaymentErrorMessage } from '@/lib/payments/coachOfferPaymentIntent';
@@ -29,6 +30,7 @@ const L = {
 
 export default function LessonOfferDetailScreen() {
   const insets = useSafeAreaInsets();
+  const { isMember } = useMembership();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [offer, setOffer] = useState<CoachOfferBrowseCard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -98,7 +100,11 @@ export default function LessonOfferDetailScreen() {
   }
 
   const typeLabel = OFFER_TYPE_OPTIONS.find((o) => o.value === offer.offer_type)?.label ?? offer.offer_type;
-  const pct = discountPercent(offer.regular_price_cents, offer.discounted_price_cents);
+  // Priced for THIS buyer. Until 2026-09-11 the screen always showed
+  // discounted_price_cents while the server charged the member price, so a
+  // member was quoted one number and billed a lower one.
+  const price = effectiveOfferPrice(offer, isMember);
+  const pct = discountPercent(offer.regular_price_cents, price.cents);
 
   // Each of these is also enforced server-side by create_coach_offer_purchase();
   // reproducing them here only decides what the button looks like. The RPC is
@@ -106,8 +112,10 @@ export default function LessonOfferDetailScreen() {
   const isOwnOffer = !!user?.id && user.id === offer.coach_id;
   const soldOut = offer.quantity_remaining != null && offer.quantity_remaining <= 0;
   const maxParticipants = offer.max_participants ?? 1;
-  const canBook = !isOwnOffer && !soldOut && !offer.premium_only;
-  const unitPriceCents = offer.discounted_price_cents ?? offer.regular_price_cents;
+  // premium_only is now refused per-buyer rather than outright, so a member can
+  // book one and everyone else still cannot.
+  const canBook = !isOwnOffer && !soldOut && (!offer.premium_only || isMember);
+  const unitPriceCents = price.cents;
   const subtotalCents = unitPriceCents * quantity;
   // Per purchase in fixed mode, whatever the headcount — a lesson is one
   // transaction. The server computes this identically and snapshots it.
@@ -159,12 +167,20 @@ export default function LessonOfferDetailScreen() {
         <View style={s.priceCard}>
           <View style={s.priceRow}>
             <Text style={s.priceStrike}>{formatPriceCents(offer.regular_price_cents)}</Text>
-            <Text style={s.priceNow}>{formatPriceCents(offer.discounted_price_cents)}</Text>
+            <Text style={s.priceNow}>{formatPriceCents(price.cents)}</Text>
             <Text style={s.pctOff}>{pct}% off</Text>
           </View>
-          {offer.premium_price_cents != null && (
-            <Text style={s.premiumPriceHint}>Premium members: {formatPriceCents(offer.premium_price_cents)}</Text>
-          )}
+          {/* Two different messages. A member is told the lower price they see
+              IS the member price, so the benefit is visible rather than a
+              silent discount at checkout. A non-member is told what it would
+              cost them — the only upsell in this flow, and it costs nothing. */}
+          {price.isMemberPrice ? (
+            <Text style={s.premiumPriceHint}>Member price applied</Text>
+          ) : offer.premium_price_cents != null ? (
+            <Text style={s.premiumPriceHint}>
+              Members pay {formatPriceCents(offer.premium_price_cents)}
+            </Text>
+          ) : null}
         </View>
 
         {offer.description && <Text style={s.description}>{offer.description}</Text>}
