@@ -852,7 +852,15 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
                             {teamTwo.map((gp) => participantName(gp.session_participant_id)).join(' & ') || 'TBD'}
                           </Text>
                         </View>
-                        <GameParLine event={gameImpact.get(game.id)} format={item.session.format} />
+                        {/* Only worth showing when there is more than one
+                            rated game. With a single game the session summary
+                            above IS this game, so the line repeated itself word
+                            for word six lines later. Across two games it earns
+                            its place -- an expected win and an upset read very
+                            differently, and the summed total hides that. */}
+                        {gameImpact.size > 1 && (
+                          <GameParLine event={gameImpact.get(game.id)} format={item.session.format} />
+                        )}
                       </View>
                     );
                   })
@@ -1120,6 +1128,10 @@ const dm = StyleSheet.create({
   },
   scroll: {
     padding: spacing.lg,
+    // More air above the title than beside it: spacing.lg is a body gutter, and
+    // this sheet opens on its heaviest type sitting directly under a bordered
+    // header, which needs the room that body text does not.
+    paddingTop: spacing.xxl,
     paddingBottom: spacing.xxxl,
   },
   title: {
