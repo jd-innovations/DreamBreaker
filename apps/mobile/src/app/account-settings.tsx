@@ -50,7 +50,7 @@ const SETTINGS_CELLS = [
   { icon: 'speedometer-outline',   label: 'Rating'        },
   { icon: 'location-outline',      label: 'Location'      },
   { icon: 'person-add-outline',    label: 'Contact'       },
-  { icon: 'refresh-outline',       label: 'My Plan'       },
+  { icon: 'refresh-outline',       label: 'My Plan',       feature: 'paidMembership' as const },
   { icon: 'cash-outline',          label: 'Payments'      },
   { icon: 'notifications-outline', label: 'Notifications' },
   { icon: 'lock-closed-outline',   label: 'Permissions'   },
@@ -148,12 +148,17 @@ export default function AccountSettingsScreen() {
   // the other money you receive — and that row grows to three, matching the
   // Notifications row's width.
   const canReceivePayouts = !!profile?.is_coach || !!profile?.is_director;
+  // Out-of-scope cells drop out before pairing, so the 2-up grid re-flows
+  // rather than leaving a hole where one used to be.
+  const inScopeCells = SETTINGS_CELLS.filter(
+    (item) => !('feature' in item) || !item.feature || isFeatureEnabled(item.feature),
+  );
   const cells = canReceivePayouts
-    ? SETTINGS_CELLS.flatMap(item =>
+    ? inScopeCells.flatMap(item =>
         item.label === 'Payments'
           ? [item, { icon: 'wallet-outline', label: 'Payouts' }]
           : [item])
-    : SETTINGS_CELLS;
+    : inScopeCells;
   const settingsGrid = chunkPairs(cells);
   const completion = getProfileCompletion(profile);
 

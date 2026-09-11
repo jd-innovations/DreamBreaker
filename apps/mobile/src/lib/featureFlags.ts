@@ -74,6 +74,7 @@ export type FeatureKey =
   | 'wallet'
   | 'marketplaceAiAssist'
   | 'myStats'
+  | 'paidMembership'
   | 'playerLists'
   | 'weeklyGame'
   | 'devTools';
@@ -115,6 +116,17 @@ export const FEATURE_VISIBILITY: Record<FeatureKey, FeatureVisibility> = {
   // PAR value is computed client-side; the screen renders what the server
   // already stores.
   myStats: 'included',
+  // The paid-membership product. membership-settings.tsx renders a complete
+  // mockup -- four benefits, three plan cards (Free/Plus/Director), a Billing
+  // group -- and none of it is wired: no onPress on Upgrade, plan cards set
+  // local state only, Billing History / Payment Methods / Restore Purchases
+  // navigate nowhere, and no price appears anywhere in the file. There is also
+  // no memberships table, no column on profiles, and no recurring billing.
+  //
+  // Deferred rather than deleted because the screen is the design for a real
+  // product -- see MONETIZATION_PLAN.md and MEMBERSHIP_EXECUTION_PLAN.md. Item
+  // 1.1 of that plan is this flag; 3.3 rewrites the screen and ungates it.
+  paidMembership: 'deferred',
   // "New List" on Play Pickleball. Nothing exists behind it -- no screen, and
   // no table in production either (checked 2026-09-10: no player_lists, no
   // roster table of any shape). The row shipped pointing at /new-list, which

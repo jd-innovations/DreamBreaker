@@ -55,10 +55,10 @@ const MORE_NAV: NavItem[] = ALL_MORE_NAV.filter(
   (item) => !item.feature || isFeatureEnabled(item.feature)
 );
 
-type AccordionItem = { label: string; href: string };
+type AccordionItem = { label: string; href: string; feature?: FeatureKey };
 type AccordionSection = { id: string; label: string; icon: IconName; items: AccordionItem[] };
 
-const ACCORDION_SECTIONS: AccordionSection[] = [
+const ALL_ACCORDION_SECTIONS: AccordionSection[] = [
   {
     id: 'help',
     label: 'Help & Support',
@@ -73,7 +73,7 @@ const ACCORDION_SECTIONS: AccordionSection[] = [
       { label: 'Account Settings', href: '/account-settings' },
       { label: 'Notifications', href: '/notifications-settings' },
       { label: 'Payments', href: '/payments-settings' },
-      { label: 'Membership', href: '/membership-settings' },
+      { label: 'Membership', href: '/membership-settings', feature: 'paidMembership' },
       { label: 'Location', href: '/location-settings' },
       { label: 'Communication', href: '/communication-settings' },
       { label: 'Permissions', href: '/permissions-settings' },
@@ -81,6 +81,16 @@ const ACCORDION_SECTIONS: AccordionSection[] = [
     ],
   },
 ];
+
+// Same treatment as MORE_NAV above: out-of-scope entries are filtered, and a
+// section left with no items is dropped whole rather than surviving as a
+// heading that expands to nothing.
+const ACCORDION_SECTIONS: AccordionSection[] = ALL_ACCORDION_SECTIONS
+  .map((section) => ({
+    ...section,
+    items: section.items.filter((item) => !item.feature || isFeatureEnabled(item.feature)),
+  }))
+  .filter((section) => section.items.length > 0);
 
 export type RecentItem = { id: string; label: string; subtitle?: string; href: string };
 

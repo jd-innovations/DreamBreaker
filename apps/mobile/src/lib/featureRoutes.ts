@@ -14,6 +14,7 @@ const GATED_ROUTE_PREFIXES: { prefix: string; feature: FeatureKey }[] = [
   { prefix: '/lessons', feature: 'lessonMarketplace' },
   { prefix: '/wallet', feature: 'wallet' },
   { prefix: '/stats', feature: 'myStats' },
+  { prefix: '/membership-settings', feature: 'paidMembership' },
 ];
 
 // Segment-aware so `/wallet` and `/wallet/abc` match but `/wallet-help`
