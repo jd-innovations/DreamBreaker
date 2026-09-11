@@ -1242,7 +1242,7 @@ const dm = StyleSheet.create({
   },
   gameParRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginTop: 8, paddingTop: 8,
+    marginTop: spacing.sm, paddingTop: spacing.sm,
     borderTopWidth: 1, borderTopColor: colors.border,
   },
   gameParChange: { fontSize: text.caption.size, fontWeight: '800' },

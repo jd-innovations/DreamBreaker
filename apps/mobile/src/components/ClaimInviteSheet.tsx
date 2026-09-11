@@ -149,8 +149,10 @@ const s = StyleSheet.create({
   anchor: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.bg,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
+    // Matches AttachmentOptionsSheet and ManageEventSheet -- the scale tops out
+    // at pill (20) with no sheet radius of its own, so both derive one this way.
+    borderTopLeftRadius: shape.card + 8,
+    borderTopRightRadius: shape.card + 8,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     paddingBottom: spacing.xxl,
@@ -194,7 +196,7 @@ const s = StyleSheet.create({
   primaryText: { color: colors.navy, fontSize: text.action.size, fontWeight: '800' },
 
   secondary: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingVertical: spacing.md, marginTop: spacing.sm,
   },
   secondaryText: { color: colors.navy, fontSize: text.body.size, fontWeight: '700' },
