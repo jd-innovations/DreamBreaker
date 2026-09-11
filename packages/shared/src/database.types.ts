@@ -8329,6 +8329,10 @@ export type Database = {
         Returns: undefined
       }
       mark_wallet_item_seen: { Args: { p_item_id: string }; Returns: undefined }
+      marketplace_listing_limit_for: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       par_clamp: {
         Args: { p_max: number; p_min: number; p_value: number }
         Returns: number

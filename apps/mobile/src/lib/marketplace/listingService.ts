@@ -216,14 +216,26 @@ export async function fetchActiveListingCount(sellerId: string): Promise<number>
   return count ?? 0;
 }
 
+/**
+ * The seller's effective cap: an explicit profiles override, else the member
+ * allowance, else the free one.
+ *
+ * Reads the RPC rather than profiles.marketplace_listing_limit directly,
+ * because that column is now only the OVERRIDE -- it is null for almost
+ * everyone, and reading it alone reported the free limit to paying members.
+ * marketplace_listing_limit_for() derives the answer from is_paid_member() at
+ * call time, so an expiring membership needs no write to take effect.
+ *
+ * This is display only. The cap is enforced by trg_enforce_listing_limit on
+ * insert, which is what makes it a real limit rather than a suggestion -- until
+ * 2026-09-11 nothing on the server checked it at all.
+ */
 export async function fetchListingLimit(sellerId: string): Promise<number> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('marketplace_listing_limit')
-    .eq('id', sellerId)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('marketplace_listing_limit_for', {
+    p_user_id: sellerId,
+  });
   if (error) throw error;
-  return data?.marketplace_listing_limit ?? DEFAULT_FREE_LISTING_LIMIT;
+  return typeof data === 'number' ? data : DEFAULT_FREE_LISTING_LIMIT;
 }
 
 export async function canCreateListing(sellerId: string): Promise<{ allowed: boolean; activeCount: number; limit: number }> {
