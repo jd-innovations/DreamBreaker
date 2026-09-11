@@ -14,8 +14,9 @@ import {
   fetchMyMatchHistory, fetchPersonalSessionWithGames, fetchPersonalGuestClaimStates,
   type PersonalMatchHistoryItem, type PersonalSessionDetails, type PersonalGuestClaimState,
 } from '@/lib/supabase/personalSessions';
-import { explainParEvent, explainParProcessing, formatParChange } from '@/lib/supabase/par';
+import { explainParEvent, explainParProcessing, formatParChange, fetchParImpactForSessions, type MatchParImpact } from '@/lib/supabase/par';
 import { onProfileUpdated } from '@/lib/profileEvents';
+import { appLinks, APP_LINK_ORIGIN } from '@/lib/appLinks';
 import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -202,6 +203,15 @@ function formatSessionDate(playedAt: string) {
   });
 }
 
+// Date plus time. "Thu, Sep 10, 2026" alone cannot tell two sessions on the
+// same day apart, and three sessions were logged on 2026-09-10 hours apart at
+// different courts.
+function formatSessionDateTime(playedAt: string) {
+  const when = new Date(playedAt);
+  const time = when.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return `${formatSessionDate(playedAt)} at ${time}`;
+}
+
 function formatFormat(format: PersonalMatchHistoryItem['session']['format']) {
   return format === 'singles' ? 'Singles' : 'Doubles';
 }
@@ -351,14 +361,34 @@ function FilterRow<T extends string>({
   );
 }
 
+/**
+ * The generic share -- the one behind the share icon, sent to anyone.
+ *
+ * It used to end at "Logged on Pickleball App" with no URL at all, so a
+ * recipient had nothing to tap: they could not see the app, install it, or act
+ * on the message. This is how a recorder shows off a result, and it was the one
+ * part of the sharing loop that led nowhere.
+ *
+ * It deliberately carries NO claim token. A token identifies one guest's slot
+ * in one match, and this message goes to whoever the sender picks -- putting a
+ * claim link here would hand someone else's match to a stranger. Per-guest
+ * invites are a separate, addressed action.
+ *
+ * The link points at the FACILITY when the session has one: a real page, in the
+ * universal-link path list so it opens the app for anyone who has it, and
+ * /api/og renders it a branded preview card. Sessions with no facility fall
+ * back to the site root. Revisit if a public match page ever exists.
+ */
 function buildMatchShareMessage(item: PersonalMatchHistoryItem): string {
   const { session, facilityName, gameCount, record } = item;
   const lines = [
-    `${formatFormat(session.format)} session on ${formatSessionDate(session.played_at)}`,
+    `${formatFormat(session.format)} session on ${formatSessionDateTime(session.played_at)}`,
   ];
   if (facilityName) lines.push(`📍 ${facilityName}`);
   lines.push(`${gameCount} game${gameCount === 1 ? '' : 's'} logged${record ? ` · ${record.wins}-${record.losses} record` : ''}`);
-  lines.push('\nLogged on Pickleball App 🏓');
+  lines.push('');
+  lines.push('Logged on Pickleball App 🏓');
+  lines.push(session.facility_id ? appLinks.facility(session.facility_id) : APP_LINK_ORIGIN);
   return lines.join('\n');
 }
 
@@ -407,25 +437,35 @@ function MatchHistoryRow({ item, onPress }: { item: PersonalMatchHistoryItem; on
   );
 }
 
-function ParImpactLine({ item }: { item: PersonalMatchHistoryItem }) {
-  const impact = item.parImpact;
+function ParImpactLine({ item, impactOverride }: { item: PersonalMatchHistoryItem; impactOverride?: MatchParImpact | null }) {
+  const impact = impactOverride ?? item.parImpact;
   const change = formatParChange(impact?.totalChange);
   const processed = impact?.status === 'processed' && change;
+  // Rated, but with no rating event for THIS viewer -- someone who recorded a
+  // session they did not play in. The prefix used to say "PAR pending" here
+  // while the suffix said the impact had been calculated: two contradictory
+  // halves of the same sentence, which is what shipped.
+  const ratedWithoutMe = impact?.status === 'processed' && !change;
   const explanation = processed
-    ? explainParEvent(impact.latestEvent)
+    ? explainParEvent(impact.latestEvent, item.session.format)
     : explainParProcessing(impact && impact.status !== 'not_started'
       ? { status: impact.status, eligibility_reason: impact.reason, error_message: null }
       : null);
 
+  let prefix: string;
+  if (processed) prefix = `PAR impact ${change}`;
+  else if (ratedWithoutMe) prefix = 'Rated';
+  else prefix = 'PAR pending';
+
   return (
     <View style={mm.parLine}>
       <Ionicons
-        name={processed ? 'trending-up-outline' : 'time-outline'}
+        name={processed ? 'trending-up-outline' : ratedWithoutMe ? 'checkmark-circle-outline' : 'time-outline'}
         size={14}
         color={processed ? colors.gold : colors.textMuted}
       />
       <Text style={[mm.parText, processed && mm.parTextProcessed]} numberOfLines={2}>
-        {processed ? `PAR impact ${change}` : 'PAR pending'}
+        {prefix}
         {explanation ? ` - ${explanation}` : ''}
       </Text>
     </View>
@@ -476,7 +516,14 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
   // If this call fails or returns nothing (anyone who did not RECORD the
   // session sees nothing, by RLS), the screen renders exactly as before.
   const [claimStates, setClaimStates] = useState<Map<string, PersonalGuestClaimState>>(new Map());
+  // PAR is refetched here rather than reused from the list row. Processing
+  // finishes roughly a minute after a session is saved, so a row rendered
+  // before that caches "pending" and the modal inherited it -- showing a fresh
+  // games list beside stale rating text. Falls back to the list's copy while
+  // this is in flight, so the line is never empty.
+  const [freshImpact, setFreshImpact] = useState<MatchParImpact | null>(null);
   const sessionId = item?.session.id ?? null;
+  const viewerId = item?.session.created_by ?? null;
 
   useEffect(() => {
     if (!sessionId) {
@@ -505,6 +552,18 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
     return () => { cancelled = true; };
   }, [sessionId]);
 
+  useEffect(() => {
+    if (!sessionId || !viewerId) {
+      setFreshImpact(null);
+      return;
+    }
+    let cancelled = false;
+    fetchParImpactForSessions([sessionId], viewerId)
+      .then((map) => { if (!cancelled) setFreshImpact(map.get(sessionId) ?? null); })
+      .catch(() => { if (!cancelled) setFreshImpact(null); });
+    return () => { cancelled = true; };
+  }, [sessionId, viewerId]);
+
   function handleShare() {
     if (!item) return;
     Share.share({ message: buildMatchShareMessage(item) }).catch(() => {});
@@ -532,7 +591,7 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
         {item && (
           <ScrollView contentContainerStyle={dm.scroll}>
             <Text style={dm.title}>{formatFormat(item.session.format)} session</Text>
-            <Text style={dm.subtitle}>{formatSessionDate(item.session.played_at)}</Text>
+            <Text style={dm.subtitle}>{formatSessionDateTime(item.session.played_at)}</Text>
 
             {item.session.facility_id && item.facilityName ? (
               // onClose() before the push: this is a pageSheet modal, so
@@ -565,7 +624,7 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
             </View>
 
             <View style={dm.parWrap}>
-              <ParImpactLine item={item} />
+              <ParImpactLine item={item} impactOverride={freshImpact} />
             </View>
 
             {loading ? (

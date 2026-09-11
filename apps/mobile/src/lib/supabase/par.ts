@@ -102,21 +102,37 @@ export function confidenceBandLabel(band: ParConfidenceBand | null | undefined) 
   return 'Low confidence';
 }
 
-export function explainParEvent(event: Pick<ParRatingEvent, 'explanation_code' | 'par_change'> | null) {
+/**
+ * Plain-English reason a rated game moved the player's PAR.
+ *
+ * `format` exists because every string here was written for doubles and read
+ * wrong in singles -- "Your team won an expected match" for a one-on-one game,
+ * where there is no team. Pass the session's format and singles gets
+ * "opponent" wording; omitting it keeps the doubles phrasing, which is what
+ * every existing caller had.
+ */
+export function explainParEvent(
+  event: Pick<ParRatingEvent, 'explanation_code' | 'par_change'> | null,
+  format?: 'singles' | 'doubles' | null,
+) {
   if (!event) return null;
+  const solo = format === 'singles';
   switch (event.explanation_code) {
     case 'upset_win':
-      return 'You beat a stronger team.';
+      return solo ? 'You beat a stronger opponent.' : 'You beat a stronger team.';
     case 'expected_win_clear':
-      return 'Your team was favored and won clearly.';
+      return solo ? 'You were favored and won clearly.' : 'Your team was favored and won clearly.';
     case 'expected_win':
-      return event.par_change > 0 ? 'Your team won an expected match.' : 'Your team won, with limited rating movement.';
+      if (event.par_change > 0) {
+        return solo ? 'You won an expected match.' : 'Your team won an expected match.';
+      }
+      return solo ? 'You won, with limited rating movement.' : 'Your team won, with limited rating movement.';
     case 'upset_loss':
-      return 'You lost to a lower-rated team.';
+      return solo ? 'You lost to a lower-rated opponent.' : 'You lost to a lower-rated team.';
     case 'close_loss_stronger_team':
-      return 'You kept it close against a stronger team.';
+      return solo ? 'You kept it close against a stronger opponent.' : 'You kept it close against a stronger team.';
     case 'loss':
-      return 'Your team lost this rated game.';
+      return solo ? 'You lost this rated game.' : 'Your team lost this rated game.';
     case 'reversal':
       return 'This rating event was reversed.';
     default:
@@ -131,6 +147,12 @@ export function explainParProcessing(processing: Pick<ParGameProcessing, 'status
   if (processing.status === 'failed') return processing.error_message ? `PAR processing failed: ${processing.error_message}` : 'PAR processing needs retry.';
   if (processing.status === 'pending' || processing.status === 'eligible' || processing.status === 'processing') return 'PAR processing pending.';
   if (processing.status === 'reversed') return 'PAR impact was reversed for this game.';
+  // 'processed' had no case, so it fell through to the default below and the
+  // line read "PAR pending - PAR impact calculated." -- both halves at once.
+  // Reaching here with 'processed' means the game WAS rated but produced no
+  // rating event for this viewer, which is what happens when someone records a
+  // session they did not play in.
+  if (processing.status === 'processed') return 'Rated, with no change to your rating.';
   return 'PAR impact calculated.';
 }
 
