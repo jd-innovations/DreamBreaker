@@ -26,6 +26,7 @@ import type { Database } from '@shared/database.types';
 import { improveListing } from '@/lib/marketplace/improveListing';
 import { isFeatureEnabled } from '@/lib/featureFlags';
 
+import { spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 
@@ -207,7 +208,7 @@ export default function CreateListingScreen() {
           You have {limitBlocked.activeCount} active listing{limitBlocked.activeCount === 1 ? '' : 's'} —
           the limit for your account is {limitBlocked.limit}. Mark one Sold or delete it to list another paddle.
         </Text>
-        <TouchableOpacity style={s.primaryBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={s.limitBtn} onPress={() => router.back()} activeOpacity={0.85}>
           <Text style={s.primaryBtnText}>Go back</Text>
         </TouchableOpacity>
       </View>
@@ -542,7 +543,7 @@ function PreviewStep({ draft, title }: { draft: Draft; title: string }) {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.bg },
-  centerFill: { alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 },
+  centerFill: { alignItems: 'center', justifyContent: 'center', gap: spacing.md, paddingHorizontal: spacing.xxxl },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   stepCount: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
@@ -556,6 +557,16 @@ const s = StyleSheet.create({
   fieldLabel: { color: L.text, fontSize: text.fieldLabel.size, fontWeight: '800', marginBottom: 8 },
 
   primaryBtn: { backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 16, alignItems: 'center' },
+  // primaryBtn carries no horizontal padding because in the footer it is a
+  // full-width block. Here it sits inside centerFill's alignItems:'center', so
+  // it shrinks to its text -- and with no side padding "Go back" touched both
+  // edges of the navy box. minWidth keeps a two-word label from rendering as a
+  // small tight pill.
+  limitBtn: {
+    backgroundColor: L.navy, borderRadius: shape.cta,
+    paddingVertical: 16, paddingHorizontal: spacing.xxl,
+    minWidth: 200, alignItems: 'center', marginTop: spacing.sm,
+  },
   primaryBtnDisabled: { opacity: 0.4 },
   primaryBtnText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
 
