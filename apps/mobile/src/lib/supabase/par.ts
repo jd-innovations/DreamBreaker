@@ -191,6 +191,45 @@ export async function processPersonalSessionPar(sessionId: string): Promise<ParG
   return (data ?? []) as ParGameProcessing[];
 }
 
+/**
+ * This viewer's rating change for each game in one session, keyed by game id.
+ *
+ * Separate from fetchParImpactForSessions(), which sums a whole session into a
+ * single number. That sum hides the interesting part: a session reading "+0.04"
+ * was actually an expected win (+0.0193) and an upset win over a stronger team
+ * (+0.0230), and only the second is worth telling anyone about.
+ *
+ * Games with no row here produced no rating event for this viewer -- an
+ * ineligible game, or a session someone recorded without playing in it. Callers
+ * should render nothing rather than a zero, which would claim the game was
+ * rated at no gain.
+ */
+export async function fetchParImpactByGame(
+  sessionId: string,
+  profileId: string,
+): Promise<Map<string, ParRatingEvent>> {
+  const byGame = new Map<string, ParRatingEvent>();
+
+  const { data, error } = await db
+    .from('par_rating_events')
+    .select('*')
+    .eq('session_id', sessionId)
+    .eq('profile_id', profileId)
+    .eq('event_type', 'game_processed')
+    .is('reversed_at', null);
+
+  // Additive detail on a screen that works without it -- never throw.
+  if (error) {
+    console.warn('[par] per-game impact unavailable:', error.message);
+    return byGame;
+  }
+
+  for (const row of (data ?? []) as ParRatingEvent[]) {
+    if (row.game_id) byGame.set(row.game_id, row);
+  }
+  return byGame;
+}
+
 export async function fetchParImpactForSessions(sessionIds: string[], profileId: string): Promise<Map<string, MatchParImpact>> {
   const impactBySession = new Map<string, MatchParImpact>();
   if (sessionIds.length === 0) return impactBySession;

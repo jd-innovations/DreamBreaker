@@ -16,7 +16,10 @@ import {
   markPersonalGuestShareInitiated,
   type PersonalMatchHistoryItem, type PersonalSessionDetails, type PersonalGuestClaimState,
 } from '@/lib/supabase/personalSessions';
-import { explainParEvent, explainParProcessing, formatParChange, fetchParImpactForSessions, type MatchParImpact } from '@/lib/supabase/par';
+import {
+  explainParEvent, explainParProcessing, formatParChange, fetchParImpactForSessions,
+  fetchParImpactByGame, type MatchParImpact, type ParRatingEvent,
+} from '@/lib/supabase/par';
 import { onProfileUpdated } from '@/lib/profileEvents';
 import { appLinks, APP_LINK_ORIGIN } from '@/lib/appLinks';
 import { buildClaimInviteMessage, type ClaimInviteGame } from '@/lib/personalMatchShare';
@@ -539,6 +542,38 @@ function ClaimBadge({
   );
 }
 
+/**
+ * What this one game did to the viewer's rating.
+ *
+ * The session line above sums every game, which flattens the detail: "+0.04"
+ * over two games was an expected win and an upset win over a stronger team, and
+ * only the second is worth mentioning.
+ *
+ * Renders nothing when the game produced no event for this viewer -- an
+ * ineligible game, or a session recorded by someone who did not play in it.
+ * A "+0.00" there would claim the game was rated and simply gained nothing,
+ * which is a different and untrue statement.
+ */
+function GameParLine({
+  event, format,
+}: {
+  event?: ParRatingEvent;
+  format: PersonalMatchHistoryItem['session']['format'];
+}) {
+  if (!event) return null;
+  const change = formatParChange(event.par_change);
+  if (!change) return null;
+  const reason = explainParEvent(event, format);
+  const up = event.par_change > 0;
+
+  return (
+    <View style={dm.gameParRow}>
+      <Text style={[dm.gameParChange, up ? dm.gameParUp : dm.gameParDown]}>{change}</Text>
+      {!!reason && <Text style={dm.gameParReason} numberOfLines={1}>{reason}</Text>}
+    </View>
+  );
+}
+
 function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | null; onClose: () => void }) {
   const [detail, setDetail] = useState<PersonalSessionDetails | null>(null);
   const [loading, setLoading] = useState(false);
@@ -560,6 +595,7 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
   const [inviteFor, setInviteFor] = useState<PersonalGuestClaimState | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [gameImpact, setGameImpact] = useState<Map<string, ParRatingEvent>>(new Map());
   const sessionId = item?.session.id ?? null;
   const viewerId = item?.session.created_by ?? null;
 
@@ -599,6 +635,9 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
     fetchParImpactForSessions([sessionId], viewerId)
       .then((map) => { if (!cancelled) setFreshImpact(map.get(sessionId) ?? null); })
       .catch(() => { if (!cancelled) setFreshImpact(null); });
+    fetchParImpactByGame(sessionId, viewerId)
+      .then((map) => { if (!cancelled) setGameImpact(map); })
+      .catch(() => { if (!cancelled) setGameImpact(new Map()); });
     return () => { cancelled = true; };
   }, [sessionId, viewerId]);
 
@@ -813,6 +852,7 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
                             {teamTwo.map((gp) => participantName(gp.session_participant_id)).join(' & ') || 'TBD'}
                           </Text>
                         </View>
+                        <GameParLine event={gameImpact.get(game.id)} format={item.session.format} />
                       </View>
                     );
                   })
@@ -1187,6 +1227,18 @@ const dm = StyleSheet.create({
   },
   gameTeamsCol: {
     gap: 2,
+  },
+  gameParRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 8, paddingTop: 8,
+    borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  gameParChange: { fontSize: text.caption.size, fontWeight: '800' },
+  gameParUp: { color: colors.success },
+  gameParDown: { color: colors.danger },
+  gameParReason: {
+    color: colors.textMuted, fontSize: text.caption.size, fontWeight: '500',
+    flexShrink: 1,
   },
   gameTeamText: {
     color: colors.textSub,
