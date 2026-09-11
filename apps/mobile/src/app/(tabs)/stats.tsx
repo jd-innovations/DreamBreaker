@@ -187,6 +187,15 @@ const STATUS_LABEL: Record<PersonalMatchHistoryItem['session']['status'], string
   cancelled: 'Cancelled',
 };
 
+// A pricetag sat next to every one of these, which reads as a category rather
+// than a state. The icon now says what the label says.
+const STATUS_ICON: Record<PersonalMatchHistoryItem['session']['status'], keyof typeof Ionicons.glyphMap> = {
+  draft: 'create-outline',
+  active: 'play-circle-outline',
+  completed: 'checkmark-circle-outline',
+  cancelled: 'close-circle-outline',
+};
+
 function formatSessionDate(playedAt: string) {
   return new Date(playedAt).toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
@@ -525,12 +534,33 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
             <Text style={dm.title}>{formatFormat(item.session.format)} session</Text>
             <Text style={dm.subtitle}>{formatSessionDate(item.session.played_at)}</Text>
 
+            {item.session.facility_id && item.facilityName ? (
+              // onClose() before the push: this is a pageSheet modal, so
+              // navigating underneath it would leave the facility screen
+              // hidden behind the sheet.
+              <TouchableOpacity
+                style={dm.metaRow}
+                activeOpacity={0.7}
+                accessibilityRole="link"
+                accessibilityLabel={`Open ${item.facilityName}`}
+                onPress={() => {
+                  const facilityId = item.session.facility_id;
+                  onClose();
+                  router.push(`/facility/${facilityId}` as never);
+                }}
+              >
+                <Ionicons name="location-outline" size={15} color={colors.gold} />
+                <Text style={[dm.metaText, dm.metaLink]}>{item.facilityName}</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.gold} />
+              </TouchableOpacity>
+            ) : (
+              <View style={dm.metaRow}>
+                <Ionicons name="location-outline" size={15} color={colors.textSub} />
+                <Text style={dm.metaText}>{item.facilityName ?? 'No facility recorded'}</Text>
+              </View>
+            )}
             <View style={dm.metaRow}>
-              <Ionicons name="location-outline" size={15} color={colors.textSub} />
-              <Text style={dm.metaText}>{item.facilityName ?? 'No facility recorded'}</Text>
-            </View>
-            <View style={dm.metaRow}>
-              <Ionicons name="pricetag-outline" size={15} color={colors.textSub} />
+              <Ionicons name={STATUS_ICON[item.session.status]} size={15} color={colors.textSub} />
               <Text style={dm.metaText}>{STATUS_LABEL[item.session.status]}</Text>
             </View>
 
@@ -570,12 +600,18 @@ function MatchDetailModal({ item, onClose }: { item: PersonalMatchHistoryItem | 
                             <Text style={dm.gamePending}>Not completed</Text>
                           )}
                         </View>
-                        <View style={dm.gameTeamsRow}>
-                          <Text style={[dm.gameTeamText, game.winning_team === 1 && dm.gameTeamWinner]} numberOfLines={1}>
+                        {/* Stacked, not side by side. Sharing one row gave each
+                            team half the width with numberOfLines={1}, so your
+                            own team -- always the longest, since it carries your
+                            full name -- truncated every time. In doubles that
+                            hid who you played WITH, which is the most useful
+                            fact on the card. */}
+                        <View style={dm.gameTeamsCol}>
+                          <Text style={[dm.gameTeamText, game.winning_team === 1 && dm.gameTeamWinner]} numberOfLines={2}>
                             {teamOne.map((gp) => participantName(gp.session_participant_id)).join(' & ') || 'TBD'}
                           </Text>
-                          <Text style={dm.gameVs}>vs</Text>
-                          <Text style={[dm.gameTeamText, game.winning_team === 2 && dm.gameTeamWinner]} numberOfLines={1}>
+                          <Text style={[dm.gameTeamText, game.winning_team === 2 && dm.gameTeamWinner]} numberOfLines={2}>
+                            <Text style={dm.gameVs}>vs </Text>
                             {teamTwo.map((gp) => participantName(gp.session_participant_id)).join(' & ') || 'TBD'}
                           </Text>
                         </View>
@@ -844,6 +880,14 @@ const dm = StyleSheet.create({
   metaText: {
     color: colors.textSub,
     fontSize: text.caption.size, fontWeight: '500',
+    // The facility name can be long ("Esplanade Golf and Country Club at
+    // Lakewood Ranch (Members Only)"), so it wraps rather than being clipped;
+    // flexShrink keeps the chevron beside it instead of pushed off the row.
+    flexShrink: 1,
+  },
+  metaLink: {
+    color: colors.navy,
+    fontWeight: '700',
   },
   parWrap: {
     marginTop: spacing.sm,
@@ -918,15 +962,12 @@ const dm = StyleSheet.create({
     color: colors.textMuted,
     fontSize: text.caption.size, fontWeight: '500',
   },
-  gameTeamsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  gameTeamsCol: {
+    gap: 2,
   },
   gameTeamText: {
     color: colors.textSub,
     fontSize: text.caption.size, fontWeight: '500',
-    flex: 1,
   },
   gameTeamWinner: {
     color: colors.navy,
