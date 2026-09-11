@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+﻿import React from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
@@ -76,13 +76,13 @@ function BenefitRow({
 // â”€â”€â”€ Billing nav row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function BillingRow({
-  icon, label, sub, last,
+  icon, label, sub, last, onPress,
 }: {
-  icon: string; label: string; sub: string; last?: boolean;
+  icon: string; label: string; sub: string; last?: boolean; onPress: () => void;
 }) {
   return (
     <>
-      <TouchableOpacity style={s.billingRow} activeOpacity={0.7}>
+      <TouchableOpacity style={s.billingRow} activeOpacity={0.7} onPress={onPress}>
         <View style={s.billingIcon}>
           <Ionicons name={icon as never} size={18} color={L.gold} />
         </View>
@@ -99,91 +99,11 @@ function BillingRow({
 
 // â”€â”€â”€ Plan card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-type Plan = 'free' | 'plus' | 'director';
-
-function PlanCard({
-  plan, selected, onSelect,
-}: {
-  plan: Plan; selected: boolean; onSelect: () => void;
-}) {
-  if (plan === 'free') {
-    return (
-      <TouchableOpacity
-        style={[s.planCard, selected && s.planCardSelected]}
-        onPress={onSelect}
-        activeOpacity={0.8}
-      >
-        <View style={s.planIconWrap}>
-          <View style={[s.planIconCircle, { backgroundColor: L.goldBg, borderColor: L.goldBorder }]}>
-            <Ionicons name="shield-checkmark-outline" size={22} color={L.gold} />
-          </View>
-        </View>
-        <View style={s.planInfo}>
-          <Text style={s.planName}>FREE</Text>
-          <Text style={s.planDesc}>Core features for all players.</Text>
-        </View>
-        {selected && (
-          <View style={s.currentPlanBadge}>
-            <Text style={s.currentPlanText}>CURRENT PLAN</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  }
-
-  if (plan === 'plus') {
-    return (
-      <TouchableOpacity style={s.planCard} onPress={onSelect} activeOpacity={0.8}>
-        <View style={s.planIconWrap}>
-          <View style={[s.planIconCircle, { backgroundColor: L.purpleBg, borderColor: L.purpleBorder }]}>
-            <Ionicons name="shield-half-outline" size={22} color={L.purple} />
-          </View>
-        </View>
-        <View style={s.planInfo}>
-          <Text style={s.planName}>PLUS</Text>
-          <Text style={s.planDesc}>Everything you need to elevate{'\n'}your pickleball experience.</Text>
-        </View>
-        <View style={s.planRight}>
-          <View style={s.priceRow}>
-            <Text style={[s.priceAmount, { color: L.purple }]}>$19.00</Text>
-            <Text style={[s.pricePer, { color: L.purple }]}>/year</Text>
-          </View>
-          <View style={[s.popularBadge, { backgroundColor: L.purple }]}>
-            <Text style={s.popularText}>MOST POPULAR</Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={16} color={L.textMuted} style={{ marginLeft: 6 }} />
-      </TouchableOpacity>
-    );
-  }
-
-  // director
-  return (
-    <TouchableOpacity style={s.planCard} onPress={onSelect} activeOpacity={0.8}>
-      <View style={s.planIconWrap}>
-        <View style={[s.planIconCircle, { backgroundColor: L.tealBg, borderColor: L.tealBorder }]}>
-          <Ionicons name="shield-outline" size={22} color={L.teal} />
-        </View>
-      </View>
-      <View style={s.planInfo}>
-        <Text style={s.planName}>DIRECTOR PRO</Text>
-        <Text style={s.planDesc}>Built for tournament directors{'\n'}and organizers.</Text>
-      </View>
-      <View style={s.priceRow}>
-        <Text style={[s.priceAmount, { color: L.teal }]}>$14.99</Text>
-        <Text style={[s.pricePer, { color: L.teal }]}>/month</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={16} color={L.textMuted} style={{ marginLeft: 6 }} />
-    </TouchableOpacity>
-  );
-}
-
 // â”€â”€â”€ Main screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function MembershipSettingsScreen() {
   const insets = useSafeAreaInsets();
   const { membership, isMember } = useMembership();
-  const [selectedPlan, setSelectedPlan] = useState<Plan>('free');
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
@@ -280,33 +200,19 @@ export default function MembershipSettingsScreen() {
           />
         </Group>
 
-        {/* â”€â”€ Choose Your Plan â”€â”€ */}
-        <SectionHeader label="CHOOSE YOUR PLAN" />
-        <View style={s.plansContainer}>
-          <PlanCard plan="free"     selected={selectedPlan === 'free'}     onSelect={() => setSelectedPlan('free')} />
-          <View style={s.planDivider} />
-          <PlanCard plan="plus"     selected={selectedPlan === 'plus'}     onSelect={() => setSelectedPlan('plus')} />
-          <View style={s.planDivider} />
-          <PlanCard plan="director" selected={selectedPlan === 'director'} onSelect={() => setSelectedPlan('director')} />
-        </View>
-
         {/* â”€â”€ Billing â”€â”€ */}
         <SectionHeader label="BILLING" />
         <Group>
-          <BillingRow
-            icon="document-text-outline"
-            label="Billing History"
-            sub="View your past purchases and invoices."
-          />
+          {/* One row, one destination. This was three: Billing History and
+              Payment Methods both navigated nowhere while the real versions of
+              both already existed on payments-settings, and Restore Purchases
+              is a StoreKit concept that means nothing until there is an IAP to
+              restore (Phase 5). */}
           <BillingRow
             icon="card-outline"
-            label="Payment Methods"
-            sub="Manage your saved payment methods."
-          />
-          <BillingRow
-            icon="refresh-circle-outline"
-            label="Restore Purchases"
-            sub="Restore a previous purchase on this device."
+            label="Payments & billing"
+            sub="Saved cards, purchase history and refunds."
+            onPress={() => router.push('/payments-settings' as never)}
             last
           />
         </Group>
