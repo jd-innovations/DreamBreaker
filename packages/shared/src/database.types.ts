@@ -3045,6 +3045,82 @@ export type Database = {
           },
         ]
       }
+      memberships: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          external_reference_id: string | null
+          granted_by: string | null
+          granted_note: string | null
+          id: string
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          source: string
+          started_at: string
+          status: string
+          tier: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          external_reference_id?: string | null
+          granted_by?: string | null
+          granted_note?: string | null
+          id?: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          source: string
+          started_at?: string
+          status?: string
+          tier?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          external_reference_id?: string | null
+          granted_by?: string | null
+          granted_note?: string | null
+          id?: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          source?: string
+          started_at?: string
+          status?: string
+          tier?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memberships_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memberships_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_reactions: {
         Row: {
           created_at: string
@@ -7079,6 +7155,32 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: undefined
       }
+      admin_grant_membership: {
+        Args: { p_expires_at?: string; p_note?: string; p_user_id: string }
+        Returns: {
+          created_at: string
+          expires_at: string | null
+          external_reference_id: string | null
+          granted_by: string | null
+          granted_note: string | null
+          id: string
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          source: string
+          started_at: string
+          status: string
+          tier: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "memberships"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_grant_wallet_item: {
         Args: {
           p_action_type?: string
@@ -7157,6 +7259,32 @@ export type Database = {
           refund_id: string
           severity: string
         }[]
+      }
+      admin_revoke_membership: {
+        Args: { p_reason?: string; p_user_id: string }
+        Returns: {
+          created_at: string
+          expires_at: string | null
+          external_reference_id: string | null
+          granted_by: string | null
+          granted_note: string | null
+          id: string
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          source: string
+          started_at: string
+          status: string
+          tier: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "memberships"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_revoke_wallet_item: {
         Args: { p_item_id: string; p_reason?: string }
@@ -8050,6 +8178,7 @@ export type Database = {
         Args: { p_listing_id: string; p_user_id: string }
         Returns: boolean
       }
+      is_paid_member: { Args: { p_user_id?: string }; Returns: boolean }
       is_personal_session_visible: {
         Args: { p_session_id: string; p_user_id: string }
         Returns: boolean

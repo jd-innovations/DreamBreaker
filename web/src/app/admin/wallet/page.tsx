@@ -59,6 +59,16 @@ interface Partner {
   is_active: boolean;
 }
 
+interface Membership {
+  id: string;
+  status: string;
+  tier: string;
+  source: string;
+  expires_at: string | null;
+  granted_note: string | null;
+  revoke_reason: string | null;
+}
+
 export default function AdminWalletPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -70,6 +80,8 @@ export default function AdminWalletPage() {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [busy, setBusy] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [membership, setMembership] = useState<Membership | null>(null);
+  const [membershipExpiry, setMembershipExpiry] = useState("");
 
   const [form, setForm] = useState({
     type: "offer" as GrantableType,
@@ -129,10 +141,61 @@ export default function AdminWalletPage() {
     }
   }
 
+  const loadMembership = useCallback(async (userId: string) => {
+    // Most recent first: a revoked row stays, so there can be several. The
+    // active one is what matters, and there is at most one by construction
+    // (idx_memberships_one_active).
+    const { data } = await supabase
+      .from("memberships")
+      .select("id,status,tier,source,expires_at,granted_note,revoke_reason")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    setMembership(((data ?? [])[0] as Membership) ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function choose(p: Person) {
     setPerson(p);
     setResults([]);
-    await loadItems(p.id);
+    setMembershipExpiry("");
+    await Promise.all([loadItems(p.id), loadMembership(p.id)]);
+  }
+
+  async function grantMembership() {
+    if (!person) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc("admin_grant_membership", {
+        p_user_id: person.id,
+        p_expires_at: membershipExpiry ? new Date(membershipExpiry).toISOString() : undefined,
+        p_note: "Comped from admin",
+      });
+      if (error) { toast.error(grantError(error.message)); return; }
+      toast.success("Membership granted.");
+      await loadMembership(person.id);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function revokeMembership() {
+    if (!person) return;
+    const reason = window.prompt("Revoke this membership? Give a reason — it is recorded.");
+    if (reason === null) return;
+    if (!reason.trim()) { toast.error("A reason is required."); return; }
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc("admin_revoke_membership", {
+        p_user_id: person.id,
+        p_reason: reason.trim(),
+      });
+      if (error) { toast.error(grantError(error.message)); return; }
+      toast.success("Membership revoked.");
+      await loadMembership(person.id);
+    } finally {
+      setBusy(false);
+    }
   }
 
   function grantError(message: string): string {
@@ -142,6 +205,7 @@ export default function AdminWalletPage() {
     if (message.includes("expires_at_in_past")) return "That expiry is already past.";
     if (message.includes("unsupported_wallet_item_type")) return "That type cannot be granted.";
     if (message.includes("cannot_revoke_coach_voucher")) return "Coach vouchers are refunded, not revoked.";
+    if (message.includes("no_active_membership")) return "They have no active membership.";
     return message;
   }
 
@@ -245,6 +309,61 @@ export default function AdminWalletPage() {
           <section className="rounded-md border p-4">
             <div className="text-sm font-semibold">{person.full_name ?? "(no name)"}</div>
             <div className="text-sm text-muted-foreground">{person.email ?? "no email"}</div>
+          </section>
+
+          <section className="space-y-3 rounded-md border p-4">
+            <h2 className="text-lg font-semibold">Membership</h2>
+            {membership && membership.status === "active" ? (
+              <>
+                <p className="text-sm">
+                  <span className="font-medium">Active</span>
+                  <span className="text-muted-foreground">
+                    {" · "}{membership.tier}{" · "}{membership.source}
+                    {membership.expires_at
+                      ? ` · expires ${new Date(membership.expires_at).toLocaleDateString()}`
+                      : " · no expiry"}
+                  </span>
+                </p>
+                <button
+                  className="rounded-md border px-3 py-1 text-xs font-semibold disabled:opacity-50"
+                  onClick={revokeMembership}
+                  disabled={busy}
+                >
+                  Revoke membership
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  No active membership.
+                  {membership?.status === "revoked" && membership.revoke_reason
+                    ? ` Last one revoked: ${membership.revoke_reason}`
+                    : ""}
+                </p>
+                <div className="flex items-end gap-2">
+                  <label className="text-sm">
+                    Expires
+                    <input
+                      type="date"
+                      className="mt-1 block rounded-md border px-3 py-2"
+                      value={membershipExpiry}
+                      onChange={(e) => setMembershipExpiry(e.target.value)}
+                    />
+                  </label>
+                  <button
+                    className="rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
+                    onClick={grantMembership}
+                    disabled={busy}
+                  >
+                    Comp membership
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Leave the date empty for no expiry. Granting again on an active membership extends it
+                  rather than creating a second one.
+                </p>
+              </>
+            )}
           </section>
 
           <section className="space-y-3">
