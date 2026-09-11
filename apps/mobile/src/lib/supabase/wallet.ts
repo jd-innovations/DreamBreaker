@@ -35,8 +35,26 @@ function parseCoachVoucherSnapshot(type: unknown, metadata: unknown): CoachVouch
 // display-only correction, scoped to coach_voucher so no other Wallet item
 // type's behavior changes. Phase 5 security checks must independently
 // compare expires_at server-side regardless of this or the stored status.
-function deriveDisplayStatus(type: unknown, status: string, expiresAt: string | null): WalletItem['status'] {
-  if (type === 'coach_voucher' && expiresAt && (status === 'active' || status === 'available' || status === 'new')) {
+function deriveDisplayStatus(
+  type: unknown,
+  status: string,
+  expiresAt: string | null,
+  redeemedAt: string | null,
+): WalletItem['status'] {
+  const looksUnused = status === 'active' || status === 'available' || status === 'new';
+
+  // A redeemed voucher that still reads active. redeem_coach_voucher() did not
+  // write back to wallet_items until migration 20260911160000, so the item said
+  // 'active' while its entitlement said 'exhausted' -- and the card and the
+  // detail block, reading different tables, contradicted each other on one
+  // screen.
+  //
+  // The migration is the real fix; this is the belt. redeemed_at being set
+  // while the status still claims the item is unused can only mean the stored
+  // status lagged, so trust the timestamp.
+  if (redeemedAt && looksUnused) return 'redeemed';
+
+  if (type === 'coach_voucher' && expiresAt && looksUnused) {
     if (new Date(expiresAt).getTime() < Date.now()) return 'expired';
   }
   return status as WalletItem['status'];
@@ -61,7 +79,12 @@ function dbRowToWalletItem(row: Record<string, unknown>): WalletItem {
     partner:               dbRowToPartner(row.wallet_partners as Record<string, unknown> | null),
 
     type:                  row.type as WalletItem['type'],
-    status:                deriveDisplayStatus(row.type, String(row.status ?? ''), row.expires_at != null ? String(row.expires_at) : null),
+    status:                deriveDisplayStatus(
+      row.type,
+      String(row.status ?? ''),
+      row.expires_at != null ? String(row.expires_at) : null,
+      row.redeemed_at != null ? String(row.redeemed_at) : null,
+    ),
 
     title:                 String(row.title ?? ''),
     subtitle:              row.subtitle != null ? String(row.subtitle) : null,

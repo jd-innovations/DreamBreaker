@@ -8,7 +8,7 @@ import { radius as shape, text } from '@shared/tokens';
 import { Avatar } from '@/components/Avatar';
 import { StatusChip } from '@/components/StatusChip';
 import { WalletRedeemSheet } from '@/components/wallet/WalletRedeemSheet';
-import { getWalletItemStatusInfo } from '@/lib/walletItemStatus';
+import { getWalletItemStatusInfo, getWalletDashboardSection } from '@/lib/walletItemStatus';
 import { getWalletTypeAccent } from '@/lib/walletItemAccent';
 import type { WalletItem } from '@/lib/walletTypes';
 import { DEFAULT_LESSON_COVER } from '@/lib/coach/defaultLessonCover';
@@ -60,6 +60,13 @@ export function WalletCard({ item }: { item: WalletItem }) {
   const accent = getWalletTypeAccent(item.type);
   const [showRedeemSheet, setShowRedeemSheet] = useState(false);
 
+  // Spent, expired or withdrawn. Keyed off the section rather than a list of
+  // statuses so redeemed/expired/revoked are handled by one rule and anything
+  // added later inherits it. Until now a redeemed card looked identical to a
+  // live one apart from a small grey chip -- the only opacity in this file was
+  // on the "Coming Soon" CTA.
+  const isSpent = getWalletDashboardSection(item) === 'history';
+
   function onPress() {
     if (item.actionType === 'view_details') {
       router.push(`/wallet/${item.id}` as never);
@@ -73,7 +80,7 @@ export function WalletCard({ item }: { item: WalletItem }) {
   return (
     <>
     <TouchableOpacity
-      style={[c.card, { backgroundColor: accent.bg, borderColor: 'transparent' }]}
+      style={[c.card, { backgroundColor: accent.bg, borderColor: 'transparent' }, isSpent && c.cardSpent]}
       activeOpacity={0.85}
       onPress={() => router.push(`/wallet/${item.id}` as never)}
     >
@@ -110,7 +117,7 @@ export function WalletCard({ item }: { item: WalletItem }) {
         </View>
       )}
 
-      {item.actionType !== 'none' && (
+      {item.actionType !== 'none' && !isSpent && (
         <TouchableOpacity
           style={[c.cta, item.actionType === 'redemption' && c.ctaDisabled]}
           activeOpacity={0.8}
@@ -167,6 +174,9 @@ const c = StyleSheet.create({
     backgroundColor: L.bg, borderWidth: 1, borderColor: 'rgba(10,18,40,0.10)',
     borderRadius: shape.cta, paddingVertical: 10,
   },
+  // Dims the whole card. Detail stays reachable -- a spent voucher is still
+  // worth opening for its history -- it just stops competing with live items.
+  cardSpent: { opacity: 0.55 },
   ctaDisabled: { opacity: 0.5 },
   ctaLabel: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
   ctaLabelDisabled: { color: L.textSub },
