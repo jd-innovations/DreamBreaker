@@ -132,6 +132,33 @@ exact benefit and stopped before there was an entitlement to read.
 So benefit 3 is a price-selection change in `lib/coach/offers.ts` plus a
 server-side check at purchase — not a new feature.
 
+### Benefit 3 — decisions taken 2026-09-11
+
+- **The coach absorbs the discount.** It is their pricing decision, and the
+  platform commission stays a percentage of a smaller number rather than turning
+  negative. In exchange the coach gets promotion — email, notifications, wallet
+  placement — which is the platform's side of the bargain.
+- **That promotion does not exist yet.** Checked: no email template and no
+  notification type references coach offers (`waitlist_spot_offered` and
+  `waitlist_offer_expired` are the only near matches), and nothing surfaces
+  "member deals" anywhere. Wallet placement is real; the rest is not. **A
+  marketing module is planned to cover this** — until it ships, the trade is
+  "margin now for promotion later", which is fine to do knowingly and wrong to
+  pitch to a coach as already running.
+- **`premium_only` stays blocked in v1.** The schema supports two different
+  things: `premium_price_cents` (members pay less) and `premium_only` (the offer
+  is invisible to non-members). Only the discount is in scope. Exclusivity is
+  worth little until the marketing module can promote it, and
+  `create_coach_offer_purchase` already refuses `premium_only` outright — an
+  honest placeholder that should stay until then.
+- **Refunds need no change.** Verified: `claim_coach_refund` refunds
+  `buyer_total_charged_cents` and never reads `coach_offers`, so a buyer always
+  gets back exactly what they paid, to the original payment method — even if
+  their membership lapsed in between.
+- **The audit columns already exist.** `coach_offer_purchases` carries
+  `premium_price_applied` and `premium_eligible_at_purchase`, so every sale
+  records which price ran and whether the buyer was entitled at that moment.
+
 ### Why director coupons are out of v1
 
 Localized tournament coupons need director-side tooling to issue them, geo or
