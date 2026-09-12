@@ -182,12 +182,15 @@ What the arithmetic now looks like, recorded so it is not re-derived:
   redeemed voucher stays under roughly $17.50. **Shipping decides that, not the
   product** — a grip is cheap, a shipped parcel is not.
 
-So one sub-question remains, and it is still commercial rather than
-engineering: whether the voucher is **$25 off a purchase** (customer pays
-shipping, often spends more, and unredeemed codes cost nothing) or **a free
-item shipped free** (a cleaner reward, a real per-member cost). It blocks no
-phase — the voucher is a code either way — but it should be settled before the
-codes are cut in decision 0.4.
+**The voucher's shape is settled too (2026-09-12):** $25 to spend on product,
+**shipping excluded**, **no remaining balance carried forward**, one member per
+code. So PGD's worst case per redeemed voucher is $25 of product at cost with
+no shipping subsidy, which sits inside the envelope above; an under-$25 order
+forfeits the difference, and an unredeemed code costs nothing at all.
+
+Mechanically that is a Shopify **fixed-amount discount code**, explicitly not a
+**gift card** — gift cards carry a balance forward, which is the one behaviour
+this rules out. Configuration details are in the execution plan's 4.0.
 
 ### IAP is unaffected by this
 
@@ -206,8 +209,8 @@ still holds — those are real-world services and are unaffected.
 ## Open product decisions — none of these are engineering questions
 
 1. ~~**Price, and period.**~~ **Decided: $25/year, one tier.**
-   ~~Who funds the voucher~~ **Decided 2026-09-12: PGD funds it** (same owner).
-   Still open: whether the voucher covers shipping — see above.
+   ~~Who funds the voucher~~ **Decided 2026-09-12: PGD funds it** (same owner),
+   as $25 against product only — no shipping, no carry-forward. See above.
 2. ~~**What is actually in Plus?**~~ **Decided** — the four benefits above. Note
    they replace the four on `membership-settings.tsx` (priority alerts, listing
    boosts, advanced matching, early access), which are copy rather than

@@ -39,11 +39,14 @@ The economics that matter, stated once so nobody re-derives them:
   redeemed voucher stays under roughly $17.50 — and **shipping is the line item
   that decides it**, not the grip.
 
-That last point is the one open sub-question, and it is a product decision, not
-an engineering one: whether the voucher is *$25 off a purchase* (customer pays
-shipping, and may spend more) or *a free item shipped free*. It does not block
-any phase — the voucher is a code either way — but it should be settled before
-the store-side codes are cut in 0.4.
+**Settled 2026-09-12:** $25 to spend on product, **shipping excluded**, and
+**no remaining balance carries forward**. Unredeemed codes cost nothing, an
+under-$25 order simply forfeits the difference, and PGD's exposure per redeemed
+voucher is capped at $25 of product cost with no shipping subsidy — which is
+what keeps the landed cost inside the $17.50 envelope above.
+
+See 4.0 for what that shape means in Shopify. It is a **discount code, not a
+gift card**, and the distinction is the whole decision.
 
 ### 0.2 RevenueCat or raw StoreKit
 RevenueCat absorbs receipt validation, renewals, restore and cross-platform
@@ -173,6 +176,32 @@ cards. Ungate 1.1's flag when there is something to sell.
 ---
 
 ## Phase 4 — The PGD voucher. Depends on 2 and 0.4.
+
+### 4.0 What the voucher is — decided 2026-09-12
+
+$25 against product, shipping excluded, no carry-forward of an unused
+remainder, one member per code.
+
+In Shopify that is a **fixed-amount discount code**, and it must not be a
+**gift card**. Gift cards are the trap here: Shopify tracks a balance on them
+and carries the remainder forward across orders, which is precisely the
+behaviour this decision rules out. A fixed-amount discount code already does
+the right things by default — it applies to the order subtotal and not to
+shipping, and anything unspent is simply gone when the order closes.
+
+The rest is configuration, all of it store-side rather than in our code:
+
+- **Amount:** $25 fixed (not a percentage).
+- **Applies to:** entire order / all products. Shipping is untouched by a
+  product discount, so no extra setting is needed to exclude it — just do not
+  add a free-shipping discount alongside it.
+- **Usage limit:** 1 total, and one code per member. Unique codes rather than a
+  shared one, or the first member to post it on Facebook spends the programme.
+- **No minimum purchase.** A member who buys a $12 grip forfeits $13, which is
+  the stated intent.
+
+Expiry is set at grant time from the wallet item, as with every other wallet
+promo — not from a Shopify-side expiry we cannot see.
 
 ### 4.1 Code supply
 Per 0.4. If a pool: a `wallet_promo_codes` table (`partner_id`, `code`,
