@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 
@@ -183,7 +184,14 @@ function PurchaseRow({ purchase, last }: { purchase: Purchase; last?: boolean })
 
   return (
     <>
-      <TouchableOpacity style={s.row} activeOpacity={0.7}>
+      {/* The chevron has always been here; until now nothing happened when you
+          tapped it. It opens the receipt, which is also what the dead
+          "Download Receipts" row below was reaching for. */}
+      <TouchableOpacity
+        style={s.row}
+        activeOpacity={0.7}
+        onPress={() => router.push(`/payments/receipt/${purchase.id}` as never)}
+      >
         <SolidCircle name={meta.icon} bg={meta.bg} />
         <View style={s.rowCenter}>
           <Text style={s.rowLabel}>{meta.label}</Text>
@@ -250,8 +258,11 @@ function PurchaseHistory({
         <PurchaseRow key={p.id} purchase={p} last={i === purchases.length - 1} />
       ))}
       <Div />
-      {/* TODO: no full-history route exists yet — this opens nothing. */}
-      <TouchableOpacity style={s.viewAllRow} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={s.viewAllRow}
+        activeOpacity={0.7}
+        onPress={() => router.push('/payments/history' as never)}
+      >
         <Text style={s.viewAllText}>View All Purchases</Text>
         <Ionicons name="chevron-forward" size={16} color={L.textMuted} />
       </TouchableOpacity>
@@ -262,14 +273,14 @@ function PurchaseHistory({
 // ─── Nav row with solid circle ───────────────────────────────────────────────
 
 function NavRow({
-  iconName, iconBg, label, sub, last,
+  iconName, iconBg, label, sub, last, onPress,
 }: {
   iconName: string; iconBg: string;
-  label: string; sub?: string; last?: boolean;
+  label: string; sub?: string; last?: boolean; onPress?: () => void;
 }) {
   return (
     <>
-      <TouchableOpacity style={s.row} activeOpacity={0.7}>
+      <TouchableOpacity style={s.row} activeOpacity={0.7} onPress={onPress}>
         <SolidCircle name={iconName} bg={iconBg} />
         <View style={s.rowCenter}>
           <Text style={s.rowLabel}>{label}</Text>
@@ -403,11 +414,16 @@ export default function PaymentsSettingsScreen() {
         {/* ── Refunds ── */}
         <SectionHeader label="REFUNDS" />
         <Group>
+          {/* A filtered view of purchases rather than a separate list: every
+              refund belongs to a payment, and each purchase row already shows
+              what came back. A second screen reading the refunds table would
+              restate the same facts in a place they could drift from. */}
           <NavRow
             iconName="cash"
             iconBg={L.teal}
             label="Refund History"
-            sub="View your past refunds"
+            sub="Purchases with money returned"
+            onPress={() => router.push('/payments/history?filter=refunded' as never)}
             last
           />
         </Group>
@@ -415,11 +431,16 @@ export default function PaymentsSettingsScreen() {
         {/* ── Billing ── */}
         <SectionHeader label="BILLING" />
         <Group>
+          {/* "Download" overpromised: expo-print is not installed, so a PDF
+              would need a native dependency and a new build. A receipt opens
+              from any purchase and shares through the OS, which is the part
+              people actually wanted. */}
           <NavRow
             iconName="receipt"
             iconBg={L.gold}
-            label="Download Receipts"
-            sub="Get receipts for your purchases"
+            label="Receipts"
+            sub="Open any purchase to view or share its receipt"
+            onPress={() => router.push('/payments/history' as never)}
             last
           />
         </Group>

@@ -161,3 +161,75 @@ export async function fetchPurchaseHistory(userId: string, limit?: number): Prom
 
   return rows.map((r) => dbRowToPurchase(r, subs.get(String(r.id))));
 }
+
+// ─── Receipt ─────────────────────────────────────────────────────────────────
+
+export type ReceiptRefund = {
+  id: string;
+  amountCents: number;
+  reason: string | null;
+  status: string;
+  at: string;
+};
+
+export type Receipt = Purchase & {
+  /** Stripe's PaymentIntent id — the reference support will ask for. */
+  reference: string | null;
+  provider: string | null;
+  refunds: ReceiptRefund[];
+};
+
+/**
+ * One payment, with the individual refunds against it.
+ *
+ * The purchase row already shows an aggregate (`refunded_amount_cents`), which
+ * is enough for a list. A receipt should show each refund separately: two
+ * partial refunds on one purchase are two events a person may need to
+ * reconcile, and a single summed figure hides that.
+ *
+ * Card brand and last four are deliberately absent — `payments` does not store
+ * them, and saved payment methods are not linked per payment, so any card
+ * detail here would be a guess.
+ *
+ * RLS does the authorisation: `payments` is readable by its payer and `refunds`
+ * by the payer of the payment they belong to, so passing someone else's id
+ * simply returns nothing.
+ */
+export async function fetchReceipt(paymentId: string): Promise<Receipt | null> {
+  const { data, error } = await supabase
+    .from('payments')
+    // Literal, not PAYMENT_SELECT + extras: the typed client parses this
+    // string at compile time and a concatenation defeats it.
+    .select('id,purpose_type,purpose_id,status,amount_cents,refunded_amount_cents,currency,created_at,confirmed_at,provider,provider_payment_intent_id')
+    .eq('id', paymentId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+
+  const row = data as Row;
+  const subs = await resolveSubtitles([row]);
+  const base = dbRowToPurchase(row, subs.get(String(row.id)));
+
+  const { data: refundRows, error: refundError } = await supabase
+    .from('refunds')
+    .select('id,amount_cents,reason,status,completed_at,created_at')
+    .eq('payment_id', paymentId)
+    .order('created_at', { ascending: true });
+
+  // A receipt without its refund detail is still a usable receipt, and the
+  // aggregate on the payment row already shows that money came back.
+  if (refundError) console.warn('[payments] receipt refunds unavailable', refundError.message);
+
+  return {
+    ...base,
+    reference: row.provider_payment_intent_id != null ? String(row.provider_payment_intent_id) : null,
+    provider: row.provider != null ? String(row.provider) : null,
+    refunds: ((refundRows ?? []) as Row[]).map((r) => ({
+      id: String(r.id),
+      amountCents: Number(r.amount_cents ?? 0),
+      reason: r.reason != null ? String(r.reason) : null,
+      status: String(r.status ?? ''),
+      at: String(r.completed_at ?? r.created_at),
+    })),
+  };
+}
