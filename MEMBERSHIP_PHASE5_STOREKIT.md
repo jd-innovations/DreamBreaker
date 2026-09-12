@@ -63,7 +63,32 @@ None of this is code, and all of it blocks testing.
 
 ---
 
-## 2. The term model — the one schema change
+## 2. The term model — BUILT 2026-09-12
+
+`20260912160000_membership_terms.sql`. Shipped ahead of the rest, as planned.
+
+Adds `term_seq` / `current_term_started_at`, re-keys the voucher `source_id` to
+`<membership_id>:<term_seq>`, and adds `start_membership_term()` (service_role
+only — Phase 5's webhook calls it on RENEWAL) with `admin_renew_membership()`
+as the admin-gated wrapper for comps.
+
+**Found while testing and fixed in the same migration:** the voucher's expiry is
+copied from the term at issuance, so extending a term left the voucher expiring
+BEFORE the membership that earned it — a member could lose the benefit while
+still paid up. `admin_grant_membership` now carries the current term's voucher
+expiry forward, while still issuing nothing and not incrementing the term.
+
+**Verified** against a scratch database, including the two things that only fail
+in production: the backfill keeps idempotency (existing members are NOT issued a
+second voucher), and the privilege boundary holds — a caller in `authenticated`
+is denied `start_membership_term` directly but reaches it through the
+SECURITY DEFINER admin wrapper.
+
+Guards, each one protecting $25: renewal must move the expiry forward (so a
+double-click fails instead of minting), a perpetual comp raises
+`membership_has_no_term`, and a dry pool advances the term without failing.
+
+### The original design notes
 
 ### The decision
 
