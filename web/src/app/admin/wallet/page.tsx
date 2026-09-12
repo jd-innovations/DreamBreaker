@@ -77,6 +77,7 @@ interface Membership {
   expires_at: string | null;
   granted_note: string | null;
   revoke_reason: string | null;
+  term_seq: number;
 }
 
 export default function AdminWalletPage() {
@@ -240,7 +241,7 @@ export default function AdminWalletPage() {
     // (idx_memberships_one_active).
     const { data } = await supabase
       .from("memberships")
-      .select("id,status,tier,source,expires_at,granted_note,revoke_reason")
+      .select("id,status,tier,source,expires_at,granted_note,revoke_reason,term_seq")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1);
@@ -287,6 +288,36 @@ export default function AdminWalletPage() {
     }
   }
 
+  async function renewMembership() {
+    if (!person || !membership) return;
+    if (!membershipExpiry) { toast.error("Pick the new term's end date first."); return; }
+
+    // Confirmed, unlike Extend, because this one spends money: a new term
+    // issues another $25 voucher and consumes a code from the pool.
+    const ok = window.confirm(
+      `Start term ${membership.term_seq + 1} for ${person.full_name ?? person.email}?\n\n`
+      + "This issues another $25 PGD voucher and takes a code from the pool. "
+      + "To only change the expiry date, use Extend instead.",
+    );
+    if (!ok) return;
+
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.rpc("admin_renew_membership", {
+        p_user_id: person.id,
+        p_expires_at: new Date(membershipExpiry).toISOString(),
+        p_note: "Renewed from admin",
+      });
+      if (error) { toast.error(grantError(error.message)); return; }
+      const r = (data ?? {}) as { term_seq?: number; voucher?: { issued?: boolean; reason?: string } };
+      if (r.voucher?.issued) toast.success(`Term ${r.term_seq} started, voucher issued.`);
+      else toast.error(`Term ${r.term_seq} started, but no voucher: ${voucherReason(r.voucher?.reason)}`);
+      await Promise.all([loadMembership(person.id), loadItems(person.id), loadStock()]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function revokeMembership() {
     if (!person) return;
     const reason = window.prompt("Revoke this membership? Give a reason — it is recorded.");
@@ -314,6 +345,8 @@ export default function AdminWalletPage() {
     if (message.includes("unsupported_wallet_item_type")) return "That type cannot be granted.";
     if (message.includes("cannot_revoke_coach_voucher")) return "Coach vouchers are refunded, not revoked.";
     if (message.includes("no_active_membership")) return "They have no active membership.";
+    if (message.includes("renewal_must_extend")) return "A new term has to end later than the current one. Pick a later date.";
+    if (message.includes("membership_has_no_term")) return "This membership never expires, so there is no term to renew.";
     return message;
   }
 
@@ -516,6 +549,10 @@ export default function AdminWalletPage() {
                 <span className="font-medium">Active</span>
                 <span className="text-muted-foreground">
                   {" · "}{membership?.tier}{" · "}{membership?.source}
+                  {/* Term is shown because it is what decides whether another
+                      voucher gets issued — the difference between the two
+                      buttons below is invisible without it. */}
+                  {membership?.term_seq ? ` · term ${membership.term_seq}` : ""}
                   {membership?.expires_at
                     ? ` · expires ${new Date(membership.expires_at).toLocaleDateString()}`
                     : " · no expiry"}
@@ -554,18 +591,33 @@ export default function AdminWalletPage() {
                 {isActiveMember ? "Extend" : "Comp membership"}
               </button>
               {isActiveMember && (
-                <button
-                  className="rounded-md border px-3 py-2 text-sm font-semibold disabled:opacity-50"
-                  onClick={revokeMembership}
-                  disabled={busy}
-                >
-                  Revoke
-                </button>
+                <>
+                  {/* Deliberately NOT the primary button. Extending is the
+                      common, free action; starting a term spends $25, so it
+                      reads as the heavier choice and asks before doing it. */}
+                  <button
+                    className="rounded-md border px-3 py-2 text-sm font-semibold disabled:opacity-50"
+                    onClick={renewMembership}
+                    disabled={busy}
+                  >
+                    Start new term
+                  </button>
+                  <button
+                    className="rounded-md border px-3 py-2 text-sm font-semibold disabled:opacity-50"
+                    onClick={revokeMembership}
+                    disabled={busy}
+                  >
+                    Revoke
+                  </button>
+                </>
               )}
             </div>
             <p className="text-xs text-muted-foreground">
               Leave the date empty for no expiry.
-              {isActiveMember ? " Extending replaces the current expiry." : ""}
+              {isActiveMember
+                ? " Extend changes the current term's end date and issues nothing."
+                  + " Start new term issues another $25 voucher."
+                : ""}
             </p>
 
             {/* The voucher's own line. Comping a membership issues it, but that

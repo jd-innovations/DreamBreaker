@@ -3048,6 +3048,7 @@ export type Database = {
       memberships: {
         Row: {
           created_at: string
+          current_term_started_at: string
           expires_at: string | null
           external_reference_id: string | null
           granted_by: string | null
@@ -3059,12 +3060,14 @@ export type Database = {
           source: string
           started_at: string
           status: string
+          term_seq: number
           tier: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          current_term_started_at?: string
           expires_at?: string | null
           external_reference_id?: string | null
           granted_by?: string | null
@@ -3076,12 +3079,14 @@ export type Database = {
           source: string
           started_at?: string
           status?: string
+          term_seq?: number
           tier?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          current_term_started_at?: string
           expires_at?: string | null
           external_reference_id?: string | null
           granted_by?: string | null
@@ -3093,6 +3098,7 @@ export type Database = {
           source?: string
           started_at?: string
           status?: string
+          term_seq?: number
           tier?: string
           updated_at?: string
           user_id?: string
@@ -7230,6 +7236,7 @@ export type Database = {
         Args: { p_expires_at?: string; p_note?: string; p_user_id: string }
         Returns: {
           created_at: string
+          current_term_started_at: string
           expires_at: string | null
           external_reference_id: string | null
           granted_by: string | null
@@ -7241,6 +7248,7 @@ export type Database = {
           source: string
           started_at: string
           status: string
+          term_seq: number
           tier: string
           updated_at: string
           user_id: string
@@ -7342,10 +7350,15 @@ export type Database = {
           voided: number
         }[]
       }
+      admin_renew_membership: {
+        Args: { p_expires_at: string; p_note?: string; p_user_id: string }
+        Returns: Json
+      }
       admin_revoke_membership: {
         Args: { p_reason?: string; p_user_id: string }
         Returns: {
           created_at: string
+          current_term_started_at: string
           expires_at: string | null
           external_reference_id: string | null
           granted_by: string | null
@@ -7357,6 +7370,7 @@ export type Database = {
           source: string
           started_at: string
           status: string
+          term_seq: number
           tier: string
           updated_at: string
           user_id: string
@@ -9589,6 +9603,14 @@ export type Database = {
       st_wrapx: {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
+      }
+      start_membership_term: {
+        Args: {
+          p_expires_at: string
+          p_external_ref?: string
+          p_user_id: string
+        }
+        Returns: Json
       }
       submit_review: {
         Args: { p_body?: string; p_rating: number; p_token: string }
