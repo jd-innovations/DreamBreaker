@@ -26,10 +26,24 @@ is proven.
 
 ## Phase 0 — Decisions. No code. This is the real blocker.
 
-### 0.1 Who funds the $25 voucher
-$25/year containing a $25 voucher nets below zero after Apple's 15–30%. Either
-PGD funds it, or the price/voucher/margin moves. **Blocks 0.2 and Phase 5**,
-because App Store Connect price tiers are painful to change after launch.
+### 0.1 Who funds the $25 voucher — DECIDED 2026-09-12: PGD funds it
+
+The owner of this app also owns Pickleball Grip Doctor, so the voucher is an
+internal transfer, not a cost paid to a third party. **Price stays $25/year.**
+
+The economics that matter, stated once so nobody re-derives them:
+
+- The app collects $25 and nets **$17.50–$21.25** after Apple's 15–30%.
+- PGD gives up $25 *at retail*, but its real outlay is COGS plus fulfillment.
+- Across both businesses the year is positive only while PGD's landed cost of a
+  redeemed voucher stays under roughly $17.50 — and **shipping is the line item
+  that decides it**, not the grip.
+
+That last point is the one open sub-question, and it is a product decision, not
+an engineering one: whether the voucher is *$25 off a purchase* (customer pays
+shipping, and may spend more) or *a free item shipped free*. It does not block
+any phase — the voucher is a code either way — but it should be settled before
+the store-side codes are cut in 0.4.
 
 ### 0.2 RevenueCat or raw StoreKit
 RevenueCat absorbs receipt validation, renewals, restore and cross-platform
@@ -45,7 +59,9 @@ or paid tier. **Blocks 3.3.**
 ### 0.4 Where Shopify codes come from
 Pre-generated pool uploaded as CSV (no integration, works today) or Shopify
 Admin API per grant (cleaner, adds credentials and a mid-grant failure mode).
-**Blocks 4.1.**
+**Blocks 4.1.** Now the only Phase 4 blocker, since 0.1 is decided. Owning the
+store makes either option available; the pool is the one that needs no
+credentials in the app and can be cut by hand today.
 
 ---
 

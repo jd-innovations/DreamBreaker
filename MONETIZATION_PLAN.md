@@ -167,24 +167,32 @@ its own right, not a switch on a membership. Revisit after v1 ships.
 
 ---
 
-## The blocker is commercial, not technical
+## The commercial blocker — RESOLVED 2026-09-12
 
-**$25/year that includes a $25 voucher nets less than zero.** Apple takes
-15-30%, so $25 collected becomes roughly $17.50-$21.25, against a $25 voucher
-cost. Every member loses money.
+**PGD funds the voucher.** The owner of this app also owns Pickleball Grip
+Doctor, so the $25 is an internal transfer between two businesses with the same
+owner, not a cost paid outward. **Price stays $25/year** and App Store Connect
+products can be created against it.
 
-Two ways it resolves, neither of them an engineering question:
+What the arithmetic now looks like, recorded so it is not re-derived:
 
-- **PGD funds the voucher** — consistent with them wanting to reward signups.
-  The membership is then profitable from day one and the voucher is a genuine
-  acquisition hook.
-- **We fund it** — then either the price rises, the voucher shrinks, or it is a
-  deliberate loss-leader with a stated payback (benefit 3's coach margin, or
-  listing volume).
+- $25 collected nets **$17.50–$21.25** after Apple's 15–30%.
+- PGD gives up $25 *at retail*; its actual outlay is COGS plus fulfillment.
+- The year is positive across both businesses while PGD's landed cost of a
+  redeemed voucher stays under roughly $17.50. **Shipping decides that, not the
+  product** — a grip is cheap, a shipped parcel is not.
 
-**Nothing else in this plan depends on the answer. The price does.** Settle it
-before App Store Connect products are created: changing a price tier after
-launch is a migration for existing subscribers rather than an edit.
+So one sub-question remains, and it is still commercial rather than
+engineering: whether the voucher is **$25 off a purchase** (customer pays
+shipping, often spends more, and unredeemed codes cost nothing) or **a free
+item shipped free** (a cleaner reward, a real per-member cost). It blocks no
+phase — the voucher is a code either way — but it should be settled before the
+codes are cut in decision 0.4.
+
+### IAP is unaffected by this
+
+Apple's cut is why the arithmetic was tight; it is not why IAP is required.
+Benefit 4 still puts this squarely under guideline 3.1.1.
 
 ### IAP is no longer in doubt
 
@@ -197,8 +205,9 @@ still holds — those are real-world services and are unaffected.
 
 ## Open product decisions — none of these are engineering questions
 
-1. ~~**Price, and period.**~~ **Decided: $25/year, one tier.** What is NOT
-   decided is who funds the voucher — see above.
+1. ~~**Price, and period.**~~ **Decided: $25/year, one tier.**
+   ~~Who funds the voucher~~ **Decided 2026-09-12: PGD funds it** (same owner).
+   Still open: whether the voucher covers shipping — see above.
 2. ~~**What is actually in Plus?**~~ **Decided** — the four benefits above. Note
    they replace the four on `membership-settings.tsx` (priority alerts, listing
    boosts, advanced matching, early access), which are copy rather than
