@@ -42,10 +42,14 @@ None of this is code, and all of it blocks testing.
 
 1. **App Store Connect**: an auto-renewable subscription in a new subscription
    group. One product, e.g. `com.pickleballapp.plus.yearly`, 1 year.
-   - **Verify $25.00 is an available price point.** Apple's price points are
-     largely `.99`; if $25.00 is unavailable the choice is $24.99 (and the $25
-     voucher then slightly exceeds the fee, which is fine and on-brand) or
-     moving the price. Do not discover this while filling in the paywall.
+   - **Price: $24.99** (settled 2026-09-12). Chosen over $25.00 because $24.99
+     is a standard Apple price point with nothing to verify or request, and
+     over $24.97 because a custom price point is setup friction buying nothing
+     — `.97` does not read as a discount outside US retail, and nobody sees the
+     cents twice on an annual subscription.
+   - Note the voucher now **exceeds** the fee: $24.99 in, $25 of product out.
+     That is deliberate and worth saying on the paywall — the PGD benefit alone
+     more than covers the membership.
    - Localizations, review screenshot, and the subscription's terms text are all
      required before it can be submitted.
 2. **Paid Applications Agreement** must be active, with banking and tax forms

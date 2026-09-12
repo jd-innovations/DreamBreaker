@@ -213,7 +213,12 @@ Apple's cut is why the arithmetic was tight; it is not why IAP is required.
 Benefit 4 still puts this squarely under guideline 3.1.1.
 
 Note the cut is also smaller than stated above: the Small Business Program is
-**15%**, not 30%, below $1M/year. $25 nets **$21.25**.
+**15%**, not 30%, below $1M/year.
+
+**Final numbers (2026-09-12):** the App Store price is **$24.99**, netting
+**$21.24**. So PGD's landed cost per redeemed voucher must stay under about
+**$21.24**, not the $17.50 quoted earlier — that figure assumed Apple's 30%.
+The voucher deliberately exceeds the fee: $24.99 in, $25 of product out.
 
 ### StoreKit — DECIDED 2026-09-12, and it was a choice, not a constraint
 

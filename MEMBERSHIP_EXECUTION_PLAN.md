@@ -264,9 +264,9 @@ now that 0.2 is settled on RevenueCat and a renewal is confirmed to earn a
 second $25 voucher. Summary only here.
 
 ### 5.1 Accounts and products — blocked on the user
-ASC subscription product, Paid Applications Agreement, Small Business Program,
-RevenueCat project, sandbox testers. Verify $25.00 is an available price point
-before the paywall is written.
+ASC subscription product at **$24.99** (settled 2026-09-12 — a standard Apple
+price point, nothing to request), Paid Applications Agreement, Small Business
+Program, RevenueCat project, sandbox testers.
 
 ### 5.2 Term model — pure DB, shippable ahead of the build
 `term_seq` + `current_term_started_at` on `memberships`; voucher `source_id`
