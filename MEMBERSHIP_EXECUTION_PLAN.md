@@ -59,12 +59,17 @@ periods, billing retry, refunds, family sharing) on us. **Blocks Phase 5 only.**
 role. `membership-settings.tsx` shows it as a third plan card. Decide: free role,
 or paid tier. **Blocks 3.3.**
 
-### 0.4 Where Shopify codes come from
-Pre-generated pool uploaded as CSV (no integration, works today) or Shopify
-Admin API per grant (cleaner, adds credentials and a mid-grant failure mode).
-**Blocks 4.1.** Now the only Phase 4 blocker, since 0.1 is decided. Owning the
-store makes either option available; the pool is the one that needs no
-credentials in the app and can be cut by hand today.
+### 0.4 Where Shopify codes come from — DECIDED 2026-09-12: CSV pool
+
+Pre-generated codes, pasted or uploaded in `/admin/wallet`. No credentials in
+our stack, no HTTP call in the middle of a grant, available today. The Admin
+API stays the upgrade path if volume ever justifies it.
+
+What the pool costs, accepted knowingly: a revoked membership cannot recall a
+code that is already live in Shopify, and without a webhook we cannot see that
+a code was spent. Both are written into the migration's closing notes.
+
+Built 2026-09-12 in `20260912120000_membership_voucher_pool.sql`.
 
 ---
 
@@ -203,11 +208,16 @@ The rest is configuration, all of it store-side rather than in our code:
 Expiry is set at grant time from the wallet item, as with every other wallet
 promo — not from a Shopify-side expiry we cannot see.
 
-### 4.1 Code supply
-Per 0.4. If a pool: a `wallet_promo_codes` table (`partner_id`, `code`,
-`assigned_to`, `assigned_at`), a CSV upload in the admin page, and a
-**remaining-codes count visible before granting** so nobody grants from an empty
-pool.
+### 4.1 Code supply — BUILT 2026-09-12
+
+`wallet_promo_codes` + `admin_upload_promo_codes()` + `admin_promo_code_stock()`,
+with the pool panel at the top of `/admin/wallet` and the available count going
+red at zero.
+
+RLS is on with **no policies at all, not even for admins**. Every other admin
+surface this week got a `for select` policy; a promo code is a bearer
+instrument worth $25 to whoever holds it, so counts are exposed through an RPC
+and the codes themselves are read only by the function that assigns them.
 
 ### 4.2 Grant on activation
 Issue from the membership grant path, exactly as
@@ -216,9 +226,21 @@ payment finalizes. `type = 'offer'`, `partner_id` = the `pickleball-grip-doctor`
 row in `wallet_partners`, `external_system = 'shopify'`, `action_type =
 'external_url'`, `action_url = https://<store>/discount/<CODE>`.
 
-**Verification:** comp a membership, confirm exactly one voucher appears, the
-code is marked assigned, and re-granting the same membership issues nothing
-further (idempotency index on `source_id`).
+**Built 2026-09-12** as `issue_membership_voucher()`, called from
+`admin_grant_membership` before both of its returns — including the extend
+path, so a membership first granted against an empty pool picks up its voucher
+when the pool is topped up and the membership is next extended.
+
+Issuance **never raises**. A dry pool returns `no_codes_available` and the
+membership still succeeds; a membership must not fail because a promo ran out.
+The admin page calls the same idempotent RPC after granting to report what
+actually happened, and shows an "Issue voucher" retry.
+
+**Verified 2026-09-12** against a scratch database with stubs, all seven cases:
+grant on an empty pool still creates the membership and issues nothing; upload
+skips blanks and rejects duplicates; issuance assigns exactly one code; a second
+issuance is a no-op; extending issues no second voucher; a non-member gets
+`no_active_membership`.
 **Known limitation:** without a Shopify webhook we cannot observe redemption, so
 the item stays `available` until expiry. Do not display a status we cannot back
 up.

@@ -56,8 +56,25 @@ interface Item {
 interface Partner {
   id: string;
   name: string;
+  slug: string;
   is_active: boolean;
 }
+
+interface PromoStock {
+  partner_id: string;
+  partner_slug: string;
+  partner_name: string;
+  available: number;
+  assigned: number;
+  voided: number;
+}
+
+// The pool RPCs land in database.types.ts only once the migration is applied
+// and `supabase gen types` is re-run. Until then the typed client rejects the
+// names. This is the single place that gap is bridged — DELETE IT and call
+// supabase.rpc() directly as soon as the types are regenerated.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type UntypedRpc = (fn: string, args?: Record<string, unknown>) => Promise<{ data: any; error: { message: string } | null }>;
 
 interface Membership {
   id: string;
@@ -86,6 +103,14 @@ export default function AdminWalletPage() {
   // which is impure and unstable across re-renders (react-hooks/purity).
   const [isActiveMember, setIsActiveMember] = useState(false);
 
+  // Pool state is global rather than person-scoped: how many codes are left is
+  // the thing to know BEFORE choosing who to comp.
+  const [stock, setStock] = useState<PromoStock[]>([]);
+  const [poolPartnerId, setPoolPartnerId] = useState("");
+  const [batchLabel, setBatchLabel] = useState("");
+  const [codesText, setCodesText] = useState("");
+  const [uploading, setUploading] = useState(false);
+
   const [form, setForm] = useState({
     type: "offer" as GrantableType,
     title: "",
@@ -99,6 +124,14 @@ export default function AdminWalletPage() {
     note: "",
   });
 
+  const loadStock = useCallback(async () => {
+    const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
+    const { data, error } = await rpc("admin_promo_code_stock");
+    if (error) { toast.error(error.message); return; }
+    setStock((data ?? []) as PromoStock[]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     (async () => {
       const userId = await getUserId();
@@ -107,8 +140,11 @@ export default function AdminWalletPage() {
         .from("profiles").select("role").eq("id", userId).maybeSingle();
       if (!profile || profile.role !== "admin") { router.push("/dashboard"); return; }
       const { data } = await supabase
-        .from("wallet_partners").select("id,name,is_active").order("name");
-      setPartners((data ?? []) as Partner[]);
+        .from("wallet_partners").select("id,name,slug,is_active").order("name");
+      const rows = (data ?? []) as Partner[];
+      setPartners(rows);
+      setPoolPartnerId(rows.find((x) => x.slug === "pickleball-grip-doctor")?.id ?? "");
+      await loadStock();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -141,6 +177,70 @@ export default function AdminWalletPage() {
       if ((data ?? []).length === 0) toast.error("No match.");
     } finally {
       setSearching(false);
+    }
+  }
+
+  async function uploadCodes() {
+    // One code per line, or comma-separated — a CSV export of one column is
+    // both, depending on who exported it, and the server trims and skips
+    // blanks anyway.
+    const codes = codesText
+      .split(/[\r\n,]+/)
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+    if (!poolPartnerId) { toast.error("Choose a partner."); return; }
+    if (codes.length === 0) { toast.error("Paste at least one code."); return; }
+
+    setUploading(true);
+    try {
+      const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
+      const { data, error } = await rpc("admin_upload_promo_codes", {
+        p_partner_id: poolPartnerId,
+        p_codes: codes,
+        p_batch_label: batchLabel.trim() || undefined,
+      });
+      if (error) { toast.error(grantError(error.message)); return; }
+      const r = (data ?? {}) as { inserted?: number; duplicates?: number; skipped?: number };
+      // Duplicates are reported rather than hidden: re-pasting a CSV is a
+      // normal accident, and "0 added, 200 already there" is the answer that
+      // stops someone uploading it a third time.
+      toast.success(
+        `${r.inserted ?? 0} added`
+        + (r.duplicates ? `, ${r.duplicates} already in the pool` : "")
+        + (r.skipped ? `, ${r.skipped} blank` : ""),
+      );
+      setCodesText("");
+      await loadStock();
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function issueVoucher() {
+    if (!person) return;
+    setBusy(true);
+    try {
+      const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
+      const { data, error } = await rpc("issue_membership_voucher", { p_user_id: person.id });
+      if (error) { toast.error(grantError(error.message)); return; }
+      const r = (data ?? {}) as { issued?: boolean; reason?: string };
+      if (r.issued) toast.success("Voucher issued.");
+      else toast.error(voucherReason(r.reason));
+      await Promise.all([loadItems(person.id), loadStock()]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function voucherReason(reason?: string): string {
+    switch (reason) {
+      case "already_issued":            return "They already have this voucher.";
+      case "no_codes_available":        return "The pool is empty — upload codes first.";
+      case "no_active_membership":      return "They have no active membership.";
+      case "url_template_not_configured": return "The partner has no discount link template.";
+      case "partner_unavailable":       return "The partner is missing or inactive.";
+      default:                          return reason ?? "No voucher issued.";
     }
   }
 
@@ -183,7 +283,16 @@ export default function AdminWalletPage() {
       });
       if (error) { toast.error(grantError(error.message)); return; }
       toast.success("Membership granted.");
-      await loadMembership(person.id);
+      // admin_grant_membership issues the voucher itself, but returns only the
+      // membership row, so it cannot say whether that part worked. Calling the
+      // idempotent issuance RPC afterwards is how the admin finds out — it
+      // reports 'already_issued' on the happy path and names the problem
+      // ('no_codes_available') when the pool was dry.
+      const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
+      const { data: v } = await rpc("issue_membership_voucher", { p_user_id: person.id });
+      const reason = (v as { issued?: boolean; reason?: string } | null)?.reason;
+      if (reason && reason !== "already_issued") toast.error(voucherReason(reason));
+      await Promise.all([loadMembership(person.id), loadItems(person.id), loadStock()]);
     } finally {
       setBusy(false);
     }
@@ -278,6 +387,96 @@ export default function AdminWalletPage() {
           Issue a promo to one person, or withdraw one. Everything here is recorded against your account.
         </p>
       </div>
+
+      <section className="space-y-3 rounded-md border p-4">
+        <h2 className="text-lg font-semibold">Voucher pool</h2>
+        <p className="text-xs text-muted-foreground">
+          Codes cut in Shopify and pasted here. One is assigned automatically when a membership is
+          comped. Codes are never shown again after upload — only counted.
+        </p>
+
+        {stock.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No codes uploaded yet.</p>
+        ) : (
+          <ul className="divide-y rounded-md border text-sm">
+            {stock.map((row) => (
+              <li key={row.partner_id} className="flex items-center justify-between px-3 py-2">
+                <span className="font-medium">{row.partner_name}</span>
+                <span className="text-muted-foreground">
+                  {/* Red at zero: comping a membership with an empty pool
+                      succeeds and silently issues nothing, so this number is
+                      the only warning there is. */}
+                  <span className={row.available === 0 ? "font-semibold text-red-600" : "font-semibold text-foreground"}>
+                    {row.available} available
+                  </span>
+                  {" · "}{row.assigned} issued
+                  {row.voided > 0 ? ` · ${row.voided} voided` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-sm">
+            Partner
+            <select
+              className="mt-1 w-full rounded-md border px-3 py-2"
+              value={poolPartnerId}
+              onChange={(e) => setPoolPartnerId(e.target.value)}
+            >
+              <option value="">Choose…</option>
+              {partners.filter((x) => x.is_active).map((x) => (
+                <option key={x.id} value={x.id}>{x.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm">
+            Batch label
+            <input
+              className="mt-1 w-full rounded-md border px-3 py-2"
+              placeholder="e.g. 2026-09 launch"
+              value={batchLabel}
+              onChange={(e) => setBatchLabel(e.target.value)}
+            />
+          </label>
+        </div>
+
+        <label className="block text-sm">
+          Codes
+          <textarea
+            className="mt-1 w-full rounded-md border px-3 py-2 font-mono text-xs"
+            rows={5}
+            placeholder={"One per line, or comma separated\nPGD-XXXX-1\nPGD-XXXX-2"}
+            value={codesText}
+            onChange={(e) => setCodesText(e.target.value)}
+          />
+        </label>
+
+        <div className="flex items-center gap-3">
+          <input
+            type="file"
+            accept=".csv,.txt"
+            className="text-xs"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              // Appended, not replaced: uploading two batches in a row should
+              // not quietly discard what is already in the box.
+              const txt = await file.text();
+              setCodesText((prev) => (prev ? `${prev}\n${txt}` : txt));
+              e.target.value = "";
+            }}
+          />
+          <button
+            className="rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
+            onClick={uploadCodes}
+            disabled={uploading}
+          >
+            {uploading ? "Uploading…" : "Add to pool"}
+          </button>
+        </div>
+      </section>
 
       <section className="space-y-3">
         <label className="text-sm font-semibold">Find someone</label>
@@ -379,6 +578,31 @@ export default function AdminWalletPage() {
               Leave the date empty for no expiry.
               {isActiveMember ? " Extending replaces the current expiry." : ""}
             </p>
+
+            {/* The voucher's own line. Comping a membership issues it, but that
+                can fail quietly (empty pool), and "did they actually get it"
+                should be answerable by looking rather than by trusting. */}
+            {isActiveMember && (
+              <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                {items.some((i) => i.source_type === "membership_benefit") ? (
+                  <span className="text-muted-foreground">
+                    <span className="font-medium text-foreground">PGD voucher issued.</span>
+                    {" It is in their wallet below."}
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-red-600">No PGD voucher issued.</span>
+                    <button
+                      className="rounded-md border px-3 py-1.5 text-sm font-semibold disabled:opacity-50"
+                      onClick={issueVoucher}
+                      disabled={busy}
+                    >
+                      Issue voucher
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </section>
 
           <section className="space-y-3">
