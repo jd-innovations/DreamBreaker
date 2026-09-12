@@ -69,13 +69,6 @@ interface PromoStock {
   voided: number;
 }
 
-// The pool RPCs land in database.types.ts only once the migration is applied
-// and `supabase gen types` is re-run. Until then the typed client rejects the
-// names. This is the single place that gap is bridged — DELETE IT and call
-// supabase.rpc() directly as soon as the types are regenerated.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type UntypedRpc = (fn: string, args?: Record<string, unknown>) => Promise<{ data: any; error: { message: string } | null }>;
-
 interface Membership {
   id: string;
   status: string;
@@ -125,10 +118,9 @@ export default function AdminWalletPage() {
   });
 
   const loadStock = useCallback(async () => {
-    const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
-    const { data, error } = await rpc("admin_promo_code_stock");
+    const { data, error } = await supabase.rpc("admin_promo_code_stock");
     if (error) { toast.error(error.message); return; }
-    setStock((data ?? []) as PromoStock[]);
+    setStock(data ?? []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -194,8 +186,7 @@ export default function AdminWalletPage() {
 
     setUploading(true);
     try {
-      const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
-      const { data, error } = await rpc("admin_upload_promo_codes", {
+      const { data, error } = await supabase.rpc("admin_upload_promo_codes", {
         p_partner_id: poolPartnerId,
         p_codes: codes,
         p_batch_label: batchLabel.trim() || undefined,
@@ -221,8 +212,7 @@ export default function AdminWalletPage() {
     if (!person) return;
     setBusy(true);
     try {
-      const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
-      const { data, error } = await rpc("issue_membership_voucher", { p_user_id: person.id });
+      const { data, error } = await supabase.rpc("issue_membership_voucher", { p_user_id: person.id });
       if (error) { toast.error(grantError(error.message)); return; }
       const r = (data ?? {}) as { issued?: boolean; reason?: string };
       if (r.issued) toast.success("Voucher issued.");
@@ -288,8 +278,7 @@ export default function AdminWalletPage() {
       // idempotent issuance RPC afterwards is how the admin finds out — it
       // reports 'already_issued' on the happy path and names the problem
       // ('no_codes_available') when the pool was dry.
-      const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
-      const { data: v } = await rpc("issue_membership_voucher", { p_user_id: person.id });
+      const { data: v } = await supabase.rpc("issue_membership_voucher", { p_user_id: person.id });
       const reason = (v as { issued?: boolean; reason?: string } | null)?.reason;
       if (reason && reason !== "already_issued") toast.error(voucherReason(reason));
       await Promise.all([loadMembership(person.id), loadItems(person.id), loadStock()]);

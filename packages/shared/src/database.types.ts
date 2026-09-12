@@ -6644,6 +6644,77 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_promo_codes: {
+        Row: {
+          assigned_at: string | null
+          assigned_to: string | null
+          batch_label: string | null
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          partner_id: string
+          voided_at: string | null
+          voided_reason: string | null
+          wallet_item_id: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_to?: string | null
+          batch_label?: string | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          partner_id: string
+          voided_at?: string | null
+          voided_reason?: string | null
+          wallet_item_id?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_to?: string | null
+          batch_label?: string | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          partner_id?: string
+          voided_at?: string | null
+          voided_reason?: string | null
+          wallet_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_promo_codes_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_promo_codes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_promo_codes_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_promo_codes_wallet_item_id_fkey"
+            columns: ["wallet_item_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallet_redemptions: {
         Row: {
           amount: number | null
@@ -7260,6 +7331,17 @@ export type Database = {
           severity: string
         }[]
       }
+      admin_promo_code_stock: {
+        Args: never
+        Returns: {
+          assigned: number
+          available: number
+          partner_id: string
+          partner_name: string
+          partner_slug: string
+          voided: number
+        }[]
+      }
       admin_revoke_membership: {
         Args: { p_reason?: string; p_user_id: string }
         Returns: {
@@ -7335,6 +7417,14 @@ export type Database = {
       admin_stage_facility_import: {
         Args: { p_filename: string; p_rows: Json; p_storage_path: string }
         Returns: string
+      }
+      admin_upload_promo_codes: {
+        Args: {
+          p_batch_label?: string
+          p_codes: string[]
+          p_partner_id: string
+        }
+        Returns: Json
       }
       apply_to_be_director: {
         Args: never
@@ -8199,6 +8289,7 @@ export type Database = {
         Args: { p_reservation_id: string; p_user_id: string }
         Returns: boolean
       }
+      issue_membership_voucher: { Args: { p_user_id: string }; Returns: Json }
       issue_review_invitation: {
         Args: {
           p_subject_id: string
