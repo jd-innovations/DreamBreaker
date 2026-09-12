@@ -259,22 +259,39 @@ up.
 
 ## Phase 5 — Purchase. Needs a build. Last, deliberately.
 
-### 5.1 SDK and products
-Per 0.2. Add the dependency, configure the product in App Store Connect,
-regenerate the lockfile with **npm 10**, not local npm 11
-(`project-eas-npm-lockfile`). Fingerprint changes, so this is a new build.
+**Expanded into its own document: `MEMBERSHIP_PHASE5_STOREKIT.md`** (2026-09-12),
+now that 0.2 is settled on RevenueCat and a renewal is confirmed to earn a
+second $25 voucher. Summary only here.
 
-### 5.2 Receipt validation
-An edge function verifies with Apple and writes the `memberships` row. The
-client is never the authority. Handle renewal, expiry, refund and restore.
+### 5.1 Accounts and products — blocked on the user
+ASC subscription product, Paid Applications Agreement, Small Business Program,
+RevenueCat project, sandbox testers. Verify $25.00 is an available price point
+before the paywall is written.
 
-### 5.3 Paywall and restore
-Wire the Upgrade row. "Restore Purchases" must actually restore.
+### 5.2 Term model — pure DB, shippable ahead of the build
+`term_seq` + `current_term_started_at` on `memberships`; voucher `source_id`
+becomes `<membership_id>:<term_seq>`. **Carries a backfill**: without it, the
+new key matches nothing and every existing member is issued a second $25.
+Extending does NOT increment; only an explicit renewal does.
 
-### 5.4 Web purchase
-Stripe on web writing the same entitlement, reconciled to one answer.
-**Never link to it from inside the iOS app** — that is its own guideline
-violation.
+### 5.3 Server
+A RevenueCat webhook at `api/revenuecat/webhook`, authenticated by a shared
+secret in the Authorization header (RevenueCat does not HMAC-sign like Stripe).
+Writes `memberships` through one service-role SECURITY DEFINER function.
+Idempotent on the store transaction id — a replayed RENEWAL must not issue a
+third voucher.
+
+### 5.4 Client
+`react-native-purchases`; `Purchases.logIn(session.user.id)` so `app_user_id` is
+the Supabase user id. Rewrite the paywall to the real four benefits, ungate
+`paidMembership`, make Restore Purchases work. Entitlement is still READ from
+our `memberships` table, never from RevenueCat's client state.
+
+### 5.5 Web purchase — reframed
+Stripe on web writing the same entitlement. The old note here said "never link
+to it from inside the iOS app — that is its own guideline violation." **That is
+no longer true on the US storefront** (see MONETIZATION_PLAN.md); it remains
+true everywhere else. Deferred either way: StoreKit is the chosen rail.
 
 ---
 
