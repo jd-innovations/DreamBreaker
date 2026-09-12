@@ -48,11 +48,21 @@ what keeps the landed cost inside the $17.50 envelope above.
 See 4.0 for what that shape means in Shopify. It is a **discount code, not a
 gift card**, and the distinction is the whole decision.
 
-### 0.2 RevenueCat or raw StoreKit
-RevenueCat absorbs receipt validation, renewals, restore and cross-platform
-entitlement at a revenue share — which 0.1 may or may not leave room for. Raw
-StoreKit avoids the fee and the dependency but puts renewal edge cases (grace
-periods, billing retry, refunds, family sharing) on us. **Blocks Phase 5 only.**
+### 0.2 RevenueCat or raw StoreKit — the last open decision
+
+**StoreKit is confirmed as the rail (2026-09-12)**, chosen over a now-permitted
+Stripe link-out for what Apple absorbs and to keep membership money out of the
+Connect/marketplace ledger. See MONETIZATION_PLAN.md.
+
+What remains is how to talk to it. Note `expo-in-app-purchases` is deprecated,
+so the real options are `react-native-purchases` (RevenueCat) or
+`react-native-iap`.
+
+RevenueCat absorbs receipt validation, renewals, restore, grace periods and
+billing retry, and its webhook maps cleanly onto writing the `memberships` row.
+Free below $2.5k/month tracked revenue, then ~1% — free at launch volume. Raw
+StoreKit avoids the dependency but puts the subscription lifecycle on us, which
+is where entitlement leaks live. **Blocks Phase 5 only.**
 
 ### 0.3 What "Director" is
 `profiles.role`, `DirectorOnly` and `apply-director.tsx` already make it a free

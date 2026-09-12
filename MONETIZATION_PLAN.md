@@ -50,13 +50,28 @@ the upgrade screen is digital and consumed inside the app:
 - Early access to new features
 
 Unlocking in-app functionality for a recurring fee is exactly what App Store
-Review Guideline 3.1.1 reserves for In-App Purchase. Selling it through Stripe
-would be a rejection, and it would also make the review note in
-`STORE_SUBMISSION.md` §6 **false** — it currently tells Apple this app takes no
-payments for digital content.
+Review Guideline 3.1.1 reserves for In-App Purchase. It also makes the review
+note in `STORE_SUBMISSION.md` §6 **false** — it currently tells Apple this app
+takes no payments for digital content, and that must be rewritten before
+submission.
 
-Confirm against the current guidelines before building; this is the single
-assumption most worth re-checking, because everything below follows from it.
+**Re-checked against the live guidelines 2026-09-12, and half of the original
+claim was wrong.** "Selling it through Stripe would be a rejection" is no longer
+true on the **United States storefront**. Following the Epic injunction, 3.1.1(a)
+now reads: "These entitlements are not required for developers to include
+buttons, external links, or other calls to action in their United States
+storefront apps... In all other storefronts, except for the United States
+storefront, where this prohibition does not apply, apps and their metadata may
+not include buttons, external links, or other calls to action that direct
+customers to purchasing mechanisms other than in-app purchase." Commission on
+linked-out purchases is currently **0%**, pending a court-approved rate.
+
+What has NOT changed: 3.1.1 still requires IAP to unlock in-app functionality,
+so the payment itself may not happen inside the app. The permitted shape is a
+link out to a web checkout.
+
+This was the assumption flagged as most worth re-checking. It was, and it held
+only partly — re-check it again at submission, since this area has moved twice.
 
 ### What that implies
 
@@ -197,12 +212,39 @@ this rules out. Configuration details are in the execution plan's 4.0.
 Apple's cut is why the arithmetic was tight; it is not why IAP is required.
 Benefit 4 still puts this squarely under guideline 3.1.1.
 
-### IAP is no longer in doubt
+Note the cut is also smaller than stated above: the Small Business Program is
+**15%**, not 30%, below $1M/year. $25 nets **$21.25**.
+
+### StoreKit — DECIDED 2026-09-12, and it was a choice, not a constraint
 
 Benefit 4 raises a limit on in-app functionality in exchange for a recurring
-fee. That is guideline 3.1.1 squarely, so the iOS purchase must go through
-StoreKit. The reasoning about court time and entry fees staying outside IAP
-still holds — those are real-world services and are unaffected.
+fee, which is guideline 3.1.1 squarely. But as recorded above, a US-storefront
+app may now link out to its own web checkout, so Stripe was genuinely available.
+
+**StoreKit was chosen anyway**, for two reasons:
+
+1. **What Apple absorbs.** Apple is merchant of record: worldwide tax collection
+   and remittance, chargebacks, and subscription lifecycle. The counterweight,
+   stated honestly, is that Apple also decides refunds, and we cannot overrule
+   one.
+2. **Keeping membership money out of the marketplace ledger.** Every Stripe flow
+   in this app is Connect money with a third-party payee — coach payouts,
+   facility payouts, the reconciliation runners. Membership revenue is purely
+   first-party. Putting it through the same rails would mean the Stripe ledger
+   no longer means one thing, and the payout runners would need to learn to
+   ignore it. This is the stronger reason.
+
+Consequences accepted: a native dependency and therefore a BUILD, products
+defined in App Store Connect, receipt validation, and no customer email from the
+purchase itself.
+
+The reasoning about court time and entry fees staying outside IAP still holds —
+those are real-world services under 3.1.3(e) and are unaffected. Apple Pay
+remains correct for those, and remains commission-free.
+
+**Stripe link-out stays documented as the fallback**, not discarded: if IAP
+review or economics ever turn, the entitlement already lives in one table and
+the acquisition path is the only thing that would change.
 
 ---
 
