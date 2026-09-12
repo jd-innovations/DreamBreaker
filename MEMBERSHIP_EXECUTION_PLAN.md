@@ -29,7 +29,9 @@ is proven.
 ### 0.1 Who funds the $25 voucher — DECIDED 2026-09-12: PGD funds it
 
 The owner of this app also owns Pickleball Grip Doctor, so the voucher is an
-internal transfer, not a cost paid to a third party. **Price stays $25/year.**
+internal transfer, not a cost paid to a third party. **The price did not have to
+move** — it is $24.99/year, the App Store price point nearest the $25 the plan
+was built on (settled 2026-09-12). The voucher stays a flat $25 of product.
 
 The economics that matter, stated once so nobody re-derives them:
 

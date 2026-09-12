@@ -5,7 +5,8 @@ now the only unbuilt phase.
 
 Decisions this rests on, all settled:
 
-- **$25/year, one tier** (MONETIZATION_PLAN.md).
+- **$24.99/year, one tier** (MONETIZATION_PLAN.md). The benefit is still a
+  flat $25 of PGD product, so the voucher slightly exceeds the fee.
 - **StoreKit, not a Stripe link-out** — chosen, not forced. A US-storefront app
   may now link out; StoreKit was picked for what Apple absorbs and to keep
   first-party membership revenue out of a Stripe ledger that otherwise means

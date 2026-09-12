@@ -103,7 +103,8 @@ refunds, family sharing) are where hand-rolled implementations leak entitlements
 
 ## The product, as defined 2026-09-11
 
-**$25/year.** One paid tier. Benefits:
+**$24.99/year.** One paid tier. (Written throughout as “$25”; $24.99 is the App
+Store price point, settled 2026-09-12.) Benefits:
 
 | # | Benefit | State of the ground |
 | --- | --- | --- |
@@ -186,8 +187,9 @@ its own right, not a switch on a membership. Revisit after v1 ships.
 
 **PGD funds the voucher.** The owner of this app also owns Pickleball Grip
 Doctor, so the $25 is an internal transfer between two businesses with the same
-owner, not a cost paid outward. **Price stays $25/year** and App Store Connect
-products can be created against it.
+owner, not a cost paid outward. **The price did not have to move** — App Store
+Connect products can be created at $24.99/year, the price point nearest the $25
+this plan was built on.
 
 What the arithmetic now looks like, recorded so it is not re-derived:
 
@@ -255,7 +257,7 @@ the acquisition path is the only thing that would change.
 
 ## Open product decisions — none of these are engineering questions
 
-1. ~~**Price, and period.**~~ **Decided: $25/year, one tier.**
+1. ~~**Price, and period.**~~ **Decided: $24.99/year, one tier.**
    ~~Who funds the voucher~~ **Decided 2026-09-12: PGD funds it** (same owner),
    as $25 against product only — no shipping, no carry-forward. See above.
 2. ~~**What is actually in Plus?**~~ **Decided** — the four benefits above. Note
