@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { useProfile } from '@/hooks/useProfile';
@@ -21,7 +21,7 @@ import { getProfileCompletion } from '@/lib/profileCompletion';
 import { signOut } from '@/lib/auth';
 import { openPrivacy, openTerms } from '@/lib/legal';
 import { isFeatureEnabled } from '@/lib/featureFlags';
-import { ProfileCompletionRing } from '@/components';
+import { ProfileCompletionRing, ShimmerOverlay } from '@/components';
 
 // Theme-backed alias Ã¢â‚¬â€ brand values resolve from @/theme.
 const L = {
@@ -231,30 +231,36 @@ export default function AccountSettingsScreen() {
         </View>
 
         {/* Ã¢â€â‚¬Ã¢â€â‚¬ UPGRADE BANNER Ã¢â€â‚¬Ã¢â€â‚¬ */}
-        <TouchableOpacity style={styles.upgradeBanner} activeOpacity={0.88}>
-          {/* Ball graphic */}
-          <View style={styles.upgradeBallWrap}>
-            <View style={styles.upgradeBall}>
-              <View style={[styles.ubH, { top: 5, left: 7 }]} />
-              <View style={[styles.ubH, { top: 5, right: 7 }]} />
-              <View style={[styles.ubH, { bottom: 5, left: 12 }]} />
+        {/* Gated with the same flag as the "My Plan" cell below. The grid
+            already hid the membership screen while paidMembership is
+            'deferred'; this banner was still advertising it, which is the
+            thing item 1.1 set out to stop. It returns when the flag flips. */}
+        {isFeatureEnabled('paidMembership') ? (
+          <TouchableOpacity
+            style={styles.upgradeBanner}
+            activeOpacity={0.88}
+            onPress={() => router.push('/membership-settings' as never)}
+          >
+            <View style={styles.upgradeText}>
+              <Text style={styles.upgradeTitle}>
+                Pickleball App <Text style={styles.upgradePlus}>PLUS</Text>
+              </Text>
+              {/* The four benefits are specific and worth more than "premium
+                  features and more", which told a reader nothing. */}
+              <Text style={styles.upgradeSub}>
+                $25 store credit, member coach pricing, and more listings.
+              </Text>
             </View>
-            <View style={[styles.ubLine, { right: -8, top: 8, width: 9 }]} />
-            <View style={[styles.ubLine, { right: -6, top: 14, width: 6 }]} />
-          </View>
 
-          <View style={styles.upgradeText}>
-            <Text style={styles.upgradeTitle}>
-              Upgrade to Pickleball App{' '}
-              <Text style={styles.upgradePlus}>PLUS</Text>
-            </Text>
-            <Text style={styles.upgradeSub}>Get premium features and more.</Text>
-          </View>
+            <View style={styles.upgradeArrow}>
+              <Ionicons name="chevron-forward" size={18} color={L.navy} />
+            </View>
 
-          <View style={styles.upgradeArrow}>
-            <Ionicons name="chevron-forward" size={18} color={L.white} />
-          </View>
-        </TouchableOpacity>
+            {/* Clipped by the banner's own overflow:'hidden'. One pass on
+                focus, not a loop — see ShimmerOverlay. */}
+            <ShimmerOverlay delayMs={600} />
+          </TouchableOpacity>
+        ) : null}
 
         {/* Ã¢â€â‚¬Ã¢â€â‚¬ SETTINGS GRID Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <View style={styles.grid}>
@@ -420,41 +426,23 @@ const styles = StyleSheet.create({
   upgradeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    backgroundColor: L.bg,
+    gap: spacing.md,
+    // Navy, like the profile hero above it, rather than white with a gold
+    // hairline — on a page of white cells the old treatment read as one more
+    // settings row instead of the one thing being sold.
+    backgroundColor: L.navy,
     borderWidth: 1.5,
     borderColor: L.goldBorder,
     borderRadius: shape.card,
-    padding: 16,
-  },
-  upgradeBallWrap: { width: 42, height: 38, position: 'relative', flexShrink: 0 },
-  upgradeBall: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: L.gold,
-    position: 'absolute',
-    left: 0,
-    top: 0,
-  },
-  ubH: {
-    position: 'absolute',
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-  },
-  ubLine: {
-    position: 'absolute',
-    height: 2.5,
-    borderRadius: 1.25,
-    backgroundColor: L.gold,
-    transform: [{ rotate: '-18deg' }],
+    padding: spacing.lg,
+    // Required: ShimmerOverlay fills the parent and relies on this to shape
+    // the sweep to the card's corners.
+    overflow: 'hidden',
   },
   upgradeText: { flex: 1 },
-  upgradeTitle: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800', marginBottom: 2 },
+  upgradeTitle: { color: L.white, fontSize: text.rowValue.size, fontWeight: '800', marginBottom: 2 },
   upgradePlus: { color: L.gold },
-  upgradeSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  upgradeSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   upgradeArrow: {
     width: 34,
     height: 34,
