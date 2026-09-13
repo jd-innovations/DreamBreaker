@@ -65,8 +65,14 @@ const swap = (html, href) => html.split(TOKEN).join(href);
 //
 // `&amp;` rather than a bare `&`: this is an HTML attribute, and the mail
 // client decodes the entity before following the link.
+//
+// Applied to CONFIRM ONLY. Reset deliberately keeps {{ .ConfirmationURL }}:
+// that flow was working, the owner asked for it to be left alone (2026-09-13),
+// and the Dashboard copy still carries the original. Keeping this file matching
+// production is worth more than the consistency of fixing both. The reset
+// version is in git history if it is ever wanted -- commit 81a3712.
 const CTA = {
-  reset: 'https://pickleballapp.app/auth/reset?token_hash={{ .TokenHash }}&amp;type=recovery',
+  reset: '{{ .ConfirmationURL }}',
   confirm: 'https://pickleballapp.app/auth/confirm?token_hash={{ .TokenHash }}&amp;type=signup',
 };
 
@@ -99,12 +105,14 @@ const templates = {
 
 for (const [file, { href, ...opts }] of Object.entries(templates)) {
   const html = swap(renderEmail({ ...common, ...opts }), href);
-  if (!html.includes('{{ .TokenHash }}')) throw new Error(`${file}: CTA token missing`);
+  if (!html.includes(href)) throw new Error(`${file}: CTA missing`);
   if (html.includes('PLACEHOLDER')) throw new Error(`${file}: placeholder leaked`);
-  // The whole point of the change: the tapped link must be a path the AASA
-  // claims, with nothing redirecting in front of it.
-  if (!html.includes('https://pickleballapp.app/auth/')) throw new Error(`${file}: CTA is not on the claimed domain`);
-  if (html.includes('supabase.co/auth/v1/verify')) throw new Error(`${file}: CTA still goes through GoTrue's redirect`);
+  // For a token_hash CTA, the whole point is that the tapped link is a path the
+  // AASA claims with nothing redirecting in front of it. Only asserted for the
+  // templates that use one.
+  if (href.includes('token_hash') && !href.startsWith('https://pickleballapp.app/auth/')) {
+    throw new Error(`${file}: CTA is not on the claimed domain`);
+  }
   writeFileSync(join(here, file), html);
   console.log(`${file}  ${Buffer.byteLength(html)} bytes`);
 }
