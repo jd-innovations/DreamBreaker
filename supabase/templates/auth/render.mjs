@@ -38,11 +38,37 @@ writeFileSync(tmp, js);
 globalThis.Deno = { env: { get: () => undefined } };
 const { renderEmail } = await import(pathToFileURL(tmp).href);
 
-// GoTrue substitutes {{ .ConfirmationURL }} itself. It is swapped in AFTER
-// rendering because the shell's safeUrl() passes only http(s) and would
-// otherwise turn the Go template token into "#".
+// The CTA is swapped in AFTER rendering because the shell's safeUrl() passes
+// only http(s) and would otherwise turn a Go template token into "#".
 const TOKEN = 'https://GOTRUE-CONFIRMATION-URL-PLACEHOLDER';
-const swap = (html) => html.split(TOKEN).join('{{ .ConfirmationURL }}');
+const swap = (html, href) => html.split(TOKEN).join(href);
+
+// Why these are token_hash links on OUR domain, and not {{ .ConfirmationURL }}.
+//
+// ConfirmationURL points at the Supabase project host:
+//
+//   https://<ref>.supabase.co/auth/v1/verify?token=...&redirect_to=https://pickleballapp.app/auth/confirm
+//
+// So the link the user TAPS is supabase.co -- a domain the app does not claim.
+// iOS opens Safari, GoTrue verifies, and only then 302s to pickleballapp.app.
+// **iOS does not fire universal links on a redirect**, so by the time our
+// claimed domain is reached the browser already owns the session and the app
+// never opens. Confirmed on device 2026-09-13: tapping "CONFIRM EMAIL" landed
+// in the web app with /auth/confirm correctly listed in the AASA (checked at
+// Apple's CDN, not just our origin) and a real app screen waiting at that path.
+//
+// A token_hash link is our own claimed URL with no redirect in front of it, so
+// iOS matches it against the AASA and opens the app. Both redeemers already
+// accept this shape, which is why this is a template change and not a code one:
+// completeEmailConfirmation()/completePasswordRecovery() in the app, and
+// web/src/lib/auth/redeem-url.ts for anyone without it installed.
+//
+// `&amp;` rather than a bare `&`: this is an HTML attribute, and the mail
+// client decodes the entity before following the link.
+const CTA = {
+  reset: 'https://pickleballapp.app/auth/reset?token_hash={{ .TokenHash }}&amp;type=recovery',
+  confirm: 'https://pickleballapp.app/auth/confirm?token_hash={{ .TokenHash }}&amp;type=signup',
+};
 
 const common = {
   preferencesUrl: 'https://pickleballapp.app/settings/notifications',
@@ -58,6 +84,7 @@ const templates = {
           <p>This link can only be used once, and it expires after a short while. If you didn&#39;t request this, you can safely ignore this email &mdash; your password will stay as it is.</p>`,
     ctaLabel: 'RESET PASSWORD',
     ctaUrl: TOKEN,
+    href: CTA.reset,
   },
   'confirm-signup.html': {
     preheader: 'Confirm your email address to finish signing up.',
@@ -66,13 +93,18 @@ const templates = {
           <p>If you didn&#39;t create an account, you can safely ignore this email.</p>`,
     ctaLabel: 'CONFIRM EMAIL',
     ctaUrl: TOKEN,
+    href: CTA.confirm,
   },
 };
 
-for (const [file, opts] of Object.entries(templates)) {
-  const html = swap(renderEmail({ ...common, ...opts }));
-  if (!html.includes('{{ .ConfirmationURL }}')) throw new Error(`${file}: CTA token missing`);
+for (const [file, { href, ...opts }] of Object.entries(templates)) {
+  const html = swap(renderEmail({ ...common, ...opts }), href);
+  if (!html.includes('{{ .TokenHash }}')) throw new Error(`${file}: CTA token missing`);
   if (html.includes('PLACEHOLDER')) throw new Error(`${file}: placeholder leaked`);
+  // The whole point of the change: the tapped link must be a path the AASA
+  // claims, with nothing redirecting in front of it.
+  if (!html.includes('https://pickleballapp.app/auth/')) throw new Error(`${file}: CTA is not on the claimed domain`);
+  if (html.includes('supabase.co/auth/v1/verify')) throw new Error(`${file}: CTA still goes through GoTrue's redirect`);
   writeFileSync(join(here, file), html);
   console.log(`${file}  ${Buffer.byteLength(html)} bytes`);
 }

@@ -35,9 +35,28 @@ header of `render.mjs`.
 
 ## Decisions baked in
 
-- **`{{ .ConfirmationURL }}`** drives the gold CTA button. It is swapped in
-  after rendering because the shell's `safeUrl()` passes only `http(s)` and
-  would otherwise turn the Go template token into `#`.
+- **The CTA is a `token_hash` link on our own domain**, not
+  `{{ .ConfirmationURL }}` — changed 2026-09-13 after device testing.
+
+  ConfirmationURL points at `https://<ref>.supabase.co/auth/v1/verify?…&redirect_to=…`,
+  so the link the user *taps* is supabase.co, which the app does not claim. iOS
+  opens Safari, GoTrue verifies, and only then redirects to pickleballapp.app —
+  and **iOS does not fire universal links on a redirect**, so the browser owns
+  the session and the app never opens. That is what happened on device: the
+  confirm link landed in the web app even though `/auth/confirm` was correctly
+  listed in the AASA (verified at Apple's CDN) with a real app screen behind it.
+
+  The links are now `…/auth/confirm?token_hash={{ .TokenHash }}&type=signup`
+  and `…/auth/reset?token_hash={{ .TokenHash }}&type=recovery` — our claimed
+  paths, nothing redirecting in front of them. No code change was needed:
+  `completeEmailConfirmation()` / `completePasswordRecovery()` and
+  `web/src/lib/auth/redeem-url.ts` all already redeemed this shape.
+
+  Still swapped in after rendering, for the original reason: `safeUrl()` passes
+  only `http(s)` and would turn a bare Go token into `#`.
+
+  **Caveat:** an in-app browser (the Gmail app's, notably) can swallow universal
+  links whatever the link shape. Test in Apple Mail before blaming the template.
 - **No unsubscribe link.** You cannot opt out of a password reset.
 - **No postal address.** Transactional mail; the address on file is
   residential. Matches `showAddress` defaulting to false in the shell.
