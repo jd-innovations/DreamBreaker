@@ -20,7 +20,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { getProfileCompletion } from '@/lib/profileCompletion';
 import { signOut } from '@/lib/auth';
 import { openPrivacy, openTerms } from '@/lib/legal';
-import { isFeatureEnabled } from '@/lib/featureFlags';
+import { isFeatureEnabled, IS_INTERNAL_BUILD } from '@/lib/featureFlags';
 import { ProfileCompletionRing, ShimmerOverlay } from '@/components';
 
 // Theme-backed alias Ã¢â‚¬â€ brand values resolve from @/theme.
@@ -234,8 +234,16 @@ export default function AccountSettingsScreen() {
         {/* Gated with the same flag as the "My Plan" cell below. The grid
             already hid the membership screen while paidMembership is
             'deferred'; this banner was still advertising it, which is the
-            thing item 1.1 set out to stop. It returns when the flag flips. */}
-        {isFeatureEnabled('paidMembership') ? (
+            thing item 1.1 set out to stop. It returns when the flag flips.
+            
+            The IS_INTERNAL_BUILD arm is TEMPORARY, for visual review of the
+            card on preview builds (2026-09-13). It deliberately does not flip
+            paidMembership to 'hidden': that flag also controls the "My Plan"
+            cell, which opens a screen that is still a mockup, and promoting it
+            would mean asserting in BETA_SCOPE.md that the feature is built.
+            Nothing here reaches a production build. Remove this arm when
+            Phase 5 ships and the flag carries it properly. */}
+        {isFeatureEnabled('paidMembership') || IS_INTERNAL_BUILD ? (
           <TouchableOpacity
             style={styles.upgradeBanner}
             activeOpacity={0.88}
