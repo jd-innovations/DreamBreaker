@@ -31,6 +31,18 @@ import { getUserId } from "@/lib/dev-user";
 const GRANTABLE_TYPES = ["offer", "reward", "pass", "ticket"] as const;
 type GrantableType = (typeof GRANTABLE_TYPES)[number];
 
+// Expiry dates are CALENDAR dates, not moments.
+//
+// The date input yields "2028-12-31", which `new Date()` parses as midnight
+// UTC. Rendering that with the viewer's local zone showed "12/30/2028" to
+// anyone west of Greenwich — every expiry on this screen was a day early,
+// including the one printed on a member's voucher. The stored value was always
+// right; only the display was wrong. Reading it back in UTC returns the date
+// that was actually typed.
+function formatDate(value: string): string {
+  return new Date(value).toLocaleDateString(undefined, { timeZone: "UTC" });
+}
+
 const ACTION_TYPES = ["view_details", "external_url", "none"] as const;
 
 interface Person {
@@ -554,7 +566,7 @@ export default function AdminWalletPage() {
                       buttons below is invisible without it. */}
                   {membership?.term_seq ? ` · term ${membership.term_seq}` : ""}
                   {membership?.expires_at
-                    ? ` · expires ${new Date(membership.expires_at).toLocaleDateString()}`
+                    ? ` · expires ${formatDate(membership.expires_at)}`
                     : " · no expiry"}
                 </span>
               </p>
@@ -788,7 +800,7 @@ export default function AdminWalletPage() {
                       <div className="text-xs text-muted-foreground">
                         {it.type} · {it.status}
                         {it.source_type ? ` · ${it.source_type}` : ""}
-                        {it.expires_at ? ` · expires ${new Date(it.expires_at).toLocaleDateString()}` : ""}
+                        {it.expires_at ? ` · expires ${formatDate(it.expires_at)}` : ""}
                       </div>
                       {it.revoke_reason ? (
                         <div className="text-xs text-muted-foreground">Revoked: {it.revoke_reason}</div>
