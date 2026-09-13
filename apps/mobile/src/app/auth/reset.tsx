@@ -27,7 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { completePasswordRecovery, describeAuthLink, updatePassword } from '@/lib/auth';
 import { isPasswordLongEnough, PASSWORD_PLACEHOLDER, PASSWORD_TOO_SHORT_MESSAGE } from '@/lib/authPolicy';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 
@@ -173,7 +173,11 @@ const s = StyleSheet.create({
 
   btn: {
     backgroundColor: colors.gold, borderRadius: shape.cta,
-    paddingVertical: 15, alignItems: 'center', marginTop: 4,
+    // Horizontal padding matters only in the invalid-link state, where the
+    // button sits in a centred block and shrinks to its label instead of
+    // filling the form width — without it the text touched both edges.
+    paddingVertical: spacing.lg, paddingHorizontal: spacing.xxxl,
+    alignItems: 'center', marginTop: spacing.xs,
   },
   btnText: { color: colors.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
 
