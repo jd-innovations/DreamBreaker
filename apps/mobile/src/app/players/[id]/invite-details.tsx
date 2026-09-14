@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { playStyleSummary } from '@shared/play-profile';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView,
   TextInput, Image, Platform, Modal, ActivityIndicator, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -395,9 +395,24 @@ export default function InviteDetailsScreen() {
         <View style={s.backBtn} />
       </View>
 
+      {/* The Send button is pinned to the bottom and the message field sits
+          just above it, so without this the keyboard covered both — the form
+          could be filled in but not sent. `padding` lifts the footer and
+          shrinks the scroll area rather than sliding the whole screen, which
+          would push the header off the top.
+
+          Wraps the scroll AND the footer: they are siblings, and lifting only
+          one of them would leave the button behind the keyboard. */}
+      <KeyboardAvoidingView
+        style={s.keyboardWrap}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        // Dragging the form dismisses the keyboard, so reaching Skill Range
+        // does not require finding a blank spot to tap first.
+        keyboardDismissMode="on-drag"
         contentContainerStyle={[s.scroll, { paddingBottom: FOOTER_H + 16 }]}
       >
         {/* ── Subtitle ── */}
@@ -562,6 +577,7 @@ export default function InviteDetailsScreen() {
             : <Text style={s.sendText}>Send Invite</Text>}
         </TouchableOpacity>
       </View>
+      </KeyboardAvoidingView>
 
       {/* ── iOS date picker (inline sheet) ── */}
       {showDate && Platform.OS === 'ios' && (
@@ -642,6 +658,7 @@ export default function InviteDetailsScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.page },
+  keyboardWrap: { flex: 1 },
 
   // Header
   header: {
