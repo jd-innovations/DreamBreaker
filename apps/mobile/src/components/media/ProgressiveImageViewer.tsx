@@ -44,15 +44,28 @@ export function ProgressiveImageViewer({ photos, index, onIndexChange, topInset 
   const translateY = useSharedValue(0);
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
+  // How big the photo actually draws, which under `contain` is smaller than the
+  // container in one axis. Pan bounds are derived from this rather than from
+  // the screen: clamping to the container let a letterboxed photo be dragged
+  // out of frame entirely, leaving only the blurred backdrop. Seeded to the
+  // container so the first frame behaves like the old cover maths.
+  const displayW = useSharedValue(screenW);
+  const displayH = useSharedValue(screenH);
 
   const clampTranslate = useCallback((tx: number, ty: number, s: number) => {
     'worklet';
-    const maxX = (screenW * (s - 1)) / 2;
-    const maxY = (screenH * (s - 1)) / 2;
+    // Half the overhang: how far the scaled photo extends past the container.
+    // Zero when it is still smaller than the container, which pins it centred.
+    const maxX = Math.max(0, (displayW.value * s - screenW) / 2);
+    const maxY = Math.max(0, (displayH.value * s - screenH) / 2);
     return {
       x: Math.max(-maxX, Math.min(maxX, tx)),
       y: Math.max(-maxY, Math.min(maxY, ty)),
     };
+    // displayW/displayH are shared values: the objects are stable and the
+    // worklet reads `.value` at call time, so listing them as deps would
+    // rebuild this on every measurement for no benefit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screenW, screenH]);
 
   // Switching photos always starts the new one unzoomed, regardless of how
@@ -64,7 +77,19 @@ export function ProgressiveImageViewer({ photos, index, onIndexChange, topInset 
     savedScale.value = 1;
     savedTranslateX.value = 0;
     savedTranslateY.value = 0;
+    displayW.value = screenW;
+    displayH.value = screenH;
   }, [activeIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // `contain` fits the photo inside the container, so the drawn size follows
+  // whichever axis runs out first.
+  const handleImageLoad = useCallback((w: number, h: number) => {
+    if (!w || !h) return;
+    const fitsByWidth = w / h > screenW / screenH;
+    displayW.value = fitsByWidth ? screenW : screenH * (w / h);
+    displayH.value = fitsByWidth ? screenW / (w / h) : screenH;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screenW, screenH]);
 
   const navigate = useCallback((x: number) => {
     setIndex(activeIndex + (x < screenW / 2 ? -1 : 1));
@@ -152,7 +177,42 @@ export function ProgressiveImageViewer({ photos, index, onIndexChange, topInset 
       <GestureDetector gesture={composed}>
         <Animated.View style={StyleSheet.absoluteFill}>
           {photo && (
-            <Animated.Image source={{ uri: photo }} style={[StyleSheet.absoluteFill, imageStyle]} resizeMode="cover" />
+            <>
+              {/* Backdrop: the same photo, covering and blurred, so the frame
+                  stays full-bleed. Static — the zoom transform belongs to the
+                  sharp copy above it, not to the wallpaper.
+
+                  RN's own Image.blurRadius does this, so no expo-blur and no
+                  extra dependency. */}
+              <Animated.Image
+                source={{ uri: photo }}
+                style={StyleSheet.absoluteFill}
+                resizeMode="cover"
+                blurRadius={28}
+              />
+              {/* Keeps a bright backdrop from washing out the white top
+                  controls, and stops the blur competing with the product. */}
+              <View style={styles.backdropScrim} pointerEvents="none" />
+
+              {/* The actual photo, whole. `contain` rather than `cover`
+                  because this is a marketplace: covering a ~0.46-aspect phone
+                  screen with a camera-roll photo crops 38-65% of its width
+                  depending on shape, and a buyer cannot judge the condition
+                  a listing claims from the middle of the frame.
+
+                  Uploads keep their source aspect (imageStandards.marketplace
+                  sets aspectRatio: null) and the picker does not force a crop,
+                  so the shapes arriving here are whatever the seller shot. */}
+              <Animated.Image
+                source={{ uri: photo }}
+                style={[StyleSheet.absoluteFill, imageStyle]}
+                resizeMode="contain"
+                onLoad={(e) => handleImageLoad(
+                  e.nativeEvent.source?.width ?? 0,
+                  e.nativeEvent.source?.height ?? 0,
+                )}
+              />
+            </>
           )}
         </Animated.View>
       </GestureDetector>
@@ -170,6 +230,7 @@ export function ProgressiveImageViewer({ photos, index, onIndexChange, topInset 
 
 const styles = StyleSheet.create({
   progressRow: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', gap: 4, zIndex: 10 },
+  backdropScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,18,40,0.38)' },
   progressSeg: { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.28)' },
   progressActive: { backgroundColor: '#C9A84C' },
 });
