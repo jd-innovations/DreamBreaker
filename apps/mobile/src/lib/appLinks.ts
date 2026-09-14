@@ -1,6 +1,19 @@
 export const APP_LINK_DOMAIN = 'pickleballapp.app';
 export const APP_LINK_ORIGIN = `https://${APP_LINK_DOMAIN}`;
 
+/**
+ * Where "get the app" points.
+ *
+ * The web app for now, because there is no App Store listing yet: no
+ * apps.apple.com URL exists anywhere in this repo, and a QR promising a
+ * download would land someone on a web page instead.
+ *
+ * ONE line to change when the listing exists — swap this to the
+ * apps.apple.com URL and update the label in ShareAppSheet, which is the only
+ * place that words it.
+ */
+export const APP_DOWNLOAD_URL = APP_LINK_ORIGIN;
+
 function segment(value: string): string {
   return encodeURIComponent(value);
 }

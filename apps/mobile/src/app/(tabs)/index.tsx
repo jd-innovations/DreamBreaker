@@ -860,7 +860,7 @@ export default function HomeScreen() {
       <StatusBar style="dark" />
 
       {/* ── HEADER (shared) ── */}
-      <AppHeader hideProfile />
+      <AppHeader hideProfile showShare />
 
       <ScrollView
         showsVerticalScrollIndicator={false}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -8,6 +8,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 import { getProfileCompletion } from '@/lib/profileCompletion';
 import { ProfileCompletionRing } from './ProfileCompletionRing';
+import { ShareAppSheet } from './ShareAppSheet';
 
 function readAuthAvatarUrl(metadata: unknown): string | null {
   if (!metadata || typeof metadata !== 'object') return null;
@@ -38,12 +39,22 @@ export const APP_HEADER_HEIGHT = 60;
  * One logo implementation, one title implementation. Replaces the divergent
  * `HeaderLogo` (games/partner) and per-screen `AppHeader` copies.
  */
-export function AppHeader({ hideProfile = false }: { hideProfile?: boolean } = {}) {
+export function AppHeader({
+  hideProfile = false,
+  /**
+   * Opt-in, because this header is shared with the stats tab and the invite is
+   * a home-screen idea. Off by default leaves stats exactly as it was.
+   */
+  showShare = false,
+}: { hideProfile?: boolean; showShare?: boolean } = {}) {
   const insets = useSafeAreaInsets();
   const { profile, user } = useProfile();
   const completion = getProfileCompletion(profile);
   const { unreadMessages, unreadNotifications } = useUnreadCounts();
   const displayAvatarUrl = profile?.avatar_url ?? readAuthAvatarUrl(user?.user_metadata) ?? null;
+  // The sheet lives here rather than on the screen, so a host only has to pass
+  // one prop; nothing about it is screen-specific.
+  const [shareOpen, setShareOpen] = useState(false);
 
   return (
     <View style={[s.wrap, { paddingTop: insets.top + 4 }]}>
@@ -67,8 +78,19 @@ export function AppHeader({ hideProfile = false }: { hideProfile?: boolean } = {
       {/* Center: intentionally empty — icons float over the screen content */}
       <View style={s.center} />
 
-      {/* Right: notifications + chat */}
-      <View style={s.right}>
+      {/* Right: (share) + notifications + chat */}
+      <View style={[s.right, showShare && s.rightWide]}>
+        {showShare && (
+          <TouchableOpacity
+            style={s.iconBtn}
+            onPress={() => setShareOpen(true)}
+            accessibilityLabel="Share Pickleball App"
+          >
+            {/* qr-code rather than a share glyph: the sheet leads with a code
+                to scan, and the icon should say what opens. */}
+            <Ionicons name="qr-code-outline" size={29} color={colors.navy} />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={s.iconBtn}
           onPress={() => router.push('/invites' as never)}
@@ -84,6 +106,10 @@ export function AppHeader({ hideProfile = false }: { hideProfile?: boolean } = {
           <CountBadge count={unreadMessages} />
         </TouchableOpacity>
       </View>
+
+      {showShare && (
+        <ShareAppSheet visible={shareOpen} onClose={() => setShareOpen(false)} />
+      )}
     </View>
   );
 }
@@ -101,6 +127,10 @@ const s = StyleSheet.create({
   // rendered on top of the header, so the profile avatar sits just after it.
   left:  { flexDirection: 'row', alignItems: 'center', gap: 7, width: 100, paddingLeft: 54 },
   right: { flexDirection: 'row', alignItems: 'center', gap: 8, width: 100, justifyContent: 'flex-end' },
+  // `right` is a fixed 100pt box holding a 34 and a 32 with an 8 gap (74). A
+  // third icon does not fit, so widen it only when that icon is rendered and
+  // the stats header keeps its existing cluster.
+  rightWide: { width: 137 },
   profileCircle: {
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: colors.navy, alignItems: 'center', justifyContent: 'center',
