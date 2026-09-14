@@ -204,10 +204,12 @@ export default function FindPlayersScreen() {
   const alreadyOnReservation = new Set(players.map(p => p.profileId));
 
   return (
-    <View style={[s.root, { paddingTop: insets.top }]}>
+    <View style={s.root}>
       <StatusBar style="dark" />
 
-      <View style={s.header}>
+      {/* Safe-area inset on the HEADER, not the root, so the white header
+          colour runs to the top of the screen. Pattern from wallet.tsx. */}
+      <View style={[s.header, { paddingTop: insets.top + spacing.screenV }]}>
         <TouchableOpacity style={s.iconBtn} onPress={() => goBack()} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={20} color={L.navy} />
         </TouchableOpacity>
