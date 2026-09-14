@@ -1,3 +1,4 @@
+import type { PlayEventType } from './playEvents';
 import { supabase } from '@/lib/supabase';
 import { addPlayParticipant, joinEventErrorMessage } from '@/lib/supabase/playEvents';
 
@@ -84,6 +85,13 @@ export type ReceivedPlayEventInvite = {
     id: string;
     name: string;
     event_date: string;
+    // Added 2026-09-14. The card hardcoded "Community Play" as its type label,
+    // which was true while this table had one source; practice matches now ride
+    // the same rail. start_time and facility_id were never selected, so the card
+    // could not say WHEN, and had nothing to link the venue to.
+    event_type: PlayEventType;
+    start_time: string | null;
+    facility_id: string | null;
     venue_name: string | null;
     location: string | null;
   } | null;
@@ -99,7 +107,7 @@ export async function fetchReceivedInvites(userId: string): Promise<ReceivedPlay
     .from('play_event_invites')
     .select(`
       id, status, created_at,
-      play_event:play_events!play_event_id(id, name, event_date, venue_name, location),
+      play_event:play_events!play_event_id(id, name, event_date, event_type, start_time, facility_id, venue_name, location),
       inviter:profiles!inviter_id(id, full_name, avatar_url)
     `)
     .eq('invitee_id', userId)

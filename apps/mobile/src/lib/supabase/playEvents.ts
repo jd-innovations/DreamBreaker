@@ -166,8 +166,6 @@ export async function createQuickGame(input: CreateQuickGameInput): Promise<Play
 
 export type CreatePracticeMatchInput = {
   organizerId:   string;
-  /** Who the match is against — used only to name it. */
-  opponentName:  string;
   locationName:  string;
   /** ISO datetime; the date and start time are taken from it. */
   eventDate:     string;
@@ -196,7 +194,11 @@ export type CreatePracticeMatchInput = {
 export async function createPracticeMatch(input: CreatePracticeMatchInput): Promise<PlayEvent> {
   return createCommunityEvent({
     organizerId:  input.organizerId,
-    name:         `Practice match with ${input.opponentName}`,
+    // Neutral, not "Practice match with <invitee>". The name is read by BOTH
+    // players, and the invitee was seeing their own name given back to them as
+    // the opponent. Who it is with is already on the card: the inviter's name
+    // and avatar sit at the top of it.
+    name:         'Practice Match',
     locationName: input.locationName,
     eventDate:    input.eventDate,
     startTime:    input.startTime,

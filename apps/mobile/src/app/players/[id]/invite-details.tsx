@@ -322,7 +322,6 @@ export default function InviteDetailsScreen() {
         when.setHours(time.getHours(), time.getMinutes(), 0, 0);
         const event = await createPracticeMatch({
           organizerId:  user.id,
-          opponentName: targetName,
           locationName: location.trim(),
           // Without these the event has no facility_id: no map pin, no link to
           // the venue page, no city or state — a second-class play_event.

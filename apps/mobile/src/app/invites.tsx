@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { goBack } from '@/lib/navigation';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
@@ -63,13 +63,22 @@ interface Invite {
   status:    InvStatus;
 }
 
+// The compact rows printed the raw column too, so history read "2026-09-15".
+// Local-date parts, not Date(string): an ISO date parsed whole is read as UTC
+// and shifts a day for anyone west of Greenwich.
+function fmtShortDate(date: string): string {
+  const [y, m, d] = (date ?? '').split('-').map(Number);
+  if (!y || !m || !d) return date ?? '';
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 function mapReceivedToInvite(inv: ReceivedPlayEventInvite): Invite {
   return {
     id:     inv.id,
     name:   inv.inviter?.full_name ?? 'A player',
     avatar: inv.inviter?.avatar_url ?? undefined,
     type:   inv.play_event?.name ?? 'A game',
-    date:   inv.play_event?.event_date ?? '',
+    date:   fmtShortDate(inv.play_event?.event_date ?? ''),
     status: inv.status === 'cancelled' ? 'cancelled' : (inv.status as InvStatus),
   };
 }
@@ -80,7 +89,7 @@ function mapSentToInvite(inv: SentPlayEventInvite): Invite {
     name:   inv.invitee?.full_name ?? 'A player',
     avatar: inv.invitee?.avatar_url ?? undefined,
     type:   inv.play_event?.name ?? 'A game',
-    date:   inv.play_event?.event_date ?? '',
+    date:   fmtShortDate(inv.play_event?.event_date ?? ''),
     status: inv.status as InvStatus,
   };
 }
@@ -91,7 +100,7 @@ function mapReceivedGroupToInvite(inv: ReceivedGroupInviteDetails): Invite {
     name:   inv.inviter?.full_name ?? 'A player',
     avatar: inv.inviter?.avatar_url ?? undefined,
     type:   inv.group?.name ?? 'A group',
-    date:   inv.created_at.slice(0, 10),
+    date:   fmtShortDate(inv.created_at.slice(0, 10)),
     status: inv.status as InvStatus,
   };
 }
@@ -102,7 +111,7 @@ function mapSentGroupToInvite(inv: SentGroupInviteDetails): Invite {
     name:   inv.invitee?.full_name ?? 'A player',
     avatar: inv.invitee?.avatar_url ?? undefined,
     type:   inv.group?.name ?? 'A group',
-    date:   inv.created_at.slice(0, 10),
+    date:   fmtShortDate(inv.created_at.slice(0, 10)),
     status: inv.status as InvStatus,
   };
 }
@@ -178,6 +187,37 @@ function InviteRow({
   );
 }
 
+// The card used to print `event_date` straight from the column, so an invite
+// read "2026-09-15". It also never showed a time, because the query did not
+// select one — you could not tell 8am from 8pm.
+function fmtInviteDate(date: string, time: string | null): string {
+  // event_date is a plain date column; parsing it as-is would be read in UTC
+  // and shift a day for anyone west of Greenwich.
+  const [y, m, d] = date.split('-').map(Number);
+  if (!y || !m || !d) return date;
+  const label = new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
+  if (!time) return label;
+  const [hh, mm] = time.split(':').map(Number);
+  if (Number.isNaN(hh)) return label;
+  const at = new Date(y, m - 1, d, hh, mm ?? 0);
+  return `${label} at ${at.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
+}
+
+// Was the literal "Community Play" — true only while this table had a single
+// source. Practice matches now arrive through the same rail.
+const INVITE_TYPE_LABEL: Record<string, string> = {
+  practice:        'Practice Match',
+  open_play:       'Community Play',
+  round_robin:     'Round Robin',
+  mini_tournament: 'Mini Tournament',
+  mixer:           'Mixer',
+  ladder:          'Ladder',
+  kings_court:     "King's Court",
+  clinic:          'Clinic',
+};
+
 // ─── Real game-invite card (play_event_invites) ────────────────────────────────
 
 function GameInviteCard({
@@ -196,7 +236,9 @@ function GameInviteCard({
           <View style={s.newCardNameRow}>
             <Text style={s.newCardName}>{invite.inviter?.full_name ?? 'A player'}</Text>
           </View>
-          <Text style={s.newCardType}>Community Play</Text>
+          <Text style={s.newCardType}>
+            {INVITE_TYPE_LABEL[invite.play_event?.event_type ?? ''] ?? 'Community Play'}
+          </Text>
         </View>
       </View>
 
@@ -208,14 +250,35 @@ function GameInviteCard({
         {!!invite.play_event?.event_date && (
           <View style={s.detailRow}>
             <Ionicons name="calendar-outline" size={14} color={L.textSub} />
-            <Text style={[s.detailText, s.detailTextFlex]}>{invite.play_event.event_date}</Text>
+            <Text style={[s.detailText, s.detailTextFlex]}>
+              {fmtInviteDate(invite.play_event.event_date, invite.play_event.start_time)}
+            </Text>
           </View>
         )}
         {!!(invite.play_event?.venue_name ?? invite.play_event?.location) && (
-          <View style={s.detailRow}>
+          <TouchableOpacity
+            style={s.detailRow}
+            activeOpacity={invite.play_event?.facility_id ? 0.6 : 1}
+            // Only a link when the venue came from the facilities directory. A
+            // manually typed location has no page to open, so it stays plain
+            // text rather than becoming a control that goes nowhere.
+            disabled={!invite.play_event?.facility_id}
+            onPress={() => router.push(`/facility/${invite.play_event?.facility_id}` as never)}
+          >
             <Ionicons name="location-outline" size={14} color={L.textSub} />
-            <Text style={[s.detailText, s.detailTextFlex]}>{invite.play_event?.venue_name ?? invite.play_event?.location}</Text>
-          </View>
+            <Text
+              style={[
+                s.detailText,
+                s.detailTextFlex,
+                !!invite.play_event?.facility_id && s.detailLink,
+              ]}
+            >
+              {invite.play_event?.venue_name ?? invite.play_event?.location}
+            </Text>
+            {!!invite.play_event?.facility_id && (
+              <Ionicons name="chevron-forward" size={13} color={L.gold} />
+            )}
+          </TouchableOpacity>
         )}
       </View>
 
@@ -776,6 +839,7 @@ const s = StyleSheet.create({
   newCardDetails: { gap: 6, paddingLeft: 58 },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   detailText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  detailLink: { color: L.gold, fontWeight: '700' },
   detailTextFlex: { flex: 1, flexShrink: 1 },
 
   // Compact card group
@@ -815,7 +879,8 @@ const s = StyleSheet.create({
   emptySub: { color: L.textMuted, fontSize: text.body.size, fontWeight: '500', textAlign: 'center', lineHeight: 20 },
 
   // Game invite actions (real play_event_invites)
-  gameInviteActions: { flexDirection: 'row', gap: 8, paddingLeft: 58 },
+  // The buttons sat directly against the location row.
+  gameInviteActions: { flexDirection: 'row', gap: 8, paddingLeft: 58, marginTop: spacing.lg },
   declineBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: shape.cta,
     borderWidth: 1.5, borderColor: L.border,
