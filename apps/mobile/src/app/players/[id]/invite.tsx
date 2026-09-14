@@ -37,6 +37,8 @@ interface InviteOption {
   icon:    string;
   title:   string;
   desc:    string;
+  /** Renders a pill instead of a chevron, and does not navigate. */
+  comingSoon?: boolean;
 }
 
 const OPTIONS: InviteOption[] = [
@@ -53,10 +55,14 @@ const OPTIONS: InviteOption[] = [
     desc:  'Find a partner for an upcoming tournament.',
   },
   {
+    // Leagues do not exist — there is no leagues table in production — and
+    // this option used to send a chat message describing one. Marked rather
+    // than removed so the intent survives until team play is built.
     type:  'team',
     icon:  'shirt-outline',
     title: 'Team Event',
-    desc:  'Invite to play on a team in a league or event.',
+    desc:  'Play on a team in an upcoming event.',
+    comingSoon: true,
   },
   {
     type:  'practice',
@@ -75,10 +81,17 @@ function InviteRow({
   onPress: () => void;
   last?: boolean;
 }) {
+  // A plain View when there is nowhere to go: a row that dims on press and
+  // then does nothing reads as broken rather than unavailable.
+  const Row = option.comingSoon ? View : TouchableOpacity;
   return (
     <>
-      <TouchableOpacity style={s.row} onPress={onPress} activeOpacity={0.7}>
-        <View style={s.iconCircle}>
+      <Row
+        style={s.row}
+        onPress={option.comingSoon ? undefined : onPress}
+        activeOpacity={option.comingSoon ? undefined : 0.7}
+      >
+        <View style={[s.iconCircle, option.comingSoon && s.iconCircleMuted]}>
           <AppIcon
             name={option.icon as AppIconName}
             size={option.icon === 'pickleball' ? 38 : 24}
@@ -91,8 +104,14 @@ function InviteRow({
           <Text style={s.rowDesc}>{option.desc}</Text>
         </View>
 
-        <Ionicons name="chevron-forward" size={18} color={L.textMuted} />
-      </TouchableOpacity>
+        {option.comingSoon ? (
+          <View style={s.comingSoonPill}>
+            <Text style={s.comingSoonText}>SOON</Text>
+          </View>
+        ) : (
+          <Ionicons name="chevron-forward" size={18} color={L.textMuted} />
+        )}
+      </Row>
       {!last && <View style={s.divider} />}
     </>
   );
@@ -215,6 +234,15 @@ const s = StyleSheet.create({
   rowTitle: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
   rowDesc: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18 },
 
+  iconCircleMuted: { opacity: 0.45 },
+  comingSoonPill: {
+    paddingHorizontal: 9, paddingVertical: 4, borderRadius: shape.pill,
+    backgroundColor: colors.goldBg, borderWidth: 1, borderColor: colors.goldBorder,
+  },
+  comingSoonText: {
+    color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800',
+    letterSpacing: text.cardLabel.letterSpacing,
+  },
   divider: {
     height: StyleSheet.hairlineWidth, backgroundColor: L.div, marginLeft: 78,
   },

@@ -60,7 +60,9 @@ export function parseSkillRange(range: string): { skill_min: number | null; skil
 // Confirmed values in play_event_type enum (2026-06-25, 'clinic' added 2026-07-23):
 //   round_robin | mini_tournament | mixer | ladder | open_play | kings_court | clinic
 
-export type PlayEventType = 'open_play' | 'round_robin' | 'mini_tournament' | 'mixer' | 'ladder' | 'kings_court' | 'clinic';
+// 'practice' added 2026-09-14: a private two-player match created from the
+// Invite to Play flow. Excluded from the three public discovery queries below.
+export type PlayEventType = 'open_play' | 'round_robin' | 'mini_tournament' | 'mixer' | 'ladder' | 'kings_court' | 'clinic' | 'practice';
 
 // ─── Shared community event input ─────────────────────────────────────────────
 // All fields shared by Quick Game, Round Robin, and any future event type.
@@ -158,6 +160,46 @@ export async function createCommunityEvent(input: CreateCommunityEventInput): Pr
 
 export async function createQuickGame(input: CreateQuickGameInput): Promise<PlayEvent> {
   return createCommunityEvent({ ...input, eventType: 'open_play' });
+}
+
+// ─── createPracticeMatch ──────────────────────────────────────────────────────
+
+export type CreatePracticeMatchInput = {
+  organizerId:   string;
+  /** Who the match is against — used only to name it. */
+  opponentName:  string;
+  locationName:  string;
+  /** ISO datetime; the date and start time are taken from it. */
+  eventDate:     string;
+  startTime:     string;
+  skillRange?:   string;
+  notes?:        string | null;
+};
+
+/**
+ * A scheduled one-on-one, created from the Invite to Play flow.
+ *
+ * A play_event rather than a table of its own, so the invite rail it needs
+ * already exists: play_event_invites, accept and decline, the /invites cards,
+ * the participant rows. Community Play is the same machinery; this is that
+ * with two seats.
+ *
+ * max_players is 2 and the organizer takes one of them, so the single invite
+ * fills the match. It carries no group_id, and the three public discovery
+ * queries exclude event_type 'practice' — this is private to the two players.
+ */
+export async function createPracticeMatch(input: CreatePracticeMatchInput): Promise<PlayEvent> {
+  return createCommunityEvent({
+    organizerId:  input.organizerId,
+    name:         `Practice match with ${input.opponentName}`,
+    locationName: input.locationName,
+    eventDate:    input.eventDate,
+    startTime:    input.startTime,
+    maxPlayers:   2,
+    skillRange:   input.skillRange,
+    notes:        input.notes ?? undefined,
+    eventType:    'practice',
+  });
 }
 
 // ─── (createRoundRobin defined below after uploadPlayEventCover) ──────────────
@@ -303,6 +345,11 @@ export async function fetchOpenPlayEvents(limit = 20): Promise<PlayEventWithCoun
   const { data, error } = await supabase
     .from('play_events')
     .select('*')
+    // Practice matches are private to the two players in them. They are
+    // play_events so the invite rail works, which means every query that lists
+    // events without scoping to an organizer, participant or group has to
+    // exclude them.
+    .neq('event_type', 'practice')
     .in('status', ['open', 'full'])
     .gte('event_date', today)
     .order('event_date', { ascending: true })
@@ -322,6 +369,7 @@ export async function fetchNearbyPlayEvents(limit = 20): Promise<PlayEventWithMa
   const { data, error } = await supabase
     .from('play_events')
     .select('*, facility:facilities!play_events_facility_id_fkey(id, name, address, city, state, latitude, longitude)')
+    .neq('event_type', 'practice')
     .in('status', ['open', 'full'])
     .gte('event_date', today)
     .order('event_date', { ascending: true })
@@ -536,7 +584,8 @@ export function playEventToGameCard(e: PlayEvent & { _participantCount?: number 
   const typeLabel =
     e.event_type === 'round_robin'     ? 'ROUND ROBIN' :
     e.event_type === 'mini_tournament' ? 'MINI TOURNAMENT' :
-    e.event_type === 'clinic'          ? 'CLINIC' : 'QUICK GAME';
+    e.event_type === 'clinic'          ? 'CLINIC' :
+    e.event_type === 'practice'        ? 'PRACTICE' : 'QUICK GAME';
 
   const logoLines =
     e.event_type === 'round_robin'     ? ['ROUND', 'ROBIN'] :

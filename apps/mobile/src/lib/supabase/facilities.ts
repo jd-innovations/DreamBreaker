@@ -281,6 +281,8 @@ export async function fetchFacilityPlayEvents(facilityId: string): Promise<Facil
     .from('play_events')
     .select('*')
     .eq('facility_id', facilityId)
+    // Private two-player matches are not part of a venue's public schedule.
+    .neq('event_type', 'practice')
     .gte('event_date', today)
     .not('status', 'in', '("cancelled","completed")')
     .order('event_date', { ascending: true });

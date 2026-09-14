@@ -9718,6 +9718,7 @@ export type Database = {
         | "kings_court"
         | "mini_tournament"
         | "clinic"
+        | "practice"
       registration_group_member_role: "initiator" | "partner"
       registration_group_member_state:
         | "invited"
@@ -10464,6 +10465,7 @@ export const Constants = {
         "kings_court",
         "mini_tournament",
         "clinic",
+        "practice",
       ],
       registration_group_member_role: ["initiator", "partner"],
       registration_group_member_state: [

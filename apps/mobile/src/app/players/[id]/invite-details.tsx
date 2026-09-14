@@ -18,6 +18,7 @@ import { useSession } from '@/hooks/useSession';
 import { getOrCreateConversation, sendMessage } from '@/lib/conversationService';
 import {
   fetchUpcomingPlayEvents, fetchJoinedPlayEvents, localDateString, type PlayEventWithCount,
+  createPracticeMatch,
 } from '@/lib/supabase/playEvents';
 import { fetchInvitedUserIds, sendPlayEventInvite } from '@/lib/supabase/playEventInvites';
 
@@ -182,6 +183,7 @@ export default function InviteDetailsScreen() {
   const inviteType  = (params.inviteType ?? 'community') as InviteType;
   const typeLabel   = INVITE_LABELS[inviteType] ?? inviteType;
   const isCommunity = inviteType === 'community';
+  const isPractice  = inviteType === 'practice';
 
   // ── Target profile ──
   const [profileLoading, setProfileLoading] = useState(true);
@@ -296,6 +298,39 @@ export default function InviteDetailsScreen() {
             eventName: event?.name ?? '',
             date: event ? fmtEventDate(event.event_date) : '',
             location: event?.venue_name || [event?.city, event?.state].filter(Boolean).join(', ') || '',
+          },
+        } as never);
+        return;
+      }
+
+      // A practice match becomes a real play_event with two seats, then goes
+      // down the same invite rail Community Play uses — so it lands in the
+      // recipient's Invitations with accept and decline, instead of being a
+      // formatted sentence in a chat thread they may never open.
+      if (isPractice) {
+        const when = new Date(date);
+        when.setHours(time.getHours(), time.getMinutes(), 0, 0);
+        const event = await createPracticeMatch({
+          organizerId:  user.id,
+          opponentName: targetName,
+          locationName: location.trim(),
+          eventDate:    when.toISOString(),
+          startTime:    when.toISOString(),
+          skillRange,
+          notes:        message.trim() || null,
+        });
+        await sendPlayEventInvite(event.id, user.id, targetId);
+        router.push({
+          pathname: '/players/[id]/invite-sent' as never,
+          params: {
+            id: targetId,
+            name: targetName,
+            inviteType,
+            eventName: event.name,
+            date: fmtDate(date),
+            time: fmtTime(time),
+            location: location.trim(),
+            skillRange,
           },
         } as never);
         return;

@@ -1,3 +1,4 @@
+import type { PlayEventType } from '@/lib/supabase/playEvents';
 import type React from 'react';
 
 export type Region = {
@@ -12,7 +13,9 @@ export type MapPinLike = {
   category: 'community' | 'tournament' | 'court' | 'listing';
   latitude: number;
   longitude: number;
-  eventType?: 'open_play' | 'round_robin' | 'mini_tournament' | 'mixer' | 'ladder' | 'kings_court' | 'clinic';
+  // The canonical union, not a third copy of it: this literal list already
+  // drifted from play_event_type when 'practice' was added.
+  eventType?: PlayEventType;
   /**
    * Overrides the category-derived pin tint. Marketplace uses it to encode a
    * price band, which the category union has no way to express.
