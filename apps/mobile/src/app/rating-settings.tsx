@@ -202,12 +202,14 @@ export default function RatingSettingsScreen() {
             sub="Building from your Pickleball App activity"
             value="Building"
           />
+          {/* Same fiction as the card below: not connected, and 4.12 was a
+              literal. Left in place rather than removed so the section still
+              says DUPR is planned. */}
           <RatingRow
             left={<DUPRBox />}
             label="Official DUPR Rating"
-            sub="Connected"
-            connected
-            value="4.12"
+            sub="Not connected yet"
+            value="—"
           />
           <RatingRow
             left={
@@ -290,20 +292,24 @@ export default function RatingSettingsScreen() {
         {/* ── Rating Source ── */}
         <SectionHeader label="RATING SOURCE" />
         <Group>
+          {/* There is no DUPR integration. `profiles.dupr` and `dupr_history`
+              exist and are empty (0 verified, 0 history rows), so "Connected",
+              the 4.12 and the June 2026 date were all literals. "Manage DUPR"
+              was a TouchableOpacity with no onPress. Says "coming soon" and
+              does nothing, visibly, until the integration is real. */}
           <View style={s.sourceCard}>
-            <DUPRBox size={52} />
+            <View style={s.sourceLogoMuted}>
+              <DUPRBox size={52} />
+            </View>
             <View style={s.sourceInfo}>
               <Text style={s.sourceTitle}>Official DUPR</Text>
-              <View style={s.connectedRow}>
-                <Ionicons name="checkmark-circle" size={13} color={L.green} />
-                <Text style={s.connectedText}>Connected</Text>
-              </View>
-              <Text style={s.sourceDate}>Last updated: June 18, 2026</Text>
+              <Text style={s.sourceDate}>
+                Connect your DUPR rating and keep it in step with your profile.
+              </Text>
             </View>
-            <TouchableOpacity style={s.manageDUPR} activeOpacity={0.7}>
-              <Text style={s.manageDUPRText}>Manage DUPR</Text>
-              <Ionicons name="chevron-forward" size={15} color={L.blue} />
-            </TouchableOpacity>
+            <View style={s.comingSoonPill}>
+              <Text style={s.comingSoonText}>COMING SOON</Text>
+            </View>
           </View>
         </Group>
 
@@ -323,10 +329,13 @@ export default function RatingSettingsScreen() {
           />
         </Group>
 
-        {/* ── Footer ── */}
+        {/* Was "Changes are saved automatically", under toggles that are
+            useState only — this screen imports no data layer and persists
+            nothing. A claim about someone's data has to be true, and that one
+            was not. */}
         <View style={s.footer}>
-          <Ionicons name="lock-closed-outline" size={13} color={L.textMuted} />
-          <Text style={s.footerText}>Changes are saved automatically</Text>
+          <Ionicons name="information-circle-outline" size={13} color={L.textMuted} />
+          <Text style={s.footerText}>Rating preferences are coming soon</Text>
         </View>
       </ScrollView>
     </View>
@@ -424,8 +433,16 @@ const s = StyleSheet.create({
   sourceInfo: { flex: 1 },
   sourceTitle: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800', marginBottom: 3 },
   sourceDate: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: 3 },
-  manageDUPR: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  manageDUPRText: { color: L.blue, fontSize: text.rowTitle.size, fontWeight: '700' },
+  // Dimmed, so the logo reads as an upcoming partner rather than a live link.
+  sourceLogoMuted: { opacity: 0.45 },
+  comingSoonPill: {
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: shape.pill,
+    backgroundColor: colors.goldBg, borderWidth: 1, borderColor: colors.goldBorder,
+  },
+  comingSoonText: {
+    color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800',
+    letterSpacing: text.cardLabel.letterSpacing,
+  },
 
   // Footer
   footer: {
