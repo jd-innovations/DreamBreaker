@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/useSession';
 import { useCurrentLocation, type Coordinates } from '@/lib/location';
 import { haversineMiles } from '@/lib/useFinderCandidates';
+import { getOrCreateConversation } from '@/lib/conversationService';
 import { useSupportContext } from '@/lib/support/supportContext';
 import type { Connection } from '@/lib/connectionStore';
 
@@ -55,7 +56,12 @@ const av = StyleSheet.create({
   circle: { backgroundColor: L.page, borderWidth: 1, borderColor: L.border, alignItems: 'center', justifyContent: 'center' },
 });
 
-function ConnectionCard({ conn, onRemove }: { conn: Connection; onRemove: () => void }) {
+function ConnectionCard({ conn, onRemove, onMessage, messaging }: {
+  conn: Connection;
+  onRemove: () => void;
+  onMessage: () => void;
+  messaging: boolean;
+}) {
   return (
     <View style={cc.card}>
       <Avatar uri={conn.player.photoUri} size={52} />
@@ -74,6 +80,15 @@ function ConnectionCard({ conn, onRemove }: { conn: Connection; onRemove: () => 
       </View>
 
       <View style={cc.actions}>
+        {/* A connection IS a mutual like, and a mutual like is the first case
+            the conversations INSERT policy permits — so this is the exact
+            relationship messaging was gated on. The player profile already had
+            a Message button; the list it is reached from did not. */}
+        <TouchableOpacity style={cc.actionBtn} onPress={onMessage} disabled={messaging}>
+          {messaging
+            ? <ActivityIndicator size="small" color={L.navy} />
+            : <Ionicons name="chatbubble-outline" size={16} color={L.navy} />}
+        </TouchableOpacity>
         <TouchableOpacity
           style={cc.actionBtn}
           onPress={() => router.push(
@@ -217,6 +232,21 @@ export default function MyConnectionsScreen() {
     ? connections.filter(c => Date.now() - new Date(c.connectedAt).getTime() < WEEK_MS)
     : connections;
 
+  const [messagingId, setMessagingId] = useState<string | null>(null);
+
+  async function handleMessage(conn: Connection) {
+    if (!user?.id || messagingId) return;
+    setMessagingId(conn.id);
+    try {
+      const convId = await getOrCreateConversation(user.id, conn.player.id);
+      router.push(`/conversation/${convId}` as never);
+    } catch {
+      Alert.alert('Could not open the conversation', 'Please try again.');
+    } finally {
+      setMessagingId(null);
+    }
+  }
+
   async function handleRemove(conn: Connection) {
     await supabase.from('partner_matches').delete().eq('id', conn.id);
     setConns(prev => prev.filter(c => c.id !== conn.id));
@@ -264,7 +294,13 @@ export default function MyConnectionsScreen() {
         ) : shown.length > 0 ? (
           <View style={s.list}>
             {shown.map(c => (
-              <ConnectionCard key={c.id} conn={c} onRemove={() => handleRemove(c)} />
+              <ConnectionCard
+                key={c.id}
+                conn={c}
+                onRemove={() => handleRemove(c)}
+                onMessage={() => handleMessage(c)}
+                messaging={messagingId === c.id}
+              />
             ))}
           </View>
         ) : (
