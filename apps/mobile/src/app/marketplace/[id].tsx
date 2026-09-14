@@ -19,10 +19,11 @@ import { makeOffer, messageSellerAboutListing } from '@/lib/marketplace/offers';
 import { blockUser, hasBlocked } from '@/lib/services/blocking';
 import { fetchProfile, type UserProfile } from '@/lib/services/profile';
 import { conditionLabel, formatPriceCents, listingAgeLabel, type MarketplaceBrand } from '@/lib/marketplace/constants';
-import { renewListing } from '@/lib/marketplace/listingService';
+import { renewListing, setListingStatus, deleteListing } from '@/lib/marketplace/listingService';
 import { isListingSaved, saveListing, unsaveListing } from '@/lib/marketplace/savedListings';
 import { BRAND_LOGOS } from '@/lib/marketplace/brandLogos';
 import LocationCard from '@/components/LocationCard';
+import { ContextMenu, useContextMenu, type MenuItem } from '@/components/ContextMenu';
 import { haptics } from '@/lib/haptics';
 import { shareEntity } from '@/lib/share';
 
@@ -66,8 +67,12 @@ export default function ListingDetailScreen() {
   // than guessed — the guess here is only a first-paint fallback before that
   // measurement lands.
   const [collapsedContentHeight, setCollapsedContentHeight] = useState(150);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [reportOpen, setReportOpen] = useState(false);
+  // Two menus, both through the shared ContextMenu: on iOS each presents the
+  // real system action sheet, on Android an anchored popover. Replaces the two
+  // hand-drawn modals this screen used to carry, and matches my-listings, which
+  // already offers the same actions on the same listings.
+  const listingMenu = useContextMenu();
+  const reportMenu = useContextMenu();
   const [offerOpen, setOfferOpen] = useState(false);
   // Whether the VIEWER has blocked this seller. Without this, Make Offer stays
   // enabled through the whole flow and fails only on the final tap, with a
@@ -187,12 +192,105 @@ export default function ListingDetailScreen() {
       await reportListing({ reporterId: user.id, sellerId: listing.seller_id, listingId: listing.id, reason });
       haptics.success();
       Alert.alert('Report submitted', 'Our team will review this listing within 24 hours.');
-      setReportOpen(false);
     } catch (err) {
       haptics.error();
       Alert.alert('Could not submit report', err instanceof Error ? err.message : 'Please try again.');
     }
   };
+
+  // Mirrors menuItemsFor() in my-listings, deliberately: the same listing must
+  // not offer a different set of actions depending on which screen you opened
+  // it from. Report is absent for the owner — reporting your own listing is
+  // not an action, and it was the only thing the old owner menu offered
+  // besides Share.
+  const presentReportMenu = () => {
+    reportMenu.present(
+      REPORT_REASONS.map((r) => ({ icon: r.icon, label: r.label })),
+      (reasonLabel) => {
+        const reason = REPORT_REASONS.find((r) => r.label === reasonLabel);
+        if (reason) reportMenu.close(() => { void handleReport(reason.id); });
+      },
+    );
+  };
+
+  const menuItems = (): MenuItem[] => {
+    const share: MenuItem = { icon: 'share-outline', label: 'Share Listing' };
+    if (!isOwner) {
+      return [
+        share,
+        { icon: 'flag-outline', label: 'Report Listing' },
+        { icon: 'hand-left-outline', label: 'Block User', danger: true },
+      ];
+    }
+    if (listing.status === 'sold') {
+      return [share, { icon: 'trash-outline', label: 'Delete', danger: true }];
+    }
+    // An expired listing is not a dead one — renewing is the whole point of
+    // expiring rather than deleting, so it leads.
+    if (listing.status === 'expired') {
+      return [
+        { icon: 'refresh-outline', label: 'Renew' },
+        { icon: 'pencil-outline', label: 'Edit' },
+        share,
+        { icon: 'trash-outline', label: 'Delete', danger: true },
+      ];
+    }
+    return [
+      { icon: 'pencil-outline', label: 'Edit' },
+      { icon: 'time-outline', label: listing.status === 'pending' ? 'Mark Active' : 'Mark Pending' },
+      { icon: 'checkmark-circle-outline', label: 'Mark Sold' },
+      share,
+      { icon: 'trash-outline', label: 'Delete', danger: true },
+    ];
+  };
+
+  async function handleStatusChange(status: 'active' | 'pending' | 'sold') {
+    try {
+      await setListingStatus(listingId, status);
+      // Reload rather than patch local state: this screen renders status in
+      // three places across the sheet tiers.
+      await load();
+    } catch (err) {
+      Alert.alert('Could not update listing', err instanceof Error ? err.message : 'Please try again.');
+    }
+  }
+
+  function handleDelete() {
+    Alert.alert('Delete this listing?', 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            await deleteListing(listingId);
+            // Unlike my-listings, which just reloads its list, this screen is
+            // displaying the row that no longer exists.
+            router.back();
+          } catch (err) {
+            Alert.alert('Could not delete listing', err instanceof Error ? err.message : 'Please try again.');
+          }
+        },
+      },
+    ]);
+  }
+
+  function handleMenuItem(label: string) {
+    // close() runs the popover's exit animation and then the callback. On iOS
+    // the popover is unused but the same delay lets the system sheet finish
+    // dismissing before a second one is presented.
+    listingMenu.close(() => {
+      switch (label) {
+        case 'Share Listing': void handleShare(); break;
+        case 'Report Listing': presentReportMenu(); break;
+        case 'Block User': handleBlock(); break;
+        case 'Edit': router.push(`/marketplace/edit/${listingId}` as never); break;
+        case 'Renew': void handleRenew(); break;
+        case 'Mark Active': void handleStatusChange('active'); break;
+        case 'Mark Pending': void handleStatusChange('pending'); break;
+        case 'Mark Sold': void handleStatusChange('sold'); break;
+        case 'Delete': handleDelete(); break;
+      }
+    });
+  }
 
   const handleShare = async () => {
     try {
@@ -200,7 +298,6 @@ export default function ListingDetailScreen() {
     } catch {
       // user cancelled or share unavailable — nothing to do
     }
-    setMoreOpen(false);
   };
 
   const handleBlock = () => {
@@ -214,7 +311,6 @@ export default function ListingDetailScreen() {
             // Reflect it immediately — the CTAs below would otherwise stay live
             // until the screen remounts.
             setBlockedSeller(true);
-            setMoreOpen(false);
           } catch (err) {
             Alert.alert('Could not block user', err instanceof Error ? err.message : 'Please try again.');
           }
@@ -240,7 +336,12 @@ export default function ListingDetailScreen() {
             >
               <Ionicons name={favorited ? 'heart' : 'heart-outline'} size={18} color={favorited ? L.gold : '#FFFFFF'} />
             </TouchableOpacity>
-            <TouchableOpacity style={s.topBtn} onPress={() => setMoreOpen(true)}>
+            <TouchableOpacity
+              style={s.topBtn}
+              onPress={() => listingMenu.present(menuItems(), handleMenuItem)}
+              accessibilityRole="button"
+              accessibilityLabel="More options"
+            >
               <Ionicons name="ellipsis-horizontal" size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
@@ -273,52 +374,36 @@ export default function ListingDetailScreen() {
         )}
         renderFull={() => (
           <FullContent listing={listing} seller={seller}
-            onReport={() => setReportOpen(true)}
+            onReport={presentReportMenu}
           />
         )}
       />
 
-      {/* More menu */}
-      <Modal visible={moreOpen} transparent animationType="fade" onRequestClose={() => setMoreOpen(false)}>
-        <TouchableOpacity style={s.modalScrim} activeOpacity={1} onPress={() => setMoreOpen(false)}>
-          <View style={s.moreSheet}>
-            <TouchableOpacity style={s.moreRow} onPress={handleShare}>
-              <Ionicons name="share-outline" size={18} color={L.text} />
-              <Text style={s.moreRowText}>Share Listing</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.moreRow} onPress={() => { setMoreOpen(false); setReportOpen(true); }}>
-              <Ionicons name="flag-outline" size={18} color={L.text} />
-              <Text style={s.moreRowText}>Report Listing</Text>
-            </TouchableOpacity>
-            {!isOwner && (
-              <TouchableOpacity style={s.moreRow} onPress={handleBlock}>
-                <Ionicons name="hand-left-outline" size={18} color={L.danger} />
-                <Text style={[s.moreRowText, { color: L.danger }]}>Block User</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Report sheet */}
-      <Modal visible={reportOpen} transparent animationType="slide" onRequestClose={() => setReportOpen(false)}>
-        <View style={s.modalScrim}>
-          <View style={s.reportSheet}>
-            <View style={s.reportHeader}>
-              <Text style={s.reportTitle}>Report Listing</Text>
-              <TouchableOpacity onPress={() => setReportOpen(false)}>
-                <Ionicons name="close" size={22} color={L.navy} />
-              </TouchableOpacity>
-            </View>
-            {REPORT_REASONS.map((r) => (
-              <TouchableOpacity key={r.id} style={s.reasonRow} onPress={() => handleReport(r.id)}>
-                <Ionicons name={r.icon as never} size={20} color={L.textMuted} />
-                <Text style={s.reasonText}>{r.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </Modal>
+      {/* Android only. On iOS present() shows the system sheet and these
+          render nothing — see ContextMenu.tsx. */}
+      {listingMenu.visible && (
+        <ContextMenu
+          items={menuItems()}
+          top={insets.top + 54}
+          right={16}
+          opacity={listingMenu.opacity}
+          scale={listingMenu.scale}
+          onItemPress={handleMenuItem}
+        />
+      )}
+      {reportMenu.visible && (
+        <ContextMenu
+          items={REPORT_REASONS.map((r) => ({ icon: r.icon, label: r.label }))}
+          top={insets.top + 54}
+          right={16}
+          opacity={reportMenu.opacity}
+          scale={reportMenu.scale}
+          onItemPress={(label) => {
+            const reason = REPORT_REASONS.find((r) => r.label === label);
+            if (reason) reportMenu.close(() => { void handleReport(reason.id); });
+          }}
+        />
+      )}
 
       {/* Make Offer */}
       <MakeOfferModal
@@ -682,15 +767,9 @@ const s = StyleSheet.create({
   reportLinkText: { color: L.textMuted, fontSize: text.link.size, fontWeight: '700' },
 
   modalScrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  moreSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingVertical: 12, paddingHorizontal: 8 },
-  moreRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16 },
-  moreRowText: { color: L.text, fontSize: text.body.size, fontWeight: '500' },
 
-  reportSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 32 },
   reportHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   reportTitle: { color: L.navy, fontSize: text.modalTitle.size, fontWeight: '900' },
-  reasonRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  reasonText: { color: L.text, fontSize: text.body.size, fontWeight: '500' },
 
   offerSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 32 },
   amountRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: L.border, borderRadius: shape.cta, paddingHorizontal: 16, marginVertical: 16 },
