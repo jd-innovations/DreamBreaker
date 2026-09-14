@@ -11,7 +11,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { traceHomeFocus, traceHomeLoadingFlip } from '@/lib/devPerfTrace';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '@/theme';
+import { colors, quickActionTints } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { AppHeader, APP_HEADER_HEIGHT, AppIcon, GlassQuickAction, ProfileCompletionRing, FindGamesFilterModal, FIND_GAMES_DISTANCE_STEPS, FIND_GAMES_SKILL_RANGES, ShimmerOverlay, type AppIconName } from '@/components';
@@ -70,31 +70,6 @@ function getGreeting(): string {
 }
 // Pastel background fills for the Home screen's Quick Actions row —
 // keyed by QuickAction.id (constants/quickActions.ts).
-const QA_PASTELS: Record<string, string> = {
-  create:      '#FDE8E8',
-  partner:     '#E3F1FD',
-  find:        '#E6F7EC',
-  lesson:      '#FDF0DB',
-  learn:       '#F1E9FB',
-  groups:      '#FEEBF3',
-  stats:       '#E1F5F3',
-  saved:       '#FFF3D6',
-  marketplace: '#E9EEFB',
-  wallet:      '#EAF7E0',
-  'dev-onboarding': '#FDF6E7',
-};
-
-// Liquid-Glass tint colors for the Quick Actions row — keyed by
-// QuickAction.id (constants/quickActions.ts). Falls back to QA_PASTELS'
-// hue for any action without an explicit spec.
-const QA_GLASS_TINTS: Record<string, string> = {
-  create:  '#C9A84C', // Create Game — Gold
-  partner: '#B8DFFF', // Partner Finder — Sky Blue
-  lesson:  '#FFE3B3', // Take Lesson — Soft Peach
-  find:    '#D6F4E5', // Find Games — Mint
-  learn:   '#E8DDFB', // Learn to Play — Lavender
-};
-
 const L = {
   bg:        colors.bg,
   page:      colors.page,
@@ -578,7 +553,7 @@ export default function HomeScreen() {
   const { isBookmarked, toggleBookmark } = useTournamentBookmarks();
   const { isBookmarked: isPlayEventBookmarked, toggleBookmark: togglePlayEventBookmark } = usePlayEventBookmarks();
   const quickActionDefaults = __DEV__
-    ? [...QUICK_ACTIONS, { id: 'dev-onboarding', label: 'DEV\nOnboarding', icon: 'sparkles-outline' as AppIconName, active: false, route: '/onboarding' }]
+    ? [...QUICK_ACTIONS, { id: 'dev-onboarding', label: 'DEV\nOnboarding', icon: 'sparkles-outline' as AppIconName, tint: 'amber' as const, route: '/onboarding' }]
     : QUICK_ACTIONS;
   const { items: quickActions, reorder: reorderQuickActions } = useQuickActionsOrder(quickActionDefaults);
   const [activeCard, setActiveCard]             = useState(0);
@@ -981,7 +956,7 @@ export default function HomeScreen() {
             <GlassQuickAction
               icon={qa.icon as AppIconName}
               label={qa.label}
-              tintColor={QA_GLASS_TINTS[qa.id] ?? QA_PASTELS[qa.id] ?? L.gold}
+              tintColor={quickActionTints[qa.tint]}
               size={54}
               style={{ width: 68 }}
             />

@@ -52,3 +52,38 @@ export const colors = {
 } as const;
 
 export type ColorToken = keyof typeof colors;
+
+/**
+ * Identity hues for the Quick Actions.
+ *
+ * Colour on a quick action says WHAT IT IS, not whether it works — whether a
+ * feature is in scope is `QuickAction.feature`'s job, checked against
+ * BETA_SCOPE.md. These were fifteen loose hex values inside
+ * `app/(tabs)/index.tsx`, one of which was `gold` copied as a literal.
+ *
+ * Two surfaces read them and render them differently, on purpose:
+ *   - Home draws a 1.25px border at 32% alpha on a light page, so the tint is
+ *     a hint and the icon stays navy.
+ *   - The slide menu is dark navy, where a pastel at 32% would be invisible,
+ *     so it takes the hue at full strength for both border and icon.
+ *
+ * Same hue, weight suited to the ground. What the menu must NOT do is adopt
+ * Home's glass tile: that carries a BlurView per tile, and finding F2 of
+ * PERFORMANCE_REGRESSION_AUDIT.md is thirteen of them already mounted on Home.
+ * Thirteen more behind a pan-driven drawer is the regression that audit exists
+ * to prevent.
+ */
+export const quickActionTints = {
+  gold:     colors.gold,
+  sky:      '#B8DFFF',
+  mint:     '#D6F4E5',
+  lavender: '#E8DDFB',
+  peach:    '#FFE3B3',
+  rose:     '#FFD3E2',
+  teal:     '#BFEDE8',
+  amber:    '#FFE1A8',
+  indigo:   '#CBD6F7',
+  lime:     '#DCF0C2',
+} as const;
+
+export type QuickActionTint = keyof typeof quickActionTints;

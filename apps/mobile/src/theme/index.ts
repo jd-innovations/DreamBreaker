@@ -7,7 +7,7 @@
  * Theme-aware colour roles (light / dark / system) — see THEMING_PLAN.md:
  *   import { useThemedStyles, useTheme, type ThemeRoles } from '@/theme';
  */
-export { colors } from './colors';
+export { colors, quickActionTints, type QuickActionTint } from './colors';
 export { typography, displayText, displayFontFamily } from './typography';
 export { spacing } from './spacing';
 export { radius, iconCircle } from './radius';

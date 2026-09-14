@@ -14,7 +14,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, quickActionTints } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { useUnreadCounts } from '@/hooks/useUnreadCounts';
@@ -307,8 +307,13 @@ export function SlideMenuProvider({ children }: { children: React.ReactNode }) {
                     onPress={() => item.route && navigate(item.route)}
                     style={({ pressed }) => [styles.shortcutTile, pressed && { opacity: 0.7 }]}
                   >
-                    <View style={[styles.shortcutIcon, item.active && styles.shortcutIconActive]}>
-                      <AppIcon name={item.icon} size={26} color={item.active ? colors.gold : colors.white} />
+                    {/* Identity hue, at full strength: this drawer is dark
+                        navy, where Home's 32%-alpha border would vanish. The
+                        flat circle is deliberate — Home's glass tile carries a
+                        BlurView each, and F2 of PERFORMANCE_REGRESSION_AUDIT.md
+                        already counts thirteen of those mounted at once. */}
+                    <View style={[styles.shortcutIcon, { borderColor: quickActionTints[item.tint] }]}>
+                      <AppIcon name={item.icon} size={26} color={quickActionTints[item.tint]} />
                     </View>
                     <Text style={styles.shortcutLabel} numberOfLines={2}>
                       {item.label}
@@ -517,10 +522,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
-  },
-  shortcutIconActive: {
-    borderColor: colors.gold,
-    backgroundColor: colors.goldBg,
   },
   shortcutLabel: {
     color: colors.white,
