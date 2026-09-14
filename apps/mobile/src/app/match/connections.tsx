@@ -15,6 +15,7 @@ import { useSession } from '@/hooks/useSession';
 import { useCurrentLocation, type Coordinates } from '@/lib/location';
 import { haversineMiles } from '@/lib/useFinderCandidates';
 import { getOrCreateConversation } from '@/lib/conversationService';
+import { ContextMenu, useContextMenu, type MenuItem } from '@/components/ContextMenu';
 import { useSupportContext } from '@/lib/support/supportContext';
 import type { Connection } from '@/lib/connectionStore';
 
@@ -56,76 +57,84 @@ const av = StyleSheet.create({
   circle: { backgroundColor: L.page, borderWidth: 1, borderColor: L.border, alignItems: 'center', justifyContent: 'center' },
 });
 
-function ConnectionCard({ conn, onRemove, onMessage, messaging }: {
+function ConnectionCard({ conn, onMore, onMessage, messaging }: {
   conn: Connection;
-  onRemove: () => void;
+  onMore: () => void;
   onMessage: () => void;
   messaging: boolean;
 }) {
   return (
-    <View style={cc.card}>
-      <Avatar uri={conn.player.photoUri} size={52} />
+    // The row itself opens the profile. It was a plain View, so tapping a
+    // person — the reflexive gesture on a row like this — did nothing, while a
+    // 32px circle off to the right did the job the row should do.
+    <TouchableOpacity
+      style={cc.card}
+      activeOpacity={0.7}
+      onPress={() => router.push(`/match/profile/${conn.player.id}` as never)}
+    >
+      {/* Identity row, then actions beneath. Side by side, two labelled
+          buttons plus the overflow would have left the name about 64pt — the
+          reason the old treatment used four unlabelled 32px circles. */}
+      <View style={cc.top}>
+        <Avatar uri={conn.player.photoUri} size={52} />
 
-      <View style={cc.info}>
-        <Text style={cc.name} numberOfLines={2}>{conn.player.name}</Text>
-        <View style={cc.duprBadge}>
-          <Ionicons name="star" size={10} color={L.gold} />
-          <Text style={cc.duprText}>{conn.player.dupr.toFixed(1)}</Text>
+        <View style={cc.info}>
+          <Text style={cc.name} numberOfLines={2}>{conn.player.name}</Text>
+          <View style={cc.duprBadge}>
+            <Ionicons name="star" size={10} color={L.gold} />
+            <Text style={cc.duprText}>{conn.player.dupr.toFixed(1)}</Text>
+          </View>
+          <Text style={cc.meta} numberOfLines={1}>
+            {conn.player.location}
+            {conn.player.distance != null ? ` · ${conn.player.distance} mi` : ''}
+          </Text>
+          <Text style={cc.meta}>Connected {relativeDate(conn.connectedAt)}</Text>
         </View>
-        <Text style={cc.meta} numberOfLines={1}>
-          {conn.player.location}
-          {conn.player.distance != null ? ` · ${conn.player.distance} mi` : ''}
-        </Text>
-        <Text style={cc.meta}>Connected {relativeDate(conn.connectedAt)}</Text>
+
+        <TouchableOpacity style={cc.moreBtn} onPress={onMore} activeOpacity={0.7} hitSlop={8}>
+          <Ionicons name="ellipsis-horizontal" size={18} color={L.textSub} />
+        </TouchableOpacity>
       </View>
 
       <View style={cc.actions}>
-        {/* A connection IS a mutual like, and a mutual like is the first case
-            the conversations INSERT policy permits — so this is the exact
-            relationship messaging was gated on. The player profile already had
-            a Message button; the list it is reached from did not. */}
-        <TouchableOpacity style={cc.actionBtn} onPress={onMessage} disabled={messaging}>
+        {/* Two primary actions, labelled, matching match/saved.tsx — the
+            sibling screen in this module already labels its buttons, and
+            unlabelled a paper-plane and a chat bubble are a guess. Everything
+            else moved behind the overflow: a menu costs a tap on every action,
+            which is the wrong trade for the two people actually use.
+
+            These are also 44pt tall now. The old 32px circles were under
+            Apple's minimum target size, four of them side by side. */}
+        <TouchableOpacity style={cc.primaryBtn} onPress={onMessage} disabled={messaging} activeOpacity={0.8}>
           {messaging
             ? <ActivityIndicator size="small" color={L.navy} />
-            : <Ionicons name="chatbubble-outline" size={16} color={L.navy} />}
+            : <>
+                <Ionicons name="chatbubble-outline" size={15} color={L.navy} />
+                <Text style={cc.primaryText}>Message</Text>
+              </>}
         </TouchableOpacity>
+
         <TouchableOpacity
-          style={cc.actionBtn}
+          style={cc.inviteBtn}
+          activeOpacity={0.8}
           onPress={() => router.push(
             // name, so the invite flow can address them by it. Without it every
             // screen in the flow falls back to "this player".
             `/players/${conn.player.id}/invite?name=${encodeURIComponent(conn.player.name)}` as never,
           )}
         >
-          <Ionicons name="paper-plane-outline" size={16} color={L.gold} />
+          <Ionicons name="paper-plane-outline" size={15} color="#FFFFFF" />
+          <Text style={cc.inviteText}>Invite</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={cc.actionBtn}
-          onPress={() => router.push(`/match/profile/${conn.player.id}` as never)}
-        >
-          <Ionicons name="person-outline" size={16} color={L.navy} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={cc.actionBtn}
-          onPress={() => Alert.alert(
-            'Remove Connection',
-            `Remove ${conn.player.name} from your connections?`,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Remove', style: 'destructive', onPress: onRemove },
-            ],
-          )}
-        >
-          <Ionicons name="person-remove-outline" size={16} color={L.danger} />
-        </TouchableOpacity>
+
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
 const cc = StyleSheet.create({
   card: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+    gap: 10,
     backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
     paddingVertical: 12, paddingHorizontal: 12,
@@ -135,12 +144,21 @@ const cc = StyleSheet.create({
   duprBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' },
   duprText: { color: L.gold, fontSize: 11, fontWeight: '700' },
   meta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
-  actions: { flexDirection: 'row', gap: 5, alignItems: 'center', flexShrink: 0 },
-  actionBtn: {
-    width: 32, height: 32, borderRadius: 16,
+  top: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  actions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  primaryBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    minHeight: 44, paddingHorizontal: 12, borderRadius: shape.cta,
     backgroundColor: L.page, borderWidth: 1.5, borderColor: L.border,
-    alignItems: 'center', justifyContent: 'center',
   },
+  primaryText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
+  inviteBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    minHeight: 44, paddingHorizontal: 12, borderRadius: shape.cta,
+    backgroundColor: L.gold,
+  },
+  inviteText: { color: '#FFFFFF', fontSize: text.action.size, fontWeight: '800' },
+  moreBtn: { minHeight: 44, width: 28, alignItems: 'center', justifyContent: 'center' },
 });
 
 // Takes the viewer's id rather than calling supabase.auth.getUser().
@@ -234,6 +252,39 @@ export default function MyConnectionsScreen() {
 
   const [messagingId, setMessagingId] = useState<string | null>(null);
 
+  // Remove lives behind the overflow now. It is destructive and rare, and it
+  // used to sit as an equal-weight circle beside the two actions people
+  // actually came here for. The shared ContextMenu gives the real iOS action
+  // sheet, with the red destructive treatment, for free.
+  const [menuFor, setMenuFor] = useState<Connection | null>(null);
+  const cardMenu = useContextMenu();
+  const MENU_ITEMS: MenuItem[] = [
+    { icon: 'person-outline', label: 'View Profile' },
+    { icon: 'person-remove-outline', label: 'Remove Connection', danger: true },
+  ];
+
+  function openMenu(conn: Connection) {
+    setMenuFor(conn);
+    cardMenu.present(MENU_ITEMS, (label) => handleMenuItem(conn, label));
+  }
+
+  function handleMenuItem(conn: Connection, label: string) {
+    cardMenu.close(() => {
+      if (label === 'View Profile') {
+        router.push(`/match/profile/${conn.player.id}` as never);
+      } else if (label === 'Remove Connection') {
+        Alert.alert(
+          'Remove Connection',
+          `Remove ${conn.player.name} from your connections?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Remove', style: 'destructive', onPress: () => { void handleRemove(conn); } },
+          ],
+        );
+      }
+    });
+  }
+
   async function handleMessage(conn: Connection) {
     if (!user?.id || messagingId) return;
     setMessagingId(conn.id);
@@ -297,7 +348,7 @@ export default function MyConnectionsScreen() {
               <ConnectionCard
                 key={c.id}
                 conn={c}
-                onRemove={() => handleRemove(c)}
+                onMore={() => openMenu(c)}
                 onMessage={() => handleMessage(c)}
                 messaging={messagingId === c.id}
               />
@@ -323,6 +374,19 @@ export default function MyConnectionsScreen() {
         )}
 
       </ScrollView>
+
+      {/* Android only. On iOS present() shows the system action sheet and this
+          renders nothing — see ContextMenu.tsx. */}
+      {cardMenu.visible && menuFor && (
+        <ContextMenu
+          items={MENU_ITEMS}
+          top={insets.top + 64}
+          right={16}
+          opacity={cardMenu.opacity}
+          scale={cardMenu.scale}
+          onItemPress={(label) => handleMenuItem(menuFor, label)}
+        />
+      )}
     </View>
   );
 }
