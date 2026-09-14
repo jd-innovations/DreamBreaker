@@ -584,7 +584,11 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: text.pageTitle.size, fontWeight: '900', color: colors.navy, },
+  // sectionTitle, not pageTitle. tokens.ts draws the line explicitly: pageTitle
+  // (28/900) is the large LEFT-ALIGNED title on a TAB ROOT, sectionTitle
+  // (17/900) is the small centred title a PUSHED screen puts beside its back
+  // button. This is the latter.
+  headerTitle: { fontSize: text.sectionTitle.size, fontWeight: '900', color: colors.navy },
 
   switcher: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   switchChip: {
