@@ -68,10 +68,14 @@ export default function CoachModeScreen() {
   const coachStatus = profile?.coach_status ?? 'inactive';
 
   return (
-    <View style={[s.root, { paddingTop: insets.top }]}>
+    <View style={s.root}>
       <StatusBar style="dark" />
 
-      <View style={s.header}>
+      {/* Safe-area inset on the HEADER, not the root, so the white header
+          colour runs to the top of the screen. On the root, the status-bar
+          strip takes the root's page grey and the header reads as a band
+          floating below it. Pattern and rationale from wallet.tsx. */}
+      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={24} color={L.navy} />
         </TouchableOpacity>
