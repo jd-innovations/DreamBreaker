@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, displayText } from '@/theme';
+import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { useProfile } from '@/hooks/useProfile';
@@ -159,7 +159,18 @@ const s = StyleSheet.create({
     width: 72, height: 72, borderRadius: 36, backgroundColor: L.goldBg,
     alignItems: 'center', justifyContent: 'center', marginBottom: 16,
   },
-  title: { ...displayText(22, { color: L.navy }), textAlign: 'center', marginBottom: 8 },
+  // System font, not the Bebas display face. typography.ts scopes that face to
+  // "tournament/event names ... hero banners and list/card titles", and a
+  // settings-screen heading is none of those — it was the only condensed
+  // element on a screen that is otherwise entirely system font.
+  //
+  // cardTitle is 22/800, the size this already used, so only the typeface
+  // changes. The casing changes with it: the string is "Coach Marketplace" and
+  // Bebas has no lowercase, so the all-caps look was the font, not the copy.
+  title: {
+    fontSize: text.cardTitle.size, fontWeight: '800', lineHeight: text.cardTitle.lineHeight,
+    color: L.navy, textAlign: 'center', marginBottom: 8,
+  },
   subtitle: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', lineHeight: 21, textAlign: 'center', marginBottom: 24 },
 
   benefits: {
