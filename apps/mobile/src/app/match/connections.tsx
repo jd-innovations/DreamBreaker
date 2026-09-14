@@ -25,10 +25,16 @@ const L = {
   text: colors.text, textSub: colors.textSub, border: colors.border,
   success: colors.success, successBg: colors.successBg,
   danger: colors.danger,
+  white: colors.white,
 };
 
 type Tab = 'All' | 'Recent';
 const TABS: Tab[] = ['All', 'Recent'];
+
+// Apple's minimum touch target. Not a spacing token — the scale tops out at 32
+// and this is a platform floor, not a rhythm value. The four 32px circles this
+// card used to carry were all under it.
+const TOUCH_TARGET = 44;
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -123,7 +129,7 @@ function ConnectionCard({ conn, onMore, onMessage, messaging }: {
             `/players/${conn.player.id}/invite?name=${encodeURIComponent(conn.player.name)}` as never,
           )}
         >
-          <Ionicons name="paper-plane-outline" size={15} color="#FFFFFF" />
+          <Ionicons name="paper-plane-outline" size={15} color={L.white} />
           <Text style={cc.inviteText}>Invite</Text>
         </TouchableOpacity>
 
@@ -134,7 +140,7 @@ function ConnectionCard({ conn, onMore, onMessage, messaging }: {
 
 const cc = StyleSheet.create({
   card: {
-    gap: 10,
+    gap: spacing.md,
     backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
     paddingVertical: 12, paddingHorizontal: 12,
@@ -144,21 +150,23 @@ const cc = StyleSheet.create({
   duprBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' },
   duprText: { color: L.gold, fontSize: 11, fontWeight: '700' },
   meta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
-  top: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  actions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  // spacing.md for avatar-to-info, matching invites.tsx's newCardTop, which
+  // is the same relationship on a comparable card.
+  top: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  actions: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
   primaryBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-    minHeight: 44, paddingHorizontal: 12, borderRadius: shape.cta,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    minHeight: TOUCH_TARGET, paddingHorizontal: spacing.md, borderRadius: shape.cta,
     backgroundColor: L.page, borderWidth: 1.5, borderColor: L.border,
   },
   primaryText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
   inviteBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-    minHeight: 44, paddingHorizontal: 12, borderRadius: shape.cta,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    minHeight: TOUCH_TARGET, paddingHorizontal: spacing.md, borderRadius: shape.cta,
     backgroundColor: L.gold,
   },
-  inviteText: { color: '#FFFFFF', fontSize: text.action.size, fontWeight: '800' },
-  moreBtn: { minHeight: 44, width: 28, alignItems: 'center', justifyContent: 'center' },
+  inviteText: { color: L.white, fontSize: text.action.size, fontWeight: '800' },
+  moreBtn: { minHeight: TOUCH_TARGET, width: spacing.xxl, alignItems: 'center', justifyContent: 'center' },
 });
 
 // Takes the viewer's id rather than calling supabase.auth.getUser().
