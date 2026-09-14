@@ -10,7 +10,7 @@ import { colors, spacing } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import { getProfileCompletion } from '@/lib/profileCompletion';
 import type { MyStatsPlayerCard } from '@/lib/stats/myStats';
-import { confidenceBandLabel, formatPar } from '@/lib/supabase/par';
+import { confidenceBandLabel, formatPar, parStageLabel } from '@/lib/supabase/par';
 import { PAR_GAUGE_SIZE, ParGauge } from './ParGauge';
 import { PlayerStatTile } from './PlayerStatTile';
 
@@ -18,14 +18,6 @@ import { PlayerStatTile } from './PlayerStatTile';
 function cleanText(value: string | null | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
-}
-
-function getParStageLabel(data: MyStatsPlayerCard) {
-  const profile = data.parProfile;
-  if (!profile) return 'Building Your PAR';
-  if (profile.confidence_band === 'high') return 'Established PAR';
-  if (profile.confidence_band === 'medium') return 'Provisional PAR';
-  return profile.eligible_games_count > 0 ? 'Estimated PAR' : 'Building Your PAR';
 }
 
 function formatName(data: MyStatsPlayerCard) {
@@ -60,7 +52,7 @@ export function PlayerCredentialCard({
   const hasFooter = Boolean(homeCourtName);
   const parScore = data.parProfile?.current_par ?? null;
   const parConfidence = data.parProfile ? confidenceBandLabel(data.parProfile.confidence_band) : 'PAR pending';
-  const parStage = getParStageLabel(data);
+  const parStage = parStageLabel(data.parProfile);
   const gamesLogged = data.loggedGames.total ?? data.parProfile?.eligible_games_count ?? 0;
   const eligibleGames = data.parProfile?.eligible_games_count ?? 0;
   const confidenceScore = data.parProfile ? `${Math.round(data.parProfile.confidence_score)}%` : 'Pending';

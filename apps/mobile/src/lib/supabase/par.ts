@@ -96,6 +96,24 @@ export function formatParChange(value: number | null | undefined) {
   return value > 0 ? `+${rounded}` : rounded;
 }
 
+/**
+ * Which stage a player's PAR is at, in words.
+ *
+ * Lives here rather than in a screen because two surfaces show it — the player
+ * credential card and Player Rating — and a ladder duplicated in two files is
+ * a ladder that eventually disagrees with itself.
+ *
+ * "Building" covers both ends: no profile yet, and a profile whose confidence
+ * is still low with nothing rated. Between them sits a profile that has rated
+ * games but not enough of them to be confident, which is "Estimated".
+ */
+export function parStageLabel(profile: Pick<PlayerParProfile, 'confidence_band' | 'eligible_games_count'> | null | undefined) {
+  if (!profile) return 'Building Your PAR';
+  if (profile.confidence_band === 'high') return 'Established PAR';
+  if (profile.confidence_band === 'medium') return 'Provisional PAR';
+  return profile.eligible_games_count > 0 ? 'Estimated PAR' : 'Building Your PAR';
+}
+
 export function confidenceBandLabel(band: ParConfidenceBand | null | undefined) {
   if (band === 'high') return 'High confidence';
   if (band === 'medium') return 'Medium confidence';

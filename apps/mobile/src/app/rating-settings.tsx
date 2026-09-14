@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useProfile } from '@/hooks/useProfile';
+import {
+  confidenceBandLabel, fetchPlayerParProfile, formatPar, parStageLabel,
+  type PlayerParProfile,
+} from '@/lib/supabase/par';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Switch,
@@ -178,6 +182,25 @@ export default function RatingSettingsScreen() {
   // the account header two screens away read the actual value.
   const { profile } = useProfile();
 
+  // PAR is real — player_par_profiles, confidence bands, rated-game counts —
+  // but this row showed the literal string "Building", which happened to be
+  // true only while every PAR was early. It would have kept saying Building
+  // after a player reached Estimated, Provisional or Established.
+  const [par, setPar] = useState<PlayerParProfile | null>(null);
+  useEffect(() => {
+    const id = profile?.id;
+    if (!id) return;
+    let cancelled = false;
+    // initializeIfMissing is deliberately off: opening a settings screen should
+    // not create a rating profile as a side effect.
+    fetchPlayerParProfile(id)
+      .then((row) => { if (!cancelled) setPar(row); })
+      .catch(() => { if (!cancelled) setPar(null); });
+    return () => { cancelled = true; };
+  }, [profile?.id]);
+
+  const parRated = (par?.eligible_games_count ?? 0) > 0;
+
   // Skill preferences
   const [higherRated,  setHigherRated]  = useState(true);
   const [similarSkill, setSimilarSkill] = useState(true);
@@ -217,8 +240,14 @@ export default function RatingSettingsScreen() {
           <RatingRow
             left={<PARBox />}
             label="PAR Rating"
-            sub="Building from your Pickleball App activity"
-            value="Building"
+            sub={
+              parRated
+                ? `${parStageLabel(par)} · ${confidenceBandLabel(par?.confidence_band)}`
+                : 'Building from your Pickleball App activity'
+            }
+            // The number once games have been rated; the stage word until then,
+            // because a PAR with nothing behind it is not a score to show.
+            value={parRated ? formatPar(par?.current_par) : 'Building'}
           />
           {/* Matches the RATING SOURCE card below: there is no DUPR
               integration, so no value and nothing to tap. */}
