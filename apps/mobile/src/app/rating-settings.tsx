@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { router } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/lib/supabase';
 import {
@@ -209,27 +209,30 @@ export default function RatingSettingsScreen() {
   // and prettier copy of a control that already had a home. It now reports the
   // stored value and opens the screen that owns it.
   const [skillRanges, setSkillRanges] = useState<string[] | null>(null);
-  useEffect(() => {
+
+  // On FOCUS, not on mount. This row's value is owned by another screen, and
+  // going back from it does not remount this one — so a mount-only effect left
+  // the old value on screen until the app was restarted, which is exactly what
+  // happened the first time it was used.
+  const loadSkillRanges = useCallback(async () => {
     const id = profile?.id;
     if (!id) return;
-    let cancelled = false;
-    // An async IIFE rather than .then().catch(): the query builder resolves as a
-    // PromiseLike, which carries no .catch, and a settings row is not worth an
-    // unhandled rejection if the network drops. It falls back to "Not set".
-    void (async () => {
-      try {
-        const { data } = await supabase
-          .from('partner_preferences')
-          .select('skill_ranges')
-          .eq('user_id', id)
-          .maybeSingle();
-        if (!cancelled) setSkillRanges(data?.skill_ranges ?? null);
-      } catch {
-        if (!cancelled) setSkillRanges(null);
-      }
-    })();
-    return () => { cancelled = true; };
+    // An async function rather than .then().catch(): the query builder resolves
+    // as a PromiseLike, which carries no .catch, and a settings row is not
+    // worth an unhandled rejection if the network drops.
+    try {
+      const { data } = await supabase
+        .from('partner_preferences')
+        .select('skill_ranges')
+        .eq('user_id', id)
+        .maybeSingle();
+      setSkillRanges(data?.skill_ranges ?? null);
+    } catch {
+      setSkillRanges(null);
+    }
   }, [profile?.id]);
+
+  useFocusEffect(useCallback(() => { void loadSkillRanges(); }, [loadSkillRanges]));
 
   // Ranges are stored as discrete bands ('3.5-4.0'), so several selected bands
   // read as a span from the lowest to the highest rather than a list.
