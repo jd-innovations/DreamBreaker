@@ -67,7 +67,9 @@ function humanize(value: unknown): string {
 }
 
 // Great-circle distance in miles between two lat/lng points.
-function haversineMiles(from: Coordinates, to: Coordinates): number {
+// Exported 2026-09-14 for My Connections, which was hardcoding distance to 0
+// and rendering every connection as "0 mi".
+export function haversineMiles(from: Coordinates, to: Coordinates): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const earthMiles = 3958.8;
   const dLat = toRad(to.lat - from.lat);

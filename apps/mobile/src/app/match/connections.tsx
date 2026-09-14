@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Image, Alert, ActivityIndicator,
@@ -11,6 +11,9 @@ import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
+import { useSession } from '@/hooks/useSession';
+import { useCurrentLocation, type Coordinates } from '@/lib/location';
+import { haversineMiles } from '@/lib/useFinderCandidates';
 import { useSupportContext } from '@/lib/support/supportContext';
 import type { Connection } from '@/lib/connectionStore';
 
@@ -63,7 +66,10 @@ function ConnectionCard({ conn, onRemove }: { conn: Connection; onRemove: () => 
           <Ionicons name="star" size={10} color={L.gold} />
           <Text style={cc.duprText}>{conn.player.dupr.toFixed(1)}</Text>
         </View>
-        <Text style={cc.meta} numberOfLines={1}>{conn.player.location} - {conn.player.distance} mi</Text>
+        <Text style={cc.meta} numberOfLines={1}>
+          {conn.player.location}
+          {conn.player.distance != null ? ` · ${conn.player.distance} mi` : ''}
+        </Text>
         <Text style={cc.meta}>Connected {relativeDate(conn.connectedAt)}</Text>
       </View>
 
@@ -122,9 +128,14 @@ const cc = StyleSheet.create({
   },
 });
 
-async function fetchMatches(): Promise<Connection[]> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+// Takes the viewer's id rather than calling supabase.auth.getUser().
+//
+// getUser() is a NETWORK round-trip to the auth server, not a read of the
+// cached session — so this screen did auth → matches → profiles, three serial
+// round-trips before anything rendered. useSession already holds the user in
+// module state.
+async function fetchMatches(userId: string, mine: Coordinates | null): Promise<Connection[]> {
+  const user = { id: userId };
 
   const { data: matches } = await supabase
     .from('partner_matches')
@@ -138,7 +149,7 @@ async function fetchMatches(): Promise<Connection[]> {
 
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, full_name, avatar_url, dupr, self_rating, location_city, location_state, looking_status')
+    .select('id, full_name, avatar_url, dupr, self_rating, location_city, location_state, location_lat, location_lng, looking_status')
     .in('id', otherIds);
 
   const profileMap = Object.fromEntries((profiles ?? []).map(p => [p.id, p]));
@@ -150,6 +161,12 @@ async function fetchMatches(): Promise<Connection[]> {
       if (!p) return null;
       const dupr = p.dupr ?? (p.self_rating ? parseFloat(p.self_rating) : 0);
       const location = [p.location_city, p.location_state].filter(Boolean).join(', ') || 'Unknown';
+      // Was hardcoded to 0, so every card read "0 mi". null means unknown —
+      // either the viewer's location is unavailable or the other player never
+      // set one — and the card omits it rather than inventing a number.
+      const distance = mine && p.location_lat != null && p.location_lng != null
+        ? Math.round(haversineMiles(mine, { lat: p.location_lat, lng: p.location_lng }))
+        : null;
       return {
         id: m.id,
         player: {
@@ -157,7 +174,7 @@ async function fetchMatches(): Promise<Connection[]> {
           name: p.full_name,
           dupr,
           location,
-          distance: 0,
+          distance,
           lookingFor: p.looking_status || 'Partner',
           photoUri: p.avatar_url ?? undefined,
         },
@@ -175,14 +192,26 @@ export default function MyConnectionsScreen() {
 
   useSupportContext({ feature: 'match' });
 
+  const { user } = useSession();
+  const location = useCurrentLocation();
+  const mine = location.isFallback ? null : { lat: location.lat, lng: location.lng };
+
+  // Spinner on the FIRST load only. This ran setLoading(true) on every focus,
+  // so returning to the screen blanked a list that was already in state and
+  // showed a spinner again — most of what made it feel slow was the screen
+  // throwing away what it already had.
+  const loadedOnce = useRef(false);
+
   useFocusEffect(useCallback(() => {
+    if (!user?.id) return;
     let cancelled = false;
-    setLoading(true);
-    fetchMatches().then(data => {
-      if (!cancelled) { setConns(data); setLoading(false); }
+    if (!loadedOnce.current) setLoading(true);
+    fetchMatches(user.id, mine).then(data => {
+      if (!cancelled) { setConns(data); setLoading(false); loadedOnce.current = true; }
     });
     return () => { cancelled = true; };
-  }, []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, mine?.lat, mine?.lng]));
 
   const shown = tab === 'Recent'
     ? connections.filter(c => Date.now() - new Date(c.connectedAt).getTime() < WEEK_MS)
