@@ -14,6 +14,7 @@ import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
+import { FacilityPicker, type FacilityPickerValue } from '@/components/FacilityPicker';
 import { useSession } from '@/hooks/useSession';
 import { getOrCreateConversation, sendMessage } from '@/lib/conversationService';
 import {
@@ -260,7 +261,16 @@ export default function InviteDetailsScreen() {
   const [time,          setTime]          = useState(() => {
     const t = new Date(); t.setHours(10, 0, 0, 0); return t;
   });
-  const [location,      setLocation]      = useState('');
+  // The facilities directory rather than a free-text box, matching the ten
+  // other creation screens. The recipient of an invite did not choose the
+  // venue, so "Riverside Courts" as a bare string is theirs to resolve — and
+  // there may be three of them nearby. Manual entry stays available for a
+  // venue that is not in the directory.
+  const [venue, setVenue] = useState<FacilityPickerValue | null>(null);
+  const isFacility = venue?.mode === 'facility';
+  const location = isFacility
+    ? `${venue.name} - ${venue.city}, ${venue.state}`
+    : (venue?.mode === 'manual' ? venue.text : '');
   const [skillRange,    setSkillRange]    = useState('3.5 – 4.0');
   const [message,       setMessage]       = useState('');
   const [showDate,      setShowDate]      = useState(false);
@@ -314,6 +324,12 @@ export default function InviteDetailsScreen() {
           organizerId:  user.id,
           opponentName: targetName,
           locationName: location.trim(),
+          // Without these the event has no facility_id: no map pin, no link to
+          // the venue page, no city or state — a second-class play_event.
+          facilityId:   isFacility ? venue.facilityId : null,
+          venueName:    isFacility ? venue.name : null,
+          city:         isFacility ? venue.city : null,
+          state:        isFacility ? venue.state : null,
           eventDate:    when.toISOString(),
           startTime:    when.toISOString(),
           skillRange,
@@ -496,19 +512,7 @@ export default function InviteDetailsScreen() {
 
               {/* Location */}
               <FormRow label="Location">
-                <View style={s.pickerRow}>
-                  <Ionicons name="location-outline" size={16} color={L.textSub} />
-                  <TextInput
-                    style={s.locationInput}
-                    value={location}
-                    onChangeText={setLocation}
-                    placeholder="Court or venue name"
-                    placeholderTextColor={L.textMuted}
-                    returnKeyType="done"
-                    selectionColor={L.gold}
-                    underlineColorAndroid="transparent"
-                  />
-                </View>
+                <FacilityPicker value={venue} onChange={setVenue} />
               </FormRow>
 
               {/* Skill range */}
@@ -701,12 +705,6 @@ const s = StyleSheet.create({
   // Picker rows
   pickerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   pickerText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', flex: 1 },
-
-  locationInput: {
-    flex: 1, color: L.navy, fontSize: text.body.size, fontWeight: '500',
-    padding: 0, margin: 0,
-    borderWidth: 0, backgroundColor: 'transparent',
-  },
 
   // Event picker rows
   eventRow: {

@@ -174,6 +174,11 @@ export type CreatePracticeMatchInput = {
   startTime:     string;
   skillRange?:   string;
   notes?:        string | null;
+  /** Set when the venue came from the facilities directory rather than typed. */
+  facilityId?:   string | null;
+  venueName?:    string | null;
+  city?:         string | null;
+  state?:        string | null;
 };
 
 /**
@@ -196,6 +201,10 @@ export async function createPracticeMatch(input: CreatePracticeMatchInput): Prom
     eventDate:    input.eventDate,
     startTime:    input.startTime,
     maxPlayers:   2,
+    locationAddress: input.venueName ?? undefined,
+    city:         input.city ?? undefined,
+    state:        input.state ?? undefined,
+    facilityId:   input.facilityId ?? null,
     skillRange:   input.skillRange,
     notes:        input.notes ?? undefined,
     eventType:    'practice',
