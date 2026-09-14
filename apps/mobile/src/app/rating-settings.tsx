@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useProfile } from '@/hooks/useProfile';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Switch,
@@ -76,14 +77,19 @@ function PARBox() {
 // ─── Rating row (tappable, right-aligned value + chevron) ────────────────────
 
 function RatingRow({
-  left, label, sub, value, last, connected,
+  left, label, sub, value, last, connected, comingSoon,
 }: {
   left: React.ReactNode; label: string; sub?: string;
-  value: string; last?: boolean; connected?: boolean;
+  value?: string; last?: boolean; connected?: boolean;
+  /** Renders a pill instead of a value, and no chevron — nothing to open. */
+  comingSoon?: boolean;
 }) {
+  // A plain View when there is nowhere to go: a TouchableOpacity that dims on
+  // press and then does nothing reads as a broken link.
+  const Row = comingSoon ? View : TouchableOpacity;
   return (
     <>
-      <TouchableOpacity style={s.row} activeOpacity={0.7}>
+      <Row style={s.row} activeOpacity={comingSoon ? undefined : 0.7}>
         {left}
         <View style={s.rowCenter}>
           <Text style={s.rowLabel}>{label}</Text>
@@ -100,9 +106,17 @@ function RatingRow({
             </View>
           )}
         </View>
-        <Text style={s.ratingValue}>{value}</Text>
-        <Ionicons name="chevron-forward" size={16} color={L.textMuted} />
-      </TouchableOpacity>
+        {comingSoon ? (
+          <View style={s.comingSoonPill}>
+            <Text style={s.comingSoonText}>COMING SOON</Text>
+          </View>
+        ) : (
+          <>
+            <Text style={s.ratingValue}>{value}</Text>
+            <Ionicons name="chevron-forward" size={16} color={L.textMuted} />
+          </>
+        )}
+      </Row>
       {!last && <Div />}
     </>
   );
@@ -159,6 +173,10 @@ function NavRow({ icon, label, sub, last }: { icon: string; label: string; sub: 
 
 export default function RatingSettingsScreen() {
   const insets = useSafeAreaInsets();
+  // self_rating is real: collected at onboarding/self-rating.tsx, editable in
+  // edit-profile, stored as TEXT on profiles. It was hardcoded "4.0" here while
+  // the account header two screens away read the actual value.
+  const { profile } = useProfile();
 
   // Skill preferences
   const [higherRated,  setHigherRated]  = useState(true);
@@ -202,14 +220,13 @@ export default function RatingSettingsScreen() {
             sub="Building from your Pickleball App activity"
             value="Building"
           />
-          {/* Same fiction as the card below: not connected, and 4.12 was a
-              literal. Left in place rather than removed so the section still
-              says DUPR is planned. */}
+          {/* Matches the RATING SOURCE card below: there is no DUPR
+              integration, so no value and nothing to tap. */}
           <RatingRow
-            left={<DUPRBox />}
+            left={<View style={s.sourceLogoMuted}><DUPRBox /></View>}
             label="Official DUPR Rating"
             sub="Not connected yet"
-            value="—"
+            comingSoon
           />
           <RatingRow
             left={
@@ -219,7 +236,7 @@ export default function RatingSettingsScreen() {
             }
             label="Self Rating"
             sub="Your playing level"
-            value="4.0"
+            value={profile?.self_rating ?? 'Not set'}
             last
           />
         </Group>
