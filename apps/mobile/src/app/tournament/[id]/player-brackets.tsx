@@ -470,9 +470,11 @@ export default function PlayerBracketsScreen() {
 
   if (brackets.length === 0) {
     return (
-      <View style={[s.root, { paddingTop: insets.top }]}>
+      <View style={s.root}>
         <StatusBar style="dark" />
-        <View style={s.header}>
+        {/* Safe-area inset on the HEADER, not the root, so the white header
+          colour runs to the top of the screen. Pattern from wallet.tsx. */}
+      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
             <Ionicons name="chevron-back" size={24} color={L.navy} />
           </TouchableOpacity>
@@ -507,11 +509,13 @@ export default function PlayerBracketsScreen() {
   // ── Main view ────────────────────────────────────────────────────────────
 
   return (
-    <View style={[s.root, { paddingTop: insets.top }]}>
+    <View style={s.root}>
       <StatusBar style="dark" />
 
       {/* ── Header ── */}
-      <View style={s.header}>
+      {/* Safe-area inset on the HEADER, not the root, so the white header
+          colour runs to the top of the screen. Pattern from wallet.tsx. */}
+      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={24} color={L.navy} />
         </TouchableOpacity>

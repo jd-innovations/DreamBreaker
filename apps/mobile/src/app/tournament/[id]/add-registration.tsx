@@ -203,12 +203,14 @@ function AddRegistrationScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[s.root, { paddingTop: insets.top }]}
+      style={s.root}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <StatusBar style="dark" />
 
-      <View style={s.header}>
+      {/* Safe-area inset on the HEADER, not the root, so the white header
+          colour runs to the top of the screen. Pattern from wallet.tsx. */}
+      <View style={[s.header, { paddingTop: insets.top + spacing.screenV }]}>
         <TouchableOpacity style={s.iconBtn} onPress={() => goBack()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={L.navy} />
         </TouchableOpacity>
