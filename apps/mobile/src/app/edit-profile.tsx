@@ -10,7 +10,7 @@ import { router } from 'expo-router';
 import { goBack } from '@/lib/navigation';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
@@ -658,14 +658,19 @@ export default function EditProfileScreen() {
         {/* ── Home Court ── */}
         <SectionHeader label="HOME COURT" />
         <Group>
-          <TouchableOpacity style={s.fieldRow} activeOpacity={0.7} onPress={() => setHomeCourtPickerOpen(true)}>
-            <Text style={s.fieldLabel}>Home Court</Text>
-            <View style={s.ratingRight}>
-              <Text style={s.homeCourtValue} numberOfLines={1}>
-                {homeCourtName ?? 'Not set'}
-              </Text>
+          {/* Stacked for the same reason as the availability grid: the label
+              was a fixed 130pt and the value capped at maxWidth 200, so any
+              real facility name was truncated mid-word ("Esplanade Golf and
+              Cou…"). A venue name is the whole point of this row, and it is
+              exactly the kind of string that does not fit a fixed column. */}
+          <TouchableOpacity style={s.homeCourtRow} activeOpacity={0.7} onPress={() => setHomeCourtPickerOpen(true)}>
+            <View style={s.homeCourtHead}>
+              <Text style={[s.fieldLabel, s.homeCourtLabel]}>Home Court</Text>
               <Ionicons name="chevron-forward" size={16} color={L.textMuted} />
             </View>
+            <Text style={s.homeCourtValue} numberOfLines={2}>
+              {homeCourtName ?? 'Not set'}
+            </Text>
           </TouchableOpacity>
           {homeCourtCity && (
             <>
@@ -817,7 +822,15 @@ const s = StyleSheet.create({
   ratingValue: { color: L.gold, fontSize: text.body.size, fontWeight: '500' },
 
   // Home court
-  homeCourtValue: { color: L.gold, fontSize: text.body.size, fontWeight: '500', maxWidth: 200 },
+  // 'auto', not undefined: an undefined value can be skipped during style
+  // merging, which would leave fieldLabel's fixed 130pt in place.
+  homeCourtLabel: { width: 'auto' as const },
+  homeCourtRow: { paddingHorizontal: 16, paddingVertical: 13, gap: 4 },
+  // The chevron stays on the label line, so it reads as the row's affordance
+  // rather than floating beside a two-line venue name.
+  homeCourtHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // No maxWidth: the name gets the full width and up to two lines.
+  homeCourtValue: { color: L.gold, fontSize: text.body.size, fontWeight: '500' },
   homeCourtSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
   // Segmented control
@@ -845,14 +858,21 @@ const s = StyleSheet.create({
 
   // Availability week grid
   availSection: { paddingHorizontal: 14, paddingVertical: 10, gap: 10 },
-  availRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 6, gap: 8,
-  },
-  availDayLabel: { color: L.text, fontSize: text.caption.size, fontWeight: '500', width: 82 },
-  availBlockRow: { flexDirection: 'row', flex: 1, gap: 6, justifyContent: 'flex-end' },
+  // Stacked, not side by side. The label used to be a fixed 82pt with no
+  // numberOfLines and no ellipsize, so anything wider simply spilled: at a
+  // larger iOS text size (allowFontScaling is nowhere disabled) "Wednesday"
+  // clipped and Thursday/Saturday collided with the Morning pill. Even at the
+  // default size the row was over budget on a 375pt device once the three
+  // pills and gaps were counted.
+  availRow: { paddingVertical: 6, gap: 8 },
+  availDayLabel: { color: L.text, fontSize: text.caption.size, fontWeight: '500' },
+  // Equal thirds: "Afternoon" can no longer widen its own pill and push the
+  // row past the screen, and each target is a third of the width rather than
+  // as small as its label.
+  availBlockRow: { flexDirection: 'row', gap: spacing.sm },
   availPill: {
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: shape.pill,
+    flex: 1, alignItems: 'center',
+    paddingHorizontal: spacing.sm, paddingVertical: 6, borderRadius: shape.pill,
     borderWidth: 1, borderColor: L.border, backgroundColor: L.bg,
   },
   availPillActive: { backgroundColor: L.navy, borderColor: L.navy },
