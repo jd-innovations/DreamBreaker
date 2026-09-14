@@ -71,7 +71,9 @@ function PlayerCard({ sp, onRemove }: { sp: SavedPlayer; onRemove: () => void })
         </TouchableOpacity>
         <TouchableOpacity
           style={[pc.actionBtn, pc.actionBtnGold]}
-          onPress={() => router.push(`/players/${p.id}/invite` as never)}
+          onPress={() => router.push(
+            `/players/${p.id}/invite?name=${encodeURIComponent(p.name)}` as never,
+          )}
         >
           <Ionicons name="paper-plane-outline" size={16} color="#FFFFFF" />
           <Text style={[pc.actionText, { color: '#FFFFFF' }]}>Invite</Text>

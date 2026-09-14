@@ -70,7 +70,11 @@ function ConnectionCard({ conn, onRemove }: { conn: Connection; onRemove: () => 
       <View style={cc.actions}>
         <TouchableOpacity
           style={cc.actionBtn}
-          onPress={() => router.push(`/players/${conn.player.id}/invite` as never)}
+          onPress={() => router.push(
+            // name, so the invite flow can address them by it. Without it every
+            // screen in the flow falls back to "this player".
+            `/players/${conn.player.id}/invite?name=${encodeURIComponent(conn.player.name)}` as never,
+          )}
         >
           <Ionicons name="paper-plane-outline" size={16} color={L.gold} />
         </TouchableOpacity>
