@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { router } from 'expo-router';
 import { useProfile } from '@/hooks/useProfile';
+import { supabase } from '@/lib/supabase';
 import {
   confidenceBandLabel, fetchPlayerParProfile, formatPar, parStageLabel,
   type PlayerParProfile,
@@ -201,6 +203,43 @@ export default function RatingSettingsScreen() {
 
   const parRated = (par?.eligible_games_count ?? 0) > 0;
 
+  // The skill range this row shows is NOT this screen's setting. It belongs to
+  // partner_preferences.skill_ranges, which match/preferences.tsx reads and
+  // writes for real. This row used to render the literal "3.5 – 4.5", a second
+  // and prettier copy of a control that already had a home. It now reports the
+  // stored value and opens the screen that owns it.
+  const [skillRanges, setSkillRanges] = useState<string[] | null>(null);
+  useEffect(() => {
+    const id = profile?.id;
+    if (!id) return;
+    let cancelled = false;
+    // An async IIFE rather than .then().catch(): the query builder resolves as a
+    // PromiseLike, which carries no .catch, and a settings row is not worth an
+    // unhandled rejection if the network drops. It falls back to "Not set".
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from('partner_preferences')
+          .select('skill_ranges')
+          .eq('user_id', id)
+          .maybeSingle();
+        if (!cancelled) setSkillRanges(data?.skill_ranges ?? null);
+      } catch {
+        if (!cancelled) setSkillRanges(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [profile?.id]);
+
+  // Ranges are stored as discrete bands ('3.5-4.0'), so several selected bands
+  // read as a span from the lowest to the highest rather than a list.
+  const skillRangeLabel = (() => {
+    if (!skillRanges || skillRanges.length === 0) return 'Not set';
+    if (skillRanges.length === 1) return skillRanges[0];
+    const sorted = [...skillRanges].sort();
+    return `${sorted[0].split(/[–-]/)[0]} – ${sorted[sorted.length - 1].split(/[–-]/).pop()}`;
+  })();
+
   // Skill preferences
   const [higherRated,  setHigherRated]  = useState(true);
   const [similarSkill, setSimilarSkill] = useState(true);
@@ -274,13 +313,17 @@ export default function RatingSettingsScreen() {
         <SectionHeader label="SKILL PREFERENCES" />
         <Group>
           {/* Preferred Skill Range — tappable row */}
-          <TouchableOpacity style={s.row} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={s.row}
+            activeOpacity={0.7}
+            onPress={() => router.push('/match/preferences' as never)}
+          >
             <IconCircle name="options-outline" />
             <View style={s.rowCenter}>
               <Text style={s.rowLabel}>Preferred Skill Range</Text>
-              <Text style={s.rowSub}>Players you want to play with</Text>
+              <Text style={s.rowSub}>Set in Partner Preferences</Text>
             </View>
-            <Text style={s.rangeValue}>3.5 – 4.5</Text>
+            <Text style={s.rangeValue}>{skillRangeLabel}</Text>
             <Ionicons name="chevron-forward" size={16} color={L.textMuted} />
           </TouchableOpacity>
           <Div />
