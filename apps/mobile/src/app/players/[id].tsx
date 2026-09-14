@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/states/ScreenState';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
+import { useSession } from '@/hooks/useSession';
 import { getOrCreateConversation } from '@/lib/conversationService';
 import { useSupportContext } from '@/lib/support/supportContext';
 
@@ -241,13 +242,25 @@ export default function PlayerProfileScreen() {
 
   const TAB_BAR_H = 56;
 
+  // supabase.auth.getUser() is a NETWORK call to the auth server, and it sat
+  // in front of the Promise.all below — so five queries that could have started
+  // together waited on a round-trip whose only output is an id to filter by.
+  // That id does no authorisation work: RLS re-checks auth.uid() server-side,
+  // so a wrong one would be rejected rather than trusted.
+  //
+  // useSession reads the cached session (getSession, no network) and holds it
+  // in module state. It starts null while that read resolves, which is why
+  // sessionUser?.id is in the dependency array: the effect runs once with no
+  // user and again when it arrives. Without that dep it would silently load
+  // the signed-out shape on every cold start.
+  const { user: sessionUser } = useSession();
+
   useEffect(() => {
     if (!id) { setLoading(false); return; }
     let cancelled = false;
 
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      const uid = user?.id ?? null;
+      const uid = sessionUser?.id ?? null;
 
       const [{ data: p }, myLikes, { data: myProfile }, { data: regs }, { data: parts }] = await Promise.all([
         supabase
@@ -342,7 +355,7 @@ export default function PlayerProfileScreen() {
 
     load();
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, sessionUser?.id]);
 
   async function handleMessage() {
     if (!profile) return;
