@@ -126,7 +126,23 @@ export const FEATURE_VISIBILITY: Record<FeatureKey, FeatureVisibility> = {
   // Deferred rather than deleted because the screen is the design for a real
   // product -- see MONETIZATION_PLAN.md and MEMBERSHIP_EXECUTION_PLAN.md. Item
   // 1.1 of that plan is this flag; 3.3 rewrites the screen and ungates it.
-  paidMembership: 'deferred',
+  //
+  // 2026-09-15: NO LONGER a mockup. The screen buys, restores, and carries the
+  // App Review disclosures; the webhook, term model and voucher pool are live
+  // and verified. So 'deferred' ("no reachable code path in any build") is now
+  // factually wrong, and internal-only is the honest classification: built, and
+  // off in production for a reason.
+  //
+  // The reason is that nothing is purchasable yet. The production EAS profile
+  // has no RevenueCat appl_ key, so getMembershipOffer() returns null and the
+  // screen would show "coming soon" -- exactly what got this gated originally.
+  // Flip to 'included' when an App Store app config exists and the subscription
+  // is approved, NOT before.
+  //
+  // Runtime effect of this change in production: none. Both values resolve to
+  // false there. It only opens the screen on internal builds, which is where
+  // the Test Store key lives and where this can be exercised at all.
+  paidMembership: 'internal-only',
   // "New List" on Play Pickleball. Nothing exists behind it -- no screen, and
   // no table in production either (checked 2026-09-10: no player_lists, no
   // roster table of any shape). The row shipped pointing at /new-list, which

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,13 @@ import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/theme';
 import { useMembership } from '@/hooks/useMembership';
+import { useSession } from '@/hooks/useSession';
+import { fetchMembership, isMembershipActive } from '@/lib/supabase/membership';
+import { TERMS_URL, PRIVACY_URL } from '@/lib/legal';
+import {
+  getMembershipOffer, purchaseMembership, restorePurchases,
+  type MembershipOffer,
+} from '@/lib/purchases';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 
@@ -101,9 +108,105 @@ function BillingRow({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
+/**
+ * How long to wait for the membership row after Apple says yes.
+ *
+ * The row is written by the RevenueCat webhook, not by the app, so there is a
+ * real gap between "Apple charged the card" and "we know about it". Showing
+ * "Free Member" in that window to someone who just paid is the worst moment in
+ * the whole flow to be wrong, so the screen holds an explicit activating state
+ * instead of rendering stale truth.
+ *
+ * Bounded on purpose. If the webhook is down, the purchase is still valid and
+ * will reconcile when it recovers -- the copy says so rather than pretending
+ * something failed.
+ */
+const ACTIVATION_POLL_MS = 1500;
+const ACTIVATION_ATTEMPTS = 8;
+
+type Phase = 'idle' | 'buying' | 'restoring' | 'activating';
+
 export default function MembershipSettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { membership, isMember } = useMembership();
+  const { membership, isMember, reload } = useMembership();
+  const { session } = useSession();
+  const [offer, setOffer] = useState<MembershipOffer | null>(null);
+  const [phase, setPhase] = useState<Phase>('idle');
+
+  // No offer means nothing is purchasable right now -- no SDK key, no store
+  // config, or web. The screen keeps its "coming soon" shape in that case
+  // rather than showing a button that cannot complete.
+  useEffect(() => {
+    let cancelled = false;
+    getMembershipOffer().then(o => { if (!cancelled) setOffer(o); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const awaitMembership = useCallback(async () => {
+    const uid = session?.user?.id;
+    if (!uid) return false;
+    for (let i = 0; i < ACTIVATION_ATTEMPTS; i++) {
+      await new Promise(r => setTimeout(r, ACTIVATION_POLL_MS));
+      const m = await fetchMembership(uid);
+      if (isMembershipActive(m)) { await reload(); return true; }
+    }
+    return false;
+  }, [session?.user?.id, reload]);
+
+  async function handleBuy() {
+    setPhase('buying');
+    const outcome = await purchaseMembership();
+
+    // Backing out of Apple's sheet is not an error and must never be reported
+    // as one.
+    if (outcome.status === 'cancelled') { setPhase('idle'); return; }
+
+    if (outcome.status === 'purchased') {
+      setPhase('activating');
+      const ok = await awaitMembership();
+      setPhase('idle');
+      if (!ok) {
+        Alert.alert(
+          'Payment received',
+          'Apple confirmed your purchase. Your membership will appear here shortly.',
+        );
+      }
+      return;
+    }
+
+    setPhase('idle');
+    if (outcome.status === 'unavailable') {
+      Alert.alert('Not on sale yet', 'Membership is not available for purchase yet.');
+    } else if (outcome.status === 'error') {
+      Alert.alert('Purchase failed', outcome.message);
+    }
+  }
+
+  async function handleRestore() {
+    setPhase('restoring');
+    const outcome = await restorePurchases();
+
+    if (outcome.status === 'restored') {
+      setPhase('activating');
+      await awaitMembership();
+      setPhase('idle');
+      Alert.alert('Membership restored', 'Your Plus membership is active again.');
+      return;
+    }
+
+    setPhase('idle');
+    if (outcome.status === 'nothing_to_restore') {
+      // App Review presses this on a fresh account. A calm answer, not an error.
+      Alert.alert('Nothing to restore', 'No previous membership was found for this Apple ID.');
+    } else if (outcome.status === 'unavailable') {
+      Alert.alert('Not available', 'Purchases cannot be restored on this device.');
+    } else if (outcome.status === 'error') {
+      Alert.alert('Could not restore', outcome.message);
+    }
+  }
+
+  const busy = phase !== 'idle';
+  const canBuy = !!offer;
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
@@ -158,13 +261,61 @@ export default function MembershipSettingsScreen() {
           {!isMember && (
             <>
               <View style={s.upgradeDivider} />
-              <View style={s.upgradeRow}>
-                <Ionicons name="sparkles-outline" size={20} color={L.gold} />
-                <View style={s.upgradeText}>
-                  <Text style={s.upgradeLabel}>Plus is coming soon</Text>
-                  <Text style={s.upgradeSub}>$25 a year. Here is what it includes.</Text>
+              {canBuy ? (
+                <View style={s.buyWrap}>
+                  <TouchableOpacity
+                    style={[s.buyBtn, busy && s.buyBtnBusy]}
+                    onPress={handleBuy}
+                    disabled={busy}
+                    activeOpacity={0.85}
+                  >
+                    {phase === 'buying' || phase === 'activating' ? (
+                      <ActivityIndicator color={L.navy} />
+                    ) : (
+                      <>
+                        <Ionicons name="sparkles" size={18} color={L.navy} />
+                        {/* The store's own localized string, never a number we
+                            format. The storefront decides currency, symbol
+                            placement and decimals. */}
+                        <Text style={s.buyBtnText}>Join Plus — {offer!.priceString}/year</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+
+                  {phase === 'activating' && (
+                    <Text style={s.activating}>Setting up your membership…</Text>
+                  )}
+
+                  {/* Required by App Review: price, period, the auto-renewing
+                      nature, how to cancel, and links to Terms and Privacy on
+                      the purchase screen itself. */}
+                  <Text style={s.disclosure}>
+                    {offer!.priceString} per year. Your subscription renews automatically
+                    unless it is cancelled at least 24 hours before the end of the
+                    period. Payment is charged to your Apple ID, and you can manage or
+                    cancel it in your Apple ID settings.
+                  </Text>
+                  <View style={s.legalRow}>
+                    <TouchableOpacity onPress={() => Linking.openURL(TERMS_URL)} activeOpacity={0.7}>
+                      <Text style={s.legalLink}>Terms of Service</Text>
+                    </TouchableOpacity>
+                    <Text style={s.legalDot}>·</Text>
+                    <TouchableOpacity onPress={() => Linking.openURL(PRIVACY_URL)} activeOpacity={0.7}>
+                      <Text style={s.legalLink}>Privacy Policy</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
+              ) : (
+                // No offering reachable -- no SDK key, nothing configured in the
+                // store, or web. Says nothing about a price it cannot quote.
+                <View style={s.upgradeRow}>
+                  <Ionicons name="sparkles-outline" size={20} color={L.gold} />
+                  <View style={s.upgradeText}>
+                    <Text style={s.upgradeLabel}>Plus is coming soon</Text>
+                    <Text style={s.upgradeSub}>Here is what it includes.</Text>
+                  </View>
+                </View>
+              )}
             </>
           )}
         </Group>
@@ -213,6 +364,16 @@ export default function MembershipSettingsScreen() {
             label="Payments & billing"
             sub="Saved cards, purchase history and refunds."
             onPress={() => router.push('/payments-settings' as never)}
+          />
+          {/* Guideline 3.1.1 asks for a restore mechanism and reviewers do press
+              it. Shown whether or not the user looks like a member: someone who
+              reinstalled is exactly the person who needs it, and to this screen
+              they look like a free user. */}
+          <BillingRow
+            icon="refresh-outline"
+            label={phase === 'restoring' ? 'Restoring…' : 'Restore purchases'}
+            sub="Already subscribed on this Apple ID? Bring it back."
+            onPress={() => { if (!busy) handleRestore(); }}
             last
           />
         </Group>
@@ -293,6 +454,30 @@ const s = StyleSheet.create({
   upgradeText: { flex: 1 },
   upgradeLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 2 },
   upgradeSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+
+  // ── Purchase ──
+  buyWrap: { padding: 16, gap: 10 },
+  buyBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: L.gold, borderRadius: shape.cta,
+    // 52 clears the 44pt minimum touch target with room for the label.
+    minHeight: 52, paddingHorizontal: 16,
+  },
+  buyBtnBusy: { opacity: 0.6 },
+  buyBtnText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
+  activating: {
+    color: L.textMuted, fontSize: text.caption.size, fontWeight: '600', textAlign: 'center',
+  },
+  disclosure: {
+    color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17,
+  },
+  legalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  legalLink: {
+    color: L.blue, fontSize: text.caption.size, fontWeight: '600',
+    // Keeps the tap area at the 44pt minimum without moving the text.
+    paddingVertical: 12,
+  },
+  legalDot: { color: L.textMuted, fontSize: text.caption.size },
 
   // ── Why Upgrade ──
   benefitRow: {
