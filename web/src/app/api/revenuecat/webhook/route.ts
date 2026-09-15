@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/service";
+import type { Json } from "@shared/database.types";
 
 // Section 4.1 of MEMBERSHIP_PHASE5_STOREKIT.md.
 //
@@ -59,22 +60,8 @@ export async function POST(request: Request) {
   }
 
   const service = createServiceClient();
-
-  // The cast is temporary and load-bearing only until the migration is applied.
-  // `Database` is generated from the live schema, so it will not know
-  // handle_membership_store_event until 20260915120000 has run and the types
-  // have been regenerated -- and without the cast this route does not compile,
-  // which would break the whole web build rather than just this endpoint.
-  //
-  // REMOVE IT once types are regenerated (and mind the UTF-16 trap when doing
-  // so -- see project_gen_types_utf16).
-  const rpc = service.rpc as unknown as (
-    fn: string,
-    args: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error: { message: string } | null }>;
-
-  const { data, error } = await rpc("handle_membership_store_event", {
-    p_payload: payload,
+  const { data, error } = await service.rpc("handle_membership_store_event", {
+    p_payload: payload as Json,
   });
 
   if (error) {

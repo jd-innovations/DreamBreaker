@@ -3045,6 +3045,62 @@ export type Database = {
           },
         ]
       }
+      membership_store_events: {
+        Row: {
+          app_user_id: string | null
+          environment: string | null
+          event_at: string | null
+          event_type: string
+          id: string
+          original_transaction_id: string | null
+          payload: Json
+          product_id: string | null
+          received_at: string
+          result: Json | null
+          store: string | null
+          transaction_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          app_user_id?: string | null
+          environment?: string | null
+          event_at?: string | null
+          event_type: string
+          id: string
+          original_transaction_id?: string | null
+          payload: Json
+          product_id?: string | null
+          received_at?: string
+          result?: Json | null
+          store?: string | null
+          transaction_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          app_user_id?: string | null
+          environment?: string | null
+          event_at?: string | null
+          event_type?: string
+          id?: string
+          original_transaction_id?: string | null
+          payload?: Json
+          product_id?: string | null
+          received_at?: string
+          result?: Json | null
+          store?: string | null
+          transaction_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_store_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memberships: {
         Row: {
           created_at: string
@@ -3063,6 +3119,7 @@ export type Database = {
           term_seq: number
           tier: string
           updated_at: string
+          will_renew: boolean
           user_id: string
         }
         Insert: {
@@ -3082,6 +3139,7 @@ export type Database = {
           term_seq?: number
           tier?: string
           updated_at?: string
+          will_renew?: boolean
           user_id: string
         }
         Update: {
@@ -3101,6 +3159,7 @@ export type Database = {
           term_seq?: number
           tier?: string
           updated_at?: string
+          will_renew?: boolean
           user_id?: string
         }
         Relationships: [
@@ -8202,6 +8261,10 @@ export type Database = {
         }[]
       }
       gettransactionid: { Args: never; Returns: unknown }
+      handle_membership_store_event: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
       has_pending_group_invite: {
         Args: { p_group_id: string; p_user_id: string }
         Returns: boolean

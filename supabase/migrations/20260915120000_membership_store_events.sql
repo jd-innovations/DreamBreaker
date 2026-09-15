@@ -104,9 +104,14 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'malformed_event');
   end if;
 
-  -- Idempotency first, and as a real insert rather than a select: two retries
-  -- arriving at once would both pass a select-then-act check. The primary key
-  -- makes the second one fail here, before anything is issued.
+  -- Idempotency, in two parts. This lookup is only the fast path, for the
+  -- ordinary case of a retry arriving after the first attempt finished.
+  --
+  -- The guard that actually holds is the PRIMARY KEY on the insert below. Two
+  -- retries arriving at once would BOTH pass a select-then-act check, and the
+  -- second one then fails on the key instead -- uncaught, deliberately, so the
+  -- whole transaction rolls back and nothing is issued twice. RevenueCat sees
+  -- a 500, retries, and takes this fast path.
   perform 1 from public.membership_store_events r where r.id = v_id;
 
   if found then
