@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
@@ -13,8 +13,8 @@ import { useMembership } from '@/hooks/useMembership';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 
-// Theme-backed alias â€” brand values resolve from @/theme.
-// purple/teal are plan-tier accent colors (no brand equivalent) â€” documented exception.
+// Theme-backed alias — brand values resolve from @/theme.
+// purple/teal are plan-tier accent colors (no brand equivalent) — documented exception.
 const L = {
   bg:         colors.bg,
   page:       colors.page,
@@ -36,7 +36,7 @@ const L = {
   tealBorder: 'rgba(11,158,138,0.25)',
 };
 
-// â”€â”€â”€ Shared helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Shared helpers ───────────────────────────────────────────────────────────
 
 function SectionHeader({ label }: { label: string }) {
   return <Text style={s.sectionHeader}>{label}</Text>;
@@ -50,7 +50,7 @@ function Div() {
   return <View style={s.div} />;
 }
 
-// â”€â”€â”€ Benefit row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Benefit row ──────────────────────────────────────────────────────────────
 
 function BenefitRow({
   icon, label, sub, last,
@@ -73,7 +73,7 @@ function BenefitRow({
   );
 }
 
-// â”€â”€â”€ Billing nav row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Billing nav row ──────────────────────────────────────────────────────────
 
 function BillingRow({
   icon, label, sub, last, onPress,
@@ -97,9 +97,9 @@ function BillingRow({
   );
 }
 
-// â”€â”€â”€ Plan card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Plan card ────────────────────────────────────────────────────────────────
 
-// â”€â”€â”€ Main screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function MembershipSettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -109,7 +109,7 @@ export default function MembershipSettingsScreen() {
     <View style={[s.root, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
 
-      {/* â”€â”€ Header â”€â”€ */}
+      {/* ── Header ── */}
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => goBack()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={L.blue} />
@@ -125,7 +125,7 @@ export default function MembershipSettingsScreen() {
       >
         <Text style={s.intro}>Manage your plan and billing.</Text>
 
-        {/* â”€â”€ Current Membership Card â”€â”€ */}
+        {/* ── Current Membership Card ── */}
         <Group>
           {/* Plan summary */}
           <View style={s.currentCard}>
@@ -169,7 +169,7 @@ export default function MembershipSettingsScreen() {
           )}
         </Group>
 
-        {/* â”€â”€ Why Upgrade â”€â”€ */}
+        {/* ── Why Upgrade ── */}
         <SectionHeader label="WHY UPGRADE?" />
         <Group>
           {/* The four benefits actually being sold (MONETIZATION_PLAN.md).
@@ -200,7 +200,7 @@ export default function MembershipSettingsScreen() {
           />
         </Group>
 
-        {/* â”€â”€ Billing â”€â”€ */}
+        {/* ── Billing ── */}
         <SectionHeader label="BILLING" />
         <Group>
           {/* One row, one destination. This was three: Billing History and
@@ -217,7 +217,7 @@ export default function MembershipSettingsScreen() {
           />
         </Group>
 
-        {/* â”€â”€ Footer â”€â”€ */}
+        {/* ── Footer ── */}
         <View style={s.footer}>
           <Ionicons name="lock-closed-outline" size={14} color={L.textMuted} />
           <View>
@@ -230,7 +230,7 @@ export default function MembershipSettingsScreen() {
   );
 }
 
-// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.bg },
@@ -264,7 +264,7 @@ const s = StyleSheet.create({
 
   div: { height: StyleSheet.hairlineWidth, backgroundColor: L.div, marginLeft: 68 },
 
-  // â”€â”€ Current membership card â”€â”€
+  // ── Current membership card ──
   currentCard: {
     flexDirection: 'row', alignItems: 'flex-start',
     padding: 18, gap: 14,
@@ -294,7 +294,7 @@ const s = StyleSheet.create({
   upgradeLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 2 },
   upgradeSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
-  // â”€â”€ Why Upgrade â”€â”€
+  // ── Why Upgrade ──
   benefitRow: {
     flexDirection: 'row', alignItems: 'flex-start',
     paddingHorizontal: 16, paddingVertical: 14, gap: 14,
@@ -308,7 +308,7 @@ const s = StyleSheet.create({
   benefitLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 3 },
   benefitSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18 },
 
-  // â”€â”€ Plan cards â”€â”€
+  // ── Plan cards ──
   plansContainer: {
     borderRadius: shape.panel, borderWidth: 1, borderColor: L.border,
     backgroundColor: L.bg, overflow: 'hidden',
@@ -343,7 +343,7 @@ const s = StyleSheet.create({
   },
   currentPlanText: { color: L.gold, fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
 
-  // â”€â”€ Billing â”€â”€
+  // ── Billing ──
   billingRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 13, gap: 12,
@@ -357,7 +357,7 @@ const s = StyleSheet.create({
   billingLabel: { color: L.navy, fontSize: text.body.size, fontWeight: '500', marginBottom: 2 },
   billingSub: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
-  // â”€â”€ Footer â”€â”€
+  // ── Footer ──
   footer: {
     flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center',
     gap: 8, marginTop: 28, paddingHorizontal: 8,
