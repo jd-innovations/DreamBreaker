@@ -4768,6 +4768,7 @@ export type Database = {
           gender: string | null
           hand: string | null
           handle: string | null
+          handle_changed_at: string | null
           home_court_id: string | null
           id: string
           is_coach: boolean
@@ -4828,6 +4829,7 @@ export type Database = {
           gender?: string | null
           hand?: string | null
           handle?: string | null
+          handle_changed_at?: string | null
           home_court_id?: string | null
           id: string
           is_coach?: boolean
@@ -4888,6 +4890,7 @@ export type Database = {
           gender?: string | null
           hand?: string | null
           handle?: string | null
+          handle_changed_at?: string | null
           home_court_id?: string | null
           id?: string
           is_coach?: boolean
@@ -5608,6 +5611,24 @@ export type Database = {
             referencedColumns: ["reservation_id"]
           },
         ]
+      }
+      reserved_handles: {
+        Row: {
+          created_at: string
+          handle: string
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          handle: string
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          handle?: string
+          reason?: string | null
+        }
+        Relationships: []
       }
       reservations: {
         Row: {
@@ -8261,6 +8282,7 @@ export type Database = {
         }[]
       }
       gettransactionid: { Args: never; Returns: unknown }
+      handle_available: { Args: { p_handle: string }; Returns: Json }
       handle_membership_store_event: {
         Args: { p_payload: Json }
         Returns: Json
@@ -9066,6 +9088,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_my_handle: { Args: { p_handle: string }; Returns: Json }
       settle_coach_payout_batch: {
         Args: { p_batch_id: string; p_failure?: string; p_transfer_id: string }
         Returns: undefined
