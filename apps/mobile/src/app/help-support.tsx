@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking,
 } from 'react-native';
@@ -20,7 +20,7 @@ import {
   openTerms,
 } from '@/lib/legal';
 
-// Theme-backed alias â€” brand values resolve from @/theme.
+// Theme-backed alias — brand values resolve from @/theme.
 const L = {
   bg:         colors.bg,
   page:       colors.page,
@@ -37,7 +37,7 @@ const L = {
   div:        colors.border,
 };
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function CardTitle({ label }: { label: string }) {
   return <Text style={s.cardTitle}>{label}</Text>;
@@ -59,7 +59,7 @@ function IconCircle({ name }: { name: string }) {
   );
 }
 
-// â”€â”€â”€ Support row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Support row ──────────────────────────────────────────────────────────────
 
 function SupportRow({
   icon, label, sub, trailing = 'chevron', onPress, last,
@@ -86,7 +86,7 @@ function SupportRow({
   );
 }
 
-// â”€â”€â”€ Main screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function HelpSupportScreen() {
   const insets = useSafeAreaInsets();
@@ -95,7 +95,7 @@ export default function HelpSupportScreen() {
     <View style={[s.root, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
 
-      {/* â”€â”€ Header â”€â”€ */}
+      {/* ── Header ── */}
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => goBack()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={L.blue} />
@@ -109,7 +109,7 @@ export default function HelpSupportScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 32 }]}
       >
-        {/* â”€â”€ Hero â”€â”€ */}
+        {/* ── Hero ── */}
         <View style={s.hero}>
           <View style={s.heroIconWrap}>
             <Ionicons name="chatbubble-ellipses-outline" size={44} color={L.navy} />
@@ -124,7 +124,7 @@ export default function HelpSupportScreen() {
           </Text>
         </View>
 
-        {/* â”€â”€ Get in Touch â”€â”€ */}
+        {/* ── Get in Touch ── */}
         <Card>
           <CardTitle label="Get in touch" />
           <SupportRow
@@ -155,7 +155,7 @@ export default function HelpSupportScreen() {
           />
         </Card>
 
-        {/* â”€â”€ Common Topics â”€â”€ */}
+        {/* ── Common Topics ── */}
         <Card>
           <CardTitle label="Common topics" />
           <SupportRow
@@ -181,7 +181,7 @@ export default function HelpSupportScreen() {
           </TouchableOpacity>
         </Card>
 
-        {/* â”€â”€ Send Feedback â”€â”€ */}
+        {/* ── Send Feedback ── */}
         <Card>
           <CardTitle label="Send us feedback" />
           <SupportRow
@@ -193,7 +193,7 @@ export default function HelpSupportScreen() {
           />
         </Card>
 
-        {/* â”€â”€ Policies â”€â”€ */}
+        {/* ── Policies ── */}
         <Card>
           <CardTitle label="Policies" />
           <SupportRow
@@ -220,7 +220,7 @@ export default function HelpSupportScreen() {
           />
         </Card>
 
-        {/* â”€â”€ Footer â”€â”€ */}
+        {/* ── Footer ── */}
         <View style={s.footer}>
           <Ionicons name="lock-closed-outline" size={14} color={L.textMuted} />
           <Text style={s.footerText}>
@@ -232,7 +232,7 @@ export default function HelpSupportScreen() {
   );
 }
 
-// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.bg },
@@ -248,7 +248,7 @@ const s = StyleSheet.create({
 
   scroll: { padding: 20 },
 
-  // â”€â”€ Hero â”€â”€
+  // ── Hero ──
   hero: { alignItems: 'center', marginTop: 8, marginBottom: 28 },
   heroIconWrap: {
     width: 92, height: 92, borderRadius: 46,
@@ -268,7 +268,7 @@ const s = StyleSheet.create({
     textAlign: 'center', lineHeight: 22,
   },
 
-  // â”€â”€ Card â”€â”€
+  // ── Card ──
   card: {
     backgroundColor: L.bg, borderRadius: shape.panel,
     borderWidth: 1, borderColor: L.border,
@@ -281,7 +281,7 @@ const s = StyleSheet.create({
 
   div: { height: StyleSheet.hairlineWidth, backgroundColor: L.div, marginLeft: 68 },
 
-  // â”€â”€ Row â”€â”€
+  // ── Row ──
   row: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 13, gap: 14,

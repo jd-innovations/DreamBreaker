@@ -11,7 +11,7 @@ import { useOnboarding } from '@/lib/onboarding/state';
 const L = colors;
 const FALLBACK_PHOTO = 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&h=500&fit=crop&q=80';
 
-// Screen 8 of 14 â€” Review Your Court. Confirms the court picked on screen 7.
+// Screen 8 of 14 — Review Your Court. Confirms the court picked on screen 7.
 export default function ReviewCourtScreen() {
   const { draft } = useOnboarding();
   const court = draft.homeCourt;
@@ -60,7 +60,7 @@ export default function ReviewCourtScreen() {
       ) : (
         <View style={s.emptyCard}>
           <Ionicons name="alert-circle-outline" size={28} color={L.textSub} />
-          <Text style={s.emptyText}>No court selected â€” go back and choose one.</Text>
+          <Text style={s.emptyText}>No court selected — go back and choose one.</Text>
         </View>
       )}
     </OnboardingScreen>

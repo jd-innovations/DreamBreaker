@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Switch,
@@ -13,7 +13,7 @@ import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 
-// Theme-backed alias â€” brand values resolve from @/theme.
+// Theme-backed alias — brand values resolve from @/theme.
 const L = {
   bg:         colors.bg,
   page:       colors.page,
@@ -31,7 +31,7 @@ const L = {
   greenBg:    colors.successBg,
 };
 
-// â”€â”€â”€ Shared helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Shared helpers ───────────────────────────────────────────────────────────
 
 function SectionHeader({ label }: { label: string }) {
   return <Text style={s.sectionHeader}>{label}</Text>;
@@ -53,7 +53,7 @@ function IconCircle({ name }: { name: string }) {
   );
 }
 
-// â”€â”€â”€ Contact info row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Contact info row ─────────────────────────────────────────────────────────
 
 function ContactRow({
   icon, label, value, verified, last,
@@ -81,7 +81,7 @@ function ContactRow({
   );
 }
 
-// â”€â”€â”€ Toggle row with icon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Toggle row with icon ─────────────────────────────────────────────────────
 
 function ToggleRow({
   icon, label, sub, value, onChange, last,
@@ -110,7 +110,7 @@ function ToggleRow({
   );
 }
 
-// â”€â”€â”€ Notification delivery row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Notification delivery row ────────────────────────────────────────────────
 
 type NotifState = { push: boolean; email: boolean };
 
@@ -160,7 +160,7 @@ function NotifRow({
   );
 }
 
-// â”€â”€â”€ Main screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function CommunicationSettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -187,7 +187,7 @@ export default function CommunicationSettingsScreen() {
     <View style={[s.root, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
 
-      {/* â”€â”€ Header â”€â”€ */}
+      {/* ── Header ── */}
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => goBack()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={L.blue} />
@@ -206,7 +206,7 @@ export default function CommunicationSettingsScreen() {
           Manage how other players can reach you and how you receive messages.
         </Text>
 
-        {/* â”€â”€ Contact Information â”€â”€ */}
+        {/* ── Contact Information ── */}
         <SectionHeader label="CONTACT INFORMATION" />
         <Group>
           <ContactRow
@@ -224,7 +224,7 @@ export default function CommunicationSettingsScreen() {
           />
         </Group>
 
-        {/* â”€â”€ How Players Can Reach Me â”€â”€ */}
+        {/* ── How Players Can Reach Me ── */}
         <SectionHeader label="HOW PLAYERS CAN REACH ME" />
         <Group>
           <ToggleRow icon="chatbubble-outline"  label="Allow Direct Messages"      value={directMessages}      onChange={setDirectMessages} />
@@ -234,7 +234,7 @@ export default function CommunicationSettingsScreen() {
           <ToggleRow icon="storefront-outline"  label="Allow Marketplace Messages" value={marketplaceMessages} onChange={setMarketplaceMessages} last />
         </Group>
 
-        {/* â”€â”€ Notification Delivery â”€â”€ */}
+        {/* ── Notification Delivery ── */}
         <SectionHeader label="NOTIFICATION DELIVERY" />
         <Group>
           <NotifRow icon="person-add-outline"  label="Partner Requests"       value={notifPartner}     onChange={setNotifPartner} />
@@ -243,7 +243,7 @@ export default function CommunicationSettingsScreen() {
           <NotifRow icon="storefront-outline"  label="Marketplace Messages"    value={notifMarketplace} onChange={setNotifMarketplace} last />
         </Group>
 
-        {/* â”€â”€ Profile Visibility â”€â”€ */}
+        {/* ── Profile Visibility ── */}
         <SectionHeader label="PROFILE VISIBILITY" />
         <Group>
           <ToggleRow icon="mail-outline"   label="Show Email Address" value={showEmail}      onChange={setShowEmail} />
@@ -258,7 +258,7 @@ export default function CommunicationSettingsScreen() {
           />
         </Group>
 
-        {/* â”€â”€ Emergency Contact â”€â”€ */}
+        {/* ── Emergency Contact ── */}
         <SectionHeader label="EMERGENCY CONTACT (OPTIONAL)" />
         <Group>
           <TouchableOpacity style={s.row} activeOpacity={0.7}>
@@ -272,7 +272,7 @@ export default function CommunicationSettingsScreen() {
           </TouchableOpacity>
         </Group>
 
-        {/* â”€â”€ Footer â”€â”€ */}
+        {/* ── Footer ── */}
         <View style={s.footer}>
           <Ionicons name="lock-closed-outline" size={14} color={L.textMuted} />
           <View style={s.footerText}>
@@ -285,7 +285,7 @@ export default function CommunicationSettingsScreen() {
   );
 }
 
-// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.bg },

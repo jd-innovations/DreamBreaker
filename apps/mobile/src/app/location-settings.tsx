@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Switch, ActivityIndicator,
@@ -15,7 +15,7 @@ import { radius as shape, text } from '@shared/tokens';
 import { useCurrentLocation, FALLBACK_LOCATION_LABEL } from '@/lib/location';
 import { useLocationSettings } from '@/hooks/useLocationSettings';
 
-// Theme-backed alias â€” brand values resolve from @/theme.
+// Theme-backed alias — brand values resolve from @/theme.
 const L = {
   bg:        colors.bg,
   page:      colors.page,
@@ -33,25 +33,25 @@ const L = {
   greenBg:   colors.successBg,
 };
 
-// â”€â”€â”€ Section header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Section header ───────────────────────────────────────────────────────────
 
 function SectionHeader({ label }: { label: string }) {
   return <Text style={s.sectionHeader}>{label}</Text>;
 }
 
-// â”€â”€â”€ Group container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Group container ──────────────────────────────────────────────────────────
 
 function Group({ children, style }: { children: React.ReactNode; style?: object }) {
   return <View style={[s.group, style]}>{children}</View>;
 }
 
-// â”€â”€â”€ Thin divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Thin divider ─────────────────────────────────────────────────────────────
 
 function Div() {
   return <View style={s.div} />;
 }
 
-// â”€â”€â”€ Full-width radius segmented control â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Full-width radius segmented control ─────────────────────────────────────
 
 function RadiusControl({
   label, sub, options, value, onChange,
@@ -94,7 +94,7 @@ function RadiusControl({
   );
 }
 
-// â”€â”€â”€ Toggle row with icon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Toggle row with icon ─────────────────────────────────────────────────────
 
 function IconToggleRow({
   icon, label, sub, value, onChange, last,
@@ -125,7 +125,7 @@ function IconToggleRow({
   );
 }
 
-// â”€â”€â”€ Simple toggle row (no icon) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Simple toggle row (no icon) ──────────────────────────────────────────────
 
 function ToggleRow({
   label, sub, value, onChange, last,
@@ -152,7 +152,7 @@ function ToggleRow({
   );
 }
 
-// â”€â”€â”€ Main screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main screen ──────────────────────────────────────────────────────────────
 
 // Coarse relative-time label for the "last updated" line.
 function relativeTime(date: Date | null): string {
@@ -209,7 +209,7 @@ export default function LocationSettingsScreen() {
     <View style={[s.root, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
 
-      {/* â”€â”€ Header â”€â”€ */}
+      {/* ── Header ── */}
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => goBack()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={L.blue} />
@@ -223,7 +223,7 @@ export default function LocationSettingsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 40 }]}
       >
-        {/* â”€â”€ Current Location â”€â”€ */}
+        {/* ── Current Location ── */}
         <SectionHeader label="CURRENT LOCATION" />
         <Group>
           <View style={s.locationCard}>
@@ -268,7 +268,7 @@ export default function LocationSettingsScreen() {
           </View>
         </Group>
 
-        {/* â”€â”€ Discovery Preferences â”€â”€ */}
+        {/* ── Discovery Preferences ── */}
         <SectionHeader label="DISCOVERY PREFERENCES" />
         <Group>
           <RadiusControl
@@ -312,7 +312,7 @@ export default function LocationSettingsScreen() {
           />
         </Group>
 
-        {/* â”€â”€ Travel Preferences â”€â”€ */}
+        {/* ── Travel Preferences ── */}
         <SectionHeader label="TRAVEL PREFERENCES" />
         <Group>
           <IconToggleRow
@@ -346,7 +346,7 @@ export default function LocationSettingsScreen() {
           />
         </Group>
 
-        {/* â”€â”€ Privacy â”€â”€ */}
+        {/* ── Privacy ── */}
         <SectionHeader label="PRIVACY" />
         <Group>
           <IconToggleRow
@@ -373,7 +373,7 @@ export default function LocationSettingsScreen() {
           />
         </Group>
 
-        {/* â”€â”€ Footer â”€â”€ */}
+        {/* ── Footer ── */}
         <View style={s.footer}>
           <Ionicons name="lock-closed-outline" size={13} color={L.textMuted} />
           <Text style={s.footerText}>Changes are saved automatically</Text>
@@ -383,7 +383,7 @@ export default function LocationSettingsScreen() {
   );
 }
 
-// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.bg },

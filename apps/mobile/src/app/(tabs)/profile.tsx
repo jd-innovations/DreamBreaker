@@ -20,7 +20,7 @@ import { getProfileCompletion } from '@/lib/profileCompletion';
 import { requireAuth } from '@/lib/authGuard';
 import { isFeatureEnabled, type FeatureKey } from '@/lib/featureFlags';
 
-// Actions that require a session â€” guard before navigating
+// Actions that require a session — guard before navigating
 type MenuItem = {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
@@ -71,7 +71,7 @@ function getMenuItems(directorStatus: string | null, coachStatus: string | null)
   return items.filter((item) => !item.feature || isFeatureEnabled(item.feature));
 }
 
-// â”€â”€â”€ Rating box â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Rating box ───────────────────────────────────────────────────────────────
 
 type RatingInfo = { value: string; label: string; sublabel: string | null };
 
@@ -93,7 +93,7 @@ function getRatingInfo(profile: UserProfile | null): RatingInfo {
   return { value: 'NR', label: 'NOT RATED', sublabel: null };
 }
 
-// â”€â”€â”€ Detail row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Detail row ───────────────────────────────────────────────────────────────
 
 function DetailRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
   return (
@@ -115,7 +115,7 @@ const dr = StyleSheet.create({
   value: { color: colors.text, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
 });
 
-// â”€â”€â”€ Guest state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Guest state ─────────────────────────────────────────────────────────────
 
 function GuestView({ insets }: { insets: { bottom: number } }) {
   return (
@@ -159,7 +159,7 @@ const g = StyleSheet.create({
   secondaryBtnText: { color: colors.gold, fontSize: text.actionLarge.size, fontWeight: '800' },
 });
 
-// â”€â”€â”€ Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -177,7 +177,7 @@ export default function ProfileScreen() {
   });
   const { setTriggerVisible } = useSlideMenu();
 
-  // Hide the floating hamburger trigger while this screen is focused â€” the
+  // Hide the floating hamburger trigger while this screen is focused — the
   // Profile tab is itself a primary destination, no menu access needed here.
   // Restored on blur.
   useFocusEffect(
@@ -256,7 +256,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* â”€â”€ Guest state â”€â”€ */}
+      {/* ── Guest state ── */}
       {!user ? (
         <GuestView insets={insets} />
       ) : (
@@ -269,7 +269,7 @@ export default function ProfileScreen() {
               <Text style={{ color: '#c00', fontSize: 12, fontFamily: 'monospace' }}>{profileError}</Text>
             </View>
           )}
-          {/* â”€â”€ Avatar card â”€â”€ */}
+          {/* ── Avatar card ── */}
           <View style={styles.profileCard}>
             <View>
               <ProfileCompletionRing percent={completion} size={64} strokeWidth={3}>
@@ -309,7 +309,7 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* â”€â”€ Stats row â”€â”€ */}
+          {/* ── Stats row ── */}
           <View style={styles.statsRow}>
             {[
               { label: 'EVENTS',      value: String(tournamentCount) },
@@ -330,7 +330,7 @@ export default function ProfileScreen() {
             ))}
           </View>
 
-          {/* â”€â”€ Bio â”€â”€ */}
+          {/* ── Bio ── */}
           {!!profile?.bio && (
             <View style={styles.infoCard}>
               <Text style={styles.infoCardTitle}>Bio</Text>
@@ -339,7 +339,7 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {/* â”€â”€ Player details â”€â”€ */}
+          {/* ── Player details ── */}
           {detailRows.length > 0 && (
             <View style={styles.infoCard}>
               <Text style={styles.infoCardTitle}>Player Details</Text>
@@ -350,7 +350,7 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {/* â”€â”€ Menu â”€â”€ */}
+          {/* ── Menu ── */}
           <View style={styles.menu}>
             {menuItems.map((item, i) => (
               <SettingsRow
@@ -370,7 +370,7 @@ export default function ProfileScreen() {
             ))}
           </View>
 
-          {/* â”€â”€ Sign out â”€â”€ */}
+          {/* ── Sign out ── */}
           <TouchableOpacity
             style={styles.signOutBtn}
             onPress={() =>

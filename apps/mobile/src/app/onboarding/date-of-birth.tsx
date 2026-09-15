@@ -11,7 +11,7 @@ import { DateOfBirthField } from '@/lib/onboarding/DateOfBirthField';
 
 const L = colors;
 
-// Screen 4 of 14 â€” Date of Birth. Required.
+// Screen 4 of 14 — Date of Birth. Required.
 export default function DateOfBirthScreen() {
   const { draft, update } = useOnboarding();
   const canContinue = validators.dateOfBirth(draft);

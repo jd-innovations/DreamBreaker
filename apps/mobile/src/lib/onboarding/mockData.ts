@@ -42,9 +42,9 @@ export const INTENT_OPTIONS = [
   { key: 'meet_players',    label: 'Meet Local Players',    icon: 'happy-outline' as const },
 ];
 
-// â”€â”€â”€ Screen 14 mock activity states â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Screen 14 mock activity states ───────────────────────────────────────────
 // Real implementation should derive this from live facility activity data
-// (player counts, upcoming play events) â€” see DATA_GAPS.md.
+// (player counts, upcoming play events) — see DATA_GAPS.md.
 
 export type ActivityLevel = 'high' | 'medium' | 'low';
 

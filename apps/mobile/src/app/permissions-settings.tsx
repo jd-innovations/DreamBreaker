@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking,
 } from 'react-native';
@@ -12,7 +12,7 @@ import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 
-// Theme-backed alias â€” brand values resolve from @/theme.
+// Theme-backed alias — brand values resolve from @/theme.
 // blue accent is the device-permissions visual language (intentional, documented).
 const L = {
   bg:         colors.bg,
@@ -28,7 +28,7 @@ const L = {
   div:        colors.border,
 };
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function SectionHeader({ label }: { label: string }) {
   return <Text style={s.sectionHeader}>{label}</Text>;
@@ -50,7 +50,7 @@ function BlueCircle({ name }: { name: string }) {
   );
 }
 
-// â”€â”€â”€ Permission row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Permission row ───────────────────────────────────────────────────────────
 
 type StatusType = 'While Using App' | 'Enabled' | 'Not Connected';
 
@@ -83,7 +83,7 @@ function PermRow({
   );
 }
 
-// â”€â”€â”€ Main screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function PermissionsSettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -92,7 +92,7 @@ export default function PermissionsSettingsScreen() {
     <View style={[s.root, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
 
-      {/* â”€â”€ Header â”€â”€ */}
+      {/* ── Header ── */}
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => goBack()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={L.blue} />
@@ -108,7 +108,7 @@ export default function PermissionsSettingsScreen() {
       >
         <Text style={s.intro}>Manage device access used by Pickleball App.</Text>
 
-        {/* â”€â”€ Device Access â”€â”€ */}
+        {/* ── Device Access ── */}
         <SectionHeader label="DEVICE ACCESS" />
         <Group>
           <PermRow
@@ -144,7 +144,7 @@ export default function PermissionsSettingsScreen() {
           />
         </Group>
 
-        {/* â”€â”€ Info note â”€â”€ */}
+        {/* ── Info note ── */}
         <View style={s.infoRow}>
           <Ionicons name="lock-closed-outline" size={14} color={L.textMuted} style={{ marginTop: 2 }} />
           <Text style={s.infoText}>
@@ -152,7 +152,7 @@ export default function PermissionsSettingsScreen() {
           </Text>
         </View>
 
-        {/* â”€â”€ Open Device Settings â”€â”€ */}
+        {/* ── Open Device Settings ── */}
         <Group>
           <TouchableOpacity
             style={s.row}
@@ -172,7 +172,7 @@ export default function PermissionsSettingsScreen() {
   );
 }
 
-// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.bg },

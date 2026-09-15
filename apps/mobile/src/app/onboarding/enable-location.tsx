@@ -11,9 +11,9 @@ import { useCurrentLocation } from '@/lib/location';
 
 const L = colors;
 
-// Screen 6 of 14 â€” Enable Location. Skippable. Reuses the existing
+// Screen 6 of 14 — Enable Location. Skippable. Reuses the existing
 // useCurrentLocation() hook (apps/mobile/src/lib/location.ts) for the real
-// permission flow â€” note that hook already requests permission on mount, so
+// permission flow — note that hook already requests permission on mount, so
 // the OS prompt may appear as soon as this screen renders.
 export default function EnableLocationScreen() {
   const { update } = useOnboarding();

@@ -23,7 +23,7 @@ import { openPrivacy, openTerms } from '@/lib/legal';
 import { isFeatureEnabled, IS_INTERNAL_BUILD } from '@/lib/featureFlags';
 import { ProfileCompletionRing, ShimmerOverlay } from '@/components';
 
-// Theme-backed alias Ã¢â‚¬â€ brand values resolve from @/theme.
+// Theme-backed alias — brand values resolve from @/theme.
 const L = {
   bg: colors.bg,
   page: colors.page,
@@ -193,7 +193,7 @@ export default function AccountSettingsScreen() {
     <View style={styles.root}>
       <StatusBar style="dark" />
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬ HEADER Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      {/* ── HEADER ── */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => goBack()}>
           <Ionicons name="chevron-back" size={20} color={L.navy} />
@@ -208,7 +208,7 @@ export default function AccountSettingsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
       >
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬ PROFILE CARD Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* ── PROFILE CARD ── */}
         <View style={styles.profileCard}>
           {/* Avatar */}
           <ProfileCompletionRing percent={completion} size={72} strokeWidth={3}>
@@ -230,7 +230,7 @@ export default function AccountSettingsScreen() {
           </View>
         </View>
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬ UPGRADE BANNER Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* ── UPGRADE BANNER ── */}
         {/* Gated with the same flag as the "My Plan" cell below. The grid
             already hid the membership screen while paidMembership is
             'deferred'; this banner was still advertising it, which is the
@@ -270,7 +270,7 @@ export default function AccountSettingsScreen() {
           </TouchableOpacity>
         ) : null}
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬ SETTINGS GRID Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* ── SETTINGS GRID ── */}
         <View style={styles.grid}>
           {settingsGrid.map((row, ri) => (
             <View key={ri} style={styles.gridRow}>
@@ -281,7 +281,7 @@ export default function AccountSettingsScreen() {
           ))}
         </View>
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬ HELP CARD Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* ── HELP CARD ── */}
         <TouchableOpacity style={styles.helpCard} activeOpacity={0.88}
           onPress={() => router.push('/help-support' as never)}>
           <View style={styles.helpIconWrap}>
@@ -296,7 +296,7 @@ export default function AccountSettingsScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬ FOOTER ROW Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* ── FOOTER ROW ── */}
         {/* Store review requires self-service deletion to be reachable from the
             account area, not buried behind a support request. The screen itself
             carries the confirmation step. */}

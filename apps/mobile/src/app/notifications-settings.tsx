@@ -20,7 +20,7 @@ import {
 } from '@/lib/notificationPreferences';
 import { haptics } from '@/lib/haptics';
 
-// Theme-backed alias â€” all brand values resolve from @/theme.
+// Theme-backed alias — all brand values resolve from @/theme.
 // `blue` is the iOS system color retained for back actions (not a brand token).
 const L = {
   bg:         colors.bg,
@@ -38,7 +38,7 @@ const L = {
   green:      colors.success,
 };
 
-// â”€â”€â”€ Shared helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Shared helpers ───────────────────────────────────────────────────────────
 
 function SectionHeader({ label }: { label: string }) {
   return <Text style={s.sectionHeader}>{label}</Text>;
@@ -60,10 +60,10 @@ function IconCircle({ name }: { name: string }) {
   );
 }
 
-// â”€â”€â”€ Category nav row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Category nav row ─────────────────────────────────────────────────────────
 
 
-// â”€â”€â”€ Toggle row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Toggle row ───────────────────────────────────────────────────────────────
 
 function ToggleRow({
   icon, label, sub, value, onChange, last, disabled, pending,
@@ -106,10 +106,10 @@ function ToggleRow({
   );
 }
 
-// â”€â”€â”€ Time picker row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Time picker row ──────────────────────────────────────────────────────────
 
 
-// â”€â”€â”€ Main screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function NotificationsSettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -237,7 +237,7 @@ export default function NotificationsSettingsScreen() {
     <View style={[s.root, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
 
-      {/* â”€â”€ Header â”€â”€ */}
+      {/* ── Header ── */}
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => goBack()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={L.blue} />
@@ -254,7 +254,7 @@ export default function NotificationsSettingsScreen() {
         {/* Subtitle */}
         <Text style={s.intro}>{"Choose what you'd like to be notified about."}</Text>
 
-        {/* â”€â”€ Notification Categories â”€â”€ */}
+        {/* ── Notification Categories ── */}
         {/* These were five CategoryRow items with a chevron, no onPress and a
             caption promising "Manage notification types for each category".
             They are now switches bound to the profiles.notif_* columns that
@@ -316,7 +316,7 @@ export default function NotificationsSettingsScreen() {
         </Text>
         {prefsError ? <Text style={s.groupNote}>{prefsError}</Text> : null}
 
-        {/* â”€â”€ Delivery Methods â”€â”€ */}
+        {/* ── Delivery Methods ── */}
         <SectionHeader label="DELIVERY METHODS" />
         <Group>
           <ToggleRow
@@ -387,7 +387,7 @@ export default function NotificationsSettingsScreen() {
             Badge counts had three switches, and setBadgeCountAsync is called
             nowhere in this app — the icon has never carried a badge. */}
 
-        {/* â”€â”€ Footer â”€â”€ */}
+        {/* ── Footer ── */}
         <View style={s.footer}>
           <Ionicons name="lock-closed-outline" size={14} color={L.textMuted} />
           <View>
@@ -400,7 +400,7 @@ export default function NotificationsSettingsScreen() {
   );
 }
 
-// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.bg },
