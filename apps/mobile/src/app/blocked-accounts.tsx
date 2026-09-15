@@ -82,10 +82,12 @@ export default function BlockedAccountsScreen() {
   }
 
   return (
-    <View style={[s.root, { paddingTop: insets.top }]}>
+    <View style={s.root}>
       <StatusBar style="dark" />
 
-      <View style={s.header}>
+      {/* Safe-area inset on the HEADER, not the root, so the white header
+          colour runs to the top of the screen. Pattern from wallet.tsx. */}
+      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={s.back} onPress={() => goBack()} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={26} color={colors.navy} />
         </TouchableOpacity>
