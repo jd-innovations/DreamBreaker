@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { claimGuestParticipants } from '@/lib/supabase/playEvents';
+import { identifyPurchases } from '@/lib/purchases';
 
 // ─── Shared auth store ────────────────────────────────────────────────────────
 // Previously every useSession() call opened its own auth subscription, its own
@@ -30,8 +31,14 @@ function init() {
   if (initialized) return;
   initialized = true;
 
+  // RevenueCat identity is attached HERE rather than at each sign-in screen.
+  // This store is the one place that sees every auth transition, so
+  // app_user_id cannot drift from the Supabase user id -- which is the failure
+  // that silently detaches a purchase from its buyer. Never awaited: identity
+  // is best-effort and must not delay auth state reaching the UI.
   supabase.auth.getSession().then(({ data: { session } }) => {
     setState({ session, user: session?.user ?? null, loading: false });
+    identifyPurchases(session?.user?.id ?? null);
     if (session?.user?.email) {
       claimGuestParticipants(session.user.id, session.user.email);
     }
@@ -40,6 +47,11 @@ function init() {
   // One app-lifetime subscription (intentionally never unsubscribed).
   supabase.auth.onAuthStateChange((event, session) => {
     setState({ session, user: session?.user ?? null, loading: false });
+    // Sign-out matters as much as sign-in: without logOut() the next person to
+    // sign in on this device inherits the previous user's RevenueCat identity.
+    if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+      identifyPurchases(session?.user?.id ?? null);
+    }
     if (
       (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') &&
       session?.user?.email

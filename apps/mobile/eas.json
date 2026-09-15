@@ -8,7 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_APP_ENV": "development"
+        "EXPO_PUBLIC_APP_ENV": "development",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "test_tiwhErijmjPSeUoOemZYedOOUit"
       },
       "environment": "development"
     },
@@ -16,7 +17,8 @@
       "distribution": "internal",
       "channel": "preview",
       "env": {
-        "EXPO_PUBLIC_APP_ENV": "internal"
+        "EXPO_PUBLIC_APP_ENV": "internal",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "test_tiwhErijmjPSeUoOemZYedOOUit"
       },
       "environment": "preview",
       "autoIncrement": true
@@ -25,7 +27,8 @@
       "channel": "production",
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_APP_ENV": "production"
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": ""
       },
       "environment": "production"
     }
