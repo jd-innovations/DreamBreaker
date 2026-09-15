@@ -93,6 +93,24 @@ function todayIsoDate(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/**
+ * Drops hours that have already started, but only when the date IS today.
+ *
+ * create_reservation already refuses a past start ("slot_in_past", P0008), so
+ * offering one is a dead end reached three screens later — pick a time, pick a
+ * court, fill in Review, then fail. The server guard stays the authority; this
+ * stops the UI advertising what it will refuse.
+ *
+ * Strictly greater than the current hour: at 7:50 the 7 AM slot began 50
+ * minutes ago, and the 8 o'clock one is still bookable. The hour in progress is
+ * never offered, because by the time the request lands its start is past.
+ */
+function futureHoursOnly(hours: number[], dateStr: string): number[] {
+  if (dateStr !== todayIsoDate()) return hours;
+  const currentHour = new Date().getHours();
+  return hours.filter(h => h > currentHour);
+}
+
 function formatHourLabel(hour: number): string {
   const period = hour >= 12 ? 'PM' : 'AM';
   const h12 = hour % 12 === 0 ? 12 : hour % 12;
@@ -235,6 +253,11 @@ export default function ChooseTimeScreen() {
   const [ballMachines, setBallMachines] = useState<BallMachine[]>([]);
   const [deals, setDeals] = useState<FlashDeal[]>([]);
   const [availability, setAvailability] = useState<Record<string, AssetAvailabilitySlot[]>>({});
+  // True when the venue IS open today but every remaining hour has already
+  // started. Distinct from is_closed: "Closed on this date" would be a lie at
+  // 9pm on a day that opened at 7am.
+  const [allHoursPast, setAllHoursPast] = useState(false);
+
   // Starts empty (not DEFAULT_HOURS) so the hour-selection effect below never
   // locks onto the fallback range before the real operating-hours fetch
   // resolves -- otherwise "7 AM" (DEFAULT_HOURS[0]) wins the race against a
@@ -279,11 +302,17 @@ export default function ChooseTimeScreen() {
           const closeH = parseInt(today.close_time.slice(0, 2), 10);
           const list = [];
           for (let h = openH; h < closeH; h++) list.push(h);
-          setHours(list.length > 0 ? list : DEFAULT_HOURS);
+          const open = list.length > 0 ? list : DEFAULT_HOURS;
+          const future = futureHoursOnly(open, dateStr);
+          setAllHoursPast(open.length > 0 && future.length === 0);
+          setHours(future);
         } else if (today?.is_closed) {
+          setAllHoursPast(false);
           setHours([]);
         } else {
-          setHours(DEFAULT_HOURS);
+          const future = futureHoursOnly(DEFAULT_HOURS, dateStr);
+          setAllHoursPast(future.length === 0);
+          setHours(future);
         }
 
         const allAssets = [
@@ -514,7 +543,11 @@ export default function ChooseTimeScreen() {
         <>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.hourRow} contentContainerStyle={{ paddingHorizontal: spacing.screenH, gap: spacing.sm }}>
             {hours.length === 0 ? (
-              <Text style={s.closedText}>Closed on this date.</Text>
+              <Text style={s.closedText}>
+                {allHoursPast
+                  ? 'No times left today — try tomorrow.'
+                  : 'Closed on this date.'}
+              </Text>
             ) : hours.map(h => (
               <TouchableOpacity
                 key={h}
