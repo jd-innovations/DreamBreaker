@@ -42,7 +42,8 @@ That was the point of sequencing it last.
 None of this is code, and all of it blocks testing.
 
 1. **App Store Connect**: an auto-renewable subscription in a new subscription
-   group. One product, e.g. `com.pickleballapp.plus.yearly`, 1 year.
+   group. One product, `app.pickleballapp.plus.yearly`, 1 year. (The bundle
+   identifier is `app.pickleballapp` — app.config.js:80 — not `com.`.)
    - **Price: $24.99** (settled 2026-09-12). Chosen over $25.00 because $24.99
      is a standard Apple price point with nothing to verify or request, and
      over $24.97 because a custom price point is setup friction buying nothing
@@ -60,6 +61,15 @@ None of this is code, and all of it blocks testing.
 4. **RevenueCat**: project, iOS app with the App Store shared secret and an
    App Store Connect API key, one entitlement (`plus`) mapped to the product.
 5. **Sandbox tester accounts** in App Store Connect.
+
+### Status
+
+**2026-09-15 — submitted to Apple, awaiting review.** Nothing below is blocked
+on that wait: RevenueCat configuration, the client SDK work (§3) and the
+webhook (§4) can all be built against the product ID before Apple approves.
+Sandbox purchases need the Paid Applications agreement Active — not review
+approval — and the first subscription is approved alongside an app version,
+so a TestFlight/App Store build has to accompany it.
 
 ---
 
