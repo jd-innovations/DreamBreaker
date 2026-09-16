@@ -25,6 +25,10 @@ import { FacilityPickerModal } from '@/components/FacilityPicker';
 import { fetchFacilityById, type FacilityWithPrimaryPhoto } from '@/lib/supabase/facilities';
 import { FALLBACK_LOCATION, useCurrentLocation } from '@/lib/location';
 import { supabase } from '@/lib/supabase';
+import {
+  checkHandleAvailable, setMyHandle, normalizeHandle,
+  HANDLE_MIN, HANDLE_MAX, type HandleCheck,
+} from '@/lib/supabase/handles';
 import { GAME_TYPES, type GameType } from '@/lib/partnerLookingFor';
 
 const GAME_TYPE_SUBS: Record<GameType, string> = {
@@ -98,6 +102,98 @@ function FieldRow({
           returnKeyType="done"
         />
       </View>
+      {!last && <Div />}
+    </>
+  );
+}
+
+// ─── Handle field ─────────────────────────────────────────────────────────────
+
+/**
+ * @handle. Optional, and the only field on this screen that is NOT saved by the
+ * normal profile write -- a trigger blocks direct writes to the column, so it
+ * goes through set_my_handle(). See lib/supabase/handles.ts.
+ *
+ * The status line is the whole point. A handle is the one thing here that can
+ * be refused by the server for reasons the user cannot guess (already taken,
+ * reserved, a 30-day cooldown), so the answer has to arrive while they type
+ * rather than as an alert after they press Save.
+ */
+function HandleField({
+  value, onChangeText, check, checking, savedHandle, last,
+}: {
+  value: string;
+  onChangeText: (t: string) => void;
+  check: HandleCheck | null;
+  checking: boolean;
+  savedHandle: string | null;
+  last?: boolean;
+}) {
+  const normalized = normalizeHandle(value);
+  const unchanged = normalized === (savedHandle ?? '');
+
+  let hint: string;
+  let tone: 'muted' | 'good' | 'bad' = 'muted';
+
+  if (!normalized) {
+    // Says what it is FOR. "Optional" alone reads as "skip me".
+    hint = savedHandle
+      ? 'Clearing this box will not remove your handle.'
+      : 'Optional. A short name others can find you by.';
+  } else if (unchanged) {
+    hint = 'This is your handle.';
+  } else if (checking) {
+    hint = 'Checking…';
+  } else if (check?.state === 'available') {
+    hint = `@${normalized} is available.`;
+    tone = 'good';
+  } else if (check?.state === 'taken') {
+    hint = 'That handle is taken.';
+    tone = 'bad';
+  } else if (check?.state === 'reserved') {
+    hint = 'That handle is not available.';
+    tone = 'bad';
+  } else if (check?.state === 'invalid') {
+    hint = `${HANDLE_MIN}–${HANDLE_MAX} characters: letters, numbers and underscores.`;
+    tone = 'bad';
+  } else if (check?.state === 'error') {
+    hint = 'Could not check right now.';
+  } else {
+    hint = 'Checking…';
+  }
+
+  return (
+    <>
+      <View style={s.fieldRow}>
+        <Text style={s.fieldLabel}>Handle</Text>
+        <View style={s.handleInputWrap}>
+          <Text style={s.handleAt}>@</Text>
+          <TextInput
+            style={s.handleInput}
+            value={value}
+            onChangeText={onChangeText}
+            placeholder="yourname"
+            placeholderTextColor={L.textMuted}
+            selectionColor={L.navy}
+            underlineColorAndroid="transparent"
+            returnKeyType="done"
+            // The server lowercases anyway; letting the keyboard capitalise
+            // would show the user something different from what gets stored.
+            autoCapitalize="none"
+            autoCorrect={false}
+            maxLength={HANDLE_MAX}
+          />
+        </View>
+      </View>
+      <Text
+        style={[
+          s.handleHint,
+          tone === 'good' && s.handleHintGood,
+          tone === 'bad' && s.handleHintBad,
+        ]}
+      >
+        {hint}
+      </Text>
       {!last && <Div />}
     </>
   );
@@ -400,6 +496,34 @@ export default function EditProfileScreen() {
   const [firstName,   setFirstName]   = useState('');
   const [lastName,    setLastName]    = useState('');
   const [bio,         setBio]         = useState('');
+  const [handle,      setHandle]      = useState('');
+  // What the server currently holds, so the field can tell "unchanged" from
+  // "available" -- your own handle reads as available and would otherwise
+  // invite a pointless write that the cooldown then refuses.
+  const [savedHandle, setSavedHandle] = useState<string | null>(null);
+  const [handleCheck, setHandleCheck] = useState<HandleCheck | null>(null);
+  const [handleChecking, setHandleChecking] = useState(false);
+
+  // Debounced so a check fires per pause, not per keystroke. `cancelled`
+  // matters more than usual here: results arriving out of order would show an
+  // answer about a handle the user has already typed past.
+  useEffect(() => {
+    const normalized = normalizeHandle(handle);
+    if (!normalized || normalized === (savedHandle ?? '')) {
+      setHandleCheck(null);
+      setHandleChecking(false);
+      return;
+    }
+    setHandleChecking(true);
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const result = await checkHandleAvailable(normalized);
+      if (cancelled) return;
+      setHandleCheck(result);
+      setHandleChecking(false);
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [handle, savedHandle]);
   const [dupr,        setDupr]        = useState('');
   const [city,        setCity]        = useState('');
   const [state,       setState_]      = useState('');
@@ -442,6 +566,8 @@ export default function EditProfileScreen() {
       setFirstName(parts[0] ?? '');
       setLastName(parts.slice(1).join(' '));
       setBio(p.bio ?? '');
+      setHandle(p.handle ?? '');
+      setSavedHandle(p.handle ?? null);
       setDupr(p.dupr != null ? String(p.dupr) : '');
       setCity(p.location_city ?? '');
       setState_(p.location_state ?? '');
@@ -545,6 +671,30 @@ export default function EditProfileScreen() {
       // Separate table, separate write -- a failure here must not be reported
       // as if the whole save failed, since the profile fields above already
       // committed.
+      // Handle is a separate write for a structural reason, not a stylistic
+      // one: a trigger blocks direct writes to profiles.handle, so it cannot
+      // ride along in baseUpdates even if we wanted it to. Same failure
+      // posture as preferences below -- the profile fields already committed,
+      // so a refusal here is reported as a partial save rather than a failure.
+      //
+      // Clearing the box is deliberately NOT a removal. set_my_handle() has no
+      // way to unset one (only an admin can, via admin_clear_handle), and
+      // silently doing nothing is better than an error about a field the user
+      // was only tidying.
+      const nextHandle = normalizeHandle(handle);
+      if (nextHandle && nextHandle !== (savedHandle ?? '')) {
+        const handleResult = await setMyHandle(nextHandle);
+        if (!handleResult.ok) {
+          Alert.alert('Handle not saved', `${handleResult.message} Everything else was saved.`);
+          return;
+        }
+        setSavedHandle(handleResult.handle);
+        // Again, deliberately. The broadcast above fired before this write, so
+        // without a second one the profile header keeps rendering without the
+        // handle until something else refetches.
+        notifyProfileUpdated();
+      }
+
       const { error: prefsError } = await supabase.from('partner_preferences').upsert({
         user_id: userId,
         actively_looking: activelyLooking,
@@ -632,6 +782,13 @@ export default function EditProfileScreen() {
         <Group>
           <FieldRow label="First Name" value={firstName}   onChangeText={setFirstName} placeholder="First name" />
           <FieldRow label="Last Name"  value={lastName}    onChangeText={setLastName}  placeholder="Last name" />
+          <HandleField
+            value={handle}
+            onChangeText={setHandle}
+            check={handleCheck}
+            checking={handleChecking}
+            savedHandle={savedHandle}
+          />
           <FieldRow label="City"       value={city}        onChangeText={setCity}      placeholder="City" />
           <FieldRow label="State"      value={state}       onChangeText={setState_}    placeholder="FL" last />
           <BioField value={bio} onChangeText={setBio} />
@@ -796,6 +953,24 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 13, minHeight: 46,
   },
   fieldLabel: { color: L.text, fontSize: text.body.size, fontWeight: '500', width: 130 },
+
+  // The "@" is a fixed prefix, not part of the value -- the stored handle has
+  // no "@" and neither does anything the user types.
+  handleInputWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
+  handleAt: { color: L.textMuted, fontSize: text.body.size, fontWeight: '500' },
+  handleInput: {
+    color: L.text, fontSize: text.body.size, fontWeight: '500',
+    textAlign: 'right', padding: 0, minWidth: 90,
+    borderWidth: 0, backgroundColor: 'transparent',
+    shadowColor: 'transparent', elevation: 0,
+  },
+  handleHint: {
+    color: L.textMuted, fontSize: text.caption.size, fontWeight: '500',
+    paddingHorizontal: 16, paddingBottom: 12, marginTop: -6,
+    textAlign: 'right',
+  },
+  handleHintGood: { color: L.green },
+  handleHintBad:  { color: L.danger },
   fieldInput: {
     flex: 1, color: L.text, fontSize: text.body.size, fontWeight: '500',
     textAlign: 'right', padding: 0,
