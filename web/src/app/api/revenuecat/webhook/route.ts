@@ -14,13 +14,17 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
- * RevenueCat does not sign its webhooks the way Stripe does.
+ * Authenticates on a shared Authorization header.
  *
- * Stripe sends an HMAC over the body, so a forged request fails verification
- * even if the endpoint URL leaks. RevenueCat instead sends whatever fixed
- * string you configure in its dashboard, in the Authorization header. That
- * makes the header a bearer password: anyone holding it can grant themselves a
- * paid membership and a $25 voucher.
+ * Correction to what this comment said originally: RevenueCat DOES offer
+ * HMAC-SHA256 signing, with a signing secret it generates and shows once. That
+ * is strictly stronger than what is here, because it authenticates the BODY
+ * rather than proving the caller knows a password. Worth adopting; deliberately
+ * not yet, because turning it on is a dashboard change that would silently
+ * break delivery if the code were not ready for it first.
+ *
+ * Until then the header is a bearer password: anyone holding it can grant
+ * themselves a paid membership and a $25 voucher.
  *
  * Consequences, all of them load-bearing:
  *
@@ -71,6 +75,29 @@ export async function POST(request: Request) {
     // reaching here means something genuinely broke.
     console.error("[revenuecat] handler failed", error.message);
     return NextResponse.json({ error: "Handler failed" }, { status: 500 });
+  }
+
+  // The blind spot this closes, found 2026-09-16 while trying to tell "nothing
+  // was delivered" apart from "something was delivered and rejected":
+  //
+  // handle_membership_store_event() validates the payload shape BEFORE it
+  // records anything, so `no_event` and `malformed_event` write no row. A
+  // delivery in an unexpected shape therefore left no trace at all -- 200 to
+  // RevenueCat, a green tick in their dashboard, an empty table, and no way to
+  // tell the two cases apart.
+  //
+  // So those two outcomes, and only those two, are logged with a truncated
+  // body. Vercel's runtime log becomes the witness for events the database
+  // never sees. Truncated because the payload is third-party data of unknown
+  // size, and capped rather than omitted because the SHAPE is the whole point
+  // of logging it.
+  const result = data as { ok?: boolean; reason?: string } | null;
+  if (result?.ok === false &&
+      (result.reason === "no_event" || result.reason === "malformed_event")) {
+    console.error(
+      `[revenuecat] unrecorded delivery (${result.reason}):`,
+      JSON.stringify(payload).slice(0, 1000),
+    );
   }
 
   // 200 even when the handler reports ok:false. Those are final answers -- an
