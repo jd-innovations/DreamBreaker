@@ -48,12 +48,33 @@ function unavailable(reason: string): PurchaseOutcome {
  * effect of an import makes the failure land wherever the bundler happens to
  * evaluate this file.
  */
+/** RevenueCat's Test Store. Usable ONLY in a debug build -- see below. */
+const IS_TEST_STORE_KEY = API_KEY.startsWith('test_');
+
 export function configurePurchases(): void {
   if (configured) return;
   // iOS only for now. There is no Android key, and configuring with an iOS key
   // on Android silently produces a customer that can never purchase.
   if (Platform.OS !== 'ios') return;
   if (!API_KEY) return;
+
+  // THE SDK FORCE-CLOSES THE APP for this, so the guard is not optional.
+  //
+  // Found on the first preview build (2026-09-16): configuring with a `test_`
+  // key in a RELEASE binary shows "Wrong API Key — the app will close now to
+  // protect the security of test purchases" and terminates. `preview` is a
+  // release build despite being internally distributed, so the whole app was
+  // unusable, not just membership.
+  //
+  // Mirroring RevenueCat's own rule here rather than relying on which key a
+  // build profile happens to carry: a Test Store key must never reach a
+  // release build, and their docs say never to ship one to a store at all.
+  // Skipping leaves the app fully working with membership simply unavailable,
+  // which is the correct outcome for a build that could not sell anyway.
+  if (IS_TEST_STORE_KEY && !__DEV__) {
+    if (__DEV__) console.warn('[purchases] test key in a release build — not configuring');
+    return;
+  }
 
   try {
     Purchases.configure({ apiKey: API_KEY });
