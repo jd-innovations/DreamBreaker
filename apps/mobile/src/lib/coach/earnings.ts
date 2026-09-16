@@ -65,6 +65,6 @@ export async function fetchCoachEarnings(coachId: string): Promise<CoachEarnings
   };
 }
 
-export function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
+// Re-exported so existing call sites keep their import, but the behaviour
+// is now the shared one -- see packages/shared/src/money.ts.
+export { formatCents } from '@shared/money';

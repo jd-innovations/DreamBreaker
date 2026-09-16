@@ -4,6 +4,7 @@
 // these lists so the UI and the DB enum stay in lockstep.
 
 import type { Database } from '@shared/database.types';
+import { formatCents } from '@shared/money';
 
 export type MarketplaceCondition = Database['public']['Enums']['marketplace_condition'];
 export type MarketplaceListingStatus = Database['public']['Enums']['marketplace_listing_status'];
@@ -97,8 +98,14 @@ export function generateListingTitle(brand: string, model: string): string {
   return `${brand} ${normalizeModelName(model)}`.trim();
 }
 
+/**
+ * Compact price for listing cards.
+ *
+ * Was `Math.round`, which rendered a $249.99 paddle as "$250". Rounding a
+ * price UP is the worst direction to be wrong in a marketplace.
+ */
 export function formatPriceCents(cents: number): string {
-  return `$${Math.round(cents / 100)}`;
+  return formatCents(cents, { omitZeroCents: true });
 }
 
 export function listingAgeLabel(createdAt: string): string {

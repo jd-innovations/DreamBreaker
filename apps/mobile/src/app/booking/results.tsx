@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing } from '@/theme';
+import { formatCents } from '@shared/money';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
@@ -46,7 +47,9 @@ type ResultFacility = FacilityWithPrimaryPhoto & {
 
 function formatPrice(cents: number | null): string {
   if (cents == null) return 'Pricing unavailable';
-  return `From $${Math.round(cents / 100)}/hr`;
+  // omitZeroCents keeps "From $25/hr" for a round rate while showing real
+  // cents when a facility prices at $27.50 -- Math.round made that "$28".
+  return `From ${formatCents(cents, { omitZeroCents: true })}/hr`;
 }
 
 function formatDate(iso: string | null): string {

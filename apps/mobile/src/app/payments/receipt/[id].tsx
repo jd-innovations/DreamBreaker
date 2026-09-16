@@ -11,6 +11,7 @@ import { fetchReceipt, type Receipt } from '@/lib/supabase/payments';
 import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
+import { formatCents } from '@shared/money';
 
 /**
  * A receipt for one payment.
@@ -25,10 +26,6 @@ import { radius as shape, text } from '@shared/tokens';
  * have always rendered a chevron and done nothing when tapped.
  */
 
-function formatCents(cents: number, currency = 'usd') {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() })
-    .format(cents / 100);
-}
 
 function formatWhen(iso: string) {
   return new Date(iso).toLocaleString('en-US', {
@@ -83,13 +80,13 @@ export default function ReceiptScreen() {
       receipt.subtitle ?? '',
       formatWhen(receipt.paidAt),
       '',
-      `Amount: ${formatCents(receipt.amountCents, receipt.currency)}`,
+      `Amount: ${formatCents(receipt.amountCents, { currency: receipt.currency })}`,
     ];
     for (const r of receipt.refunds) {
-      lines.push(`Refunded ${formatCents(r.amountCents, receipt.currency)} on ${formatWhen(r.at)}`);
+      lines.push(`Refunded ${formatCents(r.amountCents, { currency: receipt.currency })} on ${formatWhen(r.at)}`);
     }
     if (receipt.refundedCents > 0) {
-      lines.push(`Net: ${formatCents(receipt.amountCents - receipt.refundedCents, receipt.currency)}`);
+      lines.push(`Net: ${formatCents(receipt.amountCents - receipt.refundedCents, { currency: receipt.currency })}`);
     }
     if (receipt.reference) {
       lines.push('', `Reference: ${receipt.reference}`);
@@ -131,7 +128,7 @@ export default function ReceiptScreen() {
           <Text style={s.when}>{formatWhen(receipt.paidAt)}</Text>
 
           <View style={s.card}>
-            <Line label="Amount" value={formatCents(receipt.amountCents, receipt.currency)} />
+            <Line label="Amount" value={formatCents(receipt.amountCents, { currency: receipt.currency })} />
 
             {/* Each refund separately. The payment row carries only a summed
                 refunded_amount_cents, and two partial refunds on one purchase
@@ -140,7 +137,7 @@ export default function ReceiptScreen() {
               <Line
                 key={r.id}
                 label={`Refunded ${formatWhen(r.at)}`}
-                value={`-${formatCents(r.amountCents, receipt.currency)}`}
+                value={`-${formatCents(r.amountCents, { currency: receipt.currency })}`}
               />
             ))}
 
@@ -148,13 +145,13 @@ export default function ReceiptScreen() {
                 not be read — better than showing a total that ignores money
                 already returned. */}
             {receipt.refunds.length === 0 && receipt.refundedCents > 0 && (
-              <Line label="Refunded" value={`-${formatCents(receipt.refundedCents, receipt.currency)}`} />
+              <Line label="Refunded" value={`-${formatCents(receipt.refundedCents, { currency: receipt.currency })}`} />
             )}
 
             {receipt.refundedCents > 0 && (
               <>
                 <View style={s.rule} />
-                <Line label="Net" value={formatCents(net, receipt.currency)} strong />
+                <Line label="Net" value={formatCents(net, { currency: receipt.currency })} strong />
               </>
             )}
           </View>

@@ -18,6 +18,7 @@
 import { useState } from "react";
 import { Warning, WarningCircle, CheckCircle, ArrowClockwise, Copy } from "@phosphor-icons/react";
 import { toast } from "sonner";
+import { formatCents } from "@shared/money";
 
 export type ReconciliationItem = {
   kind: string;
@@ -77,10 +78,16 @@ const KIND_ORDER = [
   "stuck_pending",
 ];
 
+// Delegates to the shared formatter (packages/shared/src/money.ts). The
+// local name stays because it reads better at the call sites here.
+//
+// One deliberate behaviour change: a non-USD amount was rendered as
+// "24.99 EUR" by hand; Intl now places the correct symbol for the currency.
+// The previous version also used the SERVER's locale via toLocaleString
+// with no locale argument, so the same row could format differently
+// depending on where it rendered.
 function fmtMoney(cents: number | null, currency: string | null) {
-  if (cents == null) return "—";
-  const amount = (cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return currency && currency.toLowerCase() !== "usd" ? `${amount} ${currency.toUpperCase()}` : `$${amount}`;
+  return formatCents(cents, { currency });
 }
 
 /** Age in the coarsest unit that still reads as urgent. "437m" tells nobody anything. */

@@ -1,4 +1,5 @@
 import type { CoachOfferType } from './offers';
+import { formatCents } from '@shared/money';
 
 export const OFFER_TYPE_OPTIONS: { value: CoachOfferType; label: string }[] = [
   { value: 'private',      label: 'Private Lesson' },
@@ -8,8 +9,16 @@ export const OFFER_TYPE_OPTIONS: { value: CoachOfferType; label: string }[] = [
   { value: 'package',       label: 'Multi-Lesson Package' },
 ];
 
+/**
+ * Compact price for cards and chips.
+ *
+ * Was `toFixed(0)`, which rendered a $24.99 offer as "$25" -- a price that
+ * is not the price, on the surface where someone decides whether to buy.
+ * omitZeroCents keeps the compact look for whole dollars and shows real
+ * cents whenever there are any.
+ */
 export function formatPriceCents(cents: number): string {
-  return `$${(cents / 100).toFixed(0)}`;
+  return formatCents(cents, { omitZeroCents: true });
 }
 
 export function discountPercent(regularCents: number, discountedCents: number): number {

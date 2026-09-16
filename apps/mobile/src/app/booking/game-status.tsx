@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing } from '@/theme';
+import { formatCents } from '@shared/money';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
@@ -44,7 +45,6 @@ const STATUS_LABEL: Record<ReservationStatus, string> = {
   held: 'Held', confirmed: 'Confirmed', cancelled: 'Cancelled', expired: 'Expired',
 };
 
-function formatCents(cents: number): string { return `$${(cents / 100).toFixed(2)}`; }
 
 function formatDateTime(startsAt: string, endsAt: string): { date: string; time: string } {
   const start = new Date(startsAt);

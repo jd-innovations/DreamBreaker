@@ -22,6 +22,7 @@ import {
 } from '@/lib/payments/reservationPaymentIntent';
 import { getBookingFacility, getBookingSelection, getBookingReservationId } from '@/lib/bookingStore';
 import type { CalendarEventInput } from '@/lib/calendarEvents';
+import { formatCents } from '@shared/money';
 
 const PAYMENT_STATUS_VARIANT: Record<string, StatusVariant> = {
   succeeded: 'green', requires_confirmation: 'gold', processing: 'gold',
@@ -42,9 +43,6 @@ function formatDateTimeRange(startsAt: string, endsAt: string): { date: string; 
   return { date, time };
 }
 
-function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
 
 export default function ConfirmationScreen() {
   const insets = useSafeAreaInsets();

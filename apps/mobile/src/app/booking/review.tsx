@@ -24,6 +24,7 @@ import { useReservationPayment } from '@/lib/payments/useReservationPayment';
 import { useJoinFeePayment, joinFeeErrorMessage } from '@/lib/payments/joinFeePayment';
 import { getBookingFacility, getBookingSelection, getBookingReservationId } from '@/lib/bookingStore';
 import { isFeatureEnabled } from '@/lib/featureFlags';
+import { formatCents } from '@shared/money';
 
 const L = {
   bg: colors.bg, page: colors.page, navy: colors.navy, gold: colors.gold,
@@ -47,9 +48,6 @@ function formatDateTimeRange(startsAt: string, endsAt: string): { date: string; 
   return { date, time };
 }
 
-function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
 
 function formatCountdown(msRemaining: number): string {
   const total = Math.max(0, Math.ceil(msRemaining / 1000));

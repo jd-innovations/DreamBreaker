@@ -9,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { goBack } from '@/lib/navigation';
 import { usePurchaseHistory } from '@/hooks/usePurchaseHistory';
 import type { Purchase, PurchasePurposeType } from '@/lib/paymentTypes';
+import { formatCents } from '@shared/money';
 import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -34,10 +35,6 @@ const PURPOSE_META: Record<PurchasePurposeType, { label: string; icon: string }>
   reservation_payment: { label: 'Court reservation', icon: 'calendar-outline' },
 };
 
-function formatCents(cents: number, currency = 'usd') {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() })
-    .format(cents / 100);
-}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -62,12 +59,12 @@ function Row({ purchase }: { purchase: Purchase }) {
         <Text style={s.rowDate}>{formatDate(purchase.paidAt)}</Text>
       </View>
       <View style={s.amountCol}>
-        <Text style={s.amount}>{formatCents(purchase.amountCents, purchase.currency)}</Text>
+        <Text style={s.amount}>{formatCents(purchase.amountCents, { currency: purchase.currency })}</Text>
         {refunded && (
           <Text style={s.refundNote}>
             {purchase.status === 'refunded'
               ? 'Refunded'
-              : `${formatCents(purchase.refundedCents, purchase.currency)} refunded`}
+              : `${formatCents(purchase.refundedCents, { currency: purchase.currency })} refunded`}
           </Text>
         )}
       </View>

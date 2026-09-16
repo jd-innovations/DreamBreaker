@@ -18,6 +18,7 @@ import {
   type SavedPaymentMethod,
 } from '@/lib/payments/paymentMethods';
 import { useSavedPaymentMethods } from '@/lib/payments/useSavedPaymentMethods';
+import { formatCents } from '@shared/money';
 
 // Theme-backed alias — brand values resolve from @/theme.
 // purple/teal are payment-brand accent colors — documented exception.
@@ -62,9 +63,6 @@ function metaFor(purposeType: PurchasePurposeType) {
 
 // ─── Formatting ──────────────────────────────────────────────────────────────
 
-function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
