@@ -6,7 +6,25 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "images.pexels.com" },
+      // Every avatar, marketplace photo, and facility photo actually lives
+      // here -- WEB_PERFORMANCE_AUDIT.md F2. Its absence was silently working
+      // around next/image entirely: requesting an unlisted host throws at
+      // request time, so the codebase had reached for plain <img> 38 times
+      // instead of being told to fix this one line. Exact hostname, not a
+      // `*.supabase.co` wildcard, matching the precision of the two patterns
+      // above and this project's own fail-loud-on-mismatch convention in
+      // lib/supabase/env.ts -- a wildcard would silently start optimizing
+      // images from any Supabase project, not just this one.
+      { protocol: "https", hostname: "fbzetvkbhneptvfruilw.supabase.co" },
     ],
+  },
+  experimental: {
+    // F6: Next's own docs recommend this for icon libraries specifically, to
+    // guarantee per-icon chunking regardless of how well a library's barrel
+    // file tree-shakes on its own. @phosphor-icons/react is imported by name
+    // in 38 files; this is not proven to fix an existing oversized chunk (see
+    // the audit), it is a zero-downside addition.
+    optimizePackageImports: ["@phosphor-icons/react"],
   },
 };
 
