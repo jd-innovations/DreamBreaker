@@ -21,6 +21,14 @@ export type Membership = {
   /** Null means no expiry — only reachable through an admin comp. */
   expiresAt: string | null;
   source: 'iap' | 'stripe' | 'admin_grant';
+  /**
+   * False after the member cancels in Apple's settings. It does NOT end
+   * entitlement -- they keep the term they paid for until expiresAt -- so
+   * nothing here reads it to decide access. It exists so the UI can say
+   * "Expires" instead of "Renews", which is otherwise a lie told to exactly
+   * the person who just cancelled.
+   */
+  willRenew: boolean;
 };
 
 /**
@@ -45,7 +53,7 @@ export function isMembershipActive(m: Membership | null): boolean {
 export async function fetchMembership(userId: string): Promise<Membership | null> {
   const { data, error } = await supabase
     .from('memberships')
-    .select('id,tier,status,started_at,expires_at,source')
+    .select('id,tier,status,started_at,expires_at,source,will_renew')
     .eq('user_id', userId)
     .eq('status', 'active')
     .maybeSingle();
@@ -65,5 +73,8 @@ export async function fetchMembership(userId: string): Promise<Membership | null
     startedAt: String(data.started_at),
     expiresAt: data.expires_at != null ? String(data.expires_at) : null,
     source: data.source as Membership['source'],
+    // Defaults true: a row written before the column existed, or by a path
+    // that does not set it, is a normally renewing membership.
+    willRenew: data.will_renew !== false,
   };
 }

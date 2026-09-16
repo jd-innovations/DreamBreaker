@@ -241,9 +241,13 @@ export default function MembershipSettingsScreen() {
               <Text style={s.currentLabel}>CURRENT PLAN</Text>
               <Text style={s.currentName}>{isMember ? 'Plus Member' : 'Free Member'}</Text>
               <Text style={s.currentDesc}>
+                {/* "Renews" vs "Expires" follows will_renew. A cancelled member
+                    keeps the term they paid for, so they are still a member --
+                    but telling them it renews is a lie told to the one person
+                    who definitely knows better. */}
                 {isMember
                   ? (membership?.expiresAt
-                    ? `Renews ${new Date(membership.expiresAt).toLocaleDateString()}`
+                    ? `${membership.willRenew ? 'Renews' : 'Expires'} ${new Date(membership.expiresAt).toLocaleDateString()}`
                     : 'No expiry')
                   : 'Enjoy the core experience with essential features.'}
               </Text>
