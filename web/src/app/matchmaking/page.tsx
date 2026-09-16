@@ -319,8 +319,62 @@ function MatchmakingInner() {
       setMyId(userId);
       const user = { id: userId };
 
-      // Get my profile for match scoring
-      const { data: me } = await supabase.from("profiles").select("dupr,availability,availability_schedule,location_city,location_state,play_style,bio").eq("id", user.id).single();
+      // WEB_PERFORMANCE_AUDIT.md F3. This used to be up to eight sequential
+      // `await`s. Two things made that safe to collapse, and both are worth
+      // being explicit about because getting either wrong would silently
+      // change matching results, not just timing:
+      //
+      //   1. None of the QUERIES below need another query's DATA to know
+      //      what to ask for -- `me`, `alreadySwiped`, the candidate
+      //      `profiles`, `incomingSwipes`, `mutual`, and `tData` are each
+      //      filtered only on `user.id` / `tournamentIdParam`, which are
+      //      both already known before any of them run.
+      //   2. What DOES depend on this batch's results is the PROCESSING
+      //      after it -- `meDupr`/`meSchedule` feed every
+      //      `profileToPartner()` call, and `swipedIds` filters both the
+      //      candidate deck and the incoming-likes list. That dependency is
+      //      preserved exactly: all processing below happens only after
+      //      every fetch in this Promise.all has resolved, in the same
+      //      order the sequential version computed it.
+      //
+      // The messaging recipient list (previously fetched here too) is gone
+      // from this batch entirely -- see the separate lazy effect below,
+      // triggered only when the messaging overlay actually opens.
+      const [meRes, alreadySwipedRes, profilesRes, incomingSwipesRes, mutualRes, tDataRes] = await Promise.all([
+        supabase.from("profiles").select("dupr,availability,availability_schedule,location_city,location_state,play_style,bio").eq("id", user.id).single(),
+        supabase.from("matchmaking_swipes").select("target_id").eq("requester_id", user.id),
+        // `is_discoverable` is the user's own "show me in matchmaking"
+        // switch, set from Match Settings on either platform. Mobile's
+        // finder has always honoured it (useFinderCandidates); web did not,
+        // so someone who opted out was hidden on one platform and still
+        // listed on the other (alignment audit, workstream A2).
+        supabase
+          .from("profiles")
+          .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule")
+          .eq("role", "player")
+          .eq("is_discoverable", true)
+          .neq("id", user.id)
+          .order("dupr", { ascending: false })
+          .limit(20),
+        // Incoming likes (people who liked me that I haven't responded to)
+        supabase
+          .from("matchmaking_swipes")
+          .select("requester_id")
+          .eq("target_id", user.id)
+          .eq("direction", "like"),
+        // Mutual matches
+        supabase.from("v_mutual_matches").select("user_a,user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`),
+        // Tournament partner pool — if launched from a tournament CTA. Kept
+        // in the same batch (rather than gated out entirely) since a
+        // missing tournamentIdParam just means a harmless query for a row
+        // that will never be asked for; simpler than a conditional shape in
+        // a fixed-length Promise.all destructure.
+        tournamentIdParam
+          ? supabase.from("tournaments").select("id, name").eq("id", tournamentIdParam).single()
+          : Promise.resolve({ data: null }),
+      ]);
+
+      const me = meRes.data;
       const meDupr = me?.dupr ?? null;
       setMyDupr(meDupr);
       const meSchedule = normalizeSchedule(me?.availability_schedule);
@@ -329,82 +383,64 @@ function MatchmakingInner() {
       setMyStyle(me?.play_style ?? []);
       setMyBio(me?.bio ?? null);
 
-      const { data: alreadySwiped } = await supabase.from("matchmaking_swipes").select("target_id").eq("requester_id", user.id);
+      const alreadySwiped = alreadySwipedRes.data;
       const swipedIds = new Set((alreadySwiped ?? []).map((s) => s.target_id));
 
-      // `is_discoverable` is the user's own "show me in matchmaking" switch,
-      // set from Match Settings on either platform. Mobile's finder has always
-      // honoured it (useFinderCandidates); web did not, so someone who opted
-      // out was hidden on one platform and still listed on the other
-      // (alignment audit, workstream A2).
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule")
-        .eq("role", "player")
-        .eq("is_discoverable", true)
-        .neq("id", user.id)
-        .order("dupr", { ascending: false })
-        .limit(20);
-
+      const profiles = profilesRes.data;
       // An empty deck shows the "ALL CAUGHT UP" panel. It used to deal five
       // invented players instead — swipeable, likeable, and indistinguishable
       // from real people (item 6.1).
       const partners = (profiles ?? []).filter((p) => !swipedIds.has(p.id)).map((p) => profileToPartner(p, meDupr, meSchedule));
       setDeck([...partners].reverse());
 
-      const { data: userProfiles } = await supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name");
-      setAllUsers((userProfiles ?? []) as MessagingUserProfile[]);
+      const incomingSwipes = incomingSwipesRes.data;
+      const incomingIds = incomingSwipes && incomingSwipes.length > 0
+        ? incomingSwipes.map((s) => s.requester_id).filter((id) => !swipedIds.has(id))
+        : [];
 
-      // Incoming likes (people who liked me that I haven't responded to)
-      const { data: incomingSwipes } = await supabase
-        .from("matchmaking_swipes")
-        .select("requester_id")
-        .eq("target_id", user.id)
-        .eq("direction", "like");
-      if (incomingSwipes && incomingSwipes.length > 0) {
-        const incomingIds = incomingSwipes.map((s) => s.requester_id).filter((id) => !swipedIds.has(id));
-        if (incomingIds.length > 0) {
-          const { data: ip } = await supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule").in("id", incomingIds);
-          setIncoming((ip ?? []).map((p) => profileToPartner(p, meDupr, meSchedule)));
-        }
-      }
+      const mutual = mutualRes.data;
+      const mutualIds = mutual && mutual.length > 0
+        ? (mutual.map((m) => m.user_a === user.id ? m.user_b : m.user_a).filter(Boolean) as string[])
+        : [];
 
-      // Mutual matches
-      const { data: mutual } = await supabase.from("v_mutual_matches").select("user_a,user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
-      if (mutual && mutual.length > 0) {
-        const ids = mutual.map((m) => m.user_a === user.id ? m.user_b : m.user_a).filter(Boolean) as string[];
-        const { data: mp } = await supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule").in("id", ids);
-        setMatches((mp ?? []).map((p) => profileToPartner(p, meDupr, meSchedule)));
-      }
+      const tData = tDataRes.data as { id: string; name: string } | null;
 
-      // Tournament partner pool — if launched from a tournament CTA
-      if (tournamentIdParam) {
-        const { data: tData } = await supabase
-          .from("tournaments")
-          .select("id, name")
-          .eq("id", tournamentIdParam)
-          .single();
+      // Second round: these three DO depend on the first batch's results
+      // (the id lists just derived above), so they could not have joined
+      // the Promise.all above -- but they do not depend on EACH OTHER, so
+      // they still run concurrently rather than one after another.
+      const [ipRes, mpRes, partnerRegsRes] = await Promise.all([
+        incomingIds.length > 0
+          ? supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule").in("id", incomingIds)
+          : Promise.resolve({ data: null }),
+        mutualIds.length > 0
+          ? supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule").in("id", mutualIds)
+          : Promise.resolve({ data: null }),
+        tournamentIdParam && tData
+          ? supabase
+              .from("registrations")
+              .select("player_id, profiles!player_id(id, full_name, handle, dupr, skill_level, location_city, location_state, avatar_url, bio, play_style, availability, availability_schedule)")
+              .eq("tournament_id", tournamentIdParam)
+              .eq("needs_partner", true)
+              .in("status", ["held", "registered", "checked_in"])
+              .neq("player_id", user.id)
+          : Promise.resolve({ data: null }),
+      ]);
 
-        if (tData) {
-          const { data: partnerRegs } = await supabase
-            .from("registrations")
-            .select("player_id, profiles!player_id(id, full_name, handle, dupr, skill_level, location_city, location_state, avatar_url, bio, play_style, availability, availability_schedule)")
-            .eq("tournament_id", tournamentIdParam)
-            .eq("needs_partner", true)
-            .in("status", ["held", "registered", "checked_in"])
-            .neq("player_id", user.id);
+      if (ipRes.data) setIncoming(ipRes.data.map((p) => profileToPartner(p, meDupr, meSchedule)));
+      if (mpRes.data) setMatches(mpRes.data.map((p) => profileToPartner(p, meDupr, meSchedule)));
 
-          const tournamentPartners = (partnerRegs ?? [])
-            .map((r) => r.profiles as { id: string; full_name: string; handle: string | null; dupr: number | null; skill_level: string | null; location_city: string | null; location_state: string | null; avatar_url: string | null; bio: string | null; play_style: string[] | null; availability: string | null; availability_schedule: unknown } | null)
-            .filter(Boolean)
-            .map((p) => ({
-              ...profileToPartner(p!, meDupr, meSchedule),
-              tournamentOverlap: (tData as { name: string }).name,
-            }));
+      if (tData && partnerRegsRes.data) {
+        const tournamentPartners = partnerRegsRes.data
+          .map((r) => r.profiles as { id: string; full_name: string; handle: string | null; dupr: number | null; skill_level: string | null; location_city: string | null; location_state: string | null; avatar_url: string | null; bio: string | null; play_style: string[] | null; availability: string | null; availability_schedule: unknown } | null)
+          .filter(Boolean)
+          .map((p) => ({
+            ...profileToPartner(p!, meDupr, meSchedule),
+            tournamentOverlap: tData.name,
+          }));
 
-          if (tournamentPartners.length > 0) {
-            setTournamentContext({ id: tData.id, name: (tData as { name: string }).name, partners: tournamentPartners });
-          }
+        if (tournamentPartners.length > 0) {
+          setTournamentContext({ id: tData.id, name: tData.name, partners: tournamentPartners });
         }
       }
 
@@ -416,6 +452,22 @@ function MatchmakingInner() {
       setLoading(false);
     });
   }, [tournamentIdParam]);
+
+  // Deferred from the initial load (WEB_PERFORMANCE_AUDIT.md F3), same
+  // reasoning as profile/page.tsx's identical case: the full messaging
+  // recipient list is an unfiltered select of every row in `profiles`, and
+  // it exists only for the "MESSAGE <name>" overlay below, which most
+  // matchmaking sessions never open.
+  useEffect(() => {
+    if (!messagingTarget || allUsers.length > 0) return;
+    const supabase = createClient();
+    let cancelled = false;
+    supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name")
+      .then(({ data }) => {
+        if (!cancelled) setAllUsers((data ?? []) as MessagingUserProfile[]);
+      });
+    return () => { cancelled = true; };
+  }, [messagingTarget, allUsers.length]);
 
   const top = deck[deck.length - 1];
 

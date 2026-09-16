@@ -277,36 +277,58 @@ export default function ProfilePage() {
       userIdRef.current = userId;
       const user = { id: userId };
 
-      // All users for messaging
-      const { data: usersData } = await supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name");
-      setAllUsers((usersData ?? []) as MessagingUserProfile[]);
+      // WEB_PERFORMANCE_AUDIT.md F3. This used to be nine sequential
+      // `await`s, none in a Promise.all, and the FIRST of them was an
+      // UNFILTERED select of every row in `profiles` -- for the messaging
+      // recipient picker, a feature most profile visits never touch -- so
+      // every other fetch on the page queued up behind a full-table scan
+      // before anything rendered. That fetch is no longer here at all: see
+      // the lazy `useEffect` below `load()`, which fetches it only once the
+      // messaging overlay is actually opened. None of the six blocks left
+      // below reads another's result (partners' internal two-step fetch is
+      // the one real dependency, and it is entirely self-contained), so
+      // they run concurrently instead.
+      //
+      // Promise.all rather than allSettled: if one of these genuinely
+      // throws (not a Supabase {error} response, which every block already
+      // handles via `if (data)` -- an actual thrown exception, e.g. a
+      // network failure), the existing catch() at this function's call site
+      // is written to clear ALL profile state and show a single failure
+      // toast, on the stated principle that a half-loaded profile page is
+      // worse than an honest "could not load" -- see that catch's own
+      // comment. Promise.all preserves that: one rejection fails the whole
+      // load, which is what the failure handling already assumes.
 
-      // Fetch hidden match IDs
-      const { data: hiddenRows } = await supabase
-        .from("profile_hidden_matches")
-        .select("match_id")
-        .eq("player_id", user.id);
-      if (hiddenRows) setHiddenMatchIds(new Set(hiddenRows.map((r) => r.match_id)));
-
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("id,full_name,handle,dupr,skill_level,self_rating,location_city,location_state,avatar_url,cover_url,bio,play_style,availability,availability_schedule,hand,created_at,role,director_status")
-        .eq("id", user.id)
-        .single();
-      if (prof) {
-        setProfile(prof);
-        setFields({
-          bio: prof.bio ?? "",
-          play_style: prof.play_style ?? [],
-          availability_schedule: normalizeSchedule(prof.availability_schedule),
-          hand: prof.hand ?? "",
-          skill_level: prof.skill_level ?? "",
-          self_rating: prof.self_rating ?? "",
-          location_city: prof.location_city ?? "",
-          location_state: prof.location_state ?? "",
-        });
+      async function loadHiddenMatches() {
+        const { data: hiddenRows } = await supabase
+          .from("profile_hidden_matches")
+          .select("match_id")
+          .eq("player_id", user.id);
+        if (hiddenRows) setHiddenMatchIds(new Set(hiddenRows.map((r) => r.match_id)));
       }
 
+      async function loadProfile() {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("id,full_name,handle,dupr,skill_level,self_rating,location_city,location_state,avatar_url,cover_url,bio,play_style,availability,availability_schedule,hand,created_at,role,director_status")
+          .eq("id", user.id)
+          .single();
+        if (prof) {
+          setProfile(prof);
+          setFields({
+            bio: prof.bio ?? "",
+            play_style: prof.play_style ?? [],
+            availability_schedule: normalizeSchedule(prof.availability_schedule),
+            hand: prof.hand ?? "",
+            skill_level: prof.skill_level ?? "",
+            self_rating: prof.self_rating ?? "",
+            location_city: prof.location_city ?? "",
+            location_state: prof.location_state ?? "",
+          });
+        }
+      }
+
+      async function loadMatches() {
       // Match history
       const { data: matchRows } = await supabase
         .from("bracket_matches")
@@ -350,7 +372,9 @@ export default function ProfilePage() {
         // renders its own "NO MATCHES YET" panel and the W-L tile renders "—".
         setMatches([]);
       }
+      }
 
+      async function loadRegistrations() {
       // Tournament registrations
       const { data: regRows } = await supabase
         .from("registrations")
@@ -380,7 +404,9 @@ export default function ProfilePage() {
         const { count } = await supabase.from("registrations").select("tournament_id", { count: "exact", head: true }).eq("player_id", user.id).in("status", ["registered", "checked_in"]);
         if (count && count > 0) setStats((s) => ({ ...s, tournaments: count }));
       }
+      }
 
+      async function loadBookmarks() {
       // Bookmarked tournaments
       const { data: bookmarkRows } = await supabase
         .from("tournament_bookmarks")
@@ -401,8 +427,13 @@ export default function ProfilePage() {
           };
         }));
       }
+      }
 
-      // Partners from mutual matches
+      async function loadPartners() {
+      // Partners from mutual matches. Two genuinely sequential steps --
+      // which partner ids exist has to be known before their profiles can
+      // be fetched -- but the unit as a whole depends on nothing else here,
+      // so it still joins the Promise.all below as one entry.
       const { data: mutual } = await supabase.from("v_mutual_matches").select("user_a,user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
       if (mutual && mutual.length > 0) {
         const ids = mutual.map((m) => m.user_a === user.id ? m.user_b : m.user_a).filter(Boolean) as string[];
@@ -412,6 +443,16 @@ export default function ProfilePage() {
         // Ditto: the Partners tab has its own "NO PARTNERS YET" panel.
         setPartners([]);
       }
+      }
+
+      await Promise.all([
+        loadHiddenMatches(),
+        loadProfile(),
+        loadMatches(),
+        loadRegistrations(),
+        loadBookmarks(),
+        loadPartners(),
+      ]);
 
       setLoading(false);
     }
@@ -427,6 +468,27 @@ export default function ProfilePage() {
       setLoading(false);
     });
   }, []);
+
+  // Deferred from the initial load (WEB_PERFORMANCE_AUDIT.md F3): the full
+  // messaging-recipient list is an unfiltered select of every row in
+  // `profiles`, and it exists only for the "MESSAGE <name>" overlay below,
+  // which most profile visits never open. Fetching it here instead means a
+  // visitor who never messages anyone never pays for this query at all.
+  //
+  // Guarded on `allUsers.length === 0` rather than a separate "have I
+  // fetched" flag, since an empty result and "not fetched yet" are the only
+  // two states that matter for a re-fetch decision here, and re-deriving
+  // from the data avoids one more piece of state to keep in sync.
+  useEffect(() => {
+    if (!messagingRecipientId || allUsers.length > 0) return;
+    const supabase = createClient();
+    let cancelled = false;
+    supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name")
+      .then(({ data }) => {
+        if (!cancelled) setAllUsers((data ?? []) as MessagingUserProfile[]);
+      });
+    return () => { cancelled = true; };
+  }, [messagingRecipientId, allUsers.length]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -195,21 +195,56 @@ round-trips" is a call-count fact, not a measured millisecond figure.
 
 ---
 
-### F4 — `select("*")` inconsistent with the codebase's own stated convention — **LOW-MEDIUM**
+### F4 — `select("*")` on `/play/*` — **DOWNGRADED to informational**, correction below
 
-**Evidence.** Six call sites, five of them in `/play/*`
-(`play/page.tsx:102`, `play/[id]/join/page.tsx:34`,
-`play/[id]/manage/page.tsx:43-44,57`, `play/[id]/play-event-client.tsx:45,62`,
-`play/[id]/standings/page.tsx:32-34`), select `"*"` rather than named
-columns. This matters less for its own sake and more because the codebase
-already documents the opposite rule elsewhere — a comment in
-[`src/lib/og/fetchers.ts:179`](web/src/lib/og/fetchers.ts#L179) says plainly
-*"never select('\*')"*, referencing a specific migration
-(`20260825120000_restrict_anon_profile_columns.sql`) written after an
-over-broad grant leaked every profile's email. The `/play/*` surface simply
-didn't get that memo. Low severity on its own — these tables are narrow —
-but worth fixing as a consistency sweep alongside F3, since it's the same
-files.
+**Original claim.** Six call sites in `/play/*` select `"*"` rather than
+named columns, and a comment in
+[`src/lib/og/fetchers.ts:179`](web/src/lib/og/fetchers.ts#L179) — *"never
+select('\*')"* — was cited as an existing codebase convention this
+contradicts.
+
+**Correction, made before touching any code for this item (Phase 4
+execution).** Read that comment's full context rather than trusting the
+one-line summary this audit's first pass took from it. It is not a general
+performance rule — it is scoped, explicitly, to `profiles` and the migration
+named right next to it
+(`20260825120000_restrict_anon_profile_columns.sql`), written after an
+over-broad grant on that specific table leaked every profile's email to
+`anon`. It is a statement about column-level **security** on one sensitive
+table, not a house style against `select("*")` everywhere. Citing it as a
+general convention `/play/*` was violating was a mischaracterization.
+
+**What the real tradeoff looks like once that's set aside:**
+
+- `play_events` (24 columns), `play_matches`, `play_participants`, and
+  `play_participants_public` are all narrow, scalar tables — uuids, text,
+  dates, small ints, one enum each. No bios, no JSON blobs, no coordinate
+  pairs. The over-fetch cost `select("*")` usually implies barely applies
+  here.
+- Every one of these fetches is typed against the database's own generated
+  `Row` type (`PlayEvent = Database["public"]["Tables"]["play_events"]["Row"]`,
+  and the equivalent for the other three), used identically across 4-5
+  files. Narrowing the `select()` without narrowing the TYPE alongside it
+  would let TypeScript believe fields exist that were never actually
+  fetched — silently `undefined` at runtime for any consumer reading a
+  dropped field. That is a worse bug than the current wasteful-but-safe
+  pattern, and doing it correctly means introducing per-page narrow types
+  across a shared-type surface, which is real refactoring work, not a
+  mechanical `"*"` → column-list swap.
+- Checked for an actual sensitive-column exposure, since that was this
+  audit's original (mistaken) justification: `play_participants` does carry
+  `email`/`phone`, but `manage/page.tsx`'s fetch of it is already gated
+  behind `if (ev.organizer_id !== uid) { ...; return; }` — only the event's
+  own organizer reaches it. `play_participants_public`, the view used
+  everywhere else, already excludes both columns by design (confirmed
+  against its actual schema). There is no parallel here to the profiles
+  incident this finding leaned on.
+
+**Left untouched.** Downgraded from a to-do to a note, because the honest
+cost/benefit does not clear the bar this audit sets for itself elsewhere —
+every other change in this document either fixes a measured problem or
+costs nothing to be safe. This would cost real refactoring risk for a
+byte-savings benefit this specific set of tables doesn't really have.
 
 ### F5 — Dead dependency: `framer-motion` — **LOW**
 
@@ -326,21 +361,34 @@ but touches rendered UI, so each should be its own small, reviewable change
 rather than one 38-site sweep — consistent with how this session's other
 work has been done throughout today.
 
-### Phase 4 — F3/F4: parallelize the profile and matchmaking loads
+### Phase 4 — F3: parallelize the profile and matchmaking loads — **DONE**
 
-1. `profile/page.tsx`'s `load()`: wrap the independent fetches (hidden
-   matches, profile row, match history, registrations, bookmarks, mutual
-   matches) in `Promise.all`. The messaging recipient list (line 280) is the
-   one to look at hardest — consider whether it needs to load on every
-   profile visit at all, or only when the messaging UI is actually opened.
-2. Same pattern in `matchmaking/page.tsx`.
-3. Fold in F4 while touching these files: swap the `/play/*` `select("*")`
-   sites to named columns, matching the convention already documented in
-   `lib/og/fetchers.ts`.
+1. `profile/page.tsx`'s `load()`: the six genuinely independent fetches
+   (hidden matches, profile row, match history, registrations, bookmarks,
+   partners) now run in one `Promise.all`. The messaging recipient list —
+   the one flagged hardest to look at — is no longer part of the initial
+   load at all: it's fetched by a separate `useEffect` gated on
+   `messagingRecipientId`, so a profile visit that never opens the messaging
+   overlay never pays for that unfiltered `profiles` scan.
+2. Same two moves in `matchmaking/page.tsx`, with one real complication
+   profile.tsx didn't have: several fetches here have an actual data
+   dependency (candidate filtering needs `swipedIds`; incoming-likes and
+   mutual-match profile lookups need id lists derived from an earlier
+   fetch). Resolved as two Promise.all rounds — six independent queries
+   first, then three more that depend on the first round's *results* (not
+   on each other) — rather than force-flattening into one round and
+   silently breaking the filtering logic. See the code comment at the
+   fetch site for the exact reasoning kept in place for the next person
+   reading it.
+3. F4 (`select("*")` on `/play/*`) was investigated, not fixed — see F4's
+   entry above for why forcing it turned out to be the wrong call once the
+   actual convention it cited was checked against its real scope.
 
-**Verify:** page still renders identical data; if before/after timing is
-available, note it — this is where a real network trace would turn this
-audit's call-count reasoning into an actual measured number.
+**Verify:** `tsc --noEmit` clean project-wide, `eslint` zero new warnings on
+either file, `next build` succeeds, 53 tests pass. **Not verified:** an
+actual before/after network trace — this is where real measurement would
+turn "up to eight sequential round-trips became two" into a measured
+millisecond number rather than a call-count argument.
 
 ### Phase 5 — F7, only if it becomes a real complaint
 
@@ -492,3 +540,39 @@ no Image-related runtime errors during static generation, 53 tests pass.
 real browser — that needs a live deploy and a network panel, which this
 session doesn't have access to.
 
+
+### Phase 4 (F3 — parallelize profile/matchmaking; F4 — investigated, not fixed)
+
+**`profile/page.tsx`:** nine sequential `await`s became six fetches in one
+`Promise.all`, plus a full removal of the messaging-recipient fetch from the
+critical path (now lazy, on first overlay open). The removed fetch was
+`select("id,full_name,role,avatar_url")` over the entire `profiles` table
+with no filter — this was the single fetch the original audit named as
+blocking everything after it, and it no longer runs at all on a page visit
+that never opens messaging.
+
+**`matchmaking/page.tsx`:** up to eight sequential `await`s became two
+`Promise.all` rounds (six independent, then three dependent-on-round-one),
+plus the same messaging-list deferral. This one had real data dependencies
+the profile page didn't — `swipedIds` filters two later steps, and two
+fetches need id lists only known after round one resolves — so it could not
+collapse to a single round without changing what gets filtered. Both rounds
+are still strictly fewer round-trips than the original sequential chain.
+
+**F4, corrected rather than executed:** the audit's citation of
+`lib/og/fetchers.ts`'s "never select('\*')" comment as a general convention
+was wrong — read in full context, it is scoped to `profiles` and a specific
+security incident (an anon column leak), not a house style. Checked the
+actual tradeoff for `/play/*` before touching anything: the tables involved
+are narrow scalar tables with no over-fetch cost worth the name, every
+fetch is typed against the database's own generated `Row` type shared
+across 4-5 files (so narrowing the select without narrowing the type would
+create a silent runtime-undefined bug, not a safe cleanup), and the one
+table with sensitive columns (`play_participants`, which carries
+email/phone) already gates that fetch behind an organizer-only check.
+Left untouched; audit's F4 entry corrected in place.
+
+**Verified:** `tsc --noEmit` clean across the full project, `eslint` reports
+zero new warnings on either changed file, `next build` succeeds, 53 tests
+pass. **Not verified:** a real network trace turning "fewer round-trips"
+into a measured number — same caveat as every other phase in this log.
