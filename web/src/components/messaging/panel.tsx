@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import Image from "next/image";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -113,7 +114,7 @@ function gradientFor(seed: string) {
 
 function Avatar({ name, url, seed, size = 48, ring = false, online = false }: { name: string | null; url?: string | null; seed: string; size?: number; ring?: boolean; online?: boolean }) {
   const inner = url ? (
-    <img src={url} alt="" className="rounded-full object-cover h-full w-full" style={{ width: size, height: size }} />
+    <Image src={url} alt="" width={size} height={size} className="rounded-full object-cover" />
   ) : (
     <div className={`rounded-full flex items-center justify-center text-white font-display bg-gradient-to-tr ${gradientFor(seed)}`}
       style={{ width: size, height: size, fontSize: size * 0.36 }}>

@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
       // lib/supabase/env.ts -- a wildcard would silently start optimizing
       // images from any Supabase project, not just this one.
       { protocol: "https", hostname: "fbzetvkbhneptvfruilw.supabase.co" },
+      // Sponsor logos on the marketing footer carousel -- always this one
+      // host, only the per-sponsor path varies
+      // (logo.clearbit.com/<domain>?size=80). Added alongside the F2 sweep
+      // rather than left as the one remaining plain <img>.
+      { protocol: "https", hostname: "logo.clearbit.com" },
     ],
   },
   experimental: {

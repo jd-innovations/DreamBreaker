@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
+import Image from "next/image";
 
 type HoldRow = {
   id: string;
@@ -149,7 +150,7 @@ export default function HoldsPage() {
             return (
               <div key={h.id} className="border border-border rounded-2xl bg-card overflow-hidden" data-testid={`hold-card-${h.id}`}>
                 <div className="relative h-28 overflow-hidden">
-                  <img src={t.cover_img_url ?? DEFAULT_IMG} alt="" className="h-full w-full object-cover opacity-60" />
+                  <Image src={t.cover_img_url ?? DEFAULT_IMG} alt="" fill sizes="(min-width: 640px) 50vw, 100vw" className="object-cover opacity-60" />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent" />
                   <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
                     <div className="font-display text-2xl tracking-wide leading-tight">{t.name}</div>

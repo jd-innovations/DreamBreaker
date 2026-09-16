@@ -24,6 +24,7 @@ import { NotificationBell } from "@/components/notifications/bell";
 import { MatchSettingsPanel } from "@/components/shared/match-settings-panel";
 import { ProfileSettings } from "@/components/dashboard/profile-settings";
 import { COURT_IMG } from "@/lib/stock-images";
+import Image from "next/image";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Profile = {
@@ -187,9 +188,9 @@ function RecommendedCard({ t, idx }: { t: RecommendedTournament; idx: number }) 
       <div className="border border-border rounded-2xl bg-card overflow-hidden hover:border-primary/40 hover:shadow-lg transition-all duration-200">
         {/* Photo */}
         <div className={`relative aspect-[16/9] overflow-hidden bg-gradient-to-br ${grad} to-background`}>
-          <img
-            src={img} alt=""
-            className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+          <Image
+            src={img} alt="" fill sizes="(min-width: 1024px) 33vw, 100vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />

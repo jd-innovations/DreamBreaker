@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PLAY_STYLE_KEYS, playStyleLabel } from "@shared/play-profile";
 import { ensureFreshSession } from "@/lib/ensure-session";
 import type { Tables } from "@shared/database.types";
+import Image from "next/image";
 
 type Profile = Pick<
   Tables<"profiles">,
@@ -200,9 +201,11 @@ export function ProfileSettings({ userId }: { userId: string }) {
       <div className="flex items-center gap-5">
         <div className="relative flex-shrink-0">
           <div className="rounded-full p-[3px] bg-gradient-to-tr from-violet-500 via-pink-400 to-cyan-400">
-            <img
+            <Image
               src={avatarUrl}
               alt="Avatar"
+              width={80}
+              height={80}
               className={`h-20 w-20 rounded-full border-2 border-background object-cover transition-opacity ${avatarUploading ? "opacity-50" : ""}`}
             />
           </div>

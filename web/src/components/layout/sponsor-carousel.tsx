@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 type Brand = { name: string; domain: string; url: string };
 
 const BRANDS: Brand[] = [
@@ -40,12 +42,21 @@ export function SponsorCarousel() {
               className="flex-shrink-0 flex items-center gap-3 opacity-50 hover:opacity-100 transition-opacity duration-300"
               aria-label={b.name}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              {/* unoptimized: this marquee shows ~15 external brand
+                  logos, most already fetched once and browser-cached
+                  from their canonical size (?size=80); routing each
+                  through Next's server-side image optimizer would add a
+                  round trip and Vercel image-transform quota for a
+                  4:1 downscale that gains little. next/image still gets
+                  used for the win that matters here: no separate
+                  remote-host fetch outside React's render/hydration
+                  cycle, and the same onError fallback as before. */}
+              <Image
                 src={`https://logo.clearbit.com/${b.domain}?size=80`}
                 alt={b.name}
                 width={32}
                 height={32}
+                unoptimized
                 className="h-8 w-8 object-contain"
                 style={{ filter: "brightness(0) invert(1)" }}
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}

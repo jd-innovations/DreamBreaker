@@ -20,6 +20,8 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { tournamentOpsStatus } from "@shared/status";
 import { STATUS_DOT_CLASS, STATUS_BADGE_CLASS } from "@/lib/status";
+// Aliased: this file already imports the Phosphor `Image` icon above.
+import NextImage from "next/image";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1386,7 +1388,7 @@ export default function DirectorPage() {
               {/* Banner */}
               <div className="relative w-full h-40 sm:h-56 rounded-2xl overflow-hidden group">
                 {selected.cover_img_url ? (
-                  <img src={selected.cover_img_url} alt="Banner" className="w-full h-full object-cover" />
+                  <NextImage src={selected.cover_img_url} alt="Banner" fill sizes="100vw" className="object-cover" />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-card via-secondary to-primary/20 flex items-center justify-center">
                     <div className="text-center opacity-40">
@@ -1510,7 +1512,7 @@ export default function DirectorPage() {
               {sponsors.map((s) => (
                 <div key={s.id} className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
                   {s.logo_url ? (
-                    <img src={s.logo_url} alt={s.name} className="h-10 w-10 object-contain rounded-lg bg-secondary flex-shrink-0" />
+                    <NextImage src={s.logo_url} alt={s.name} width={40} height={40} className="h-10 w-10 object-contain rounded-lg bg-secondary flex-shrink-0" />
                   ) : (
                     <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
                       <Star size={18} className="text-muted-foreground" />
@@ -1651,6 +1653,12 @@ export default function DirectorPage() {
             </div>
 
             <input type="url" value={bannerUrl} onChange={(e) => setBannerUrl(e.target.value)} placeholder="https://example.com/banner.jpg" className="w-full h-12 rounded-xl bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring mb-4" />
+            {/* Deliberately plain <img>, not next/image: this previews whatever URL
+                the director just typed into the field above, which can be any
+                host. next/image throws at request time for a host outside
+                remotePatterns, so it cannot preview an arbitrary URL the way
+                this control is meant to. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             {bannerUrl && <img src={bannerUrl} alt="Preview" className="w-full h-32 object-cover rounded-xl mb-4" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />}
             <div className="flex gap-3">
               <button onClick={() => setEditingBanner(false)} className="flex-1 h-11 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">CANCEL</button>

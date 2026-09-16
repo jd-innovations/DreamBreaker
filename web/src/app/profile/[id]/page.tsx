@@ -13,6 +13,7 @@ import { getUserId } from "@/lib/dev-user";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
 import { X } from "@phosphor-icons/react";
+import Image from "next/image";
 
 type PublicProfile = {
   id: string;
@@ -138,7 +139,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ id: st
           <div className="px-6 pt-8 pb-6 flex flex-col sm:flex-row items-center sm:items-start gap-5">
             <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-2xl font-display text-primary">
               {profile.avatar_url
-                ? <img src={profile.avatar_url} alt="" className="h-20 w-20 rounded-full object-cover" />
+                ? <Image src={profile.avatar_url} alt="" width={80} height={80} className="h-20 w-20 rounded-full object-cover" />
                 : initials(profile.full_name)}
             </div>
             <div className="flex-1 min-w-0 text-center sm:text-left">

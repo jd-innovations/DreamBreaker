@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
 import type { Tables } from "@shared/database.types";
+import Image from "next/image";
 
 type Profile = Pick<
   Tables<"profiles">,
@@ -169,7 +170,7 @@ function TournamentsTab({ entries, bookmarks, loading }: { entries: TournamentEn
         <Link key={e.id} href={`/tournaments/${e.tournamentId}`} className="block">
           <div className="border border-border rounded-2xl bg-card flex items-center gap-4 p-4 hover:border-primary transition-colors group">
             {e.cover_img_url ? (
-              <img src={e.cover_img_url} alt="" className="h-16 w-16 rounded-xl object-cover flex-shrink-0 group-hover:opacity-90 transition-opacity" />
+              <Image src={e.cover_img_url} alt="" width={64} height={64} className="h-16 w-16 rounded-xl object-cover flex-shrink-0 group-hover:opacity-90 transition-opacity" />
             ) : (
               <div className="h-16 w-16 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
                 <Trophy size={20} weight="fill" className="text-primary" />
@@ -219,7 +220,7 @@ function TournamentsTab({ entries, bookmarks, loading }: { entries: TournamentEn
             <Link key={b.id} href={`/tournaments/${b.tournamentId}`} className="block">
               <div className="border border-border rounded-2xl bg-card flex items-center gap-4 p-4 hover:border-primary transition-colors group">
                 {b.cover_img_url ? (
-                  <img src={b.cover_img_url} alt="" className="h-16 w-16 rounded-xl object-cover flex-shrink-0 group-hover:opacity-90 transition-opacity" />
+                  <Image src={b.cover_img_url} alt="" width={64} height={64} className="h-16 w-16 rounded-xl object-cover flex-shrink-0 group-hover:opacity-90 transition-opacity" />
                 ) : (
                   <div className="h-16 w-16 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
                     <Trophy size={20} weight="fill" className="text-primary" />
@@ -621,10 +622,13 @@ export default function ProfilePage() {
     <PageShell>
       {/* Cover photo */}
       <div className="relative h-48 sm:h-64 lg:h-80 overflow-hidden">
-        <img
+        <Image
           src={coverUrl}
           alt=""
-          className={`h-full w-full object-cover opacity-70 dark:opacity-60 transition-opacity ${coverUploading ? "opacity-30" : ""}`}
+          fill
+          priority
+          sizes="100vw"
+          className={`object-cover opacity-70 dark:opacity-60 transition-opacity ${coverUploading ? "opacity-30" : ""}`}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
 
@@ -658,7 +662,7 @@ export default function ProfilePage() {
                   onClick={() => selectPresetCover(p.url)}
                   className={`relative flex-shrink-0 h-16 w-28 rounded-xl overflow-hidden border-2 transition-all ${coverUrl === p.url ? "border-primary" : "border-transparent hover:border-primary/50"}`}
                 >
-                  <img src={p.url} alt={p.label} className="h-full w-full object-cover" />
+                  <Image src={p.url} alt={p.label} fill sizes="112px" className="object-cover" />
                   {coverUrl === p.url && (
                     <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                       <Check size={16} weight="bold" className="text-primary" />
@@ -688,9 +692,12 @@ export default function ProfilePage() {
             <div className="relative flex-shrink-0">
               {/* Multi-colored gradient ring outline */}
               <div className="rounded-full p-[3px] lg:p-[4px] bg-gradient-to-tr from-violet-500 via-pink-400 to-cyan-400">
-                <img
+                <Image
                   src={avatarUrl}
                   alt="Avatar"
+                  width={144}
+                  height={144}
+                  priority
                   className={`h-24 w-24 lg:h-36 lg:w-36 rounded-full border-2 border-background object-cover transition-opacity ${avatarUploading ? "opacity-50" : ""}`}
                 />
               </div>
@@ -895,7 +902,7 @@ export default function ProfilePage() {
                   {partners.map((p) => (
                     <div key={p.id} className="border border-border rounded-2xl bg-card p-5 flex items-center gap-4 relative group">
                       {p.avatar ? (
-                        <img src={p.avatar} alt="" className="h-14 w-14 rounded-xl object-cover flex-shrink-0" />
+                        <Image src={p.avatar} alt="" width={56} height={56} className="h-14 w-14 rounded-xl object-cover flex-shrink-0" />
                       ) : (
                         <div className="h-14 w-14 rounded-xl bg-secondary flex items-center justify-center font-display text-2xl flex-shrink-0">{p.name.charAt(0)}</div>
                       )}

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { playStyleLabel } from "@shared/play-profile";
+import Image from "next/image";
 import {
   X, Heart, XCircle, Plug, MapPin, Star, Trophy,
   Users, Calendar, CheckCircle, Medal, ShieldStar,
@@ -94,7 +95,7 @@ export function PlayerProfileSheet({ partner, onClose, onPass, onLike, onSuperCo
         <div className="overflow-y-auto flex-1 min-h-0">
           {/* Hero photo */}
           <div className="relative h-96 overflow-hidden flex-shrink-0">
-            <img src={partner.img} alt="" className="h-full w-full object-cover object-top" />
+            <Image src={partner.img} alt="" fill sizes="(min-width: 640px) 480px, 100vw" className="object-cover object-top" />
             {/* Always-dark gradient so white text is readable in both light and dark mode */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 

@@ -5,6 +5,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { HERO_IMG } from "@/lib/stock-images";
 import { createClient } from "@/lib/supabase/server";
 import { getPlatformStats } from "@/lib/platform-stats";
+import Image from "next/image";
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&q=80";
 
@@ -99,7 +100,7 @@ export default async function LandingPage() {
       {/* HERO */}
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0">
-          <img src={HERO_IMG} alt="" className="h-full w-full object-cover object-center opacity-50 dark:opacity-60" />
+          <Image src={HERO_IMG} alt="" fill priority sizes="100vw" className="object-cover object-center opacity-50 dark:opacity-60" />
           <div className="absolute inset-0 bg-black/50" />
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/20 dark:from-background dark:via-background/70 dark:to-transparent" />
         </div>
@@ -192,7 +193,7 @@ export default async function LandingPage() {
             {featuredList.map((t) => (
               <Link key={t.id} href={`/tournaments/${t.id}`} data-testid={`featured-tournament-${t.id}`} className="group border border-border rounded-2xl overflow-hidden bg-card hover:border-primary transition-all">
                 <div className="relative h-44 overflow-hidden">
-                  <img src={t.img} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <Image src={t.img} alt="" fill sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                   <div className="absolute top-3 left-3 flex gap-2">
                     <span className="px-2.5 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-mono tracking-widest font-bold">{(t.status === "filling_fast" ? "Filling Fast" : t.status).toUpperCase()}</span>

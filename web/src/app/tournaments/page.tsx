@@ -7,6 +7,7 @@ import { BookmarkButton } from "@/components/shared/bookmark-button";
 import { ShareButton } from "@/components/shared/share-button";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
 
 const formats = ["All", "Doubles", "Singles", "Mixed", "Juniors"];
 const levels = ["All", "3.0 – 4.0", "3.5 – 4.5", "4.0 – 5.0", "4.5+", "U18"];
@@ -161,7 +162,7 @@ export default function TournamentsPage() {
               return (
                 <div key={t.id} data-testid={`tournament-card-${t.id}`} className="group border border-border rounded-2xl overflow-hidden bg-card hover:border-primary transition-all flex flex-col">
                   <Link href={`/tournaments/${t.id}`} className="relative h-44 overflow-hidden block">
-                    <img src={coverImg} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <Image src={coverImg} alt="" fill sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
                     <div className="absolute top-3 left-3 flex gap-2">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono tracking-widest font-bold ${isFast ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"}`}>{statusDisplay.toUpperCase()}</span>

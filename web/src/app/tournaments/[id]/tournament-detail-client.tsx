@@ -19,6 +19,7 @@ import { ShareButton } from "@/components/shared/share-button";
 import { createClient } from "@/lib/supabase/client";
 import { computeInsight, type InsightResult } from "@/lib/insights";
 import { getUserId } from "@/lib/dev-user";
+import Image from "next/image";
 
 // ── FAQ data ──────────────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
@@ -648,10 +649,13 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       {/* ── Hero ─────────────────────────────────────────────────── */}
       <section className="relative border-b border-border overflow-hidden">
         <div className="absolute inset-0">
-          <img
+          <Image
             src={t.cover_img_url ?? "https://images.unsplash.com/photo-1737477004595-e9b659bb44ca?w=1200&q=80"}
             alt=""
-            className="h-full w-full object-cover opacity-50 dark:opacity-60"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover opacity-50 dark:opacity-60"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />
         </div>
@@ -1102,7 +1106,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                     {/* Avatar */}
                     <Link href={`/profile/${a.id}`} className="relative flex-shrink-0">
                       {a.avatar ? (
-                        <img src={a.avatar} alt="" className="h-9 w-9 rounded-full object-cover" />
+                        <Image src={a.avatar} alt="" width={36} height={36} className="h-9 w-9 rounded-full object-cover" />
                       ) : (
                         <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center font-display text-sm">
                           {a.name.charAt(0)}

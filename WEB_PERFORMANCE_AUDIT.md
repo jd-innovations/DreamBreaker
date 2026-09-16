@@ -431,3 +431,64 @@ present. Sentry — deliberately left untouched — remains the largest single
 piece of always-loaded JS (424 KB), for the reason given in F1's corrected
 evidence: its early load timing is intentional, and its configuration was
 already lean before this audit touched anything.
+
+### Phase 3 (F2 — `<img>` to `next/image`)
+
+**32 of 36 real `<img>` tags converted** across 17 files. The remaining 4 are
+deliberate, each with a comment explaining why, not oversights:
+
+1. `director/page.tsx` and `director/tournaments/[id]/page.tsx` — a banner
+   *preview* bound to a text field where the director can paste **any** URL
+   ("Paste a direct image URL"). `next/image` throws at request time for a
+   host outside `remotePatterns`, so it structurally cannot preview an
+   arbitrary host the way this control needs to.
+2. `admin/facility-import/page.tsx` — already had its own justification
+   comment predating this session (a Google Places photo proxy, admin-only,
+   used during a one-time import workflow); left as-is rather than
+   overridden.
+3. `ticket-panel.tsx` — a chat attachment of unknown, variable natural
+   dimensions. `next/image` needs a width/height (or a sized `fill` parent)
+   to reserve layout space; forcing one here would either distort the image
+   or require storing dimensions at upload time, which is new work outside
+   this audit's scope.
+
+**Two new `remotePatterns` hosts added beyond the Phase 1 Supabase one:**
+`logo.clearbit.com` (sponsor carousel — always that host, only the path
+varies) with `unoptimized` on that specific `<Image>`, since routing ~15
+already-cached external brand logos through Next's server-side optimizer for
+a 4:1 downscale costs more (a round trip, Vercel image-transform quota) than
+it returns.
+
+**A real mistake caught by `tsc`, not by review:** a batch-edit script
+inserted the new `import Image from "next/image"` line in the middle of two
+files' existing multi-line `import { ... } from "..."` blocks (landed after
+the FIRST line of the block rather than after it closes), breaking their
+syntax outright. `tsc --noEmit` failed immediately and named both files
+precisely — `play-event-client.tsx` and `player-profile-sheet.tsx` — which is
+exactly the value of running a full project-wide typecheck after a
+scripted, multi-file edit rather than trusting the edit script's own
+success output. Both fixed, then the whole `src/` tree was re-scanned in
+Python for the same corruption pattern (a bash/grep attempt at the same
+check produced a false-positive matching nearly every file, due to how
+shell quoting handles embedded newlines in a pattern — worth remembering
+for next time: verify a multi-line-pattern grep result before trusting it,
+especially when it returns suspiciously many hits).
+
+**Sizing decisions, briefly:** fixed-pixel avatars/thumbnails got explicit
+`width`/`height` matching their Tailwind size class exactly (so the
+rendered box is unchanged); images inside an already-`relative`,
+already-sized container got `fill` with a `sizes` attribute reflecting the
+real responsive layout, not a guess. Three images marked `priority` because
+each is the single largest above-the-fold element on its page: the profile
+header avatar and cover, the landing page hero, the marketplace listing's
+main photo, and the matchmaking swipe deck's current card (that last one
+priority for a different reason — it is never off-screen, so lazy-loading
+it would be actively wrong, not just unhelpful).
+
+**Verified:** `tsc --noEmit` clean across the full project (not just changed
+files), `eslint src --quiet` reports zero errors, `next build` succeeds with
+no Image-related runtime errors during static generation, 53 tests pass.
+**Not verified:** actual decoded file sizes or WebP/AVIF negotiation in a
+real browser — that needs a live deploy and a network panel, which this
+session doesn't have access to.
+

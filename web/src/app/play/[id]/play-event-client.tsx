@@ -14,6 +14,7 @@ import { ShareButton } from "@/components/shared/share-button";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { withTimeout } from "@/lib/with-timeout";
+import Image from "next/image";
 import {
   type PlayEvent, type PlayParticipantPublic,
   eventTypeLabel, statusLabel, skillLabel, formatEventDate, formatEventTime, displayName,
@@ -277,7 +278,7 @@ export default function PlayEventPage({ params }: { params: Promise<{ id: string
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-12 w-12 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
                   {organizer.avatar_url
-                    ? <img src={organizer.avatar_url} alt="" className="h-full w-full object-cover" />
+                    ? <Image src={organizer.avatar_url} alt="" width={48} height={48} className="h-full w-full object-cover" />
                     : <span className="font-display text-lg text-primary">{(organizer.full_name ?? "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</span>}
                 </div>
                 <div className="min-w-0">
