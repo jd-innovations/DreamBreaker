@@ -1,27 +1,20 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import { OPTIMIZABLE_IMAGE_HOSTS } from "./src/lib/image-hosts";
 
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "images.pexels.com" },
-      // Every avatar, marketplace photo, and facility photo actually lives
-      // here -- WEB_PERFORMANCE_AUDIT.md F2. Its absence was silently working
-      // around next/image entirely: requesting an unlisted host throws at
-      // request time, so the codebase had reached for plain <img> 38 times
-      // instead of being told to fix this one line. Exact hostname, not a
-      // `*.supabase.co` wildcard, matching the precision of the two patterns
-      // above and this project's own fail-loud-on-mismatch convention in
-      // lib/supabase/env.ts -- a wildcard would silently start optimizing
-      // images from any Supabase project, not just this one.
-      { protocol: "https", hostname: "fbzetvkbhneptvfruilw.supabase.co" },
-      // Sponsor logos on the marketing footer carousel -- always this one
-      // host, only the per-sponsor path varies
-      // (logo.clearbit.com/<domain>?size=80). Added alongside the F2 sweep
-      // rather than left as the one remaining plain <img>.
-      { protocol: "https", hostname: "logo.clearbit.com" },
-    ],
+    // Generated from OPTIMIZABLE_IMAGE_HOSTS rather than listed by hand here.
+    // That list is also what SafeImage (components/shared/safe-image.tsx)
+    // checks BEFORE choosing next/image over a plain <img> for a src that
+    // might be user-typed -- see that file and lib/image-hosts.ts for the
+    // incident (a live tournament's cover image on an unlisted host) that
+    // made two independent copies of this allowlist worth collapsing into
+    // one.
+    remotePatterns: OPTIMIZABLE_IMAGE_HOSTS.map((hostname) => ({
+      protocol: "https" as const,
+      hostname,
+    })),
   },
   experimental: {
     // F6: Next's own docs recommend this for icon libraries specifically, to

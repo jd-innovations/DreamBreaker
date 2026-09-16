@@ -20,8 +20,12 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { tournamentOpsStatus } from "@shared/status";
 import { STATUS_DOT_CLASS, STATUS_BADGE_CLASS } from "@/lib/status";
-// Aliased: this file already imports the Phosphor `Image` icon above.
-import NextImage from "next/image";
+// SafeImage (not next/image directly): both srcs on this page are
+// director-typed free text (cover_img_url, logo_url), not app-controlled
+// uploads -- see lib/image-hosts.ts for why that matters. No alias needed
+// here since SafeImage is a distinct name from the Phosphor `Image` icon
+// this file already imports.
+import { SafeImage } from "@/components/shared/safe-image";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1388,7 +1392,7 @@ export default function DirectorPage() {
               {/* Banner */}
               <div className="relative w-full h-40 sm:h-56 rounded-2xl overflow-hidden group">
                 {selected.cover_img_url ? (
-                  <NextImage src={selected.cover_img_url} alt="Banner" fill sizes="100vw" className="object-cover" />
+                  <SafeImage src={selected.cover_img_url} alt="Banner" fill sizes="100vw" className="object-cover" />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-card via-secondary to-primary/20 flex items-center justify-center">
                     <div className="text-center opacity-40">
@@ -1512,7 +1516,7 @@ export default function DirectorPage() {
               {sponsors.map((s) => (
                 <div key={s.id} className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
                   {s.logo_url ? (
-                    <NextImage src={s.logo_url} alt={s.name} width={40} height={40} className="h-10 w-10 object-contain rounded-lg bg-secondary flex-shrink-0" />
+                    <SafeImage src={s.logo_url} alt={s.name} width={40} height={40} className="h-10 w-10 object-contain rounded-lg bg-secondary flex-shrink-0" />
                   ) : (
                     <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
                       <Star size={18} className="text-muted-foreground" />

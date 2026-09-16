@@ -20,6 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 import { computeInsight, type InsightResult } from "@/lib/insights";
 import { getUserId } from "@/lib/dev-user";
 import Image from "next/image";
+import { SafeImage } from "@/components/shared/safe-image";
 
 // ── FAQ data ──────────────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
@@ -649,7 +650,11 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       {/* ── Hero ─────────────────────────────────────────────────── */}
       <section className="relative border-b border-border overflow-hidden">
         <div className="absolute inset-0">
-          <Image
+          {/* t.cover_img_url is free-text a director can set to anything --
+              SafeImage, not Image directly. See lib/image-hosts.ts for the
+              incident (a live tournament on an unlisted host) this guards
+              against. */}
+          <SafeImage
             src={t.cover_img_url ?? "https://images.unsplash.com/photo-1737477004595-e9b659bb44ca?w=1200&q=80"}
             alt=""
             fill

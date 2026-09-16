@@ -6,6 +6,7 @@ import { HERO_IMG } from "@/lib/stock-images";
 import { createClient } from "@/lib/supabase/server";
 import { getPlatformStats } from "@/lib/platform-stats";
 import Image from "next/image";
+import { SafeImage } from "@/components/shared/safe-image";
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&q=80";
 
@@ -193,7 +194,10 @@ export default async function LandingPage() {
             {featuredList.map((t) => (
               <Link key={t.id} href={`/tournaments/${t.id}`} data-testid={`featured-tournament-${t.id}`} className="group border border-border rounded-2xl overflow-hidden bg-card hover:border-primary transition-all">
                 <div className="relative h-44 overflow-hidden">
-                  <Image src={t.img} alt="" fill sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                  {/* `t.img` traces back to tournaments.cover_img_url, a
+                      free-text field a director can set to anything --
+                      SafeImage, not Image directly. See lib/image-hosts.ts. */}
+                  <SafeImage src={t.img} alt="" fill sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                   <div className="absolute top-3 left-3 flex gap-2">
                     <span className="px-2.5 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-mono tracking-widest font-bold">{(t.status === "filling_fast" ? "Filling Fast" : t.status).toUpperCase()}</span>

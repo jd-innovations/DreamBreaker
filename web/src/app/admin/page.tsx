@@ -23,7 +23,7 @@ import { TicketPanel } from "@/components/support/ticket-panel";
 import { PaymentReconciliation, type ReconciliationItem } from "@/components/admin/payment-reconciliation";
 import { tournamentOpsStatus } from "@shared/status";
 import { STATUS_DOT_CLASS } from "@/lib/status";
-import Image from "next/image";
+import { SafeImage } from "@/components/shared/safe-image";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1754,7 +1754,10 @@ export default function AdminPage() {
                     <div className="space-y-2">
                       {emailSponsors.map((s) => (
                         <div key={s.id} className="flex items-center gap-3 p-2 rounded-xl border border-border">
-                          <Image src={s.logo_url} alt={s.name} width={64} height={32} className="h-8 w-16 object-contain bg-white rounded" />
+                          {/* s.logo_url is a raw form field (line ~599: a URL
+                              input, no upload flow) -- SafeImage, not Image
+                              directly. See lib/image-hosts.ts. */}
+                          <SafeImage src={s.logo_url} alt={s.name} width={64} height={32} className="h-8 w-16 object-contain bg-white rounded" />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium truncate">{s.name}</div>
                             {s.link && <div className="text-[10px] text-muted-foreground truncate">{s.link}</div>}

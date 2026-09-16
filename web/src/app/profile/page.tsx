@@ -27,6 +27,7 @@ import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
 import type { Tables } from "@shared/database.types";
 import Image from "next/image";
+import { SafeImage } from "@/components/shared/safe-image";
 
 type Profile = Pick<
   Tables<"profiles">,
@@ -169,8 +170,10 @@ function TournamentsTab({ entries, bookmarks, loading }: { entries: TournamentEn
       {items.map((e) => (
         <Link key={e.id} href={`/tournaments/${e.tournamentId}`} className="block">
           <div className="border border-border rounded-2xl bg-card flex items-center gap-4 p-4 hover:border-primary transition-colors group">
+            {/* e.cover_img_url is free-text a director can set to anything
+                -- SafeImage, not Image directly. See lib/image-hosts.ts. */}
             {e.cover_img_url ? (
-              <Image src={e.cover_img_url} alt="" width={64} height={64} className="h-16 w-16 rounded-xl object-cover flex-shrink-0 group-hover:opacity-90 transition-opacity" />
+              <SafeImage src={e.cover_img_url} alt="" width={64} height={64} className="h-16 w-16 rounded-xl object-cover flex-shrink-0 group-hover:opacity-90 transition-opacity" />
             ) : (
               <div className="h-16 w-16 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
                 <Trophy size={20} weight="fill" className="text-primary" />
@@ -219,8 +222,9 @@ function TournamentsTab({ entries, bookmarks, loading }: { entries: TournamentEn
           {bookmarks.map((b) => (
             <Link key={b.id} href={`/tournaments/${b.tournamentId}`} className="block">
               <div className="border border-border rounded-2xl bg-card flex items-center gap-4 p-4 hover:border-primary transition-colors group">
+                {/* b.cover_img_url: same free-text field, same guard. */}
                 {b.cover_img_url ? (
-                  <Image src={b.cover_img_url} alt="" width={64} height={64} className="h-16 w-16 rounded-xl object-cover flex-shrink-0 group-hover:opacity-90 transition-opacity" />
+                  <SafeImage src={b.cover_img_url} alt="" width={64} height={64} className="h-16 w-16 rounded-xl object-cover flex-shrink-0 group-hover:opacity-90 transition-opacity" />
                 ) : (
                   <div className="h-16 w-16 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
                     <Trophy size={20} weight="fill" className="text-primary" />
