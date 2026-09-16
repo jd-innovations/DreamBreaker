@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { buildEntityMetadata } from "@/lib/og/metadata";
 import { fetchMarketplaceListingOg } from "@/lib/og/fetchers";
 import { formatCents } from "@shared/money";
+import { marketplaceConditionLabel, marketplaceFulfillmentLabel } from "@shared/marketplace";
 import { ListingGallery } from "./listing-gallery";
 
 /**
@@ -38,12 +39,18 @@ export async function generateMetadata({
 }
 
 // What an ANONYMOUS visitor is allowed to read. Not an arbitrary subset: these
-// are exactly the columns granted to `anon` on marketplace_listings. Adding
-// `condition` or `fulfillment` here — both genuinely useful to a buyer —
-// requires widening that grant, which is a security decision rather than a
-// query change, so the page is built to be correct without them.
+// are exactly the columns granted to `anon` on marketplace_listings.
+//
+// `condition` and `fulfillment` were added to that grant in 20260916160000,
+// deliberately and by themselves, because they are the two facts a buyer asks
+// first. seller_id, the location_* family and min_offer_cents stay closed:
+// they are the seller's whereabouts and negotiating floor.
+//
+// Adding a column here that `anon` cannot read fails the WHOLE query for a
+// logged-out visitor — it does not return a null — so this list and that
+// grant have to move together.
 const LISTING_COLUMNS =
-  "id, title, description, asking_price_cents, location_city, location_state, status";
+  "id, title, description, asking_price_cents, location_city, location_state, status, condition, fulfillment";
 
 export default async function MarketplaceListingPage({
   params,
@@ -110,6 +117,28 @@ export default async function MarketplaceListingPage({
                 <p className="mt-2 text-sm text-muted-foreground">{location}</p>
               )}
             </div>
+
+            {/* The two facts a buyer asks first. Labels come from
+                @shared/marketplace so this page cannot word them differently
+                from the app. */}
+            <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border">
+              <div className="bg-background p-4">
+                <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Condition
+                </dt>
+                <dd className="mt-1 text-sm font-medium">
+                  {marketplaceConditionLabel(listing.condition)}
+                </dd>
+              </div>
+              <div className="bg-background p-4">
+                <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Handoff
+                </dt>
+                <dd className="mt-1 text-sm font-medium">
+                  {marketplaceFulfillmentLabel(listing.fulfillment)}
+                </dd>
+              </div>
+            </dl>
 
             {listing.description?.trim() && (
               <div>

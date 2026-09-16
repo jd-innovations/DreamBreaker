@@ -1,0 +1,34 @@
+-- Let an anonymous visitor see a listing's condition and handoff method.
+--
+-- D1 of WEB_MOBILE_ALIGNMENT_PLAN.md made /marketplace/[id] a real web page,
+-- because it is the one link a seller pastes where the recipient may not have
+-- the app. That page was built against the columns `anon` could already read:
+--
+--   id, title, description, asking_price_cents, location_city,
+--   location_state, status
+--
+-- `condition` and `fulfillment` were granted to `authenticated` only, so the
+-- public page could not say whether a paddle was new or worn, or whether the
+-- seller ships. Those are the two facts a buyer most wants, and withholding
+-- them from the exact audience the page exists for defeats the point of it.
+--
+-- WHY THIS IS SAFE, stated rather than assumed. Both are product attributes of
+-- an item already listed publicly -- not personal data, not location, not
+-- contact details. The row is already readable by `anon`: the RLS policy
+-- "marketplace_listings: public read active" returns every active listing to
+-- everyone. This widens WHICH COLUMNS of an already-public row are visible,
+-- and nothing more.
+--
+-- Deliberately NOT included, though they sit in the same table: seller_id,
+-- location_lat, location_lng, location_coords, location_postal,
+-- location_precision, min_offer_cents. The location family is the seller's
+-- whereabouts and min_offer_cents is their negotiating floor. Neither belongs
+-- to an anonymous reader, and an earlier incident in this project -- `anon`
+-- able to select every row's email from `profiles` until 2026-08-25 -- is why
+-- this file enumerates two columns instead of granting the table.
+--
+-- No mobile impact: mobile runs as `authenticated`, which already had both.
+-- A grant can only widen what a client may read, so no existing query changes
+-- behaviour.
+
+grant select (condition, fulfillment) on public.marketplace_listings to anon;
