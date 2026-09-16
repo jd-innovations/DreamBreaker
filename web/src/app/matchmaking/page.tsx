@@ -50,7 +50,6 @@ interface Partner {
   tournamentOverlap: string | null;
   mutuals: number;
   isTopRated: boolean;
-  isVerified: boolean;
 }
 
 interface TournamentContext {
@@ -174,7 +173,6 @@ function profileToPartner(
     tournamentOverlap: null,
     mutuals: 0,
     isTopRated: (p.dupr ?? 0) >= 4.5,
-    isVerified: !!p.handle,
   };
 }
 
@@ -852,7 +850,6 @@ function MatchmakingInner() {
                       <div className="absolute bottom-4 left-5 right-5 lg:hidden">
                         <div className="flex items-center gap-2">
                           <h2 className="font-display text-3xl tracking-wide text-white leading-tight">{topCard.name}</h2>
-                          {topCard.isVerified && <CheckCircle size={18} weight="fill" className="text-primary flex-shrink-0" />}
                         </div>
                         <div className="flex items-center gap-3 mt-1 flex-wrap">
                           {topCard.dupr ? (
@@ -872,7 +869,6 @@ function MatchmakingInner() {
                         <div className="hidden lg:block mb-5">
                           <div className="flex items-center gap-2 mb-2">
                             <h2 className="font-display text-4xl tracking-wide leading-tight">{topCard.name}</h2>
-                            {topCard.isVerified && <CheckCircle size={20} weight="fill" className="text-primary flex-shrink-0" />}
                           </div>
                           <div className="flex items-center gap-3 flex-wrap">
                             {topCard.dupr ? (

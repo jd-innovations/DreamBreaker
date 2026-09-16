@@ -2,10 +2,19 @@ import type { UserProfile } from '@/lib/services/profile';
 
 // Weighted fields — avatar and bio count double since they matter most for
 // how complete a profile looks/reads to other players.
+//
+// Every check here must be something the user can actually DO from the app. A
+// weight on a field with no input is a ring that can never fill, and this had
+// one: `handle` was worth 1 of 11 and is not editable anywhere (verified
+// 2026-09-15 across every screen — nothing in the app writes it), so every
+// profile was capped at 91% with no way to find the missing 9%.
+//
+// Handles are deliberately optional and claimed after signup (see
+// 20260915140000_handle_rules.sql), so even once a claim UI exists this should
+// only come back if setting one becomes something we actively ask for.
 const CHECKS: { weight: number; test: (p: UserProfile) => boolean }[] = [
   { weight: 2, test: (p) => !!p.avatar_url },
   { weight: 2, test: (p) => !!p.bio },
-  { weight: 1, test: (p) => !!p.handle },
   { weight: 1, test: (p) => !!p.location_city && !!p.location_state },
   { weight: 1, test: (p) => !!p.hand },
   { weight: 1, test: (p) => !!p.play_style },
