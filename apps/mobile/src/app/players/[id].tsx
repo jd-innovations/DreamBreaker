@@ -253,10 +253,24 @@ export default function PlayerProfileScreen() {
   // sessionUser?.id is in the dependency array: the effect runs once with no
   // user and again when it arrives. Without that dep it would silently load
   // the signed-out shape on every cold start.
-  const { user: sessionUser } = useSession();
+  //
+  // FOUND 2026-09-15, after this screen was reported as feeling slower: the
+  // dependency on sessionUser?.id made it load TWICE on a cold start. The
+  // session begins null while the cached read resolves, so the effect fired
+  // once signed-out -- five queries, two of them skipped -- and then fired
+  // again with the id, repeating all five. Double the queries, and a second
+  // pass that replaces state underneath content already on screen.
+  //
+  // Gating on `loading` fixes it without giving back the win. This is the
+  // cached-session read, not a network call: waiting for it costs a tick, not
+  // a round-trip, and the effect then runs once with the right viewer.
+  const { user: sessionUser, loading: sessionLoading } = useSession();
 
   useEffect(() => {
     if (!id) { setLoading(false); return; }
+    // Not an early setLoading(false): the screen should keep its skeleton
+    // rather than flash a signed-out shape for one tick.
+    if (sessionLoading) return;
     let cancelled = false;
 
     async function load() {
@@ -355,7 +369,7 @@ export default function PlayerProfileScreen() {
 
     load();
     return () => { cancelled = true; };
-  }, [id, sessionUser?.id]);
+  }, [id, sessionUser?.id, sessionLoading]);
 
   async function handleMessage() {
     if (!profile) return;
