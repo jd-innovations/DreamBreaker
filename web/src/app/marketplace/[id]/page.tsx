@@ -73,11 +73,20 @@ export default async function MarketplaceListingPage({
   // actually verify.
   if (!listing) notFound();
 
-  const { data: photos } = await supabase
+  const { data: photos, error: photosError } = await supabase
     .from("marketplace_listing_photos")
     .select("id, url")
     .eq("listing_id", id)
     .order("sort_order", { ascending: true });
+
+  // Inspecting the error is not defensive noise. Destructuring only `data`
+  // turned a broken RLS policy into a silent "No photos" on a listing with
+  // three of them, and it stayed that way until someone fetched the page
+  // anonymously and counted the <img> tags. A policy fault should be visible
+  // in the logs, not rendered as an empty state.
+  if (photosError) {
+    console.error("[marketplace] photos query failed", photosError.message);
+  }
 
   const location = [listing.location_city, listing.location_state]
     .filter(Boolean)
