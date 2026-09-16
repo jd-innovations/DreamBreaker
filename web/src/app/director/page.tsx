@@ -18,6 +18,8 @@ import { NotificationBell } from "@/components/notifications/bell";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
+import { tournamentOpsStatus } from "@shared/status";
+import { STATUS_DOT_CLASS, STATUS_BADGE_CLASS } from "@/lib/status";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -78,18 +80,10 @@ interface Registration {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Draft", pending_approval: "Pending",
-  open: "Open", filling_fast: "Filling Fast",
-  registration_closed: "Reg. Closed", in_progress: "In Progress",
-  completed: "Completed", cancelled: "Cancelled",
-};
-const STATUS_DOT: Record<string, string> = {
-  draft: "bg-muted-foreground", pending_approval: "bg-amber-400",
-  open: "bg-primary", filling_fast: "bg-primary",
-  registration_closed: "bg-blue-400", in_progress: "bg-green-500",
-  completed: "bg-green-700", cancelled: "bg-red-400",
-};
+// See the note in admin/page.tsx. These two maps were a divergent copy of the
+// ones there, and the unguarded lookups below rendered a BLANK label and no
+// dot colour for any status they had not enumerated -- `approved` and
+// `published` both hit that.
 
 const TIER_LABELS: Record<string, string> = { title: "Title", gold: "Gold", silver: "Silver", standard: "Standard" };
 const TIER_COLORS: Record<string, string> = {
@@ -804,8 +798,8 @@ export default function DirectorPage() {
               <div className="font-semibold text-sm truncate">{selected?.name ?? "No tournaments"}</div>
               {selected && (
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[selected.status]}`} />
-                  <span className="text-[10px] text-muted-foreground">{STATUS_LABELS[selected.status]} · {selected.city}</span>
+                  <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT_CLASS[tournamentOpsStatus(selected.status).tone]}`} />
+                  <span className="text-[10px] text-muted-foreground">{tournamentOpsStatus(selected.status).label} · {selected.city}</span>
                 </div>
               )}
             </div>
@@ -819,7 +813,7 @@ export default function DirectorPage() {
               <button key={t.id} onClick={() => { setSelectedId(t.id); setTournamentPickerOpen(false); setRegsLoaded(null); setManagementLoaded(null); setMobileSidebarOpen(false); setSubmitErrors([]); }}
                 className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${t.id === selectedId ? "bg-primary/10 text-foreground" : "hover:bg-secondary text-muted-foreground"}`}>
                 <div className="flex items-center gap-2">
-                  <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[t.status]}`} />
+                  <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${STATUS_DOT_CLASS[tournamentOpsStatus(t.status).tone]}`} />
                   <span className="truncate">{t.name}</span>
                 </div>
               </button>
@@ -1116,7 +1110,7 @@ export default function DirectorPage() {
                     <div className="space-y-2">
                       {tournaments.slice(0, 4).map((t) => (
                         <button key={t.id} onClick={() => setSelectedId(t.id)} className={`w-full text-left flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors ${t.id === selectedId ? "bg-primary/10" : "hover:bg-secondary"}`}>
-                          <span className={`h-2 w-2 rounded-full flex-shrink-0 ${STATUS_DOT[t.status]}`} />
+                          <span className={`h-2 w-2 rounded-full flex-shrink-0 ${STATUS_DOT_CLASS[tournamentOpsStatus(t.status).tone]}`} />
                           <span className="text-xs truncate flex-1">{t.name}</span>
                           <span className="text-[10px] font-mono text-muted-foreground">{Math.round((t.registered / t.draw_size) * 100)}%</span>
                         </button>
@@ -1200,7 +1194,7 @@ export default function DirectorPage() {
                         </div>
                         <span className="font-mono text-xs text-muted-foreground w-10 sm:w-12 text-right flex-shrink-0">{pct}%</span>
                         <span className="font-mono text-xs text-primary w-16 sm:w-20 text-right flex-shrink-0">{fmt(t.revenue_cents)}</span>
-                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border w-16 sm:w-20 text-center flex-shrink-0 ${STATUS_DOT[t.status] === "bg-primary" ? "text-primary border-primary/30" : "text-muted-foreground border-border"}`}>{STATUS_LABELS[t.status]}</span>
+                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border w-16 sm:w-20 text-center flex-shrink-0 ${STATUS_BADGE_CLASS[tournamentOpsStatus(t.status).tone]}`}>{tournamentOpsStatus(t.status).label}</span>
                       </div>
                     );
                   })}

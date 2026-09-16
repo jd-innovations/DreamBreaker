@@ -21,6 +21,8 @@ import type { UserProfile as MessagingUserProfile } from "@/components/messaging
 import { NotificationBell } from "@/components/notifications/bell";
 import { TicketPanel } from "@/components/support/ticket-panel";
 import { PaymentReconciliation, type ReconciliationItem } from "@/components/admin/payment-reconciliation";
+import { tournamentOpsStatus } from "@shared/status";
+import { STATUS_DOT_CLASS } from "@/lib/status";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -105,22 +107,13 @@ interface EmailSponsor {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const STATUS_DOT: Record<string, string> = {
-  draft: "bg-muted-foreground",
-  pending_approval: "bg-amber-400",
-  open: "bg-primary",
-  filling_fast: "bg-orange-400",
-  registration_closed: "bg-slate-400",
-  in_progress: "bg-green-400",
-  completed: "bg-muted-foreground",
-  cancelled: "bg-red-400",
-};
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Draft", pending_approval: "Pending",
-  open: "Open", filling_fast: "Filling Fast",
-  registration_closed: "Reg. Closed", in_progress: "In Progress",
-  completed: "Completed", cancelled: "Cancelled",
-};
+// Status labels and colours now come from packages/shared/src/status.ts. The
+// two maps that used to live here and in director/page.tsx had identical
+// labels and different colours for half the statuses -- `completed` was grey
+// here and green there -- and neither covered `approved` or `published`.
+//
+// tournamentOpsStatus, not the player view: an admin needs `in_progress` to
+// say "In progress", where a player is shown "Open".
 const ROLE_COLOR: Record<string, string> = {
   admin: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
   director: "text-blue-400 border-blue-400/40 bg-blue-400/10",
@@ -1360,9 +1353,9 @@ export default function AdminPage() {
                     <div key={t.id} className="flex flex-wrap items-center gap-4 p-4 sm:p-5 border-b border-border/50 last:border-0">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                          <span className={`h-2 w-2 rounded-full flex-shrink-0 ${STATUS_DOT[t.status] ?? "bg-muted-foreground"}`} />
+                          <span className={`h-2 w-2 rounded-full flex-shrink-0 ${STATUS_DOT_CLASS[tournamentOpsStatus(t.status).tone]}`} />
                           <span className="font-medium text-sm">{t.name}</span>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border text-muted-foreground border-border">{STATUS_LABEL[t.status] ?? t.status}</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border text-muted-foreground border-border">{tournamentOpsStatus(t.status).label}</span>
                           {t.featured && (
                             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border text-amber-400 border-amber-400/40 bg-amber-400/10 flex items-center gap-1"><Star size={9} weight="fill" /> FEATURED</span>
                           )}

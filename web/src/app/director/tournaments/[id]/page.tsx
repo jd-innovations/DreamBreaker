@@ -14,6 +14,8 @@ import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { BracketTree } from "@/components/shared/bracket-tree";
+import { tournamentOpsStatus } from "@shared/status";
+import { STATUS_BADGE_CLASS } from "@/lib/status";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -116,20 +118,13 @@ const STRUCTURE_LABELS: Record<string, string> = {
   mlp: "MLP Format",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Draft",
-  pending_approval: "Pending Approval",
-  approved: "Approved",
-  published: "Live",
-  cancelled: "Cancelled",
-};
-const STATUS_COLORS: Record<string, string> = {
-  draft: "text-muted-foreground border-border",
-  pending_approval: "text-amber-400 border-amber-400/40 bg-amber-400/10",
-  approved: "text-blue-400 border-blue-400/40 bg-blue-400/10",
-  published: "text-primary border-primary/40 bg-primary/10",
-  cancelled: "text-red-400 border-red-400/40 bg-red-400/10",
-};
+// THIRD copy of a tournament status map, and the most divergent: it covered
+// only five of the ten statuses, so a live tournament fell through to
+// `tournament.status.toUpperCase()` and rendered the raw token
+// "REGISTRATION_CLOSED". It also called `published` "Live" where the other two
+// pages said "Published".
+//
+// Now from packages/shared/src/status.ts like the rest.
 const TIER_LABELS: Record<string, string> = { title: "Title", gold: "Gold", silver: "Silver", standard: "Standard" };
 const TIER_COLORS: Record<string, string> = {
   title: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
@@ -742,9 +737,9 @@ export default function DirectorTournamentPage() {
           <UploadSimple size={13} weight="bold" /> CHANGE BANNER
         </button>
         <div className="absolute top-4 left-4 flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono tracking-wider ${STATUS_COLORS[tournament.status] ?? ""}`}>
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono tracking-wider ${STATUS_BADGE_CLASS[tournamentOpsStatus(tournament.status).tone]}`}>
             {tournament.status === "published" ? <Lightning size={11} weight="fill" /> : <Clock size={11} weight="bold" />}
-            {STATUS_LABELS[tournament.status] ?? tournament.status.toUpperCase()}
+            {tournamentOpsStatus(tournament.status).label}
           </span>
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-border bg-background/70 text-xs font-mono tracking-wider text-muted-foreground">
             {structureLabel}
