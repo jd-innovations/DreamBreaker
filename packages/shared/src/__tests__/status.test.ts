@@ -24,6 +24,28 @@ describe('tournamentPlayerStatus — mobile’s collapse, preserved', () => {
     expect(tournamentPlayerStatus('in_progress', true)).toMatchObject({ key: 'completed' });
   });
 
+  // Mobile's `status` field drives LOGIC, not just labels -- calendar
+  // eligibility, director groupings, discovery filters all compare against
+  // these strings. A key that does not line up with mobile's union would
+  // silently change behaviour on the day mobile adopts this module, which is
+  // exactly the kind of drift the shared package exists to prevent.
+  it('returns keys that match mobile’s app-level union exactly', () => {
+    const mobileUnion = new Set([
+      'draft', 'pending_approval', 'open', 'filling_fast',
+      'full', 'upcoming', 'completed', 'cancelled',
+    ]);
+    const dbValues = [
+      'draft', 'pending_approval', 'approved', 'published', 'open',
+      'filling_fast', 'registration_closed', 'in_progress', 'completed',
+      'cancelled', 'something_unseen',
+    ];
+    for (const s of dbValues) {
+      for (const finished of [false, true]) {
+        expect(mobileUnion).toContain(tournamentPlayerStatus(s, finished).key);
+      }
+    }
+  });
+
   it('falls back to Upcoming for statuses it does not enumerate', () => {
     expect(tournamentPlayerStatus('approved')).toMatchObject({ key: 'upcoming' });
     expect(tournamentPlayerStatus('published')).toMatchObject({ key: 'upcoming' });

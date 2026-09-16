@@ -73,7 +73,12 @@ export function tournamentPlayerStatus(
     case 'draft':
       return { key: 'draft', label: 'Draft', tone: 'neutral' };
     case 'pending_approval':
-      return { key: 'pending', label: 'Pending', tone: 'info' };
+      // Key matches mobile's app-level union exactly ('pending_approval',
+      // not 'pending'). Mobile's `status` field drives LOGIC as well as
+      // labels -- calendar eligibility, director groupings, discovery
+      // filters -- so a key that does not line up would silently change
+      // behaviour the day mobile adopts this, not just wording.
+      return { key: 'pending_approval', label: 'Pending', tone: 'info' };
     case 'open':
       return { key: 'open', label: 'Open', tone: 'positive' };
     case 'filling_fast':
