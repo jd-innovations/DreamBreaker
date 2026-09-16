@@ -19,11 +19,22 @@ import { PLUS_ENTITLEMENT, type MembershipOffer, type PurchaseOutcome } from './
 // Public SDK key. Safe in the bundle by design -- it can only make non-potent
 // changes to a subscriber. The secret key must never appear in the app.
 //
-// Empty on the `production` profile until an App Store app config exists in
-// RevenueCat and mints an `appl_` key. A `test_` key is RevenueCat's Test
-// Store: the SDK works and no real purchase is ever made, which is exactly
-// what we want on development and preview.
-const API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? '';
+// ABSENT on the `production` profile until an App Store app config exists in
+// RevenueCat and mints an `appl_` key. Absent rather than empty because EAS
+// rejects an empty env value outright ("is not allowed to be empty") and the
+// build will not start. A `test_` key is RevenueCat's Test Store: the SDK works
+// and no real purchase is ever made, which is what we want on development and
+// preview.
+//
+// The string checks are not paranoia. An undefined EXPO_PUBLIC_* can reach the
+// bundle as the literal text "undefined" depending on how the export ran, and
+// a key of "undefined" would configure the SDK with garbage instead of cleanly
+// doing nothing. Same trap the web env loader documents for NEXT_PUBLIC_*.
+const RAW_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
+const API_KEY =
+  !RAW_KEY || RAW_KEY === 'undefined' || RAW_KEY === 'null' || RAW_KEY.trim() === ''
+    ? ''
+    : RAW_KEY.trim();
 
 let configured = false;
 

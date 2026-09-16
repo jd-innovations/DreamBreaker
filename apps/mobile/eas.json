@@ -27,8 +27,7 @@
       "channel": "production",
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_APP_ENV": "production",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": ""
+        "EXPO_PUBLIC_APP_ENV": "production"
       },
       "environment": "production"
     }
