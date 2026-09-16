@@ -267,13 +267,30 @@ found no direct evidence of an actual oversized-chunk problem caused by it**
 (no Phosphor-specific chunk was identified as anomalously large in the build
 output). Listed as a cheap, safe addition rather than a proven regression.
 
-### F7 — No pagination on the largest admin/director list views — **LOW-MEDIUM, low reach**
+### F7 — No pagination on the largest admin/director list views — **CHECKED in Phase 5, not currently warranted**
 
-`admin/page.tsx` renders 54 separate `.map()` calls with no `.range()` or
-`.limit()` visible on its list queries, consistent with unbounded lists
-rendered in full. Lower priority than F1-F3 because this surface is used by
-a handful of internal staff, not the consumer base — the same pattern on a
-player-facing screen would be MEDIUM-HIGH.
+Original claim: `admin/page.tsx` renders 54 separate `.map()` calls with no
+`.range()`/`.limit()` on its list queries, consistent with unbounded lists
+rendered in full.
+
+**Checked against real row counts before touching anything (Phase 5),
+because the plan itself gated this on "only if it becomes a real
+complaint" and no complaint exists — this was a proactive audit, not a
+response to a reported problem, so the honest move was to verify the
+premise rather than execute a refactor speculatively.** Queried production
+directly: `tournaments` 14 rows, `profiles` 51, `coach_offers` 33,
+`registrations` 22, `marketplace_listings` 5. `facilities` is the one table
+with real volume (489 rows) — but `admin/page.tsx` doesn't query it at all;
+that table is handled by the separate, purpose-built
+`admin/facility-import/page.tsx`. Every list this page actually renders
+tops out under 60 rows.
+
+There is currently nothing to paginate. The pattern (no `.range()`/`.limit()`)
+is real and worth having in mind if any of these tables grow by an order of
+magnitude, but building pagination UI and query state across the largest
+file in the app today would be speculative work against a condition that
+hasn't occurred, for tables an order of magnitude below where it would
+matter. Left as a documented pattern to watch, not a fix to make now.
 
 ---
 
@@ -390,12 +407,16 @@ actual before/after network trace — this is where real measurement would
 turn "up to eight sequential round-trips became two" into a measured
 millisecond number rather than a call-count argument.
 
-### Phase 5 — F7, only if it becomes a real complaint
+### Phase 5 — F7: checked against real data, condition not met — **DONE (verification, no code change)**
 
-Server-side pagination for `admin/page.tsx`'s list views. Held to last
-because current reach is small (internal staff) and the fix is more
-involved than the others (touches queries, not just rendering) — worth
-doing, not worth doing before the phases that affect every visitor.
+The plan's own gate was explicit: "only if it becomes a real complaint."
+There has been no complaint, so this phase's job was to check whether the
+premise even holds before building anything speculative. It doesn't — see
+F7's corrected entry above. Every table `admin/page.tsx` lists from is
+under 60 rows in production today; the one table with real volume
+(`facilities`, 489 rows) isn't queried by this page at all. No code
+changed. This is the honest outcome of "only if," not a shortcut taken to
+skip the phase.
 
 ---
 
@@ -576,3 +597,45 @@ Left untouched; audit's F4 entry corrected in place.
 zero new warnings on either changed file, `next build` succeeds, 53 tests
 pass. **Not verified:** a real network trace turning "fewer round-trips"
 into a measured number — same caveat as every other phase in this log.
+
+### Phase 5 (F7 — checked, not executed)
+
+Queried production directly rather than estimating: `tournaments` 14 rows,
+`profiles` 51, `coach_offers` 33, `registrations` 22, `marketplace_listings`
+5. `facilities` (489 rows, the one table with real volume) is not queried
+by `admin/page.tsx` at all — that's handled by the separate
+`admin/facility-import/page.tsx`. The plan's own gate on this phase was
+"only if it becomes a real complaint"; checking the real numbers before
+writing any pagination code is what taking that gate seriously looks like,
+rather than either skipping the phase silently or building speculative UI
+against a condition that hasn't occurred. No code changed in this phase.
+
+---
+
+## 6. Summary of all five phases
+
+| Phase | What | Status |
+| --- | --- | --- |
+| 1 | Supabase host in `remotePatterns`, `optimizePackageImports`, remove dead `framer-motion` | Done |
+| 2 | Defer PostHog off the critical path; Sentry left untouched (deliberately early-loading, already lean) | Done, F1 corrected in execution |
+| 3 | Convert `<img>` to `next/image`, 32 of 36 real tags, 4 left deliberately with stated reasons | Done |
+| 4 | Parallelize `profile/page.tsx` and `matchmaking/page.tsx` data loads; defer messaging-list fetches to on-open | Done, F4 corrected rather than executed |
+| 5 | Admin pagination | Checked against real row counts; condition not met, nothing built |
+
+**Two findings (F1's Sentry claim, F4's `select("*")` convention) turned out
+wrong or overstated on closer inspection during execution, and both are
+corrected in place in this document rather than quietly fixed.** That's
+worth stating plainly rather than leaving implicit: a third of this audit's
+original findings needed revision once someone actually went to act on
+them, which is the argument for treating an audit's severity ranking as a
+starting hypothesis, not a verdict — exactly the caveat Section 4 asked the
+reader to hold onto from the start.
+
+**What remains unverified across all five phases, stated once rather than
+repeated per-phase:** no Lighthouse run, no Core Web Vitals field data, no
+live network trace, no gzip-measured transfer sizes. Every phase's
+"verified" claims are `tsc`, `eslint`, `next build`, and the test suite —
+real, but they prove the code is correct and builds, not that a real
+visitor's page got faster by a measured amount. That measurement is the
+one thing this session could not produce without a live deploy and a
+browser attached to it.
