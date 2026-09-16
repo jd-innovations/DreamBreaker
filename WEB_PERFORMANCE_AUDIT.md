@@ -639,3 +639,66 @@ real, but they prove the code is correct and builds, not that a real
 visitor's page got faster by a measured amount. That measurement is the
 one thing this session could not produce without a live deploy and a
 browser attached to it.
+
+---
+
+## 7. Post-promote finding: a real regression in Phase 3's own work
+
+Found via a live PageSpeed Insights run against the promoted site (LCP 7.7s,
+2,584 KiB of image savings flagged, on a deployment confirmed already
+promoted). That contradicted what Phase 3 should have produced. Curling the
+live HTML showed the hero and featured-tournament images were still plain
+`<img>` tags with the pre-conversion className — the promoted build did not
+contain Phase 3's changes as expected, which led to checking the actual
+`next/image` conversion for correctness rather than assuming the report was
+just measuring a stale deploy.
+
+**What was actually wrong:** Phase 3 converted every site rendering
+`tournaments.cover_img_url` and sponsor `logo_url` to `next/image` without
+checking whether those fields could hold an arbitrary host. Both are
+free-text — `logo_url` is `fd.get("sp_logo")` from a plain form input, no
+upload flow. `next/image` throws at render time for a host outside
+`remotePatterns`; in a client component with no error boundary, that is a
+React render error, not a broken-image icon.
+
+**Confirmed live, not hypothetical:** one real tournament ("Test Hero",
+status `registration_closed`) has `cover_img_url` on `hartru.com`, a host
+nowhere in `remotePatterns`. Both the public `/tournaments` list and the
+landing page's featured section include `registration_closed` in their
+status filter — this tournament renders on both, for every anonymous
+visitor. It was one promote away from crashing either page.
+
+**Scope, once actually checked rather than assumed:** 10 sites across 7
+files — not the 2 the PageSpeed report pointed at directly. Found by
+grepping every `next/image` usage against both free-text fields.
+
+**The fix:** `lib/image-hosts.ts` is now the single source of truth for
+optimizable hosts; `next.config.ts`'s `remotePatterns` is generated from it
+instead of hand-duplicated — closing the actual gap, which was that the
+config list and every call site's assumption of safety were two
+unconnected things kept in sync by hand. `components/shared/safe-image.tsx`
+checks a src against that list and falls back to a plain `<img>` for
+anything unlisted, so an unknown host degrades to a broken image, never a
+crashed page. Scoped to exactly the two free-text fields — everything
+sourced from this app's own upload flow (avatar/cover/marketplace photos,
+always a Supabase Storage URL) was traced to confirm it's safe by
+construction and left on `next/image` directly.
+
+**What this means for Phase 3's "verified" claims above:** they were true
+as far as they went — `tsc`, `eslint`, and `next build` all passed, because
+none of those catch "this value can be attacker- or user-controlled and
+the library throws on the wrong input." That is a category of bug static
+checks and a clean build cannot surface; only reasoning about where a value
+comes from catches it, which this session's first pass through Phase 3 did
+for the director banner *preview* field (correctly left as plain `<img>`)
+but did not extend to the structurally identical `cover_img_url` and
+`logo_url` cases sitting right next to it in the same files. Worth naming
+as the actual lesson: getting the reasoning right once in one place is not
+the same as applying it everywhere the same shape of risk appears.
+
+Verified: `tsc --noEmit` clean project-wide, `eslint` zero errors, `next
+build` succeeds, 57 tests pass — including one asserting
+`isOptimizableImageUrl` returns `false` for the exact `hartru.com` URL live
+in production. **Not yet verified:** a fresh PageSpeed run against the
+re-promoted site, which is the only way to confirm the original LCP/image
+findings actually improve now that the conversion is real.
