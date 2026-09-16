@@ -1,5 +1,6 @@
 import { ogClient } from "./client";
 import type { OgPayload } from "./types";
+import { formatCents } from "@shared/money";
 
 // Every fetcher returns `null` for anything that should not get a real
 // preview: not found, wrong id shape, or a row RLS hides from an anonymous
@@ -137,7 +138,10 @@ export async function fetchMarketplaceListingOg(id: string): Promise<OgPayload |
     .limit(1)
     .maybeSingle();
 
-  const price = `$${(data.asking_price_cents / 100).toFixed(0)}`;
+  // Missed by C1: a THIRTEENTH money formatter, and the one with the widest
+  // reach, since this text is the link preview people see in a chat before
+  // they open anything. toFixed(0) rendered a $249.99 paddle as "$250".
+  const price = formatCents(data.asking_price_cents, { omitZeroCents: true });
   const location = joinParts([data.location_city, data.location_state]);
   return {
     entityType: "marketplace",
