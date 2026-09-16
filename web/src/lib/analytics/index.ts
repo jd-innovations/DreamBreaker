@@ -23,7 +23,15 @@
 // identifying on its own and it is the join key that turns "someone dropped out
 // of checkout" into "this stuck booking".
 
-import posthog from "posthog-js";
+// posthog-js is loaded with a DYNAMIC import inside initAnalytics rather
+// than statically here -- WEB_PERFORMANCE_AUDIT.md F1. A static import in a
+// module reachable from the root layout (via AnalyticsProvider, which is
+// mounted unconditionally) means the ~260KB library rides in the initial
+// bundle of EVERY page, including anonymous public ones that have nothing
+// to identify yet. There is no correctness reason analytics needs to be
+// present before first paint -- unlike Sentry's instrumentation-client.ts,
+// which loads early ON PURPOSE to catch hydration-time errors, and is left
+// untouched here.
 import {
   sanitizeProperties,
   type AnalyticsEvent,
@@ -31,13 +39,19 @@ import {
 } from "@shared/analytics";
 import { getPostHogKey, getPostHogHost } from "./env";
 
+type PostHog = typeof import("posthog-js").default;
+
+// Set together, after the dynamic import resolves. Every call site below
+// guards on `started` before touching `posthogRef`, so the two must never
+// go true/non-null out of step with each other.
+let posthogRef: PostHog | null = null;
 let started = false;
 
 /**
  * Initialises the SDK once. Safe to call repeatedly — React strict mode in
  * development mounts effects twice, and a second init would double every event.
  */
-export function initAnalytics(config: { key?: string; host?: string }): void {
+export async function initAnalytics(config: { key?: string; host?: string }): Promise<void> {
   if (started || typeof window === "undefined") return;
 
   // The values are ARGUMENTS, not reads. See ./env.ts — reading process.env in
@@ -47,22 +61,43 @@ export function initAnalytics(config: { key?: string; host?: string }): void {
   const key = getPostHogKey(config.key);
   if (!key) return;
 
-  posthog.init(key, {
-    api_host: getPostHogHost(config.host),
-    person_profiles: "identified_only",
-    autocapture: false,
-    capture_pageview: false,
-    capture_pageleave: false,
-    disable_session_recording: true,
-    // Web vitals slipped through the first time. It is not autocapture, so the
-    // flags above do not cover it — but it still sends events nobody asked for,
-    // each carrying the current URL, and the claim in this file's header is
-    // that nothing is collected by default. Observed in production 2026-08-31
-    // as $web_vitals on /profile.
-    capture_performance: false,
-  });
+  // The download happens here, on first effect run — after the page has
+  // already painted, not before. Wrapped in try/catch: a static import
+  // can only fail the whole bundle at build time, but a dynamic import()
+  // is a real network request an ad blocker or an offline visitor can
+  // fail at runtime — a new failure mode this change introduces, and
+  // every other exported function in this file is already "never
+  // throws" for the same reason: an analytics failure must not surface
+  // as a console error or an unhandled rejection Sentry then reports.
+  try {
+    // `{ default: posthog }` because posthog-js ships a default export;
+    // destructuring at the import site (rather than
+    // `const posthog = (await import(...)).default`) keeps the call
+    // below identical to what it was as a static import.
+    const { default: posthog } = await import("posthog-js");
 
-  started = true;
+    posthog.init(key, {
+      api_host: getPostHogHost(config.host),
+      person_profiles: "identified_only",
+      autocapture: false,
+      capture_pageview: false,
+      capture_pageleave: false,
+      disable_session_recording: true,
+      // Web vitals slipped through the first time. It is not autocapture, so the
+      // flags above do not cover it — but it still sends events nobody asked for,
+      // each carrying the current URL, and the claim in this file's header is
+      // that nothing is collected by default. Observed in production 2026-08-31
+      // as $web_vitals on /profile.
+      capture_performance: false,
+    });
+
+    posthogRef = posthog;
+    started = true;
+  } catch {
+    // Deliberately silent — see the module doc and track()'s comment.
+    // `started` stays false, so every call site above correctly no-ops
+    // instead of throwing on a null posthogRef.
+  }
 }
 
 /**
@@ -101,12 +136,12 @@ function reportRejected(event: AnalyticsEvent, dropped: string[], forbidden: str
  */
 export function track(event: AnalyticsEvent, properties?: AnalyticsProperties): void {
   try {
-    if (!started) return;
+    if (!started || !posthogRef) return;
 
     const { properties: safe, dropped, forbidden } = sanitizeProperties(properties);
     reportRejected(event, dropped, forbidden);
 
-    posthog.capture(event, { ...safe, platform: "web" });
+    posthogRef.capture(event, { ...safe, platform: "web" });
   } catch {
     // Deliberately silent — see above.
   }
@@ -121,8 +156,8 @@ export function track(event: AnalyticsEvent, properties?: AnalyticsProperties): 
  */
 export function identifyUser(userId: string): void {
   try {
-    if (!started) return;
-    posthog.identify(userId);
+    if (!started || !posthogRef) return;
+    posthogRef.identify(userId);
   } catch {
     /* see track */
   }
@@ -134,8 +169,8 @@ export function identifyUser(userId: string): void {
  */
 export function resetAnalytics(): void {
   try {
-    if (!started) return;
-    posthog.reset();
+    if (!started || !posthogRef) return;
+    posthogRef.reset();
   } catch {
     /* see track */
   }

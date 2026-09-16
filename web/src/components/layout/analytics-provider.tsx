@@ -27,7 +27,12 @@ export function AnalyticsProvider({
   // that imports posthog-js cannot reliably read process.env — see
   // lib/analytics/env.ts for what that cost.
   useEffect(() => {
-    initAnalytics({ key: posthogKey, host: posthogHost });
+    // initAnalytics is async now -- it dynamic-imports posthog-js rather
+    // than the module carrying a static import (WEB_PERFORMANCE_AUDIT.md
+    // F1). Fire-and-forget is correct here: the effect has nothing to
+    // clean up, and initAnalytics itself never throws (see its own
+    // comment) -- there is no rejection for `void` to silently swallow.
+    void initAnalytics({ key: posthogKey, host: posthogHost });
   }, [posthogKey, posthogHost]);
 
   // ── Identity ──────────────────────────────────────────────────────────────
