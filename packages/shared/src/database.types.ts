@@ -7300,6 +7300,10 @@ export type Database = {
             }
             Returns: string
           }
+      admin_clear_handle: {
+        Args: { p_reason?: string; p_user_id: string }
+        Returns: Json
+      }
       admin_commit_facility_import: {
         Args: { p_admin_id: string; p_batch_id: string; p_decisions?: Json }
         Returns: {
@@ -8453,6 +8457,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      join_tournament_waitlist: {
+        Args: { p_division_id?: string; p_tournament_id: string }
+        Returns: Json
       }
       list_facility_manager_applications: {
         Args: { p_status?: string }

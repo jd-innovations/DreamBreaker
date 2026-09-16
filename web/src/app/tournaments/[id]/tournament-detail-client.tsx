@@ -498,28 +498,50 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     setJoiningWaitlist(true);
     try {
       const supabase = createClient();
-      // Get next waitlist position for this tournament
-      const { data: lastPos } = await supabase
-        .from("registrations")
-        .select("waitlist_position")
-        .eq("tournament_id", id)
-        .in("status", ["waitlisted", "waitlist_offered"])
-        .order("waitlist_position", { ascending: false })
-        .limit(1)
-        .single();
-      const nextPos = ((lastPos as { waitlist_position: number | null } | null)?.waitlist_position ?? 0) + 1;
-      const { error } = await supabase.from("registrations").insert({
-        tournament_id: id,
-        player_id: userId,
-        division_id: divisionId,
-        status: "waitlisted",
-        waitlist_position: nextPos,
+      // The position is assigned SERVER-side (join_tournament_waitlist).
+      //
+      // This used to read the current maximum, add one in the browser, and
+      // insert — three round trips with no lock between them, so two people
+      // tapping within the same second both read the same maximum and both
+      // took the same position. The index was not unique, so nothing caught it
+      // and promote_next_waitlisted() then ordered them arbitrarily.
+      //
+      // The RPC is also idempotent, which the old path was not: a double tap
+      // returns the position already held instead of attempting a second row.
+      const { data, error } = await supabase.rpc("join_tournament_waitlist", {
+        p_tournament_id: id,
+        // The SQL parameter has a DEFAULT, so the generated type is optional
+        // rather than nullable. A tournament with no divisions passes null
+        // here, which has to become undefined to match.
+        p_division_id: divisionId ?? undefined,
       });
-      if (error) { toast.error("Could not join waitlist. You may already be on it."); return; }
-      setWaitlistPosition(nextPos);
-      toast.success(`You're #${nextPos} on the waitlist!`, {
-        description: "We'll notify you by email when a spot opens up.",
-      });
+
+      if (error) {
+        // The server's refusals are specific; say which one happened rather
+        // than guessing "you may already be on it" at everything.
+        const message =
+          error.message.includes("already_registered")
+            ? "You already have a place in this tournament."
+            : error.message.includes("tournament_not_accepting")
+              ? "This tournament is not accepting waitlist entries."
+              : error.message.includes("not_signed_in")
+                ? "Sign in to join the waitlist."
+                : "Could not join the waitlist. Please try again.";
+        toast.error(message);
+        return;
+      }
+
+      const result = data as { position?: number; reason?: string } | null;
+      const position = result?.position ?? null;
+      if (position != null) setWaitlistPosition(position);
+
+      if (result?.reason === "already_waitlisted") {
+        toast.info(`You're already #${position} on the waitlist.`);
+      } else {
+        toast.success(`You're #${position} on the waitlist!`, {
+          description: "We'll notify you by email when a spot opens up.",
+        });
+      }
     } finally {
       setJoiningWaitlist(false);
     }
