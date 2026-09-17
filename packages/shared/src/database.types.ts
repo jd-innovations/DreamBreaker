@@ -2711,6 +2711,7 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          invite_token: string | null
           location: string | null
           name: string
           organizer_id: string
@@ -2726,6 +2727,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          invite_token?: string | null
           location?: string | null
           name: string
           organizer_id: string
@@ -2741,6 +2743,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          invite_token?: string | null
           location?: string | null
           name?: string
           organizer_id?: string
@@ -8269,6 +8272,16 @@ export type Database = {
           waitlisted: number
         }[]
       }
+      get_group_preview_by_invite_token: {
+        Args: { p_token: string }
+        Returns: {
+          description: string
+          id: string
+          image_url: string
+          member_count: number
+          name: string
+        }[]
+      }
       get_or_create_direct_conversation: {
         Args: { p_partner_id: string }
         Returns: string
@@ -8404,6 +8417,10 @@ export type Database = {
           invitation_id: string
           token: string
         }[]
+      }
+      join_group_via_invite_token: {
+        Args: { p_token: string }
+        Returns: undefined
       }
       join_play_event: {
         Args: {
