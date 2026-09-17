@@ -12,6 +12,16 @@ import { SafeImage } from "@/components/shared/safe-image";
 const formats = ["All", "Doubles", "Singles", "Mixed", "Juniors"];
 const levels = ["All", "3.0 – 4.0", "3.5 – 4.5", "4.0 – 5.0", "4.5+", "U18"];
 
+// Local calendar date (YYYY-MM-DD), not UTC — a tournament should stay
+// listed on the day it's actually being played and drop off the next
+// morning. Mirrors apps/mobile/src/lib/tournamentTypes.ts's
+// isTournamentExpired(), which exists precisely because toISOString()'s
+// UTC day cuts an event off hours early for anyone west of UTC.
+function todayLocalDateString(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 type TournamentRow = {
   id: string;
   name: string;
@@ -61,6 +71,7 @@ export default function TournamentsPage() {
         .from("tournaments")
         .select("id,name,city,state,venue_name,venue_address,cover_img_url,format,skill_min,skill_max,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,prize_pool_cents,event_date,status")
         .in("status", ["open", "filling_fast", "registration_closed"])
+        .gte("event_date", todayLocalDateString())
         .order("event_date", { ascending: true });
       if (error) throw error;
       setRows(data ?? []);
