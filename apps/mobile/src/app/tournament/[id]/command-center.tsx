@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -238,6 +238,13 @@ function CommandCenterScreen() {
   const [allBrackets, setAllBrackets]   = React.useState(() => getAllBrackets(id));
   const [matchCounts, setMatchCounts]   = React.useState(() => getBracketMatchCounts(id));
   const [loading, setLoading]           = React.useState(true);
+  // Separate from `loading`: that one gates the initial full-screen spinner
+  // only (see the `if (loading || !tournament)` guard below) and never flips
+  // back to true on a refocus refetch. Without a distinct flag, pull-to-refresh
+  // would have to either reuse `loading` (re-triggering the full-screen
+  // spinner on every pull) or silently do nothing while the request is in
+  // flight -- neither is what a "pull down to refresh" gesture should do.
+  const [refreshing, setRefreshing]     = React.useState(false);
   const [roster, setRoster]             = React.useState<TournamentRegistration[]>([]);
   const [exporting, setExporting]       = React.useState(false);
   const [submittingApproval, setSubmittingApproval] = React.useState(false);
@@ -282,6 +289,18 @@ function CommandCenterScreen() {
   }, [id]);
 
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+
+  // Manual refresh: a director approving their own tournament from the web
+  // admin console (the only place approval happens today -- there is no
+  // mobile approve action) has no way to see that land here short of leaving
+  // this screen and coming back, since refresh() only re-runs on focus.
+  // Pull-to-refresh gives them an on-demand way to confirm it went through
+  // without navigating away.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }, [refresh]);
 
   async function handleExportRoster() {
     if (!tournament) return;
@@ -409,6 +428,9 @@ function CommandCenterScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 100 }]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={L.gold} />
+        }
       >
 
         {/* ── SECTION 2 — OPERATIONS SUMMARY ── */}
