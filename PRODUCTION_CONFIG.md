@@ -55,6 +55,17 @@ restart.
 | `DEV_TOOLS_SECRET` | `web/src/app/api/dev/**` | **dev only** | **YES** | Platform | see warning below |
 | `NEXT_PUBLIC_SENTRY_DSN` | `instrumentation-client.ts`, `sentry.*.config.ts` | all | no (public by design) | Platform | `/api/admin/sentry-test` as an admin |
 | `SENTRY_AUTH_TOKEN` | build-time source-map upload | all | **YES** | Platform | stack traces show filenames, not chunk offsets |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | `web/src/components/nearby-map.tsx` | all | no (browser-restricted key) | Platform | **not yet provisioned** — see below |
+
+**`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` — added for the Community Play "nearby"
+map view (COMMUNITY_GAMES_WEB_PLAN.md Phase 5), not yet provisioned.** Needs a
+Google Cloud project with the Maps JavaScript API enabled, billing
+configured, and the key restricted by HTTP referrer to the production +
+preview domains. Until it's set, `/play`'s map toggle stays hidden
+(`isMapAvailable()` returns false) and the page behaves exactly as it did
+before this key existed — list view only, no build or runtime error. Map
+loads are billed per load by Google, so confirm expected traffic before
+this goes live in production.
 
 **`DEV_TOOLS_SECRET` must be UNSET in production.** It gates the dev-only
 payment-simulation and test-fixture routes. Those routes already hard-404 when

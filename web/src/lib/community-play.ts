@@ -8,11 +8,16 @@ export type PlayMatch = Database["public"]["Tables"]["play_matches"]["Row"];
 export type PlayEventType = Database["public"]["Enums"]["play_event_type"];
 export type PlayEventStatus = Database["public"]["Enums"]["play_event_status"];
 
+// `practice` is deliberately excluded from this list, matching mobile: it's
+// a private 1-on-1 "Invite to Play" match, not a publicly creatable/
+// discoverable Community Play event type.
 export const EVENT_TYPES: { value: PlayEventType; label: string; available: boolean }[] = [
+  { value: "open_play", label: "Quick Game", available: true },
   { value: "round_robin", label: "Round Robin", available: true },
-  { value: "mixer", label: "Mixer", available: false },
+  { value: "mini_tournament", label: "Mini Tournament", available: true },
+  { value: "clinic", label: "Clinic", available: true },
+  { value: "mixer", label: "Mixer", available: true },
   { value: "ladder", label: "Ladder", available: false },
-  { value: "open_play", label: "Open Play", available: false },
   { value: "kings_court", label: "King's Court", available: false },
 ];
 
@@ -48,6 +53,38 @@ export function statusLabel(status: PlayEventStatus): string {
     case "completed": return "Completed";
     case "cancelled": return "Cancelled";
   }
+}
+
+// Matches mobile's SKILL_RANGES exactly (apps/mobile/src/components/
+// FindGamesFilterModal.tsx) so the skill filter bands read the same on both
+// platforms.
+export const SKILL_RANGES: { label: string; min: number; max: number | null }[] = [
+  { label: "3.0 – 3.5", min: 3.0, max: 3.5 },
+  { label: "3.5 – 4.0", min: 3.5, max: 4.0 },
+  { label: "4.0 – 4.5", min: 4.0, max: 4.5 },
+  { label: "4.5+", min: 4.5, max: null },
+];
+
+/**
+ * Does an event's skill_min/skill_max overlap any of the selected skill
+ * bands? Events with no skill range set always pass (mobile's semantics —
+ * "All Levels" events aren't excluded by a skill filter). Pass an empty
+ * `selectedLabels` to mean "no filter" (returns true for everything).
+ */
+export function skillRangeOverlaps(
+  eventMin: number | null,
+  eventMax: number | null,
+  selectedLabels: string[],
+): boolean {
+  if (selectedLabels.length === 0) return true;
+  if (eventMin == null && eventMax == null) return true;
+  const ranges = SKILL_RANGES.filter((r) => selectedLabels.includes(r.label));
+  const eMax = eventMax ?? eventMin ?? Infinity;
+  const eMin = eventMin ?? -Infinity;
+  return ranges.some((r) => {
+    const rMax = r.max ?? Infinity;
+    return eMin <= rMax && eMax >= r.min;
+  });
 }
 
 export function skillLabel(min: number | null, max: number | null): string {

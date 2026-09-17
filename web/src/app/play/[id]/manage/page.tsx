@@ -189,6 +189,12 @@ export default function ManagePlayEventPage({ params }: { params: Promise<{ id: 
     );
   }
 
+  // Round robin and mini tournament are the two structured/bracket-style
+  // types — quick games, mixers, and clinics stay casual RSVP events with no
+  // schedule, matching mobile (which has no round-robin generator at all;
+  // this scheduling engine is web-only, added for the types that want it).
+  const isBracketType = event.event_type === "round_robin" || event.event_type === "mini_tournament";
+
   const nameOf = (pid: string | null) => {
     if (!pid) return "BYE";
     const p = participants.find((x) => x.id === pid);
@@ -232,7 +238,11 @@ export default function ManagePlayEventPage({ params }: { params: Promise<{ id: 
               }`}>{statusLabel(event.status).toUpperCase()}</span>
             </div>
             <h1 className="font-display text-3xl tracking-wide">{event.name}</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{eventTypeLabel(event.event_type)} · {formatLabel(event.format)} · {participants.length}/{event.max_players} players</p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {eventTypeLabel(event.event_type)}
+              {event.event_type === "round_robin" ? ` · ${formatLabel(event.format)}` : ""}
+              {` · ${participants.length}/${event.max_players} players`}
+            </p>
           </div>
         </div>
 
@@ -248,8 +258,12 @@ export default function ManagePlayEventPage({ params }: { params: Promise<{ id: 
           </button>
         </div>
 
-        {/* Format selector */}
-        {(() => {
+        {/* Format selector + match generation: only meaningful for the two
+            structured/bracket-style event types. Quick games, mixers, and
+            clinics are casual RSVP events on mobile too — they never get a
+            round-robin schedule there, so this section (a web-only addition
+            on top of play_events) shouldn't invent one for them either. */}
+        {isBracketType && (() => {
           const editable = event.status === "open" || event.status === "full";
           const activeFmt = parseFormat(event.format);
           const activeOpt = FORMAT_OPTIONS.find((o) => o.format === activeFmt);
@@ -288,13 +302,13 @@ export default function ManagePlayEventPage({ params }: { params: Promise<{ id: 
 
         {/* Lifecycle controls */}
         <div className="flex flex-wrap gap-2 mb-8">
-          {(event.status === "open" || event.status === "full") && (
+          {isBracketType && (event.status === "open" || event.status === "full") && (
             <button onClick={generateMatches} disabled={busy || participants.length < 2}
               className="h-10 px-5 rounded-full bg-secondary border border-border hover:border-primary/50 text-sm font-display tracking-wider transition-colors flex items-center gap-2 disabled:opacity-50">
               <ArrowClockwise size={15} weight="bold" /> {matches.length > 0 ? "REGENERATE" : "GENERATE"} MATCHES
             </button>
           )}
-          {(event.status === "open" || event.status === "full") && matches.length > 0 && (
+          {(event.status === "open" || event.status === "full") && (!isBracketType || matches.length > 0) && (
             <button onClick={() => updateStatus("in_progress")} disabled={busy}
               className="h-10 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider transition-colors flex items-center gap-2">
               <Play size={15} weight="fill" /> START EVENT
@@ -306,11 +320,13 @@ export default function ManagePlayEventPage({ params }: { params: Promise<{ id: 
               <FlagCheckered size={15} weight="fill" /> COMPLETE EVENT
             </button>
           )}
-          <Link href={`/play/${id}/standings`}>
-            <button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors flex items-center gap-2">
-              <Trophy size={15} weight="fill" className="text-primary" /> STANDINGS
-            </button>
-          </Link>
+          {isBracketType && (
+            <Link href={`/play/${id}/standings`}>
+              <button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors flex items-center gap-2">
+                <Trophy size={15} weight="fill" className="text-primary" /> STANDINGS
+              </button>
+            </Link>
+          )}
         </div>
 
         {/* Participants */}
