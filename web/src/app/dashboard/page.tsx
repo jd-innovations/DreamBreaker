@@ -278,14 +278,23 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [navSection, setNavSection] = useState<NavSection>("dashboard");
+  const [dmDirectorId, setDmDirectorId] = useState<string | null>(null);
 
-  // Open a specific section when linked with ?section= (e.g. from the mobile nav).
+  // Open a specific section when linked with ?section= (e.g. from the mobile
+  // nav, or a "Message" button elsewhere on the site). ?dm=<userId> additionally
+  // opens a direct conversation with that user — used by the Groups Members
+  // tab (GROUPS_WEB_PLAN.md Phase 2) to deep-link into messaging the way
+  // this page's own "Message Director" buttons already do internally via
+  // setDmDirectorId, just reachable from outside this component now too.
   useEffect(() => {
-    const sec = new URLSearchParams(window.location.search).get("section");
+    const params = new URLSearchParams(window.location.search);
+    const sec = params.get("section");
+    const dm = params.get("dm");
     const allowed: NavSection[] = ["dashboard", "events", "matches", "saved", "messages", "matchmaking", "settings"];
     // One-time init from the URL query; intentional setState on mount.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (sec && (allowed as string[]).includes(sec)) setNavSection(sec as NavSection);
+    if (dm) setDmDirectorId(dm);
   }, []);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [messagingUnread, setMessagingUnread] = useState(0);
@@ -324,7 +333,6 @@ export default function DashboardPage() {
     })();
     return () => { stale = true; };
   }, [cancelTarget]);
-  const [dmDirectorId, setDmDirectorId] = useState<string | null>(null);
   const [removingBookmarkId, setRemovingBookmarkId] = useState<string | null>(null);
   const [registerTarget, setRegisterTarget] = useState<SavedTournament | null>(null);
   const [registerFormat, setRegisterFormat] = useState<string>("");

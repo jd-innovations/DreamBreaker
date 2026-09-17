@@ -14,6 +14,7 @@ import { NotificationBell } from "@/components/notifications/bell";
 const navLinks = [
   { to: "/tournaments",  label: "Tournaments",   testid: "nav-tournaments" },
   { to: "/play",         label: "Community Play", testid: "nav-community-play" },
+  { to: "/groups",       label: "Groups",        testid: "nav-groups" },
   { to: "/matchmaking",  label: "Matchmaking",   testid: "nav-matchmaking" },
   { to: "/dashboard",    label: "Player",        testid: "nav-player" },
   { to: "/director",     label: "Director",      testid: "nav-director" },
