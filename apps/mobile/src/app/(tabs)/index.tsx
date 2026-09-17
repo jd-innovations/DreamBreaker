@@ -147,8 +147,6 @@ const TRENDING = [
   },
 ];
 
-const FALLBACK_TOURNEY_PHOTO = 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&h=600&fit=crop&q=80';
-
 // Takes the raw ISO event date (YYYY-MM-DD), not the already-human-formatted
 // display string — re-parsing a formatted string like "Jul 31, 2026" via
 // `new Date(string)` is implementation-defined per spec and unreliable on
@@ -173,7 +171,11 @@ function tournamentToFeatured(t: Tournament): typeof FEATURED[0] {
     players: t.spotsFilled,
     holdSpots: Math.max(0, t.drawSize - t.spotsFilled),
     pctFilled,
-    photo: t.coverImgUrl ?? FALLBACK_TOURNEY_PHOTO,
+    // '' is the "no real cover" sentinel FeaturedCard's eventCoverSource()
+    // call resolves to the bundled default-court-cover.jpg — not a remote
+    // stock photo. See mini-tournament-created.tsx / round-robin-created.tsx
+    // for the same pattern.
+    photo: t.coverImgUrl ?? '',
   };
 }
 
@@ -313,7 +315,7 @@ function FeaturedCard({ item }: { item: typeof FEATURED[0] }) {
       activeOpacity={0.92}
       onPress={() => router.push(`/tournament/${item.id}` as never)}
     >
-      <Image source={{ uri: item.photo }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <Image source={eventCoverSource(item.photo)} style={StyleSheet.absoluteFill} resizeMode="cover" />
       <LinearGradient
         colors={['rgba(0,0,0,0.08)', 'rgba(0,0,0,0.72)']}
         style={StyleSheet.absoluteFill}
@@ -619,7 +621,7 @@ export default function HomeScreen() {
           for (const t of active) {
             setEventShell(t.id, {
               name: t.name,
-              photo: { uri: t.coverImgUrl ?? FALLBACK_TOURNEY_PHOTO },
+              photo: eventCoverSource(t.coverImgUrl),
               datetime: formatDateRange(t.eventDate),
               venue: t.venue,
             });

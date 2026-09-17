@@ -45,6 +45,7 @@ import { getOrCreateConversation } from '@/lib/conversationService';
 import { useSupportContext } from '@/lib/support/supportContext';
 import { appLinks } from '@/lib/appLinks';
 import { shareEntity } from '@/lib/share';
+import { eventCoverSource } from '@/lib/eventCover';
 import type { Tournament } from '@/lib/tournamentTypes';
 import type { DivisionData } from '@/data/divisions';
 
@@ -73,11 +74,11 @@ const L = {
   redBg:     colors.dangerBg,
 };
 
-// Fallback only. Previously used unconditionally — the hero never showed a
-// director's real cover image at all, regardless of tournament.coverImgUrl,
-// which read as a jarring flash-to-wrong-image once the F7 shell (which does
-// use the real cover) started showing the correct photo first.
-const HERO_PHOTO     = 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&h=600&fit=crop&q=80';
+// Director avatar fallback only — a headshot placeholder, unrelated to the
+// tournament-cover bug fixed via eventCoverSource() below. Flagging rather
+// than fixing silently: this is a different image category (profile photo,
+// not event cover) and worth its own decision on whether to swap in a
+// bundled local default too.
 const DIRECTOR_PHOTO = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&q=80';
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
@@ -604,7 +605,7 @@ export default function TournamentDetail() {
         {/* HERO */}
         <View style={[s.hero, { height: HERO_H }]}>
           <Animated.Image
-            source={{ uri: tournament.coverImgUrl ?? HERO_PHOTO }}
+            source={eventCoverSource(tournament.coverImgUrl)}
             style={[StyleSheet.absoluteFill, { transform: [{ scale: heroScale }] }]}
             resizeMode="cover"
           />
