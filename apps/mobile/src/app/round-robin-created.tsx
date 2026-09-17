@@ -38,13 +38,11 @@ import {
 import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilities';
 import { shareEntity } from '@/lib/share';
 import { FacilityCard } from '@/components/FacilityCard';
+import { eventCoverSource } from '@/lib/eventCover';
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
 
 const { width: SW } = Dimensions.get('window');
-
-const FALLBACK_PHOTO =
-  'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&h=450&fit=crop&q=80';
 
 // ─── Theme alias ────────────────────────────────────────────────────────────────
 
@@ -164,7 +162,7 @@ function playEventToRR(e: PlayEvent): RoundRobin {
     id:              e.id,
     type:            'round_robin',
     title:           e.name,
-    imageUri:        e.cover_url ?? FALLBACK_PHOTO,
+    imageUri:        e.cover_url ?? '',
     date:            e.event_date,
     startTime:       e.start_time ? `${e.event_date}T${e.start_time}` : e.event_date,
     duration:        '2 Hours',
@@ -238,7 +236,7 @@ export default function RoundRobinCreatedScreen() {
         id: 'rr-demo',
         type: 'round_robin',
         title: 'Wednesday Round Robin',
-        imageUri: FALLBACK_PHOTO,
+        imageUri: '',
         date: new Date().toISOString(),
         startTime: new Date().toISOString(),
         duration: '2 Hours',
@@ -666,7 +664,7 @@ export default function RoundRobinCreatedScreen() {
       {/* ── FULL-BLEED HERO ── */}
       <View style={s.hero}>
         <Image
-          source={{ uri: g.imageUri || FALLBACK_PHOTO }}
+          source={eventCoverSource(g.imageUri)}
           style={StyleSheet.absoluteFill}
           resizeMode="cover"
         />

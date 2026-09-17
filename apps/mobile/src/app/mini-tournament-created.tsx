@@ -33,13 +33,11 @@ import {
 import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilities';
 import { shareEntity } from '@/lib/share';
 import { FacilityCard } from '@/components/FacilityCard';
+import { eventCoverSource } from '@/lib/eventCover';
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
 
 const { width: SW } = Dimensions.get('window');
-
-const FALLBACK_PHOTO =
-  'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&h=450&fit=crop&q=80';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -53,7 +51,7 @@ function playEventToMT(e: PlayEvent): MiniTournament {
     id:               e.id,
     type:             'mini_tournament',
     title:            e.name,
-    imageUri:         e.cover_url ?? FALLBACK_PHOTO,
+    imageUri:         e.cover_url ?? '',
     date:             e.event_date,
     startTime:        e.start_time ? `${e.event_date}T${e.start_time}` : e.event_date,
     duration:         '—',
@@ -183,7 +181,7 @@ const DEFAULT_TOURNAMENT: MiniTournament = {
   id: 'mt-demo',
   type: 'mini_tournament',
   title: 'Summer Slam Mini',
-  imageUri: FALLBACK_PHOTO,
+  imageUri: '',
   date: new Date(2025, 6, 12, 9, 0).toISOString(),
   startTime: new Date(2025, 6, 12, 9, 0).toISOString(),
   duration: '3 Hours',
@@ -603,7 +601,7 @@ export default function MiniTournamentCreatedScreen() {
       {/* ── HERO ── */}
       <View style={s.hero}>
         <Image
-          source={{ uri: g.imageUri || FALLBACK_PHOTO }}
+          source={eventCoverSource(g.imageUri)}
           style={StyleSheet.absoluteFill}
           resizeMode="cover"
         />

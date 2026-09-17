@@ -20,9 +20,6 @@ import { FillBar } from './FillBar';
 // Named TournamentTrendingCard because a different, smaller TournamentCard
 // already exists locally on the facility screen.
 
-const FALLBACK_TOURNEY_PHOTO =
-  'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&h=600&fit=crop&q=80';
-
 export type TrendingTournament = {
   id: string;
   badge: string;
@@ -81,7 +78,17 @@ export function tournamentToTrending(t: Tournament): TrendingTournament {
     // and "Hold My Spot · $0" reads like a broken price.
     holdFee: t.holdFeeCents > 0 ? `$${Math.round(t.holdFeeCents / 100)}` : 'Free',
     entryFee: `$${Math.round(t.entryFeeCents / 100)}`,
-    photo: t.coverImgUrl ?? FALLBACK_TOURNEY_PHOTO,
+    // director/create-tournament.tsx already asks for a hero image and shows
+    // the bundled local placeholder (DEFAULT_EVENT_COVER) when the director
+    // hasn't uploaded one yet -- that flow was never the problem. This card's
+    // own render dropped the hero image entirely (see the card{} style comment
+    // below), so `photo` isn't rendered by this component today; empty string
+    // is the "no real cover" sentinel for whoever reads it next, matching the
+    // imageUri pattern in round-robin-created.tsx / mini-tournament-created.tsx.
+    // A remote stock photo has no place here even unrendered -- the bundled
+    // default is a render-time concern for eventCoverSource(photo) to apply,
+    // not something to bake into the data.
+    photo: t.coverImgUrl ?? '',
     logoLines: [words.slice(0, mid).join(' '), words.slice(mid).join(' ')],
     primaryAction: t.status === 'filling_fast' ? 'hold' as const : 'view' as const,
   };
