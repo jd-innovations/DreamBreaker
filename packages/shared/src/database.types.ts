@@ -3754,6 +3754,8 @@ export type Database = {
       payments: {
         Row: {
           amount_cents: number
+          card_brand: string | null
+          card_last4: string | null
           confirmed_at: string | null
           created_at: string
           currency: string
@@ -3773,6 +3775,8 @@ export type Database = {
         }
         Insert: {
           amount_cents: number
+          card_brand?: string | null
+          card_last4?: string | null
           confirmed_at?: string | null
           created_at?: string
           currency?: string
@@ -3792,6 +3796,8 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
+          card_brand?: string | null
+          card_last4?: string | null
           confirmed_at?: string | null
           created_at?: string
           currency?: string

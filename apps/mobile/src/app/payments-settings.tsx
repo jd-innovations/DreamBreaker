@@ -53,6 +53,7 @@ const PURPOSE_META: Record<PurchasePurposeType, { icon: string; bg: string; labe
   tournament_team_entry:           { icon: 'people',     bg: L.navy,   label: 'Team Registration' },
   coach_offer_purchase:            { icon: 'bag',        bg: L.purple, label: 'Coach Marketplace' },
   reservation_payment:             { icon: 'tennisball', bg: L.teal,   label: 'Court Booking' },
+  reservation_join_fee:            { icon: 'tennisball', bg: L.teal,   label: 'Court Booking' },
 };
 
 const FALLBACK_META = { icon: 'card', bg: L.navy, label: 'Purchase' };

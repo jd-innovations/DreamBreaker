@@ -10,7 +10,8 @@ export type PurchasePurposeType =
   | 'tournament_registration_balance'
   | 'tournament_team_entry'
   | 'coach_offer_purchase'
-  | 'reservation_payment';
+  | 'reservation_payment'
+  | 'reservation_join_fee';
 
 export type PurchaseStatus = 'succeeded' | 'refunded' | 'partially_refunded';
 

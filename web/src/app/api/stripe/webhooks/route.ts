@@ -174,6 +174,41 @@ export async function POST(request: Request) {
   return NextResponse.json({ received: true });
 }
 
+// Payment Receipt redesign (2026-09-17): captures card brand + last4 from
+// Stripe's own PaymentMethod object at the moment a payment succeeds, so a
+// receipt can show "Visa •••• 8180" instead of nothing — `payments` never
+// stored this before, and it cannot be recovered for anything that succeeded
+// earlier. Deliberately not part of finalizePaymentSucceeded()/
+// finalizePayment.ts: that file is also called by the dev-only payment
+// simulation route, which has no real Stripe PaymentMethod to retrieve, and
+// mixing Stripe API calls into the shared domain-dispatch function would
+// break that path. A failure here is logged and swallowed rather than
+// thrown — a receipt with no card info is a cosmetic gap, not a reason to
+// fail the webhook (which Stripe would then retry) or block finalization.
+async function captureCardDetails(
+  service: ServiceClient,
+  paymentId: string,
+  paymentMethod: string | Stripe.PaymentMethod | null,
+): Promise<void> {
+  if (!paymentMethod) return;
+  try {
+    const paymentMethodId = typeof paymentMethod === "string" ? paymentMethod : paymentMethod.id;
+    const pm = await getStripe().paymentMethods.retrieve(paymentMethodId);
+    if (!pm.card) return; // Not a card payment method (e.g. a bank-debit method) — nothing to show.
+
+    const { error } = await service
+      .from("payments")
+      .update({ card_brand: pm.card.brand, card_last4: pm.card.last4 })
+      .eq("id", paymentId);
+
+    if (error) {
+      console.error(`[stripe webhook] could not save card details for payment ${paymentId} :: ${error.message}`);
+    }
+  } catch (err) {
+    console.error(`[stripe webhook] could not retrieve card details for payment ${paymentId}`, err);
+  }
+}
+
 async function handlePaymentEvent(service: ServiceClient, event: Stripe.Event) {
   if (event.type === "charge.refunded") {
     const charge = event.data.object as Stripe.Charge;
@@ -238,6 +273,9 @@ async function handlePaymentEvent(service: ServiceClient, event: Stripe.Event) {
   }
 
   if (event.type === "payment_intent.succeeded") {
+    // Best-effort — a receipt missing card info is a cosmetic gap, not a
+    // reason to fail the webhook or block the domain finalization below.
+    await captureCardDetails(service, payment.id, intent.payment_method);
     await finalizePaymentSucceeded(service, payment.id);
     return;
   }

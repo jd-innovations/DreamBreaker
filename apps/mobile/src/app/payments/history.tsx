@@ -33,6 +33,7 @@ const PURPOSE_META: Record<PurchasePurposeType, { label: string; icon: string }>
   tournament_team_entry: { label: 'Team entry', icon: 'people-outline' },
   coach_offer_purchase: { label: 'Lesson', icon: 'school-outline' },
   reservation_payment: { label: 'Court reservation', icon: 'calendar-outline' },
+  reservation_join_fee: { label: 'Court reservation', icon: 'calendar-outline' },
 };
 
 
