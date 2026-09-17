@@ -360,36 +360,67 @@ export default function DashboardPage() {
       setCurrentUserId(userId);
       const user = { id: userId };
 
-      const { data: userProfiles } = await supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name");
-      setAllUsers((userProfiles ?? []) as MessagingUserProfile[]);
+      // Perf: these ten queries depend on nothing but `user.id` and not on
+      // each other, so they ran one after another for no reason (flagged in
+      // WEB_PERFORMANCE_AUDIT.md F3, fixed here the same way Phase 4 already
+      // fixed the identical pattern in profile.tsx/matchmaking.tsx). The
+      // unbounded, unfiltered all-profiles fetch that used to run FIRST —
+      // blocking every query below it behind a full-table scan for a
+      // Messages recipient picker the visitor may never open — is gone from
+      // this load entirely; see the separate effect below that fetches it
+      // only once the visitor actually opens Messages.
+      const [
+        { data: mutual },
+        { data: mySwipes },
+        { data: incomingLikes },
+        { data: prof },
+        { data: regs },
+        { data: matchRows },
+        { count },
+        { data: bookmarkRows },
+        { data: playRows },
+        { data: duprRows },
+      ] = await Promise.all([
+        // Matchmaking matches + pending likes → "New Matches" strip in Messages
+        supabase.from("v_mutual_matches").select("user_a,user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`),
+        supabase.from("matchmaking_swipes").select("target_id").eq("requester_id", user.id),
+        supabase.from("matchmaking_swipes").select("requester_id").eq("target_id", user.id).eq("direction", "like"),
+        supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state").eq("id", user.id).single(),
+        (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+          .from("registrations")
+          .select("id, status, hold_expires_at, tournament:tournaments!tournament_id(id, name, city, state, event_date, status, director_id, cancellation_policy, refund_cutoff_days, entry_fee_cents)")
+          .eq("player_id", user.id)
+          .in("status", ["held", "registered", "checked_in"])
+          .order("created_at", { ascending: false })
+          .limit(10),
+        supabase
+          .from("bracket_matches")
+          .select("id, round, winner, score_team1, score_team2, completed_at, scheduled_at, tournament:tournaments!tournament_id(name), t1a:profiles!team1_player_a(full_name), t1b:profiles!team1_player_b(full_name), t2a:profiles!team2_player_a(full_name), t2b:profiles!team2_player_b(full_name)")
+          .or(`team1_player_a.eq.${user.id},team1_player_b.eq.${user.id},team2_player_a.eq.${user.id},team2_player_b.eq.${user.id}`)
+          .not("winner", "is", null)
+          .order("completed_at", { ascending: false })
+          .limit(20),
+        supabase.from("registrations").select("tournament_id", { count: "exact", head: true }).eq("player_id", user.id).in("status", ["registered", "checked_in"]),
+        (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+          .from("tournament_bookmarks")
+          .select("id, tournament:tournaments!tournament_id(id, name, city, state, event_date, director_id, entry_fee_cents, formats, skill_min, skill_max, venue_name, description)")
+          .eq("player_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(10),
+        supabase
+          .from("play_events")
+          .select("id, name, event_date, status, max_players, play_participants(count)")
+          .eq("organizer_id", user.id)
+          .order("event_date", { ascending: false })
+          .limit(20),
+        supabase.from("dupr_history").select("delta").eq("player_id", user.id).order("recorded_at", { ascending: false }).limit(5),
+      ]);
 
-      // Matchmaking matches + pending likes → "New Matches" strip in Messages
-      const { data: mutual } = await supabase.from("v_mutual_matches").select("user_a,user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
       const matchIds = (mutual ?? []).map((m) => m.user_a === user.id ? m.user_b : m.user_a).filter(Boolean) as string[];
-      if (matchIds.length > 0) {
-        const { data: mp } = await supabase.from("profiles").select("id,full_name,avatar_url,dupr,skill_level").in("id", matchIds);
-        setMmMatches((mp ?? []).map((p) => ({ id: p.id, name: p.full_name ?? "Player", avatar: p.avatar_url, dupr: p.dupr, skill: p.skill_level })));
-      }
-      const { data: mySwipes } = await supabase.from("matchmaking_swipes").select("target_id").eq("requester_id", user.id);
       const swipedSet = new Set((mySwipes ?? []).map((s) => s.target_id));
-      const { data: incomingLikes } = await supabase.from("matchmaking_swipes").select("requester_id").eq("target_id", user.id).eq("direction", "like");
       setMmLikes(new Set((incomingLikes ?? []).map((s) => s.requester_id).filter((id) => !swipedSet.has(id))).size);
 
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("id,full_name,handle,dupr,skill_level,location_city,location_state")
-        .eq("id", user.id)
-        .single();
       if (prof) setProfile(prof);
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: regs } = await (supabase as any)
-        .from("registrations")
-        .select("id, status, hold_expires_at, tournament:tournaments!tournament_id(id, name, city, state, event_date, status, director_id, cancellation_policy, refund_cutoff_days, entry_fee_cents)")
-        .eq("player_id", user.id)
-        .in("status", ["held", "registered", "checked_in"])
-        .order("created_at", { ascending: false })
-        .limit(10);
 
       const liveUpcoming: UpcomingEvent[] = (regs ?? [])
         .map((r: { id: string; status: string; hold_expires_at?: string | null; tournament: { id: string; name: string; city: string; state: string; event_date: string; status: string; director_id?: string | null; cancellation_policy?: string | null; refund_cutoff_days?: number | null; entry_fee_cents?: number | null } | null }) => {
@@ -403,14 +434,6 @@ export default function DashboardPage() {
       // registrations they never made.
       setUpcoming(liveUpcoming);
 
-      const { data: matchRows } = await supabase
-        .from("bracket_matches")
-        .select("id, round, winner, score_team1, score_team2, completed_at, scheduled_at, tournament:tournaments!tournament_id(name), t1a:profiles!team1_player_a(full_name), t1b:profiles!team1_player_b(full_name), t2a:profiles!team2_player_a(full_name), t2b:profiles!team2_player_b(full_name)")
-        .or(`team1_player_a.eq.${user.id},team1_player_b.eq.${user.id},team2_player_a.eq.${user.id},team2_player_b.eq.${user.id}`)
-        .not("winner", "is", null)
-        .order("completed_at", { ascending: false })
-        .limit(20);
-
       if (matchRows && matchRows.length > 0) {
         const processed = matchRows.map((m) => processMatch(m as Parameters<typeof processMatch>[0], user.id));
         setMatches(processed);
@@ -419,11 +442,8 @@ export default function DashboardPage() {
         setMatches([]);
       }
 
-      const { count } = await supabase.from("registrations").select("tournament_id", { count: "exact", head: true }).eq("player_id", user.id).in("status", ["registered", "checked_in"]);
       if (count && count > 0) setStats((s) => ({ ...s, tournaments: count }));
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: bookmarkRows } = await (supabase as any).from("tournament_bookmarks").select("id, tournament:tournaments!tournament_id(id, name, city, state, event_date, director_id, entry_fee_cents, formats, skill_min, skill_max, venue_name, description)").eq("player_id", user.id).order("created_at", { ascending: false }).limit(10);
       if (bookmarkRows && bookmarkRows.length > 0) {
         setSaved(bookmarkRows.map((b: { id: string; tournament: unknown }) => {
           const t = b.tournament as { id: string; name: string; city: string; state: string; event_date: string; director_id?: string | null; entry_fee_cents?: number | null; formats?: string[]; skill_min?: number | null; skill_max?: number | null; venue_name?: string | null; description?: string | null } | null;
@@ -431,25 +451,58 @@ export default function DashboardPage() {
         }));
       }
 
+      if (playRows && playRows.length > 0) {
+        setHostedPlay(playRows.map((e: { id: string; name: string; event_date: string; status: string; max_players: number; play_participants: { count: number }[] | { count: number } }) => ({
+          id: e.id,
+          name: e.name,
+          event_date: e.event_date,
+          status: e.status,
+          max_players: e.max_players,
+          participant_count: Array.isArray(e.play_participants) ? (e.play_participants[0]?.count ?? 0) : (e.play_participants?.count ?? 0),
+        })));
+      }
+
+      if (duprRows && duprRows.length > 0) {
+        const delta = duprRows.reduce((sum, r) => sum + (r.delta ?? 0), 0);
+        setStats((s) => ({ ...s, duprDelta: Math.round(delta * 100) / 100 }));
+      }
+
+      // Round 2: matched-profile lookup needs matchIds from round 1;
+      // recommended tournaments needs liveUpcoming's ids from round 1. Not
+      // dependent on EACH OTHER, so still one Promise.all rather than two
+      // more sequential awaits.
+      const validRegisteredIds = liveUpcoming.map((e) => e.id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let recQuery = (supabase as any)
+        .from("tournaments")
+        // capacity:draw_size -- there is no tournaments.capacity column. This
+        // selected a column that does not exist, so PostgREST returned 400 and
+        // the recommended strip rendered empty in production. The mock path
+        // below supplies `capacity` directly, which is why it looked fine
+        // locally. Aliased rather than renamed so the display code is untouched.
+        .select("id, name, city, state, event_date, format, entry_fee_cents, capacity:draw_size, venue_name, skill_min, skill_max")
+        .neq("status", "draft")
+        .order("event_date")
+        .limit(12);
+      if (validRegisteredIds.length > 0) {
+        recQuery = recQuery.not("id", "in", `(${validRegisteredIds.join(",")})`);
+      }
+
+      const [mpResult, recResult] = await Promise.all([
+        matchIds.length > 0
+          ? supabase.from("profiles").select("id,full_name,avatar_url,dupr,skill_level").in("id", matchIds)
+          : Promise.resolve({ data: null as { id: string; full_name: string | null; avatar_url: string | null; dupr: number | null; skill_level: string | null }[] | null }),
+        recQuery,
+      ]);
+
+      if (matchIds.length > 0) {
+        const mp = mpResult.data;
+        setMmMatches((mp ?? []).map((p) => ({ id: p.id, name: p.full_name ?? "Player", avatar: p.avatar_url, dupr: p.dupr, skill: p.skill_level })));
+      }
+
       // Recommended tournaments — ordered by proximity then date
       {
-        const validRegisteredIds = liveUpcoming.map((e) => e.id);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let recQuery = (supabase as any)
-          .from("tournaments")
-          // capacity:draw_size -- there is no tournaments.capacity column. This
-          // selected a column that does not exist, so PostgREST returned 400 and
-          // the recommended strip rendered empty in production. The mock path
-          // below supplies `capacity` directly, which is why it looked fine
-          // locally. Aliased rather than renamed so the display code is untouched.
-          .select("id, name, city, state, event_date, format, entry_fee_cents, capacity:draw_size, venue_name, skill_min, skill_max")
-          .neq("status", "draft")
-          .order("event_date")
-          .limit(12);
-        if (validRegisteredIds.length > 0) {
-          recQuery = recQuery.not("id", "in", `(${validRegisteredIds.join(",")})`);
-        }
-        const { data: recRows, error: recError } = await recQuery;
+        const { data: recRows, error: recError } = recResult;
         console.log("[recommended]", recRows?.length ?? 0, "rows", recError?.message ?? "");
         if (recRows && recRows.length > 0) {
           const recIds = recRows.map((r: { id: string }) => r.id);
@@ -483,32 +536,6 @@ export default function DashboardPage() {
         }
       }
 
-      // Community Play events hosted by this user
-      {
-        const { data: playRows } = await supabase
-          .from("play_events")
-          .select("id, name, event_date, status, max_players, play_participants(count)")
-          .eq("organizer_id", user.id)
-          .order("event_date", { ascending: false })
-          .limit(20);
-        if (playRows && playRows.length > 0) {
-          setHostedPlay(playRows.map((e: { id: string; name: string; event_date: string; status: string; max_players: number; play_participants: { count: number }[] | { count: number } }) => ({
-            id: e.id,
-            name: e.name,
-            event_date: e.event_date,
-            status: e.status,
-            max_players: e.max_players,
-            participant_count: Array.isArray(e.play_participants) ? (e.play_participants[0]?.count ?? 0) : (e.play_participants?.count ?? 0),
-          })));
-        }
-      }
-
-      const { data: duprRows } = await supabase.from("dupr_history").select("delta").eq("player_id", user.id).order("recorded_at", { ascending: false }).limit(5);
-      if (duprRows && duprRows.length > 0) {
-        const delta = duprRows.reduce((sum, r) => sum + (r.delta ?? 0), 0);
-        setStats((s) => ({ ...s, duprDelta: Math.round(delta * 100) / 100 }));
-      }
-
       setLoading(false);
     }
 
@@ -521,6 +548,19 @@ export default function DashboardPage() {
       setLoading(false);
     });
   }, []);
+
+  // Perf: this is an unbounded, unfiltered scan of every profiles row,
+  // needed only by the Messages recipient picker. It used to run first in
+  // the main load above, blocking every other query behind a full-table
+  // fetch the visitor may never need — same fix Phase 4 already applied to
+  // the identical query in profile.tsx. Deferred here instead: fetched once,
+  // only after Messages is actually opened.
+  useEffect(() => {
+    if (navSection !== "messages" || allUsers.length > 0) return;
+    const supabase = createClient();
+    supabase.from("profiles").select("id,full_name,role,avatar_url").order("full_name")
+      .then(({ data }) => setAllUsers((data ?? []) as MessagingUserProfile[]));
+  }, [navSection, allUsers.length]);
 
   const firstName = profile?.full_name?.split(" ")[0]?.toUpperCase() ?? "PLAYER";
   const dupr = profile?.dupr;
