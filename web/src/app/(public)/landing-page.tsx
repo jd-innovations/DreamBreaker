@@ -32,11 +32,19 @@ interface FeaturedCard {
 async function getFeaturedTournaments(): Promise<FeaturedCard[]> {
   try {
     const supabase = await createClient();
+    // This is a Server Component — there's no viewer-local clock to read
+    // before hydration, so UTC "today" is the only defensible boundary here
+    // (unlike the client-side pages, which use the browser's own local
+    // date). Same bug this fixed on /tournaments: status alone never
+    // excluded a past event_date, so a tournament stuck in
+    // registration_closed with a past date stayed featured indefinitely.
+    const todayUtc = new Date().toISOString().slice(0, 10);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data } = await (supabase as any)
       .from("tournaments")
       .select("id,name,city,state,cover_img_url,event_date,draw_size,spots_filled,prize_pool_cents,status,featured")
       .in("status", ["open", "filling_fast", "registration_closed"])
+      .gte("event_date", todayUtc)
       // Featured first, then soonest events fill the remaining slots.
       .order("featured", { ascending: false })
       .order("event_date", { ascending: true })
