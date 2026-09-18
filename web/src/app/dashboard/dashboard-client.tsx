@@ -19,6 +19,7 @@ import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile, MatchSummary } from "@/components/messaging/panel";
 import { NotificationBell } from "@/components/notifications/bell";
 import { MatchSettingsPanel } from "@/components/shared/match-settings-panel";
+import { normalizeSchedule, isScheduleEmpty } from "@shared/availability";
 import { ProfileSettings } from "@/components/dashboard/profile-settings";
 import { COURT_IMG } from "@/lib/stock-images";
 import Image from "next/image";
@@ -32,6 +33,9 @@ type Profile = {
   skill_level: string | null;
   location_city: string | null;
   location_state: string | null;
+  play_style: string[] | null;
+  availability_schedule: unknown;
+  bio: string | null;
 };
 
 type SavedTournament = {
@@ -382,7 +386,7 @@ export default function DashboardPage() {
         supabase.from("v_mutual_matches").select("user_a,user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`),
         supabase.from("matchmaking_swipes").select("target_id").eq("requester_id", user.id),
         supabase.from("matchmaking_swipes").select("requester_id").eq("target_id", user.id).eq("direction", "like"),
-        supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state").eq("id", user.id).single(),
+        supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,play_style,availability_schedule,bio").eq("id", user.id).single(),
         (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
           .from("registrations")
           .select("id, status, hold_expires_at, tournament:tournaments!tournament_id(id, name, city, state, event_date, status, director_id, cancellation_policy, refund_cutoff_days, entry_fee_cents)")
@@ -1179,10 +1183,15 @@ export default function DashboardPage() {
               </div>
               <MatchSettingsPanel
                 myDupr={profile?.dupr ?? null}
-                myAvail={null}
+                // Truthy-only signal (MatchSettingsPanel just checks !!myAvail
+                // for the completeness bar, never renders the value) — checked
+                // against availability_schedule, the current structured field,
+                // not the legacy availability prose string, so an account set
+                // up entirely under the newer model still reads as complete.
+                myAvail={!isScheduleEmpty(normalizeSchedule(profile?.availability_schedule)) ? "set" : null}
                 myLocation={profile?.location_city ? `${profile.location_city}, ${profile.location_state ?? ""}`.trim().replace(/,$/, "") : null}
-                myStyle={null}
-                myBio={null}
+                myStyle={profile?.play_style && profile.play_style.length > 0 ? profile.play_style.join(",") : null}
+                myBio={profile?.bio ?? null}
               />
             </div>
           )}
