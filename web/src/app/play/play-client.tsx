@@ -27,6 +27,36 @@ type EventWithExtras = PlayEvent & {
 const STATUS_FILTERS = ["All", "Open", "Live", "Completed"] as const;
 type SortMode = "date" | "distance";
 
+/** Completed events reach back this far on first load. */
+const COMPLETED_LOOKBACK_START_DAYS = 7;
+/** Each "Load more" widens the window by this much… */
+const COMPLETED_LOOKBACK_STEP_DAYS = 30;
+/** …up to this ceiling, past which the button is retired. */
+const COMPLETED_LOOKBACK_MAX_DAYS = 365;
+
+// Local calendar date, not UTC — an event stays "today's" for the whole of
+// the viewer's own day. Same reasoning (and the same reason it isn't
+// toISOString()) as the tournaments list; see that page's copy of this.
+function localDateString(daysOffset = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + daysOffset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * What an event actually IS, as opposed to what its `status` column claims.
+ *
+ * Nothing transitions play_events.status when an event's date passes — that
+ * only happens if an organizer acts — so a June round robin sits in 'open'
+ * forever and advertises itself as joinable. A past date is the stronger
+ * signal and wins here, exactly as mobile's getTournamentStatus() already
+ * resolves the same conflict (apps/mobile/src/lib/tournamentStatus.ts).
+ */
+function effectiveStatus(e: { status: PlayEvent["status"]; event_date: string }): PlayEvent["status"] {
+  if (e.status === "completed" || e.status === "cancelled") return e.status;
+  return e.event_date < localDateString() ? "completed" : e.status;
+}
+
 function StatusBadge({ status }: { status: PlayEvent["status"] }) {
   const map: Record<string, string> = {
     open: "bg-primary/15 text-primary border-primary/30",
@@ -58,7 +88,7 @@ function EventCard({ e }: { e: EventWithExtras }) {
                 <NavigationArrow size={9} weight="fill" /> {formatDistanceMiles(e.distanceMi)}
               </span>
             )}
-            <StatusBadge status={e.status} />
+            <StatusBadge status={effectiveStatus(e)} />
           </div>
         </div>
 
@@ -134,7 +164,7 @@ export default function PlayBrowsePage() {
   const [rawEvents, setRawEvents] = useState<(PlayEvent & { participant_count: number; facility: { latitude: number; longitude: number } | null })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>("All");
+  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>("Open");
   const [typeFilter, setTypeFilter] = useState<PlayEventType | "all">("all");
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -146,6 +176,13 @@ export default function PlayBrowsePage() {
   const [hideFull, setHideFull] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  // How far back finished events are fetched. Upcoming events are never
+  // bounded; this only governs the Completed tab, which "Load more" widens
+  // in steps. Without a lower bound this query pulled every event ever
+  // created — 47 of the 48 it returned were months old and, because nothing
+  // transitions play_events.status when a date passes, all still stored as
+  // 'open'.
+  const [lookbackDays, setLookbackDays] = useState(COMPLETED_LOOKBACK_START_DAYS);
 
   useEffect(() => {
     let cancelled = false;
@@ -158,6 +195,7 @@ export default function PlayBrowsePage() {
             .select("*, facility:facilities!play_events_facility_id_fkey(latitude,longitude)")
             .neq("status", "cancelled")
             .neq("event_type", "practice")
+            .gte("event_date", localDateString(-lookbackDays))
             .order("event_date", { ascending: true }),
         );
         if (cancelled) return;
@@ -181,7 +219,7 @@ export default function PlayBrowsePage() {
     }
     load();
     return () => { cancelled = true; };
-  }, [reloadKey]);
+  }, [reloadKey, lookbackDays]);
 
   async function handleRequestLocation() {
     setLocating(true);
@@ -209,9 +247,12 @@ export default function PlayBrowsePage() {
   const maxDistanceMi = distanceStepToMiles(distanceStep);
 
   const filtered = events.filter((e) => {
-    if (statusFilter === "Open" && !(e.status === "open" || e.status === "full")) return false;
-    if (statusFilter === "Live" && e.status !== "in_progress") return false;
-    if (statusFilter === "Completed" && e.status !== "completed") return false;
+    // Derived, not stored — a past event is finished no matter what its
+    // status column says. See effectiveStatus().
+    const status = effectiveStatus(e);
+    if (statusFilter === "Open" && !(status === "open" || status === "full")) return false;
+    if (statusFilter === "Live" && status !== "in_progress") return false;
+    if (statusFilter === "Completed" && status !== "completed") return false;
     if (typeFilter !== "all" && e.event_type !== typeFilter) return false;
     if (hideFull && e.max_players > 0 && e.participant_count >= e.max_players) return false;
     // Distance filter only excludes events we could actually measure —
@@ -231,7 +272,12 @@ export default function PlayBrowsePage() {
       if (b.distanceMi == null) return -1;
       return a.distanceMi - b.distanceMi;
     }
-    return a.event_date.localeCompare(b.event_date);
+    // Past events read newest-first — the most recently finished game is the
+    // one someone browsing Completed is most likely looking for. Every other
+    // tab is forward-looking, so it stays soonest-first.
+    return statusFilter === "Completed"
+      ? b.event_date.localeCompare(a.event_date)
+      : a.event_date.localeCompare(b.event_date);
   });
 
   const activeFilterCount = (typeFilter !== "all" ? 1 : 0) + selectedSkillLabels.length + (hideFull ? 1 : 0) + (maxDistanceMi != null ? 1 : 0);
@@ -448,6 +494,31 @@ export default function PlayBrowsePage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {sorted.map((e) => <EventCard key={e.id} e={e} />)}
+          </div>
+        )}
+
+        {/* Completed only: the other tabs have no lower date bound to widen.
+            Rendered outside the results branch above so it's still reachable
+            when the current window happens to be empty. */}
+        {statusFilter === "Completed" && !loading && !error && (
+          <div className="mt-8 text-center">
+            {lookbackDays < COMPLETED_LOOKBACK_MAX_DAYS ? (
+              <>
+                <button
+                  onClick={() => setLookbackDays((d) => Math.min(d + COMPLETED_LOOKBACK_STEP_DAYS, COMPLETED_LOOKBACK_MAX_DAYS))}
+                  className="h-11 px-7 rounded-full border border-border hover:border-primary/50 font-display tracking-[0.15em] text-sm transition-colors inline-flex items-center gap-2"
+                >
+                  <ArrowClockwise size={16} weight="bold" /> LOAD MORE
+                </button>
+                <p className="text-muted-foreground text-xs mt-3">
+                  Showing the last {lookbackDays} days
+                </p>
+              </>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                Showing the last {COMPLETED_LOOKBACK_MAX_DAYS} days — that&apos;s as far back as this list goes.
+              </p>
+            )}
           </div>
         )}
       </section>
