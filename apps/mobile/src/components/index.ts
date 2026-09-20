@@ -39,6 +39,8 @@ export { QRScanner } from './QRScanner';
 export type { QRScannerHandle, QRScannerProps } from './QRScanner.types';
 export { AddToCalendarButton } from './AddToCalendarButton';
 export type { AddToCalendarButtonProps } from './AddToCalendarButton';
+export { PressableCTA } from './PressableCTA';
+export type { PressableCTAProps } from './PressableCTA';
 export { DirectorOnly } from './DirectorOnly';
 export { ShimmerOverlay } from './ShimmerOverlay';
 export { ShareAppSheet } from './ShareAppSheet';

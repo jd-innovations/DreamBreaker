@@ -19,7 +19,7 @@ import { goBack } from '@/lib/navigation';
 import { supabase } from '@/lib/supabase';
 import { platformAlert } from '@/lib/platformAlert';
 import { eventCoverSource } from '@/lib/eventCover';
-import { AppIcon, PickleballIcon, JoinCelebration, Avatar, ManageEventSheet, AddToCalendarButton, type AppIconName } from '@/components';
+import { AppIcon, PickleballIcon, JoinCelebration, Avatar, ManageEventSheet, AddToCalendarButton, PressableCTA, type AppIconName } from '@/components';
 import { appLinks } from '@/lib/appLinks';
 import { withLink, type CalendarEventInput } from '@/lib/calendarEvents';
 import {
@@ -1664,12 +1664,18 @@ export default function CommunityEventScreen() {
               <Ionicons name="chevron-back" size={20} color={colors.white} />
             </TouchableOpacity>
             <View style={s.topRight}>
-              <TouchableOpacity style={s.circleBtn} activeOpacity={0.85} onPress={handleShare}>
+              <PressableCTA style={s.circleBtn} onPress={handleShare} accessibilityLabel="Share event">
                 <Ionicons name="share-outline" size={20} color={colors.white} />
-              </TouchableOpacity>
-              <TouchableOpacity style={s.circleBtn} onPress={() => setSaved(v => !v)} activeOpacity={0.85}>
+              </PressableCTA>
+              <PressableCTA
+                style={s.circleBtn}
+                onPress={() => setSaved(v => !v)}
+                hapticType="selection"
+                pulseOn={saved}
+                accessibilityLabel={saved ? 'Remove from saved' : 'Save event'}
+              >
                 <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? t.accent : colors.white} />
-              </TouchableOpacity>
+              </PressableCTA>
               {communityCalendarEvent && (
                 <AddToCalendarButton
                   event={communityCalendarEvent}

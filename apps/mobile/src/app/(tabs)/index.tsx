@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors, quickActionTints } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
-import { AppHeader, APP_HEADER_HEIGHT, AppIcon, GlassQuickAction, ProfileCompletionRing, FindGamesFilterModal, FIND_GAMES_DISTANCE_STEPS, FIND_GAMES_SKILL_RANGES, ShimmerOverlay, type AppIconName } from '@/components';
+import { AppHeader, APP_HEADER_HEIGHT, AppIcon, GlassQuickAction, ProfileCompletionRing, FindGamesFilterModal, FIND_GAMES_DISTANCE_STEPS, FIND_GAMES_SKILL_RANGES, ShimmerOverlay, PressableCTA, type AppIconName } from '@/components';
 import { DraggableQuickActions } from '@/components/DraggableQuickActions';
 import { useSession } from '@/hooks/useSession';
 import { useProfile } from '@/hooks/useProfile';
@@ -439,9 +439,15 @@ function CommunityCard({ item, saved, onSave }: { item: CommunityCardData; saved
           <View style={[cl.statusBadge, { backgroundColor: badgeBg }]}>
             <Text style={[cl.statusText, { color: badgeColor }]}>{item.badge}</Text>
           </View>
-          <TouchableOpacity onPress={onSave} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <PressableCTA
+            onPress={onSave}
+            hapticType="selection"
+            pulseOn={saved}
+            hitSlop={8}
+            accessibilityLabel={saved ? 'Remove from favorites' : 'Add to favorites'}
+          >
             <Ionicons name={saved ? 'heart' : 'heart-outline'} size={16} color={saved ? '#FF6B6B' : L.textSub} />
-          </TouchableOpacity>
+          </PressableCTA>
         </View>
       </View>
 

@@ -10,7 +10,7 @@ import { goBack } from '@/lib/navigation';
 import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
-import { StatusChip } from '@/components';
+import { StatusChip, PressableCTA } from '@/components';
 import { getPlayerRegStatusInfo } from '@/lib/tournamentStatus';
 import type { HeldSpot } from '@/lib/tournamentStore';
 import type { TournamentRegistration } from '@/lib/registrationStore';
@@ -472,9 +472,16 @@ function SavedTournamentCard({ tournament, onUnsave }: { tournament: BookmarkedT
           <Text style={c.viewBtnText}>View</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={c.cancelBtn} activeOpacity={0.75} onPress={onUnsave}>
+        {/* pulseOn={false}: un-save only — see saved-events.tsx for why. */}
+        <PressableCTA
+          style={c.cancelBtn}
+          onPress={onUnsave}
+          hapticType="selection"
+          pulseOn={false}
+          accessibilityLabel="Remove from saved"
+        >
           <Ionicons name="bookmark-outline" size={16} color={L.danger} />
-        </TouchableOpacity>
+        </PressableCTA>
       </View>
     </View>
   );

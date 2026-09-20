@@ -8,6 +8,7 @@ import { goBack } from '@/lib/navigation';
 import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
+import { PressableCTA } from '@/components';
 import { useSession } from '@/hooks/useSession';
 import { useTournamentBookmarks } from '@/hooks/useTournamentBookmarks';
 import { usePlayEventBookmarks } from '@/hooks/usePlayEventBookmarks';
@@ -41,9 +42,18 @@ function SavedCard({
       <TouchableOpacity style={c.viewBtn} activeOpacity={0.75} onPress={onView}>
         <Ionicons name="eye-outline" size={15} color={L.navy} />
       </TouchableOpacity>
-      <TouchableOpacity style={c.unsaveBtn} activeOpacity={0.75} onPress={onUnsave}>
+      {/* pulseOn={false}: this control only ever un-saves, so the "on" edge
+          the pulse celebrates is never reached from here. The selection
+          haptic still fires — the tap happened either way. */}
+      <PressableCTA
+        style={c.unsaveBtn}
+        onPress={onUnsave}
+        hapticType="selection"
+        pulseOn={false}
+        accessibilityLabel="Remove from saved"
+      >
         <Ionicons name="heart" size={15} color={L.danger} />
-      </TouchableOpacity>
+      </PressableCTA>
     </View>
   );
 }

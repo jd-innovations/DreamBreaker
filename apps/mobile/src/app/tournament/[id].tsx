@@ -16,7 +16,7 @@ import { goBack } from '@/lib/navigation';
 import { getEventShell } from '@/lib/eventShellCache';   // F7 fix
 import { isTournamentCompleted, getAllBrackets } from '@/lib/directorBracketStore';
 import { isTournamentCompleted as fetchHasPublishedResults } from '@/lib/supabase/brackets';
-import { StatusChip, AddToCalendarButton } from '@/components';
+import { StatusChip, AddToCalendarButton, PressableCTA } from '@/components';
 import { InfoTooltip } from '@/components/InfoTooltip';
 import type { CalendarEventInput } from '@/lib/calendarEvents';
 import { withLink } from '@/lib/calendarEvents';
@@ -567,16 +567,22 @@ export default function TournamentDetail() {
           <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={s.topRight}>
-          <TouchableOpacity
+          <PressableCTA
             style={s.topCircle}
-            activeOpacity={0.8}
             onPress={handleShare}
+            accessibilityLabel="Share tournament"
           >
             <Ionicons name="share-outline" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-          <TouchableOpacity style={s.topCircle} onPress={() => toggleBookmark(id)} activeOpacity={0.8}>
+          </PressableCTA>
+          <PressableCTA
+            style={s.topCircle}
+            onPress={() => toggleBookmark(id)}
+            hapticType="selection"
+            pulseOn={isBookmarked(id)}
+            accessibilityLabel={isBookmarked(id) ? 'Remove from favorites' : 'Add to favorites'}
+          >
             <Ionicons name={isBookmarked(id) ? 'heart' : 'heart-outline'} size={20} color={isBookmarked(id) ? '#FF6B6B' : '#FFFFFF'} />
-          </TouchableOpacity>
+          </PressableCTA>
           {tournamentCalendarEvent && (
             <AddToCalendarButton
               event={tournamentCalendarEvent}
@@ -1237,12 +1243,18 @@ export default function TournamentDetail() {
                 </Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity style={s.saveBtn} onPress={() => toggleBookmark(id)} activeOpacity={0.75}>
+              <PressableCTA
+                style={s.saveBtn}
+                onPress={() => toggleBookmark(id)}
+                hapticType="selection"
+                pulseOn={isBookmarked(id)}
+                accessibilityLabel={isBookmarked(id) ? 'Remove from saved' : 'Save tournament'}
+              >
                 <Ionicons name={isBookmarked(id) ? 'bookmark' : 'bookmark-outline'} size={18} color={isBookmarked(id) ? L.gold : L.navy} />
                 <Text style={[s.saveBtnText, isBookmarked(id) && { color: L.gold }]}>
                   {isBookmarked(id) ? 'Saved' : 'Save Tournament'}
                 </Text>
-              </TouchableOpacity>
+              </PressableCTA>
             )
           )}
         </View>

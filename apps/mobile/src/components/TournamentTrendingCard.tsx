@@ -9,6 +9,7 @@ import { skillLabel } from '@/lib/supabase/playEvents';
 import { formatEventDay, formatStartTime, humanizeFormat } from '@/lib/tournamentDisplay';
 import type { Tournament } from '@/lib/tournamentTypes';
 import { FillBar } from './FillBar';
+import { PressableCTA } from './PressableCTA';
 
 // The large tournament card from the Home tab, shared so the Events tab can
 // show a registered tournament the same way Home shows an open one.
@@ -121,9 +122,15 @@ export function TournamentTrendingCard({ item, onSave, saved, registered, style 
 
         <View style={tc.nameRow}>
           <Text style={tc.name}>{item.name}</Text>
-          <TouchableOpacity onPress={onSave} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <PressableCTA
+            onPress={onSave}
+            hapticType="selection"
+            pulseOn={saved}
+            hitSlop={8}
+            accessibilityLabel={saved ? 'Remove from favorites' : 'Add to favorites'}
+          >
             <Ionicons name={saved ? 'heart' : 'heart-outline'} size={18} color={saved ? '#FF6B6B' : colors.textSub} />
-          </TouchableOpacity>
+          </PressableCTA>
         </View>
 
         <View style={tc.statsRow}>

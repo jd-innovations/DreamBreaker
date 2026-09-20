@@ -17,7 +17,7 @@ import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components/StatusChip';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SecondaryButton } from '@/components/SecondaryButton';
-import { JoinCelebration } from '@/components';
+import { JoinCelebration, PressableCTA } from '@/components';
 import {
   fetchPlayEventWithOrganizer, fetchPlayParticipants, fetchPublicPlayParticipantCount, cancelPlayEvent, completePlayEvent, skillLabel,
   removePlayParticipant, addPlayParticipant, joinEventErrorMessage, updatePlayEvent,
@@ -616,9 +616,9 @@ export default function MiniTournamentCreatedScreen() {
             <Ionicons name="chevron-back" size={22} color={L.white} />
           </TouchableOpacity>
           <View style={s.navRight}>
-            <TouchableOpacity style={s.navBtn} onPress={handleShare} activeOpacity={0.8}>
+            <PressableCTA style={s.navBtn} onPress={handleShare} accessibilityLabel="Share event">
               <Ionicons name="share-outline" size={20} color={L.white} />
-            </TouchableOpacity>
+            </PressableCTA>
             <TouchableOpacity style={s.navBtn} onPress={openMenu} activeOpacity={0.8}>
               <Ionicons name="ellipsis-horizontal" size={20} color={L.white} />
             </TouchableOpacity>

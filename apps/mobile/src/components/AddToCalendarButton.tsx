@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { TouchableOpacity, StyleSheet, ViewStyle, Platform } from 'react-native';
+import { StyleSheet, ViewStyle, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
 import { haptics } from '@/lib/haptics';
 import { addToCalendar } from '@/lib/calendarEvents';
 import type { CalendarEventInput, AddToCalendarResult } from '@/lib/calendarEvents';
 import { SecondaryButton } from './SecondaryButton';
+import { PressableCTA } from './PressableCTA';
 
 type LocalState = 'idle' | 'working' | 'added';
 
@@ -64,17 +65,23 @@ export function AddToCalendarButton({
   const icon = state === 'added' ? 'checkmark-circle' : 'calendar-outline';
 
   if (variant === 'icon') {
+    // Icon variant only: it sits in the hero action row next to Share and
+    // Favorite, so it gets the same press treatment they do. The press
+    // haptic here is separate from — and fires before — the success/error
+    // haptics handlePress fires once the native editor returns.
+    //
+    // The 'button' variant deliberately does not get this: it renders
+    // through SecondaryButton, which is shared app-wide, and changing its
+    // press feel would reach far past event menus.
     return (
-      <TouchableOpacity
+      <PressableCTA
         style={[s.iconBtn, style]}
         onPress={handlePress}
-        activeOpacity={0.8}
         disabled={state === 'working'}
-        accessibilityRole="button"
         accessibilityLabel={label}
       >
         <Ionicons name={icon} size={20} color={iconColor ?? colors.navy} />
-      </TouchableOpacity>
+      </PressableCTA>
     );
   }
 

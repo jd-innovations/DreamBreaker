@@ -14,7 +14,7 @@ import { EmptyState, LoadingState } from '@/components/states/ScreenState';
 import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import { StatusChip } from '@/components/StatusChip';
-import { PickleballIcon, JoinCelebration } from '@/components';
+import { PickleballIcon, JoinCelebration, PressableCTA } from '@/components';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SecondaryButton } from '@/components/SecondaryButton';
 import {
@@ -620,9 +620,9 @@ export default function QuickGameCreatedScreen() {
               persistent one rendered above, outside the scroll) */}
           <View style={[s.navRow, { paddingTop: insets.top + 6 }]}>
             <View style={s.navRight}>
-              <TouchableOpacity style={s.navBtn} onPress={handleShare} activeOpacity={0.8}>
+              <PressableCTA style={s.navBtn} onPress={handleShare} accessibilityLabel="Share event">
                 <Ionicons name="share-outline" size={20} color={L.white} />
-              </TouchableOpacity>
+              </PressableCTA>
               <TouchableOpacity style={s.navBtn} activeOpacity={0.8}>
                 <Ionicons name="bookmark-outline" size={20} color={L.white} />
               </TouchableOpacity>
