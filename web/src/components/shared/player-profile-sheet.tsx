@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { formatMiles } from "@shared/geo";
 import { playStyleLabel } from "@shared/play-profile";
 import Image from "next/image";
 import {
@@ -15,7 +16,8 @@ interface SheetPartner {
   dupr: number | null;
   skill_level: string | null;
   location: string;
-  distance: string | null;
+  /** Miles. Formatted here, so callers keep one numeric representation. */
+  distance: number | null;
   availability: string | null;
   /** Keys, not labels — rendered through playStyleLabel(). */
   play_style: string[] | null;
@@ -133,7 +135,7 @@ export function PlayerProfileSheet({ partner, onClose, onPass, onLike, onSuperCo
                   </span>
                 ) : null}
                 <span className="flex items-center gap-1 text-white/80 text-xs">
-                  <MapPin size={12} weight="bold" />{partner.location}{partner.distance ? ` · ${partner.distance}` : ""}
+                  <MapPin size={12} weight="bold" />{partner.location}{formatMiles(partner.distance) ? ` · ${formatMiles(partner.distance)}` : ""}
                 </span>
               </div>
             </div>

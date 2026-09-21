@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from './supabase';
 import { playStyleSummary } from '@shared/play-profile';
 import { computeMatch } from '@shared/match';
+import { haversineMiles } from '@shared/geo';
 import { useCurrentLocation, type Coordinates } from './location';
 import { useLocationSettings } from '@/hooks/useLocationSettings';
 
@@ -71,16 +72,10 @@ function humanize(value: unknown): string {
 // Great-circle distance in miles between two lat/lng points.
 // Exported 2026-09-14 for My Connections, which was hardcoding distance to 0
 // and rendering every connection as "0 mi".
-export function haversineMiles(from: Coordinates, to: Coordinates): number {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const earthMiles = 3958.8;
-  const dLat = toRad(to.lat - from.lat);
-  const dLng = toRad(to.lng - from.lng);
-  const lat1 = toRad(from.lat);
-  const lat2 = toRad(to.lat);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 2 * earthMiles * Math.asin(Math.sqrt(a));
-}
+// Re-exported rather than moved outright: My Connections imports it from here
+// (2026-09-14) and the maths now lives in @shared/geo, beside computeMatch,
+// which is the only other place that cares about distance.
+export { haversineMiles };
 
 // Parses a radius label like "25 mi" → 25. Non-numeric options ("Statewide",
 // "Unlimited") mean "no distance cap" → Infinity.

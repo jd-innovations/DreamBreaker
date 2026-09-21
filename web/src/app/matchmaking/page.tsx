@@ -11,6 +11,7 @@ import {
   type AvailabilitySchedule,
 } from "@shared/availability";
 import { computeMatch } from "@shared/match";
+import { distanceMilesOrNull, formatMiles, type LatLng } from "@shared/geo";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Heart, X, XCircle, Plug, MapPin, Star, ArrowRight, Trophy,
@@ -37,7 +38,10 @@ interface Partner {
   dupr: number | null;
   skill_level: string | null;
   location: string;
-  distance: string | null;
+  /** Miles, or null when either side has no coordinates. Was a display
+   *  STRING ("5 mi"), which is how it ended up being parseInt-ed in two
+   *  places and compared against a 999 sentinel. */
+  distance: number | null;
   availability: string | null;
   availability_schedule: unknown;
   play_style: string[] | null;
@@ -109,18 +113,24 @@ function profileToPartner(
     id: string; full_name: string; handle: string | null;
     dupr: number | null; skill_level: string | null;
     location_city: string | null; location_state: string | null;
+    location_lat?: number | null; location_lng?: number | null;
     avatar_url: string | null; bio: string | null; play_style: string[] | null;
     availability: string | null;
     availability_schedule: unknown;
   },
   myDupr: number | null,
   mySchedule: AvailabilitySchedule,
+  myCoords: LatLng | null,
 ): Partner {
-  // distanceMi stays null until this page computes a real distance: the web
-  // matchmaker has a distance FILTER but no coordinates to measure with, and
-  // computeMatch scores an unknown distance as zero rather than as "far".
+  // Real miles now. Null when either side has no coordinates, which
+  // computeMatch scores as zero and says nothing about — unknown is not far.
+  const distanceMi = distanceMilesOrNull(
+    myCoords,
+    { lat: p.location_lat, lng: p.location_lng },
+  );
+
   const { pct, reasons } = computeMatch(
-    { dupr: p.dupr, schedule: p.availability_schedule, distanceMi: null },
+    { dupr: p.dupr, schedule: p.availability_schedule, distanceMi },
     { dupr: myDupr, schedule: mySchedule },
   );
   return {
@@ -130,7 +140,7 @@ function profileToPartner(
     dupr: p.dupr,
     skill_level: p.skill_level,
     location: [p.location_city, p.location_state].filter(Boolean).join(", ") || "Unknown",
-    distance: null,
+    distance: distanceMi,
     availability: p.availability,
     availability_schedule: p.availability_schedule,
     play_style: p.play_style,
@@ -312,7 +322,7 @@ function MatchmakingInner() {
       // from this batch entirely -- see the separate lazy effect below,
       // triggered only when the messaging overlay actually opens.
       const [meRes, alreadySwipedRes, profilesRes, incomingSwipesRes, mutualRes, tDataRes] = await Promise.all([
-        supabase.from("profiles").select("dupr,availability,availability_schedule,location_city,location_state,play_style,bio").eq("id", user.id).single(),
+        supabase.from("profiles").select("dupr,availability,availability_schedule,location_city,location_state,location_lat,location_lng,play_style,bio").eq("id", user.id).single(),
         supabase.from("matchmaking_swipes").select("target_id").eq("requester_id", user.id),
         // `is_discoverable` is the user's own "show me in matchmaking"
         // switch, set from Match Settings on either platform. Mobile's
@@ -321,7 +331,7 @@ function MatchmakingInner() {
         // listed on the other (alignment audit, workstream A2).
         supabase
           .from("profiles")
-          .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule")
+          .select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule,location_lat,location_lng")
           .eq("role", "player")
           .eq("is_discoverable", true)
           .neq("id", user.id)
@@ -349,6 +359,13 @@ function MatchmakingInner() {
       const meDupr = me?.dupr ?? null;
       setMyDupr(meDupr);
       const meSchedule = normalizeSchedule(me?.availability_schedule);
+      // Null unless the viewer has set a location. Every candidate's
+      // distance then resolves to null too, which the filter keeps and the
+      // score ignores — the page degrades to how it behaved before.
+      const meCoords: LatLng | null =
+        me?.location_lat != null && me?.location_lng != null
+          ? { lat: me.location_lat, lng: me.location_lng }
+          : null;
       setMySchedule(meSchedule);
       setMyLocation([me?.location_city, me?.location_state].filter(Boolean).join(", ") || null);
       setMyStyle(me?.play_style ?? []);
@@ -361,7 +378,7 @@ function MatchmakingInner() {
       // An empty deck shows the "ALL CAUGHT UP" panel. It used to deal five
       // invented players instead — swipeable, likeable, and indistinguishable
       // from real people (item 6.1).
-      const partners = (profiles ?? []).filter((p) => !swipedIds.has(p.id)).map((p) => profileToPartner(p, meDupr, meSchedule));
+      const partners = (profiles ?? []).filter((p) => !swipedIds.has(p.id)).map((p) => profileToPartner(p, meDupr, meSchedule, meCoords));
       setDeck([...partners].reverse());
 
       const incomingSwipes = incomingSwipesRes.data;
@@ -382,15 +399,15 @@ function MatchmakingInner() {
       // they still run concurrently rather than one after another.
       const [ipRes, mpRes, partnerRegsRes] = await Promise.all([
         incomingIds.length > 0
-          ? supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule").in("id", incomingIds)
+          ? supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule,location_lat,location_lng").in("id", incomingIds)
           : Promise.resolve({ data: null }),
         mutualIds.length > 0
-          ? supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule").in("id", mutualIds)
+          ? supabase.from("profiles").select("id,full_name,handle,dupr,skill_level,location_city,location_state,avatar_url,bio,play_style,availability,availability_schedule,location_lat,location_lng").in("id", mutualIds)
           : Promise.resolve({ data: null }),
         tournamentIdParam && tData
           ? supabase
               .from("registrations")
-              .select("player_id, profiles!player_id(id, full_name, handle, dupr, skill_level, location_city, location_state, avatar_url, bio, play_style, availability, availability_schedule)")
+              .select("player_id, profiles!player_id(id, full_name, handle, dupr, skill_level, location_city, location_state, avatar_url, bio, play_style, availability, availability_schedule, location_lat, location_lng)")
               .eq("tournament_id", tournamentIdParam)
               .eq("needs_partner", true)
               .in("status", ["held", "registered", "checked_in"])
@@ -398,15 +415,15 @@ function MatchmakingInner() {
           : Promise.resolve({ data: null }),
       ]);
 
-      if (ipRes.data) setIncoming(ipRes.data.map((p) => profileToPartner(p, meDupr, meSchedule)));
-      if (mpRes.data) setMatches(mpRes.data.map((p) => profileToPartner(p, meDupr, meSchedule)));
+      if (ipRes.data) setIncoming(ipRes.data.map((p) => profileToPartner(p, meDupr, meSchedule, meCoords)));
+      if (mpRes.data) setMatches(mpRes.data.map((p) => profileToPartner(p, meDupr, meSchedule, meCoords)));
 
       if (tData && partnerRegsRes.data) {
         const tournamentPartners = partnerRegsRes.data
           .map((r) => r.profiles as { id: string; full_name: string; handle: string | null; dupr: number | null; skill_level: string | null; location_city: string | null; location_state: string | null; avatar_url: string | null; bio: string | null; play_style: string[] | null; availability: string | null; availability_schedule: unknown } | null)
           .filter(Boolean)
           .map((p) => ({
-            ...profileToPartner(p!, meDupr, meSchedule),
+            ...profileToPartner(p!, meDupr, meSchedule, meCoords),
             tournamentOverlap: tData.name,
           }));
 
@@ -546,9 +563,13 @@ function MatchmakingInner() {
     if (filters.maxDupr && (p.dupr ?? 99) > parseFloat(filters.maxDupr)) return false;
     if (!matchesAvailabilityFilter(normalizeSchedule(p.availability_schedule), filters.availability)) return false;
     if (filters.maxDistance !== "Any") {
+      // An unknown distance is KEPT, matching mobile's finder. It used to be
+      // read as 999 miles, so picking any radius emptied the deck entirely —
+      // and since no coordinates were fetched at all, every candidate was
+      // unknown. The page read as "nobody near you" when it meant "this
+      // filter has no data".
       const maxMi = parseInt(filters.maxDistance);
-      const dist = p.distance ? parseInt(p.distance) : 999;
-      if (dist > maxMi) return false;
+      if (p.distance != null && p.distance > maxMi) return false;
     }
     return true;
   });
@@ -881,7 +902,7 @@ function MatchmakingInner() {
                           ) : topCard.skill_level ? (
                             <span className="bg-white/10 text-white text-xs font-mono px-2.5 py-1 rounded-full border border-white/20 flex items-center gap-1"><Star size={11} weight="fill" className="text-white/70" />{topCard.skill_level.replace("-", " – ")}</span>
                           ) : null}
-                          <span className="flex items-center gap-1 text-white/80 text-xs"><MapPin size={12} weight="bold" />{topCard.location}{topCard.distance ? ` · ${topCard.distance}` : ""}</span>
+                          <span className="flex items-center gap-1 text-white/80 text-xs"><MapPin size={12} weight="bold" />{topCard.location}{formatMiles(topCard.distance) ? ` · ${formatMiles(topCard.distance)}` : ""}</span>
                         </div>
                       </div>
                     </div>
@@ -903,7 +924,7 @@ function MatchmakingInner() {
                             {topCard.badges.slice(0, 2).map((b) => (
                               <span key={b} className="bg-secondary border border-border text-xs font-mono px-3 py-1.5 rounded-full">{b.toUpperCase()}</span>
                             ))}
-                            <span className="flex items-center gap-1 text-muted-foreground text-xs"><MapPin size={12} weight="bold" className="text-primary" />{topCard.location}{topCard.distance ? ` · ${topCard.distance}` : ""}</span>
+                            <span className="flex items-center gap-1 text-muted-foreground text-xs"><MapPin size={12} weight="bold" className="text-primary" />{topCard.location}{formatMiles(topCard.distance) ? ` · ${formatMiles(topCard.distance)}` : ""}</span>
                           </div>
                         </div>
 
