@@ -42,11 +42,14 @@ type ProfileRow = {
   // compiler.
   play_style: string[] | null;
   availability: string | null;
+  availability_schedule: unknown;
 };
 
 type LookingFor = { activelyLooking: boolean; gameTypes: string[] };
 
-type Mine = { dupr: number | null; availability: string | null };
+// `availability` (text) is kept only for the card's human label. Matching
+// reads availability_schedule — see packages/shared/src/availability.ts.
+type Mine = { dupr: number | null; availability: string | null; schedule: unknown };
 
 // Turns raw enum-ish DB values into display text: "actively_looking" →
 // "Actively Looking", "right" → "Right". Replaces underscores with spaces and
@@ -118,7 +121,10 @@ function mapProfile(row: ProfileRow, mine: Mine, distance: number | null, lookin
   if (styleSummary) tags1.push({ icon: 'heart-outline', label: styleSummary });
   if (row.availability) tags1.push({ icon: 'calendar-outline', label: humanize(row.availability) });
 
-  const { pct } = computeMatch({ dupr: duprNum || null, availability: row.availability }, mine);
+  const { pct } = computeMatch(
+    { dupr: duprNum || null, schedule: row.availability_schedule, distanceMi: distance },
+    { dupr: mine.dupr, schedule: mine.schedule },
+  );
 
   return {
     id: row.id,
@@ -160,7 +166,7 @@ export type UseFinderCandidatesOptions = {
 export function useFinderCandidates(opts?: UseFinderCandidatesOptions) {
   const [rows, setRows] = useState<ProfileRow[]>([]);
   const [lookingForByUser, setLookingForByUser] = useState<Map<string, LookingFor>>(new Map());
-  const [mine, setMine] = useState<Mine>({ dupr: null, availability: null });
+  const [mine, setMine] = useState<Mine>({ dupr: null, availability: null, schedule: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -182,7 +188,7 @@ export function useFinderCandidates(opts?: UseFinderCandidatesOptions) {
         supabase
           .from('profiles')
           .select(
-            'id, full_name, avatar_url, bio, location_city, location_state, location_lat, location_lng, dupr, self_rating, skill_level, hand, play_style, availability'
+            'id, full_name, avatar_url, bio, location_city, location_state, location_lat, location_lng, dupr, self_rating, skill_level, hand, play_style, availability, availability_schedule'
           )
           .eq('is_discoverable', true)
           .neq('id', user?.id ?? '')
@@ -192,13 +198,14 @@ export function useFinderCandidates(opts?: UseFinderCandidatesOptions) {
           ? supabase.from('partner_preferences').select('skill_ranges').eq('user_id', user.id).maybeSingle()
           : Promise.resolve({ data: null }),
         user?.id
-          ? supabase.from('profiles').select('dupr, self_rating, availability').eq('id', user.id).maybeSingle()
+          ? supabase.from('profiles').select('dupr, self_rating, availability, availability_schedule').eq('id', user.id).maybeSingle()
           : Promise.resolve({ data: null }),
       ]);
 
       const mineNext: Mine = {
         dupr: myProfile?.dupr ?? (myProfile?.self_rating ? parseFloat(myProfile.self_rating) : null),
         availability: myProfile?.availability ?? null,
+        schedule: myProfile?.availability_schedule ?? null,
       };
 
       if (cancelled) return;

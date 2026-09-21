@@ -53,7 +53,7 @@ describe('buildEntityShareContent', () => {
     expect(mt.message).toContain('Mini Tournament');
   });
 
-  it('marketplace: formats whole-dollar price and uses /marketplace/{id}', () => {
+  it('marketplace: shows exact cents and uses /marketplace/{id}', () => {
     const { message, url } = buildEntityShareContent({
       type: 'marketplace',
       id: 'listing-1',
@@ -61,7 +61,10 @@ describe('buildEntityShareContent', () => {
       priceCents: 4599,
     });
     expect(url).toBe(`${APP_LINK_ORIGIN}/marketplace/listing-1`);
-    expect(message).toContain('$46'); // Math.round(4599/100) = 46
+    // NOT '$46'. This assertion predated formatCents(), which shows exact
+    // cents unless the amount is whole dollars — rounding a listing up in a
+    // share message advertises a price the seller is not asking.
+    expect(message).toContain('$45.99');
     expect(message).toContain('JOOLA Paddle');
   });
 

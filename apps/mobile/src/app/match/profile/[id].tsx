@@ -90,7 +90,7 @@ export default function PartnerProfileScreen() {
       const [{ data: p }, { count }, myLikes, { data: myProfile }] = await Promise.all([
         supabase
           .from('profiles')
-          .select('full_name, avatar_url, dupr, self_rating, skill_level, hand, play_style, bio, dupr_verified, location_city, location_state, looking_status, availability')
+          .select('full_name, avatar_url, dupr, self_rating, skill_level, hand, play_style, bio, dupr_verified, location_city, location_state, looking_status, availability, availability_schedule')
           .eq('id', id)
           .single(),
         supabase
@@ -105,7 +105,7 @@ export default function PartnerProfileScreen() {
               .eq('to_user_id', id)
           : Promise.resolve({ data: [] as { kind: string }[] }),
         uid
-          ? supabase.from('profiles').select('dupr, self_rating, availability').eq('id', uid).maybeSingle()
+          ? supabase.from('profiles').select('dupr, self_rating, availability, availability_schedule').eq('id', uid).maybeSingle()
           : Promise.resolve({ data: null }),
       ]);
 
@@ -122,11 +122,14 @@ export default function PartnerProfileScreen() {
       const { data: ageValue } = await supabase.rpc('profile_age', { p_user_id: id });
       const age = typeof ageValue === 'number' ? ageValue : null;
 
+      // No distance: this screen does not know where the viewer is, and
+      // passing null is honest — computeMatch scores it zero and says nothing,
+      // rather than treating unknown as far away.
       const { pct } = computeMatch(
-        { dupr: dupr || null, availability: p.availability },
+        { dupr: dupr || null, schedule: p.availability_schedule, distanceMi: null },
         {
           dupr: myProfile?.dupr ?? (myProfile?.self_rating ? parseFloat(myProfile.self_rating) : null),
-          availability: myProfile?.availability ?? null,
+          schedule: myProfile?.availability_schedule ?? null,
         },
       );
 
