@@ -1,0 +1,37 @@
+-- HOTFIX / partial rollback of 20260921130000.
+--
+-- Revoking email and date_of_birth from `authenticated` broke every signed-in
+-- session immediately. The core profile fetch
+-- (apps/mobile/src/lib/services/profile.ts) lists 'email' in a column-ARRAY
+-- constant rather than a .select() string, so the survey of readers missed it.
+-- Postgres denies the whole query when one column is denied, so the app could
+-- not load any profile at all: "You're signed in, but we couldn't reach your
+-- profile."
+--
+-- Two lessons, recorded because the fix is not the interesting part:
+--
+-- 1. Grepping for `.select("...email...")` does not find every reader. Column
+--    lists live in constants, in shared helpers, and in generated types. The
+--    only reliable survey is to revoke on a BRANCH and run the apps against it.
+--
+-- 2. The ordering was backwards. A column grant can only be removed after every
+--    client that selects it has stopped — and for a mobile app that means after
+--    the OTA has actually been adopted, not merely published. Installed bundles
+--    cannot be fixed retroactively, so the revoke must trail the client change
+--    by a release, not lead it.
+--
+-- The leak this was closing is real and still open: any signed-in user can read
+-- every user's email and date of birth. It gets closed again once the clients
+-- are clean, in this order:
+--
+--   a. profile.ts stops selecting email; the app takes it from the auth session
+--      (useSession already carries user.email), or from a self-scoped accessor.
+--   b. every other reader is found by running against a Supabase branch with
+--      the revoke applied, not by grep.
+--   c. ship, wait for OTA adoption.
+--   d. THEN re-apply the revoke from 20260921130000.
+--
+-- admin_profile_emails(), admin_search_profiles() and profile_age() from that
+-- migration are kept: they are correct, already deployed, and the web console
+-- and match profile now use them.
+grant select (email, date_of_birth) on public.profiles to authenticated;
