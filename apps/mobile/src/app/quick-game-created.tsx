@@ -13,6 +13,7 @@ import { EmptyState, LoadingState } from '@/components/states/ScreenState';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
+import { usePlayEventBookmarks } from '@/hooks/usePlayEventBookmarks';
 import { StatusChip } from '@/components/StatusChip';
 import { PickleballIcon, JoinCelebration, PressableCTA } from '@/components';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -229,6 +230,7 @@ export default function QuickGameCreatedScreen() {
   const { user } = useSession();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isSupabase = !!id && UUID_RE.test(id);
+  const { isBookmarked, toggleBookmark } = usePlayEventBookmarks();
 
   // Supabase-backed path: id param present → fetch from DB (with organizer profile join)
   const [event,      setEvent]      = useState<PlayEvent | null>(null);
@@ -623,9 +625,25 @@ export default function QuickGameCreatedScreen() {
               <PressableCTA style={s.navBtn} onPress={handleShare} accessibilityLabel="Share event">
                 <Ionicons name="share-outline" size={20} color={L.white} />
               </PressableCTA>
-              <TouchableOpacity style={s.navBtn} activeOpacity={0.8}>
-                <Ionicons name="bookmark-outline" size={20} color={L.white} />
-              </TouchableOpacity>
+              {/* Only a real, saved event can be bookmarked: the local
+                  fallback path has no play_events row behind it, and the
+                  hooks no-op without a session. Hidden rather than inert in
+                  both cases — this button previously had no onPress at all. */}
+              {isSupabase && !!user?.id && (
+                <PressableCTA
+                  style={s.navBtn}
+                  onPress={() => { void toggleBookmark(g.id); }}
+                  hapticType="selection"
+                  pulseOn={isBookmarked(g.id)}
+                  accessibilityLabel={isBookmarked(g.id) ? 'Remove from saved' : 'Save event'}
+                >
+                  <Ionicons
+                    name={isBookmarked(g.id) ? 'bookmark' : 'bookmark-outline'}
+                    size={20}
+                    color={isBookmarked(g.id) ? L.gold : L.white}
+                  />
+                </PressableCTA>
+              )}
             </View>
           </View>
 

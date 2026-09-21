@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
   ScrollView, Animated, Image, ActivityIndicator, Modal, Pressable, Switch,
 } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -28,7 +29,10 @@ import {
 import { FALLBACK_LOCATION_LABEL, useCurrentLocation, type Coordinates } from '@/lib/location';
 import { ExploreMap } from '@/components/ExploreMap';
 import type { Region } from '@/components/ExploreMap.types';
-import { PickleballIcon, AppIcon } from '@/components';
+import { PickleballIcon, AppIcon, PressableCTA } from '@/components';
+import { useSession } from '@/hooks/useSession';
+import { useTournamentBookmarks } from '@/hooks/useTournamentBookmarks';
+import { usePlayEventBookmarks } from '@/hooks/usePlayEventBookmarks';
 import { useSlideMenu } from '@/components/SlideMenu';
 import { SKILL_RANGES, DISTANCE_STEPS } from '@/components/FindGamesFilterModal';
 import { tabBarClearance } from '@/constants/tabBar';
@@ -211,6 +215,78 @@ const TABS: { key: Category; label: string; icon: keyof typeof Ionicons.glyphMap
 
 const RADIUS_OPTIONS = [5, 10, 20, 50] as const;
 
+// ─── Saving a pin ─────────────────────────────────────────────────────────────
+//
+// Both card layouts showed a bookmark icon with no onPress — decoration, and
+// with no saved state read it could never even render filled.
+//
+// Two of the three categories have real backing: tournament_bookmarks and
+// saved_play_events, through the same shared hooks the detail screens use, so
+// a save made here shows up in Saved Events and (for tournaments) on the web.
+// COURTS HAVE NO SAVE CONCEPT ANYWHERE — no table, no lib, no other surface —
+// so a court pin renders no icon at all rather than an inert or greyed one.
+// A present-but-dead control is the defect this change exists to remove.
+//
+// The hooks are called ONCE, in ExploreScreen, and handed down. Calling them
+// per card would fetch the whole bookmark set once per row.
+
+type PinBookmarks = {
+  /** False when signed out: the hooks no-op without a session, so the icon hides. */
+  enabled: boolean;
+  isSaved: (pin: ExplorePin) => boolean;
+  toggle: (pin: ExplorePin) => void;
+};
+
+function usePinBookmarks(): PinBookmarks {
+  const { user } = useSession();
+  const tournaments = useTournamentBookmarks();
+  const playEvents = usePlayEventBookmarks();
+
+  const isSaved = useCallback((pin: ExplorePin) => (
+    pin.category === 'tournament' ? tournaments.isBookmarked(pin.id)
+      : pin.category === 'community' ? playEvents.isBookmarked(pin.id)
+        : false
+  ), [tournaments, playEvents]);
+
+  const toggle = useCallback((pin: ExplorePin) => {
+    if (pin.category === 'tournament') void tournaments.toggleBookmark(pin.id);
+    else if (pin.category === 'community') void playEvents.toggleBookmark(pin.id);
+  }, [tournaments, playEvents]);
+
+  return { enabled: !!user?.id, isSaved, toggle };
+}
+
+function PinBookmarkButton({
+  pin, bookmarks, size, style,
+}: {
+  pin: ExplorePin;
+  bookmarks: PinBookmarks;
+  size: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  if (!bookmarks.enabled || pin.category === 'court') return null;
+
+  const saved = bookmarks.isSaved(pin);
+  return (
+    <PressableCTA
+      style={style}
+      onPress={() => bookmarks.toggle(pin)}
+      // A toggle, so the pulse fires only on the false -> true edge: saving
+      // bounces, un-saving does not. The selection haptic fires either way.
+      hapticType="selection"
+      pulseOn={saved}
+      hitSlop={8}
+      accessibilityLabel={saved ? `Remove ${pin.name} from saved` : `Save ${pin.name}`}
+    >
+      <Ionicons
+        name={saved ? 'bookmark' : 'bookmark-outline'}
+        size={size}
+        color={saved ? L.gold : L.textSub}
+      />
+    </PressableCTA>
+  );
+}
+
 function PinPhoto({
   uri, name, style,
 }: {
@@ -375,11 +451,12 @@ const fbs = StyleSheet.create({
 // ─── Bottom sheet ───────────────────────────────────────────────────────────────
 
 function BottomSheet({
-  pin, onDismiss, sheetY,
+  pin, onDismiss, sheetY, bookmarks,
 }: {
   pin: ExplorePin;
   onDismiss: () => void;
   sheetY: Animated.Value;
+  bookmarks: PinBookmarks;
 }) {
   const catLabel =
     pin.category === 'community'  ? 'COMMUNITY PLAY' :
@@ -412,9 +489,7 @@ function BottomSheet({
               <Text style={bs.catLabel}>{catLabel}</Text>
             </View>
             <View style={bs.iconGroup}>
-              <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Ionicons name="bookmark-outline" size={20} color={L.textSub} />
-              </TouchableOpacity>
+              <PinBookmarkButton pin={pin} bookmarks={bookmarks} size={20} />
               <TouchableOpacity style={bs.closeBtn} onPress={onDismiss} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Close">
                 <Ionicons name="close" size={15} color={L.textSub} />
               </TouchableOpacity>
@@ -525,7 +600,7 @@ const bs = StyleSheet.create({
 
 // ─── List card ──────────────────────────────────────────────────────────────────
 
-function ListCard({ pin }: { pin: ExplorePin }) {
+function ListCard({ pin, bookmarks }: { pin: ExplorePin; bookmarks: PinBookmarks }) {
   const catLabel =
     pin.category === 'community'  ? 'COMMUNITY PLAY' :
     pin.category === 'tournament' ? 'TOURNAMENT'      : 'COURT';
@@ -544,9 +619,7 @@ function ListCard({ pin }: { pin: ExplorePin }) {
         <View style={lc.catRow}>
           <Ionicons name={catIcon} size={12} color={L.gold} />
           <Text style={lc.catLabel}>{catLabel}</Text>
-          <TouchableOpacity style={{ marginLeft: 'auto' }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-            <Ionicons name="bookmark-outline" size={17} color={L.textSub} />
-          </TouchableOpacity>
+          <PinBookmarkButton pin={pin} bookmarks={bookmarks} size={17} style={{ marginLeft: 'auto' }} />
         </View>
         <Text style={lc.title} numberOfLines={1}>{pin.name}</Text>
         <View style={lc.metaRow}>
@@ -609,6 +682,8 @@ export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const location = useCurrentLocation();
   const { setTriggerVisible } = useSlideMenu();
+  // Once for the whole screen, then handed to every card — see usePinBookmarks.
+  const bookmarks = usePinBookmarks();
 
   // Hide the floating hamburger trigger while this screen is focused — the
   // header here has its own dedicated actions (Filters/Map), no menu access
@@ -1030,6 +1105,7 @@ export default function ExploreScreen() {
                 pin={selectedPin}
                 onDismiss={handleDismissSheet}
                 sheetY={sheetY}
+                bookmarks={bookmarks}
               />
             ) : null}
 
@@ -1062,13 +1138,13 @@ export default function ExploreScreen() {
                 {filteredPins.length === 0 ? (
                   <Text style={s.listNote}>Nothing within {radiusMiles} miles.</Text>
                 ) : filteredPins.map(pin => (
-                  <ListCard key={pin.id} pin={pin} />
+                  <ListCard key={pin.id} pin={pin} bookmarks={bookmarks} />
                 ))}
                 {widerPins.length > 0 && (
                   <>
                     <Text style={[s.listCount, s.listSectionGap]}>OUTSIDE YOUR AREA</Text>
                     {widerPins.map(pin => (
-                      <ListCard key={pin.id} pin={pin} />
+                      <ListCard key={pin.id} pin={pin} bookmarks={bookmarks} />
                     ))}
                   </>
                 )}
