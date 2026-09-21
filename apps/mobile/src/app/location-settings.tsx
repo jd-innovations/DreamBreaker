@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Switch, ActivityIndicator,
+  ScrollView, Switch, ActivityIndicator, TextInput, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,9 @@ import { colors } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import { useCurrentLocation, FALLBACK_LOCATION_LABEL } from '@/lib/location';
 import { useLocationSettings } from '@/hooks/useLocationSettings';
+import { useSession } from '@/hooks/useSession';
+import { describeCoords, searchPlace, type PlaceEstimate } from '@/lib/geocode';
+import { fetchProfile, updateProfile } from '@/lib/services/profile';
 
 // Theme-backed alias — brand values resolve from @/theme.
 const L = {
@@ -30,6 +33,7 @@ const L = {
   border:    colors.border,
   div:       colors.border,
   green:     colors.success,
+  white:     colors.white,
   greenBg:   colors.successBg,
 };
 
@@ -202,6 +206,99 @@ export default function LocationSettingsScreen() {
   const cityLabel = placeLabel
     ?? (location.loading ? 'Locating…' : FALLBACK_LOCATION_LABEL);
 
+  // ── The SAVED area on the profile ─────────────────────────────────────────
+  //
+  // Distinct from the device reading above, and the distinction is the whole
+  // point of this section. `location_lat/lng` on profiles drives every
+  // distance in the app — the partner finder's radius, match scoring, "3 mi
+  // away" on a card — and until now it had exactly ONE writer, the onboarding
+  // area step. Someone who moved, denied permission at signup, or onboarded
+  // from the wrong city could never correct it, and this screen's "Refresh
+  // Location" button only re-read the device; it never saved anything.
+  const { user } = useSession();
+  const [savedArea, setSavedArea] = useState<PlaceEstimate | null>(null);
+  const [areaLoading, setAreaLoading] = useState(true);
+  const [savingArea, setSavingArea] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) { setAreaLoading(false); return; }
+    let cancelled = false;
+    fetchProfile(user.id)
+      .then((p) => {
+        if (cancelled || !p) return;
+        setSavedArea({
+          city: p.location_city,
+          state: p.location_state,
+          lat: p.location_lat,
+          lng: p.location_lng,
+        });
+      })
+      .finally(() => { if (!cancelled) setAreaLoading(false); });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  async function persistArea(place: PlaceEstimate) {
+    // Refuses rather than guessing. Writing a fallback city into a profile is
+    // how someone ends up permanently listed in a town they have never been to.
+    if (!user?.id || place.lat == null || place.lng == null) {
+      Alert.alert('Could not set your area', 'No location was found. Try again, or search for a city.');
+      return;
+    }
+    setSavingArea(true);
+    try {
+      await updateProfile(user.id, {
+        location_city: place.city ?? undefined,
+        location_state: place.state ?? undefined,
+        location_lat: place.lat,
+        location_lng: place.lng,
+      });
+      setSavedArea(place);
+      setSearchOpen(false);
+      setSearchTerm('');
+    } catch {
+      Alert.alert('Could not save your area', 'Please try again.');
+    } finally {
+      setSavingArea(false);
+    }
+  }
+
+  async function applyDeviceLocation() {
+    if (location.isFallback) {
+      Alert.alert(
+        'Location unavailable',
+        'Turn on location access for Pickleball App, or search for your city instead.',
+      );
+      return;
+    }
+    setSavingArea(true);
+    const place = await describeCoords(location.lat, location.lng);
+    await persistArea(place);
+  }
+
+  async function runSearch() {
+    const term = searchTerm.trim();
+    if (term.length < 3) return;
+    setSearching(true);
+    try {
+      const place = await searchPlace(term);
+      if (!place) {
+        Alert.alert('No match', `Could not find "${term}". Try a city and state, like "Sarasota, FL".`);
+        return;
+      }
+      await persistArea(place);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  const savedLabel = savedArea && (savedArea.city || savedArea.state)
+    ? [savedArea.city, savedArea.state].filter(Boolean).join(', ')
+    : null;
+  const savedHasCoords = savedArea?.lat != null && savedArea?.lng != null;
+
   // ── Persisted discovery / privacy preferences ──
   const { settings, update } = useLocationSettings();
 
@@ -263,6 +360,87 @@ export default function LocationSettingsScreen() {
               <View style={s.gpsBadge}>
                 <Ionicons name="checkmark-circle" size={13} color={L.green} />
                 <Text style={s.gpsBadgeText}>GPS</Text>
+              </View>
+            )}
+          </View>
+        </Group>
+
+        {/* ── Your Area (SAVED, unlike the block above) ── */}
+        <SectionHeader label="YOUR AREA" />
+        <Group>
+          <View style={s.areaCard}>
+            <View style={s.areaTop}>
+              <View style={s.pinCircle}>
+                <Ionicons name="map" size={20} color={L.gold} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.areaLabel}>
+                  {areaLoading ? 'Loading…' : savedLabel ?? 'Not set'}
+                </Text>
+                <Text style={s.areaSub}>
+                  {areaLoading
+                    ? ' '
+                    : savedHasCoords
+                      ? 'Used for distances, nearby games and partner matching.'
+                      : 'Set this to see distances and be matched with players near you.'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={s.areaActions}>
+              <TouchableOpacity
+                style={[s.areaBtn, s.areaBtnPrimary]}
+                onPress={() => { void applyDeviceLocation(); }}
+                disabled={savingArea || location.loading}
+                activeOpacity={0.85}
+              >
+                {savingArea ? (
+                  <ActivityIndicator size="small" color={L.navy} />
+                ) : (
+                  <>
+                    <Ionicons name="navigate" size={15} color={L.navy} />
+                    <Text style={s.areaBtnPrimaryText}>Use current location</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={s.areaBtn}
+                onPress={() => setSearchOpen((v) => !v)}
+                disabled={savingArea}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="search" size={15} color={L.textSub} />
+                <Text style={s.areaBtnText}>Search</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* The fallback path, and the one that matters when permission is
+                denied or the area wanted is not the one being stood in. */}
+            {searchOpen && (
+              <View style={s.areaSearchRow}>
+                <TextInput
+                  style={s.areaSearchInput}
+                  placeholder="City, State"
+                  placeholderTextColor={L.textMuted}
+                  value={searchTerm}
+                  onChangeText={setSearchTerm}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  returnKeyType="search"
+                  onSubmitEditing={() => { void runSearch(); }}
+                  accessibilityLabel="Search for a city"
+                />
+                <TouchableOpacity
+                  style={s.areaSearchGo}
+                  onPress={() => { void runSearch(); }}
+                  disabled={searching || searchTerm.trim().length < 3}
+                  activeOpacity={0.85}
+                >
+                  {searching
+                    ? <ActivityIndicator size="small" color={L.white} />
+                    : <Ionicons name="arrow-forward" size={16} color={L.white} />}
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -417,6 +595,31 @@ const s = StyleSheet.create({
   div: { height: StyleSheet.hairlineWidth, backgroundColor: L.div, marginLeft: 16 },
 
   // Current location card
+  // ── Your Area ──
+  areaCard: { paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
+  areaTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  areaLabel: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
+  areaSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2, lineHeight: 17 },
+  areaActions: { flexDirection: 'row', gap: 8 },
+  areaBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    height: 40, paddingHorizontal: 14, borderRadius: shape.cta,
+    borderWidth: 1.5, borderColor: L.border, backgroundColor: L.page,
+  },
+  areaBtnPrimary: { flex: 1, borderColor: L.goldBorder, backgroundColor: L.goldBg },
+  areaBtnPrimaryText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
+  areaBtnText: { color: L.textSub, fontSize: text.action.size, fontWeight: '700' },
+  areaSearchRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  areaSearchInput: {
+    flex: 1, height: 40, borderRadius: shape.cta, paddingHorizontal: 12,
+    borderWidth: 1, borderColor: L.border, backgroundColor: L.page,
+    color: L.text, fontSize: text.body.size, fontWeight: '500',
+  },
+  areaSearchGo: {
+    width: 40, height: 40, borderRadius: shape.cta,
+    backgroundColor: L.navy, alignItems: 'center', justifyContent: 'center',
+  },
+
   locationCard: {
     flexDirection: 'row', alignItems: 'flex-start',
     paddingHorizontal: 16, paddingVertical: 16, gap: 12,

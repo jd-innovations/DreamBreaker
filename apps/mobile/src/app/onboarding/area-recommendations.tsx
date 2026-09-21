@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -14,30 +13,22 @@ import { fetchFacilities, type FacilityWithPrimaryPhoto } from '@/lib/supabase/f
 import { fetchNearbyPlayEvents } from '@/lib/supabase/playEvents';
 import { fetchTournaments } from '@/lib/supabase/tournaments';
 import { useCurrentLocation } from '@/lib/location';
+// describeCoords/estimateFromIp used to live here. Location Settings needs
+// them too, now that onboarding is no longer the only writer of a profile's
+// coordinates — see src/lib/geocode.ts.
+import { describeCoords, estimateFromIp, type PlaceEstimate } from '@/lib/geocode';
 
 const L = colors;
 const SCREEN_BG = '#F8F5EF';
 const RADIUS_MILES = 25;
 
-type IpEstimate = {
-  city: string | null;
-  state: string | null;
-  lat: number | null;
-  lng: number | null;
-};
+type IpEstimate = PlaceEstimate;
 
 type AreaStats = {
   players: number | null;
   courts: number | null;
   gamesThisWeek: number | null;
   tournamentsOpen: number | null;
-};
-
-const FALLBACK_AREA: IpEstimate = {
-  city: 'Lakewood Ranch',
-  state: 'FL',
-  lat: 27.3864,
-  lng: -82.4346,
 };
 
 export default function AreaRecommendationsScreen() {
@@ -162,48 +153,6 @@ export default function AreaRecommendationsScreen() {
  * location_lat/lng both use them -- so a failed reverse geocode still returns
  * the fix and only the label falls back.
  */
-async function describeCoords(lat: number, lng: number): Promise<IpEstimate> {
-  let city: string | null = null;
-  let state: string | null = null;
-  try {
-    const [place] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-    if (place) {
-      city = place.city ?? place.subregion ?? place.district ?? null;
-      state = place.region ?? null;
-    }
-  } catch {
-    // Reverse geocoding unavailable (offline / no provider).
-  }
-  return {
-    city: city ?? FALLBACK_AREA.city,
-    state: state ?? FALLBACK_AREA.state,
-    lat,
-    lng,
-  };
-}
-
-async function estimateFromIp(): Promise<IpEstimate> {
-  try {
-    const response = await fetch('https://ipapi.co/json/');
-    if (!response.ok) throw new Error('ip_lookup_failed');
-    const row = await response.json() as {
-      city?: string;
-      region_code?: string;
-      region?: string;
-      latitude?: number;
-      longitude?: number;
-    };
-    return {
-      city: row.city ?? FALLBACK_AREA.city,
-      state: row.region_code ?? row.region ?? FALLBACK_AREA.state,
-      lat: typeof row.latitude === 'number' ? row.latitude : FALLBACK_AREA.lat,
-      lng: typeof row.longitude === 'number' ? row.longitude : FALLBACK_AREA.lng,
-    };
-  } catch {
-    return FALLBACK_AREA;
-  }
-}
-
 async function loadAreaStats(area: IpEstimate): Promise<AreaStats> {
   const [facilities, players, gamesThisWeek, tournamentsOpen] = await Promise.all([
     loadFacilities(area),
