@@ -238,6 +238,12 @@ function RootLayout() {
           name="story/[category]"
           options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'fade' }}
         />
+        {/* Same options as story/[category]: a photo should feel like it
+            expanded in place, which a slide-up sheet does not. */}
+        <Stack.Screen
+          name="photo-viewer"
+          options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'fade' }}
+        />
         <Stack.Screen name="play-pickleball" options={{ headerShown: false }} />
         <Stack.Screen name="create-quick-game" options={{ headerShown: false }} />
         <Stack.Screen name="quick-game-created" options={{ headerShown: false }} />

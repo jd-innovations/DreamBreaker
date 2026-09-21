@@ -62,6 +62,46 @@ const TABS: Tab[] = ['Feed', 'Events', 'Members', 'Photos'];
 const FALLBACK_BANNER = 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&h=400&fit=crop&q=80';
 const FALLBACK_EVENT_IMAGE = 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=200&fit=crop&q=80';
 
+// ─── Feed photo sizing ────────────────────────────────────────────────────────
+//
+// A feed photo used to be a fixed 220pt box with resizeMode 'cover', which
+// centre-cropped every portrait shot: a 9:16 phone screenshot lost roughly two
+// thirds of its height before anyone could tap it. The card now takes the
+// photo's own aspect ratio, clamped at both ends.
+//
+// The clamp is what keeps this from swinging the other way. On a ~343pt-wide
+// card, 0.85 draws about 404pt tall and 2.2 about 156pt — tall enough to read,
+// short enough that one post cannot own the whole viewport, and wide enough
+// that a panorama is still a picture rather than a stripe. Shapes outside that
+// range are still cropped, deliberately; the full frame is one tap away in the
+// viewer, which renders `contain`.
+const MIN_FEED_ASPECT = 0.85;
+const MAX_FEED_ASPECT = 2.2;
+const DEFAULT_FEED_ASPECT = 4 / 3;
+
+function clampFeedAspect(aspect: number): number {
+  if (!Number.isFinite(aspect) || aspect <= 0) return DEFAULT_FEED_ASPECT;
+  return Math.max(MIN_FEED_ASPECT, Math.min(MAX_FEED_ASPECT, aspect));
+}
+
+/**
+ * Opens the shared full-screen viewer (src/app/photo-viewer.tsx).
+ *
+ * A single URL is passed bare; a gallery is passed as JSON with the tapped
+ * index, so the viewer's own tap-to-advance works across the whole set.
+ */
+function openPhotoViewer(urls: string[], index = 0, title?: string): void {
+  if (urls.length === 0) return;
+  router.push({
+    pathname: '/photo-viewer',
+    params: {
+      urls: urls.length === 1 ? urls[0] : JSON.stringify(urls),
+      index: String(index),
+      ...(title ? { title } : {}),
+    },
+  } as never);
+}
+
 // ─── Context menu data ────────────────────────────────────────────────────────
 
 const GROUP_MENU_MEMBER: MenuItem[] = [
@@ -295,6 +335,9 @@ function FeedPostCard({
   const [body, setBody] = useState(item.body);
   const [editedAt, setEditedAt] = useState(item.edited_at);
   const [reportVisible, setReportVisible] = useState(false);
+  // Settles to the photo's real shape on load; until then the card reserves a
+  // neutral landscape box rather than jumping up from zero height.
+  const [imageAspect, setImageAspect] = useState(DEFAULT_FEED_ASPECT);
   const isMine = item.author.id === userId;
 
   function handleMenu() {
@@ -445,7 +488,21 @@ function FeedPostCard({
       )}
 
       {item.kind === 'post' && !!item.image_url && (
-        <Image source={{ uri: item.image_url }} style={fp.postImage} resizeMode="cover" />
+        <Pressable
+          onPress={() => openPhotoViewer([item.image_url!], 0, body ?? undefined)}
+          accessibilityRole="imagebutton"
+          accessibilityLabel="Open photo full screen"
+        >
+          <Image
+            source={{ uri: item.image_url }}
+            style={[fp.postImage, { aspectRatio: imageAspect }]}
+            resizeMode="cover"
+            onLoad={(e) => {
+              const src = e.nativeEvent.source;
+              if (src?.width && src?.height) setImageAspect(clampFeedAspect(src.width / src.height));
+            }}
+          />
+        </Pressable>
       )}
 
       {item.kind === 'poll' && (
@@ -823,7 +880,10 @@ const fp = StyleSheet.create({
   author: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
   meta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   content: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 21 },
-  postImage: { width: '100%', height: 220, borderRadius: shape.panel },
+  // No fixed height: aspectRatio is supplied per-photo at the call site once
+  // the image reports its real dimensions. The background shows during load,
+  // so the reserved box is never a bare white gap.
+  postImage: { width: '100%', borderRadius: shape.panel, backgroundColor: L.border },
   editWrap: { gap: 8 },
   editInput: {
     borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
@@ -1301,11 +1361,17 @@ function PhotosTab({ groupId, userId }: { groupId: string; userId: string }) {
         </View>
       ) : (
         <View style={ph.grid}>
-          {photos.map((p) => (
+          {photos.map((p, i) => (
             <TouchableOpacity
               key={p.id}
               style={ph.cell}
               activeOpacity={0.85}
+              accessibilityRole="imagebutton"
+              accessibilityLabel={`Open photo ${i + 1} of ${photos.length} full screen`}
+              // The grid stays cropped squares — that is what a grid is for —
+              // but the viewer gets the whole set, so tap-to-advance walks the
+              // gallery instead of dead-ending on one photo.
+              onPress={() => openPhotoViewer(photos.map(x => x.url), i)}
               onLongPress={() => {
                 if (p.uploaded_by !== userId) return;
                 Alert.alert('Delete this photo?', 'This cannot be undone.', [
