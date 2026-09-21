@@ -172,11 +172,11 @@ export default function AdminWalletPage() {
     try {
       // Email first, because an admin acting on a support request has an email
       // in front of them and a name is ambiguous.
+      // Server-side, because email left the authenticated grant
+      // (20260921130000) and PostgREST cannot filter on a column the caller
+      // cannot read — the old .or(email.ilike) would error, not just omit it.
       const { data, error } = await supabase
-        .from("profiles")
-        .select("id,full_name,email")
-        .or(`email.ilike.%${q}%,full_name.ilike.%${q}%`)
-        .limit(10);
+        .rpc("admin_search_profiles", { p_query: q, p_limit: 10 });
       if (error) { toast.error(error.message); return; }
       setResults((data ?? []) as Person[]);
       if ((data ?? []).length === 0) toast.error("No match.");

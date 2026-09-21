@@ -89,7 +89,7 @@ export default function PartnerProfileScreen() {
       const [{ data: p }, { count }, myLikes, { data: myProfile }] = await Promise.all([
         supabase
           .from('profiles')
-          .select('full_name, avatar_url, dupr, self_rating, skill_level, hand, play_style, bio, dupr_verified, location_city, location_state, looking_status, date_of_birth, availability')
+          .select('full_name, avatar_url, dupr, self_rating, skill_level, hand, play_style, bio, dupr_verified, location_city, location_state, looking_status, availability')
           .eq('id', id)
           .single(),
         supabase
@@ -115,9 +115,11 @@ export default function PartnerProfileScreen() {
       const dupr = rating.value;
       const location = [p.location_city, p.location_state].filter(Boolean).join(', ') || 'Unknown';
       const photos = p.avatar_url ? [p.avatar_url] : [];
-      const age = p.date_of_birth
-        ? Math.floor((Date.now() - new Date(p.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-        : null;
+      // date_of_birth is no longer readable by the client — a birth date is
+      // identity-grade PII and this screen only ever wanted the age, so the
+      // server returns the integer instead (20260921130000).
+      const { data: ageValue } = await supabase.rpc('profile_age', { p_user_id: id });
+      const age = typeof ageValue === 'number' ? ageValue : null;
 
       const { pct } = computeMatch(
         { dupr: dupr || null, availability: p.availability },

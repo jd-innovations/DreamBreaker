@@ -8362,6 +8362,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_profile_emails: {
+        Args: never
+        Returns: { id: string; email: string | null }[]
+      }
+      admin_search_profiles: {
+        Args: { p_query: string; p_limit?: number }
+        Returns: { id: string; full_name: string | null; email: string | null }[]
+      }
+      profile_age: { Args: { p_user_id: string }; Returns: number | null }
       is_admin: { Args: never; Returns: boolean }
       is_approved_director: { Args: never; Returns: boolean }
       is_blocked_between: { Args: { a: string; b: string }; Returns: boolean }

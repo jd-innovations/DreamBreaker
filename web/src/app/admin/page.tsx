@@ -293,12 +293,24 @@ export default function AdminPage() {
       if (!profile || profile.role !== "admin") { router.push("/dashboard"); return; }
       setAdminName((profile.full_name as string | null) ?? "Admin");
 
-      // Load all profiles
-      const { data: profs } = await supabase.from("profiles")
-        .select("id,email,full_name,handle,role,director_status,director_events_hosted,director_rating,created_at,location_city,location_state,avatar_url")
-        .order("created_at", { ascending: false });
-      setProfiles((profs ?? []) as Profile[]);
-      setAllUsers((profs ?? []).map((p) => ({ id: p.id, full_name: p.full_name as string | null, role: p.role as string, avatar_url: (p as { avatar_url?: string | null }).avatar_url ?? null })) as MessagingUserProfile[]);
+      // Load all profiles.
+      //
+      // `email` is no longer in the authenticated SELECT grant on profiles —
+      // RLS there allows reading every row, so granting the column handed every
+      // signed-in user the whole address book (20260921130000). Admins get it
+      // back through admin_profile_emails(), merged on id here.
+      const [{ data: profs }, { data: emailRows }] = await Promise.all([
+        supabase.from("profiles")
+          .select("id,full_name,handle,role,director_status,director_events_hosted,director_rating,created_at,location_city,location_state,avatar_url")
+          .order("created_at", { ascending: false }),
+        supabase.rpc("admin_profile_emails"),
+      ]);
+      const emailById = new Map<string, string | null>(
+        ((emailRows ?? []) as { id: string; email: string | null }[]).map((r) => [r.id, r.email]),
+      );
+      const profsWithEmail = (profs ?? []).map((p) => ({ ...p, email: emailById.get(p.id) ?? null }));
+      setProfiles(profsWithEmail as Profile[]);
+      setAllUsers(profsWithEmail.map((p) => ({ id: p.id, full_name: p.full_name as string | null, role: p.role as string, avatar_url: (p as { avatar_url?: string | null }).avatar_url ?? null })) as MessagingUserProfile[]);
 
       // Load all tournaments with director name
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
