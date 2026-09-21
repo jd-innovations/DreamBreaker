@@ -1,0 +1,46 @@
+-- Closes the email / date_of_birth leak, properly this time.
+--
+-- Supersedes 20260921140000, the hotfix that restored these columns after the
+-- first attempt (20260921130000) took production down. The SQL is identical to
+-- the one that failed. Only the ordering changed, and the ordering was the whole
+-- problem:
+--
+--   first attempt:  revoke, then discover the readers
+--   this attempt:   change every reader, ship it, confirm adoption, then revoke
+--
+-- A column grant cannot be removed ahead of its clients. Installed mobile
+-- bundles cannot be patched retroactively, so a revoke that leads the client
+-- release takes down every session at once — Postgres denies the whole query
+-- when a single column is denied, which turns "one column is private now" into
+-- "the app cannot load a profile".
+--
+-- Verified before applying, in this order:
+--
+--   1. Every select against `profiles` extracted MECHANICALLY (regex over the
+--      source, including selects built from variables) rather than grepped for
+--      the column name. Four readers, all mobile. The one that caused the
+--      outage — services/profile.ts — builds its select from a column ARRAY, so
+--      no select() string ever contained the word "email"; grep could not have
+--      found it.
+--   2. All four changed and shipped: 04b7665, published OTA, adopted on the
+--      only device with the app installed, and the three affected screens
+--      exercised by hand (profile load, partner finder, join a community event).
+--   3. The surviving client column lists run as `authenticated` with this
+--      revoke active, inside a rolled-back transaction. No permission error.
+--   4. A guard test now fails the build if any source file selects these
+--      columns, in either a select() string or a column array —
+--      apps/mobile/src/lib/__tests__/profilePrivateColumns.test.ts. It was
+--      checked against the pre-fix profile.ts to confirm it flags the real
+--      regression rather than merely passing today.
+--
+-- Legitimate readers keep access through the accessors from 20260921130000:
+--   admin_profile_emails()   ids + addresses, admin-gated
+--   admin_search_profiles()  the wallet lookup; a function is required because
+--                            PostgREST cannot FILTER on a column the caller
+--                            cannot read
+--   profile_age()            returns the integer, so a birth date never reaches
+--                            a client at all — better than the grant it replaces
+--
+-- A user's own email remains available where it always was: the auth session
+-- (`useSession().user.email`), which never went through this table.
+revoke select (email, date_of_birth) on public.profiles from authenticated;
