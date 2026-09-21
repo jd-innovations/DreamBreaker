@@ -14,7 +14,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import type { StyleProp, ViewStyle } from 'react-native';
+import type { StyleProp, ViewStyle, ImageStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -24,6 +24,7 @@ import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
+import { openPhotoViewer, clampAspect } from '@/lib/photoViewer';
 import {
   AppIcon, PickleballIcon, ReactionPills, AttachmentOptionsSheet, FileAttachmentRow,
   type AppIconName,
@@ -50,6 +51,49 @@ import {
 } from '@/lib/attachmentPicker';
 
 const { width: SW } = Dimensions.get('window');
+
+// ─── Chat photo sizing ────────────────────────────────────────────────────────
+//
+// A chat photo used to be a forced SW*0.55 SQUARE, so every portrait shot
+// arrived centre-cropped: the shape a phone screenshot is least likely to be.
+// The bubble now takes the photo's own aspect ratio, clamped.
+//
+// Tighter bounds than the group feed uses. A bubble is ~206pt wide on a 375pt
+// screen, so 0.74 draws about 279pt tall and 1.7 about 121pt — a photo should
+// read at a glance without pushing the rest of the conversation off screen.
+// Anything outside the range is still cropped here and whole in the viewer.
+const MIN_CHAT_ASPECT = 0.74;
+const MAX_CHAT_ASPECT = 1.7;
+const DEFAULT_CHAT_ASPECT = 1;
+
+const clampChatAspect = (aspect: number) =>
+  clampAspect(aspect, MIN_CHAT_ASPECT, MAX_CHAT_ASPECT, DEFAULT_CHAT_ASPECT);
+
+/**
+ * A photo inside a chat bubble.
+ *
+ * Exists as a component only so each message can hold its own measured aspect
+ * ratio — messages render in a map, so the state cannot live in the screen.
+ *
+ * It deliberately handles no touches. The enclosing bubble already owns
+ * onLongPress for reactions, and nesting a pressable inside it would make the
+ * two compete (and behave differently on Android). The bubble gained an
+ * onPress instead.
+ */
+function ChatPhoto({ uri, style }: { uri: string; style: StyleProp<ImageStyle> }) {
+  const [aspect, setAspect] = useState(DEFAULT_CHAT_ASPECT);
+  return (
+    <Image
+      source={{ uri }}
+      style={[style, { aspectRatio: aspect }]}
+      resizeMode="cover"
+      onLoad={(e) => {
+        const src = e.nativeEvent.source;
+        if (src?.width && src?.height) setAspect(clampChatAspect(src.width / src.height));
+      }}
+    />
+  );
+}
 
 // Theme-backed alias — brand values resolve from @/theme.
 const L = {
@@ -475,7 +519,9 @@ const eg = StyleSheet.create({
   sentBubblePhoto: {
     borderRadius: shape.card, borderTopRightRadius: 4, overflow: 'hidden', alignSelf: 'flex-end',
   },
-  msgPhoto: { width: SW * 0.55, height: SW * 0.55, backgroundColor: L.page },
+  // No fixed height: aspectRatio comes from ChatPhoto once the image reports
+  // its real dimensions. backgroundColor fills the reserved box during load.
+  msgPhoto: { width: SW * 0.55, backgroundColor: L.page },
   sentText: { color: '#FFFFFF', fontSize: text.body.size, fontWeight: '500', lineHeight: 21 },
   sentMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   msgTime: { color: L.textMuted, fontSize: 11, fontWeight: '400', marginTop: 2 },
@@ -569,7 +615,9 @@ const s = StyleSheet.create({
   sentBubblePhoto: {
     borderRadius: shape.card, borderTopRightRadius: 4, overflow: 'hidden', alignSelf: 'flex-end',
   },
-  msgPhoto: { width: SW * 0.55, height: SW * 0.55, backgroundColor: L.page },
+  // No fixed height: aspectRatio comes from ChatPhoto once the image reports
+  // its real dimensions. backgroundColor fills the reserved box during load.
+  msgPhoto: { width: SW * 0.55, backgroundColor: L.page },
   sentText: { color: '#FFFFFF', fontSize: text.body.size, fontWeight: '500', lineHeight: 21 },
   sentMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   msgTime: { color: L.textMuted, fontSize: 11, fontWeight: '400', marginTop: 2 },
@@ -1150,10 +1198,15 @@ function RealDMScreen({ conversationId }: { conversationId: string }) {
                     <TouchableOpacity
                       activeOpacity={0.85}
                       onLongPress={() => setReactingTo(msg.id)}
+                      // Images only. A text bubble has nothing to expand, and giving
+                      // it an onPress would swallow taps that currently fall through.
+                      onPress={msg.attachment_type === 'image'
+                        ? () => openPhotoViewer([msg.attachment_url!])
+                        : undefined}
                       style={msg.attachment_type === 'image' ? s.sentBubblePhoto : s.sentBubble}
                     >
                       {msg.attachment_type === 'image' ? (
-                        <Image source={{ uri: msg.attachment_url! }} style={s.msgPhoto} />
+                        <ChatPhoto uri={msg.attachment_url!} style={s.msgPhoto} />
                       ) : msg.attachment_type === 'file' ? (
                         <FileAttachmentRow url={msg.attachment_url!} name={msg.attachment_name} onDark />
                       ) : (
@@ -1190,10 +1243,13 @@ function RealDMScreen({ conversationId }: { conversationId: string }) {
                   <TouchableOpacity
                     activeOpacity={0.85}
                     onLongPress={() => setReactingTo(msg.id)}
+                    onPress={msg.attachment_type === 'image'
+                      ? () => openPhotoViewer([msg.attachment_url!])
+                      : undefined}
                     style={msg.attachment_type === 'image' ? s.receivedBubblePhoto : s.receivedBubble}
                   >
                     {msg.attachment_type === 'image' ? (
-                      <Image source={{ uri: msg.attachment_url! }} style={s.msgPhoto} />
+                      <ChatPhoto uri={msg.attachment_url!} style={s.msgPhoto} />
                     ) : msg.attachment_type === 'file' ? (
                       <FileAttachmentRow url={msg.attachment_url!} name={msg.attachment_name} />
                     ) : (
@@ -1557,10 +1613,13 @@ function RealGroupChat({
                     <TouchableOpacity
                       activeOpacity={0.85}
                       onLongPress={() => setReactingTo(msg.id)}
+                      onPress={msg.attachment_type === 'image'
+                        ? () => openPhotoViewer([msg.attachment_url!])
+                        : undefined}
                       style={msg.attachment_type === 'image' ? eg.sentBubblePhoto : eg.sentBubble}
                     >
                       {msg.attachment_type === 'image' ? (
-                        <Image source={{ uri: msg.attachment_url! }} style={eg.msgPhoto} />
+                        <ChatPhoto uri={msg.attachment_url!} style={eg.msgPhoto} />
                       ) : msg.attachment_type === 'file' ? (
                         <FileAttachmentRow url={msg.attachment_url!} name={msg.attachment_name} onDark />
                       ) : (
@@ -1594,10 +1653,13 @@ function RealGroupChat({
                   <TouchableOpacity
                     activeOpacity={0.85}
                     onLongPress={() => setReactingTo(msg.id)}
+                    onPress={msg.attachment_type === 'image'
+                      ? () => openPhotoViewer([msg.attachment_url!])
+                      : undefined}
                     style={msg.attachment_type === 'image' ? eg.receivedBubblePhoto : eg.receivedBubble}
                   >
                     {msg.attachment_type === 'image' ? (
-                      <Image source={{ uri: msg.attachment_url! }} style={eg.msgPhoto} />
+                      <ChatPhoto uri={msg.attachment_url!} style={eg.msgPhoto} />
                     ) : msg.attachment_type === 'file' ? (
                       <FileAttachmentRow url={msg.attachment_url!} name={msg.attachment_name} />
                     ) : (

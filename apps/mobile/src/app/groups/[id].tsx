@@ -25,6 +25,7 @@ import {
   type Group, type GroupMember, type GroupFeedItem, type GroupComment,
   type GroupPostWithMeta, type GroupPhoto, type GroupRole, type ReportReason,
 } from '@/lib/groupService';
+import { openPhotoViewer, clampAspect } from '@/lib/photoViewer';
 import { setPendingGroupId } from '@/lib/pendingGroupLink';
 import { sendPartnerLike, hasSentPartnerLike, isPartnerMatch } from '@/lib/partnerLikes';
 import { getOrCreateConversation } from '@/lib/conversationService';
@@ -79,28 +80,8 @@ const MIN_FEED_ASPECT = 0.85;
 const MAX_FEED_ASPECT = 2.2;
 const DEFAULT_FEED_ASPECT = 4 / 3;
 
-function clampFeedAspect(aspect: number): number {
-  if (!Number.isFinite(aspect) || aspect <= 0) return DEFAULT_FEED_ASPECT;
-  return Math.max(MIN_FEED_ASPECT, Math.min(MAX_FEED_ASPECT, aspect));
-}
-
-/**
- * Opens the shared full-screen viewer (src/app/photo-viewer.tsx).
- *
- * A single URL is passed bare; a gallery is passed as JSON with the tapped
- * index, so the viewer's own tap-to-advance works across the whole set.
- */
-function openPhotoViewer(urls: string[], index = 0, title?: string): void {
-  if (urls.length === 0) return;
-  router.push({
-    pathname: '/photo-viewer',
-    params: {
-      urls: urls.length === 1 ? urls[0] : JSON.stringify(urls),
-      index: String(index),
-      ...(title ? { title } : {}),
-    },
-  } as never);
-}
+const clampFeedAspect = (aspect: number) =>
+  clampAspect(aspect, MIN_FEED_ASPECT, MAX_FEED_ASPECT, DEFAULT_FEED_ASPECT);
 
 // ─── Context menu data ────────────────────────────────────────────────────────
 
