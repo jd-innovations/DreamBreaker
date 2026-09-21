@@ -1,13 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Image, TextInput, ActivityIndicator,
+  StyleSheet, Image, TextInput, ActivityIndicator, Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { goBack } from '@/lib/navigation';
+import { useSession } from '@/hooks/useSession';
+import { getOrCreateConversation } from '@/lib/conversationService';
 import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -40,7 +42,11 @@ const av = StyleSheet.create({
   },
 });
 
-function PlayerRow({ player }: { player: DirectoryPlayer }) {
+function PlayerRow({ player, onMessage, messaging }: {
+  player: DirectoryPlayer;
+  onMessage: () => void;
+  messaging: boolean;
+}) {
   const mutuals = mutualLabel(player.mutualCount);
   return (
     <TouchableOpacity
@@ -87,7 +93,20 @@ function PlayerRow({ player }: { player: DirectoryPlayer }) {
         )}
       </View>
 
-      <Ionicons name="chevron-forward" size={18} color={L.textSub} />
+      {/* Straight to a thread. No relationship needed since 20260921170000 —
+          the recipient's control is block and report, not a locked door. */}
+      <TouchableOpacity
+        style={r.msgBtn}
+        onPress={onMessage}
+        disabled={messaging}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={`Message ${player.name}`}
+      >
+        {messaging
+          ? <ActivityIndicator size="small" color={L.navy} />
+          : <Ionicons name="chatbubble-outline" size={17} color={L.navy} />}
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 }
@@ -104,6 +123,21 @@ export default function PlayerDirectoryScreen() {
   // fast later one — the classic search race, and very reachable here because
   // shorter queries match more rows and take longer.
   const requestId = useRef(0);
+  const { user } = useSession();
+  const [messagingId, setMessagingId] = useState<string | null>(null);
+
+  async function handleMessage(playerId: string) {
+    if (!user?.id || messagingId) return;
+    setMessagingId(playerId);
+    try {
+      const convId = await getOrCreateConversation(user.id, playerId);
+      router.push(`/conversation/${convId}` as never);
+    } catch {
+      Alert.alert('Could not open the conversation', 'Please try again.');
+    } finally {
+      setMessagingId(null);
+    }
+  }
 
   const runSearch = useCallback(async (term: string) => {
     const mine = ++requestId.current;
@@ -195,7 +229,14 @@ export default function PlayerDirectoryScreen() {
             </TouchableOpacity>
           </View>
         ) : results.length > 0 ? (
-          results.map((p) => <PlayerRow key={p.id} player={p} />)
+          results.map((p) => (
+            <PlayerRow
+              key={p.id}
+              player={p}
+              onMessage={() => { void handleMessage(p.id); }}
+              messaging={messagingId === p.id}
+            />
+          ))
         ) : searched ? (
           <View style={s.state}>
             <Ionicons name="search-outline" size={40} color={L.textSub} />
@@ -271,4 +312,9 @@ const r = StyleSheet.create({
   dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: L.border },
   mutualRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
   mutual: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  msgBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    borderWidth: 1.5, borderColor: L.border, backgroundColor: L.page,
+    alignItems: 'center', justifyContent: 'center',
+  },
 });

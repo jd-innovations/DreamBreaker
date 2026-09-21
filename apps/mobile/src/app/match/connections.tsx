@@ -71,13 +71,17 @@ const av = StyleSheet.create({
 });
 
 /**
- * A contact row. Deliberately lighter than ConnectionCard: a contact is
- * someone you noted, not someone who agreed to anything, so the card offers
- * the profile and a way to drop them — and no Message button, because
- * messaging a non-connection is gated server-side and a button that usually
- * fails is worse than no button.
+ * A contact row. Lighter than ConnectionCard — a contact is someone you
+ * noted, not someone who agreed to anything — but it can be messaged: the
+ * relationship allowlist came off get_or_create_direct_conversation
+ * (20260921170000), so anyone may now open a thread with anyone.
  */
-function ContactCard({ contact, onRemove }: { contact: Contact; onRemove: () => void }) {
+function ContactCard({ contact, onRemove, onMessage, messaging }: {
+  contact: Contact;
+  onRemove: () => void;
+  onMessage: () => void;
+  messaging: boolean;
+}) {
   return (
     <TouchableOpacity
       style={cc.card}
@@ -106,6 +110,24 @@ function ContactCard({ contact, onRemove }: { contact: Contact; onRemove: () => 
           <Ionicons name="close" size={18} color={L.textSub} />
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity
+        style={cc.msgBtn}
+        onPress={onMessage}
+        disabled={messaging}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={`Message ${contact.player.name}`}
+      >
+        {messaging
+          ? <ActivityIndicator size="small" color={L.navy} />
+          : (
+            <>
+              <Ionicons name="chatbubble-outline" size={15} color={L.navy} />
+              <Text style={cc.msgLabel}>Message</Text>
+            </>
+          )}
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 }
@@ -216,6 +238,14 @@ const cc = StyleSheet.create({
   },
   inviteText: { color: L.white, fontSize: text.action.size, fontWeight: '800' },
   moreBtn: { minHeight: TOUCH_TARGET, width: spacing.xxl, alignItems: 'center', justifyContent: 'center' },
+  // Contacts card. Same shape as primaryBtn, full width — a contact row has
+  // one action, not two, so nothing needs to share the line with it.
+  msgBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    minHeight: TOUCH_TARGET, marginTop: spacing.sm, paddingHorizontal: spacing.md,
+    borderRadius: shape.cta, backgroundColor: L.page, borderWidth: 1.5, borderColor: L.border,
+  },
+  msgLabel: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 });
 
 // Takes the viewer's id rather than calling supabase.auth.getUser().
@@ -390,6 +420,20 @@ export default function MyConnectionsScreen() {
     }
   }
 
+  /** Contacts key on the player id; connections key on the match row id. */
+  async function handleMessagePlayer(playerId: string) {
+    if (!user?.id || messagingId) return;
+    setMessagingId(playerId);
+    try {
+      const convId = await getOrCreateConversation(user.id, playerId);
+      router.push(`/conversation/${convId}` as never);
+    } catch {
+      Alert.alert('Could not open the conversation', 'Please try again.');
+    } finally {
+      setMessagingId(null);
+    }
+  }
+
   async function handleRemove(conn: Connection) {
     await supabase.from('partner_matches').delete().eq('id', conn.id);
     setConns(prev => prev.filter(c => c.id !== conn.id));
@@ -459,6 +503,8 @@ export default function MyConnectionsScreen() {
                   key={c.player.id}
                   contact={c}
                   onRemove={() => { void handleRemoveContact(c); }}
+                  onMessage={() => { void handleMessagePlayer(c.player.id); }}
+                  messaging={messagingId === c.player.id}
                 />
               ))}
             </View>
