@@ -83,6 +83,34 @@ export async function fetchListings(params: FetchListingsParams = {}): Promise<M
   }));
 }
 
+/**
+ * A seller's listings as the PUBLIC sees them — active only.
+ *
+ * Deliberately not `fetchListings({ sellerId })`. That path exists for "My
+ * Listings" and returns every status on purpose, so reusing it on someone
+ * else's profile would publish their drafts, sold items and expired listings
+ * to a stranger.
+ */
+export async function fetchPublicSellerListings(
+  sellerId: string,
+  limit = 6,
+): Promise<MarketplaceListingCard[]> {
+  const { data, error } = await supabase
+    .from('marketplace_listings')
+    .select(LISTING_WITH_PHOTOS_SELECT)
+    .eq('seller_id', sellerId)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  return (data as unknown as MarketplaceListingWithPhotos[]).map((row) => ({
+    ...row,
+    primaryPhotoUrl: [...row.photos].sort((a, b) => a.sort_order - b.sort_order)[0]?.url ?? null,
+  }));
+}
+
 // ── Proximity search ─────────────────────────────────────────────────────────
 // Phase 1 of MARKETPLACE_MAP_AUDIT.md. Replaces the client-side haversine pass
 // the browse grid used to run over every fetched listing (§4.2): the database

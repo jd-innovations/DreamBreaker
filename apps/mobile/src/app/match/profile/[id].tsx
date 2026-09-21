@@ -13,10 +13,12 @@ import { resolvePlayerRating, formatPlayerRating } from '@/lib/playerRating';
 import { colors, spacing } from '@/theme';
 import { EmptyState } from '@/components/states/ScreenState';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
-import { radius as shape, text } from '@shared/tokens';
+import { radius as shape, space, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateConversation } from '@/lib/conversationService';
 import { openPhotoViewer } from '@/lib/photoViewer';
+import { fetchPublicSellerListings } from '@/lib/marketplace/listingService';
+import { formatPriceCents } from '@/lib/marketplace/constants';
 import { computeMatch } from '@shared/match';
 import { distanceMilesOrNull, formatMiles } from '@shared/geo';
 import {
@@ -62,6 +64,7 @@ type ProfileData = {
    *  player's own availability summary. */
   availabilityLabel: string | null;
   availabilityIsShared: boolean;
+  listings: { id: string; title: string; priceCents: number; photo: string | null }[];
   upcomingEvents: { name: string; date: string; type: string }[];
   groups: { name: string; role: string }[];
   stats: { label: string; value: string }[];
@@ -110,6 +113,7 @@ export default function PartnerProfileScreen() {
       const [
         { data: p }, { count }, myLikes, { data: myProfile },
         { data: regRows }, { data: playRows }, { data: groupRows },
+        sellerListings,
       ] = await Promise.all([
         supabase
           .from('profiles')
@@ -150,6 +154,10 @@ export default function PartnerProfileScreen() {
           .eq('user_id', id)
           .eq('status', 'active')
           .limit(20),
+        // Active only — fetchListings({ sellerId }) deliberately returns every
+        // status for "My Listings", which on someone else's profile would
+        // publish their drafts and sold items.
+        fetchPublicSellerListings(id, 6).catch(() => []),
       ]);
 
       if (cancelled) return;
@@ -244,6 +252,12 @@ export default function PartnerProfileScreen() {
         homeCourt: homeCourtRow?.name ?? null,
         availabilityLabel: sharedLabel ?? ownLabel,
         availabilityIsShared: !!sharedLabel,
+        listings: (sellerListings ?? []).map((l) => ({
+          id: l.id,
+          title: l.title,
+          priceCents: l.asking_price_cents,
+          photo: l.primaryPhotoUrl,
+        })),
         upcomingEvents: activity,
         groups,
         stats: [
@@ -527,6 +541,41 @@ export default function PartnerProfileScreen() {
             </Section>
           )}
 
+          {/* What they're selling. A horizontal rail rather than a list: it
+              is supporting detail on a profile, not the marketplace. */}
+          {profile.listings.length > 0 && (
+            <Section title="MARKETPLACE">
+              <View style={s.card}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={s.listingScroll}
+                >
+                  {profile.listings.map((l) => (
+                    <TouchableOpacity
+                      key={l.id}
+                      style={s.listingCard}
+                      activeOpacity={0.85}
+                      onPress={() => router.push(`/marketplace/${l.id}` as never)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${l.title}, ${formatPriceCents(l.priceCents)}`}
+                    >
+                      {l.photo ? (
+                        <Image source={{ uri: l.photo }} style={s.listingPhoto} resizeMode="cover" />
+                      ) : (
+                        <View style={[s.listingPhoto, s.listingPhotoEmpty]}>
+                          <Ionicons name="pricetag-outline" size={22} color={L.textSub} />
+                        </View>
+                      )}
+                      <Text style={s.listingTitle} numberOfLines={1}>{l.title}</Text>
+                      <Text style={s.listingPrice}>{formatPriceCents(l.priceCents)}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </Section>
+          )}
+
           {/* Upcoming events */}
           {profile.upcomingEvents.length > 0 && (
             <Section title="UPCOMING EVENTS">
@@ -641,14 +690,46 @@ const s = StyleSheet.create({
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.35)' },
   dotActive: { backgroundColor: L.gold, width: 18 },
 
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 },
-  infoText: { color: L.text, fontSize: text.body.size, fontWeight: '500', flex: 1, lineHeight: 21 },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+  // DESIGN_STANDARD.md roles, not eyeballed values:
+  //   rowTitle 14/700      "primary label in a list or INFO ROW" — was body
+  //                        15/500, which is the bio's role and read oversized
+  //                        here, wrapping the home-court line onto two lines.
+  //   controlLabel 13/700  "tabs, filter chips" — was caption.
+  //   space.gutter         card padding. The row had NO horizontal padding at
+  //                        all, so the pin icon sat against the card border
+  //                        while every sibling card was inset.
+  infoRow: {
+    flexDirection: 'row', alignItems: 'center', gap: space.gapTight,
+    paddingHorizontal: space.gutter, paddingVertical: space.gapTight + 2,
+  },
+  infoText: {
+    color: L.text, fontSize: text.rowTitle.size, fontWeight: text.rowTitle.weight,
+    flex: 1, lineHeight: 20,
+  },
+  chipWrap: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: space.gapTight - 2,
+    paddingHorizontal: space.gutter, paddingBottom: space.gap,
+  },
   chip: {
-    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: shape.pill, paddingHorizontal: space.gapTight + 2, paddingVertical: 5,
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.border,
   },
-  chipText: { color: L.navy, fontSize: text.caption.size, fontWeight: '700' },
+  chipText: {
+    color: L.navy, fontSize: text.controlLabel.size, fontWeight: text.controlLabel.weight,
+  },
+  listingScroll: { paddingHorizontal: space.gutter, paddingVertical: space.gap, gap: space.gap },
+  listingCard: { width: 132 },
+  listingPhoto: {
+    width: 132, height: 100, borderRadius: shape.panel,
+    backgroundColor: L.page, borderWidth: 1, borderColor: L.border,
+  },
+  listingPhotoEmpty: { alignItems: 'center', justifyContent: 'center' },
+  listingTitle: {
+    color: L.navy, fontSize: text.rowTitle.size, fontWeight: text.rowTitle.weight, marginTop: 6,
+  },
+  listingPrice: {
+    color: L.gold, fontSize: text.chipValue.size, fontWeight: text.chipValue.weight, marginTop: 2,
+  },
 
   heroTopBar: {
     position: 'absolute', left: 16, right: 16,
