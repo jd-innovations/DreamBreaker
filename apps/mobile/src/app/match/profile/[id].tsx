@@ -284,30 +284,36 @@ export default function PartnerProfileScreen() {
             <TouchableOpacity style={s.iconBtn} onPress={() => router.back()}>
               <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
             </TouchableOpacity>
-            {/* Saving a player IS adding a contact — same partner_likes
-                kind='save' row the Contacts tab reads. */}
-            <PressableCTA
-              style={s.iconBtn}
-              onPress={handleBookmark}
-              hapticType="light"
-              pulseOn={bookmarked}
-              accessibilityLabel={bookmarked ? 'Remove from contacts' : 'Save to contacts'}
-            >
-              <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={bookmarked ? L.gold : '#FFFFFF'} />
-            </PressableCTA>
-            {/* 4.3. Hidden on your own profile — reporting yourself is not a
-                thing, and blocked_users has a no_self_block constraint that
-                would reject it anyway. */}
-            {myId && myId !== id ? (
-              <TouchableOpacity
+            {/* Actions group RIGHT, back stays left. With three children under
+                space-between the bookmark sat dead centre, reading as a badge
+                on the photo rather than a control — and it drifted whenever
+                the report button was hidden on your own profile. */}
+            <View style={s.heroActions}>
+              {/* Saving a player IS adding a contact — same partner_likes
+                  kind='save' row the Contacts tab reads. */}
+              <PressableCTA
                 style={s.iconBtn}
-                onPress={() => setReportOpen(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Report this person"
+                onPress={handleBookmark}
+                hapticType="light"
+                pulseOn={bookmarked}
+                accessibilityLabel={bookmarked ? 'Remove from contacts' : 'Save to contacts'}
               >
-                <Ionicons name="flag-outline" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-            ) : null}
+                <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={bookmarked ? L.gold : '#FFFFFF'} />
+              </PressableCTA>
+              {/* 4.3. Hidden on your own profile — reporting yourself is not a
+                  thing, and blocked_users has a no_self_block constraint that
+                  would reject it anyway. */}
+              {myId && myId !== id ? (
+                <TouchableOpacity
+                  style={s.iconBtn}
+                  onPress={() => setReportOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Report this person"
+                >
+                  <Ionicons name="flag-outline" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
           </View>
 
           {/* Name overlay */}
@@ -491,8 +497,11 @@ const s = StyleSheet.create({
 
   heroTopBar: {
     position: 'absolute', left: 16, right: 16,
-    flexDirection: 'row', justifyContent: 'space-between',
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
+  // Keeps save + report together on the right, so the row is "leave" on one
+  // side and "act on this person" on the other, whether or not report renders.
+  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconBtn: {
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: 'rgba(0,0,0,0.35)',
