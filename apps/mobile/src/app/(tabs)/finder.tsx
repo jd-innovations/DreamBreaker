@@ -99,7 +99,10 @@ const ab = StyleSheet.create({
 
 const MATCH_MENU = [
   { id: 'connections', icon: 'people-outline',     label: 'My Connections',      route: '/match/connections' },
-  { id: 'saved',       icon: 'bookmark-outline',   label: 'Saved Players',       route: '/match/saved'       },
+  // Now a tab inside My Connections. The standalone /match/saved screen still
+  // works and is unchanged; this entry just stops being a second front door
+  // to the same list under a different name.
+  { id: 'saved',       icon: 'bookmark-outline',   label: 'My Contacts',         route: '/match/connections?tab=Contacts' },
   { id: 'requests',    icon: 'person-add-outline', label: 'Match Requests',      route: '/match/requests'    },
   { id: 'prefs',       icon: 'options-outline',    label: 'Partner Preferences', route: '/match/preferences' },
 ];

@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Image, Alert, ActivityIndicator,
 } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -18,6 +18,7 @@ import { haversineMiles } from '@/lib/useFinderCandidates';
 import { getOrCreateConversation } from '@/lib/conversationService';
 import { ContextMenu, useContextMenu, type MenuItem } from '@/components/ContextMenu';
 import { useSupportContext } from '@/lib/support/supportContext';
+import { fetchContacts, removeContact, type Contact } from '@/lib/supabase/savedPlayers';
 import type { Connection } from '@/lib/connectionStore';
 
 const L = {
@@ -29,8 +30,13 @@ const L = {
   white: colors.white,
 };
 
-type Tab = 'All' | 'Recent';
-const TABS: Tab[] = ['All', 'Recent'];
+// Contacts is a DIFFERENT relationship from the other two, not a filter of
+// them: All/Recent slice mutual connections (partner_matches), Contacts is
+// the one-sided private shortlist (partner_likes, kind='save'). They share a
+// screen because that is where someone looks for "people I know", not
+// because they share a data source.
+type Tab = 'All' | 'Recent' | 'Contacts';
+const TABS: Tab[] = ['All', 'Recent', 'Contacts'];
 
 // Apple's minimum touch target. Not a spacing token — the scale tops out at 32
 // and this is a platform floor, not a rhythm value. The four 32px circles this
@@ -63,6 +69,46 @@ function Avatar({ uri, size }: { uri?: string; size: number }) {
 const av = StyleSheet.create({
   circle: { backgroundColor: L.page, borderWidth: 1, borderColor: L.border, alignItems: 'center', justifyContent: 'center' },
 });
+
+/**
+ * A contact row. Deliberately lighter than ConnectionCard: a contact is
+ * someone you noted, not someone who agreed to anything, so the card offers
+ * the profile and a way to drop them — and no Message button, because
+ * messaging a non-connection is gated server-side and a button that usually
+ * fails is worse than no button.
+ */
+function ContactCard({ contact, onRemove }: { contact: Contact; onRemove: () => void }) {
+  return (
+    <TouchableOpacity
+      style={cc.card}
+      activeOpacity={0.7}
+      onPress={() => router.push(`/match/profile/${contact.player.id}` as never)}
+    >
+      <View style={cc.top}>
+        <Avatar uri={contact.player.photoUri} size={52} />
+        <View style={cc.info}>
+          <Text style={cc.name} numberOfLines={2}>{contact.player.name}</Text>
+          <View style={cc.duprBadge}>
+            <Ionicons name="speedometer-outline" size={10} color={L.gold} />
+            <Text style={cc.duprText}>
+              {formatPlayerRating({ value: contact.player.dupr, source: contact.player.ratingSource })}
+            </Text>
+          </View>
+          <Text style={cc.meta} numberOfLines={1}>{contact.player.location}</Text>
+          <Text style={cc.meta}>Saved {relativeDate(contact.savedAt)}</Text>
+        </View>
+        <TouchableOpacity
+          onPress={onRemove}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel={`Remove ${contact.player.name} from contacts`}
+        >
+          <Ionicons name="close" size={18} color={L.textSub} />
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 function ConnectionCard({ conn, onMore, onMessage, messaging }: {
   conn: Connection;
@@ -231,9 +277,17 @@ async function fetchMatches(userId: string, mine: Coordinates | null): Promise<C
 
 export default function MyConnectionsScreen() {
   const insets = useSafeAreaInsets();
-  const [tab, setTab]           = useState<Tab>('All');
+  // Deep-linkable: the Partner menu's "My Contacts" entry lands on that tab
+  // directly rather than dropping people on All and making them find it.
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab]           = useState<Tab>(
+    TABS.includes(tabParam as Tab) ? (tabParam as Tab) : 'All',
+  );
   const [connections, setConns] = useState<Connection[]>([]);
   const [loading, setLoading]   = useState(true);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const contactsLoadedOnce = useRef(false);
 
   useSupportContext({ feature: 'match' });
 
@@ -257,6 +311,32 @@ export default function MyConnectionsScreen() {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, mine?.lat, mine?.lng]));
+
+  // Deferred: the two default tabs are mutual connections, and most visits
+  // never open this one. Loading it on mount would put a second round trip in
+  // front of every arrival for a list nobody asked for yet.
+  useFocusEffect(useCallback(() => {
+    if (tab !== 'Contacts' || !user?.id) return;
+    let cancelled = false;
+    if (!contactsLoadedOnce.current) setContactsLoading(true);
+    fetchContacts(user.id)
+      .then(rows => { if (!cancelled) { setContacts(rows); contactsLoadedOnce.current = true; } })
+      .catch(() => { /* leaves the previous list rather than blanking it */ })
+      .finally(() => { if (!cancelled) setContactsLoading(false); });
+    return () => { cancelled = true; };
+  }, [tab, user?.id]));
+
+  async function handleRemoveContact(contact: Contact) {
+    if (!user?.id) return;
+    const previous = contacts;
+    setContacts(prev => prev.filter(c => c.player.id !== contact.player.id));
+    try {
+      await removeContact(user.id, contact.player.id);
+    } catch {
+      setContacts(previous);
+      Alert.alert('Could not remove', 'Please try again.');
+    }
+  }
 
   const shown = tab === 'Recent'
     ? connections.filter(c => Date.now() - new Date(c.connectedAt).getTime() < WEEK_MS)
@@ -329,7 +409,11 @@ export default function MyConnectionsScreen() {
         </TouchableOpacity>
         <View style={s.headerCenter}>
           <Text style={s.title}>My Connections</Text>
-          <Text style={s.subtitle}>{connections.length} player{connections.length !== 1 ? 's' : ''} connected</Text>
+          <Text style={s.subtitle}>
+            {tab === 'Contacts'
+              ? `${contacts.length} contact${contacts.length !== 1 ? 's' : ''}`
+              : `${connections.length} player${connections.length !== 1 ? 's' : ''} connected`}
+          </Text>
         </View>
         {/* The directory's entry point. Until now player search existed only
             inside "new message" and "invite to event" — you could find someone
@@ -365,7 +449,37 @@ export default function MyConnectionsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 32 }]}
       >
-        {loading ? (
+        {tab === 'Contacts' ? (
+          contactsLoading && contacts.length === 0 ? (
+            <View style={s.empty}><ActivityIndicator size="large" color={L.navy} /></View>
+          ) : contacts.length > 0 ? (
+            <View style={s.list}>
+              {contacts.map(c => (
+                <ContactCard
+                  key={c.player.id}
+                  contact={c}
+                  onRemove={() => { void handleRemoveContact(c); }}
+                />
+              ))}
+            </View>
+          ) : (
+            <View style={s.empty}>
+              <Ionicons name="bookmark-outline" size={52} color={L.textSub} />
+              <Text style={s.emptyTitle}>No contacts yet</Text>
+              <Text style={s.emptySub}>
+                Save a player from their profile to keep them here. A contact is
+                private — they are not told, and it is not a connection.
+              </Text>
+              <TouchableOpacity
+                style={s.emptyBtn}
+                onPress={() => router.push('/match/directory' as never)}
+                activeOpacity={0.85}
+              >
+                <Text style={s.emptyBtnText}>Find Players</Text>
+              </TouchableOpacity>
+            </View>
+          )
+        ) : loading ? (
           <View style={s.empty}>
             <ActivityIndicator size="large" color={L.navy} />
           </View>
@@ -393,7 +507,11 @@ export default function MyConnectionsScreen() {
                 : 'Connect with players in the Partner Finder to see them here.'}
             </Text>
             {tab === 'All' && (
-              <TouchableOpacity style={s.emptyBtn} onPress={() => router.back()} activeOpacity={0.85}>
+              <TouchableOpacity
+                style={s.emptyBtn}
+                onPress={() => router.push('/match/directory' as never)}
+                activeOpacity={0.85}
+              >
                 <Text style={s.emptyBtnText}>Find Players</Text>
               </TouchableOpacity>
             )}

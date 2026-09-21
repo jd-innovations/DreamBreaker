@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import type { RatingSource } from '@/lib/playerRating';
+import { PressableCTA } from '@/components';
 import { resolvePlayerRating, formatPlayerRating } from '@/lib/playerRating';
 import { colors, spacing } from '@/theme';
 import { EmptyState } from '@/components/states/ScreenState';
@@ -283,9 +284,17 @@ export default function PartnerProfileScreen() {
             <TouchableOpacity style={s.iconBtn} onPress={() => router.back()}>
               <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
             </TouchableOpacity>
-            <TouchableOpacity style={s.iconBtn} onPress={handleBookmark}>
+            {/* Saving a player IS adding a contact — same partner_likes
+                kind='save' row the Contacts tab reads. */}
+            <PressableCTA
+              style={s.iconBtn}
+              onPress={handleBookmark}
+              hapticType="light"
+              pulseOn={bookmarked}
+              accessibilityLabel={bookmarked ? 'Remove from contacts' : 'Save to contacts'}
+            >
               <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={bookmarked ? L.gold : '#FFFFFF'} />
-            </TouchableOpacity>
+            </PressableCTA>
             {/* 4.3. Hidden on your own profile — reporting yourself is not a
                 thing, and blocked_users has a no_self_block constraint that
                 would reject it anyway. */}

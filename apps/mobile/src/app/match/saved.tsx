@@ -7,12 +7,13 @@ import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { resolvePlayerRating, formatPlayerRating } from '@/lib/playerRating';
+import { formatPlayerRating } from '@/lib/playerRating';
 import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
 import { useSupportContext } from '@/lib/support/supportContext';
+import { fetchContacts, removeContact } from '@/lib/supabase/savedPlayers';
 import type { SavedPlayer } from '@/lib/connectionStore';
 
 const L = {
@@ -129,49 +130,15 @@ const pc = StyleSheet.create({
   },
 });
 
+/**
+ * Kept as a thin wrapper over the shared module. This screen and the Contacts
+ * tab inside My Connections render the same list, and two copies of "what
+ * counts as a contact" — a magic `kind` value in a shared table — would drift.
+ */
 async function fetchSaved(): Promise<SavedPlayer[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
-
-  const { data: likes } = await supabase
-    .from('partner_likes')
-    .select('to_user_id, created_at')
-    .eq('from_user_id', user.id)
-    .eq('kind', 'save')
-    .order('created_at', { ascending: false });
-
-  if (!likes || likes.length === 0) return [];
-
-  const ids = likes.map(l => l.to_user_id);
-
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, full_name, avatar_url, dupr, self_rating, location_city, location_state, looking_status')
-    .in('id', ids);
-
-  const profileMap = Object.fromEntries((profiles ?? []).map(p => [p.id, p]));
-
-  return likes
-    .map(l => {
-      const p = profileMap[l.to_user_id];
-      if (!p) return null;
-      const rating = resolvePlayerRating(p.dupr, p.self_rating);
-      const location = [p.location_city, p.location_state].filter(Boolean).join(', ') || 'Unknown';
-      return {
-        player: {
-          id: p.id,
-          name: p.full_name,
-          dupr: rating.value,
-          ratingSource: rating.source,
-          location,
-          distance: 0,
-          lookingFor: p.looking_status || 'Partner',
-          photoUri: p.avatar_url ?? undefined,
-        },
-        savedAt: l.created_at,
-      } as SavedPlayer;
-    })
-    .filter((s): s is SavedPlayer => s !== null);
+  return fetchContacts(user.id);
 }
 
 export default function SavedPlayersScreen() {
@@ -201,14 +168,7 @@ export default function SavedPlayersScreen() {
 
   async function handleRemove(sp: SavedPlayer) {
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase
-        .from('partner_likes')
-        .delete()
-        .eq('from_user_id', user.id)
-        .eq('to_user_id', sp.player.id)
-        .eq('kind', 'save');
-    }
+    if (user) await removeContact(user.id, sp.player.id);
     setSaved(prev => prev.filter(s => s.player.id !== sp.player.id));
   }
 
@@ -229,8 +189,8 @@ export default function SavedPlayersScreen() {
           <Ionicons name="chevron-back" size={20} color={L.navy} />
         </TouchableOpacity>
         <View style={s.headerCenter}>
-          <Text style={s.title}>Saved Players</Text>
-          <Text style={s.subtitle}>Players you've bookmarked for future events.</Text>
+          <Text style={s.title}>My Contacts</Text>
+          <Text style={s.subtitle}>Players you've saved. Private to you.</Text>
         </View>
         <View style={{ width: 36 }} />
       </View>
