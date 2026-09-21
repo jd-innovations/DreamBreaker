@@ -157,10 +157,7 @@ export default function InviteDetailScreen() {
   }
 
   function openSenderProfile() {
-    router.push({
-      pathname: '/players/[id]' as never,
-      params: { id: inv.senderId },
-    } as never);
+    router.push(`/match/profile/${inv.senderId}` as never);
   }
 
   return (

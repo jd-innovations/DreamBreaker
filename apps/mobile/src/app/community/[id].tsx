@@ -1255,10 +1255,7 @@ export default function CommunityEventScreen() {
                         disabled={!player.userId}
                         onPress={() => {
                           if (!player.userId) return;
-                          router.push({
-                            pathname: '/players/[id]' as never,
-                            params: { id: player.userId },
-                          } as never);
+                          router.push(`/match/profile/${player.userId}` as never);
                         }}
                       >
                         <Avatar uri={pr.avatarUrl ?? null} initials={player.initials} bg={player.bg} size={42} />

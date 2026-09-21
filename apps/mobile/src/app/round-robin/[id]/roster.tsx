@@ -128,7 +128,7 @@ function PlayerCard({
         ...(player.profileId
           ? [{
               text: 'View Profile',
-              onPress: () => router.push(`/players/${player.profileId}` as never),
+              onPress: () => router.push(`/match/profile/${player.profileId}` as never),
             }]
           : []),
         {

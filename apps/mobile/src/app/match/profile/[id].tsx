@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Image, Dimensions, Alert, ActivityIndicator, Pressable,
+  StyleSheet, Image, Alert, ActivityIndicator, Pressable, Share,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import type { RatingSource } from '@/lib/playerRating';
 import { PressableCTA } from '@/components';
-import { resolvePlayerRating, formatPlayerRating } from '@/lib/playerRating';
-import { colors, spacing } from '@/theme';
+import { ContextMenu, useContextMenu, type MenuItem } from '@/components/ContextMenu';
+import { formatPlayerRating } from '@/lib/playerRating';
+import { colors } from '@/theme';
 import { EmptyState } from '@/components/states/ScreenState';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, space, text } from '@shared/tokens';
@@ -19,88 +19,56 @@ import { getOrCreateConversation } from '@/lib/conversationService';
 import { openPhotoViewer } from '@/lib/photoViewer';
 import { fetchPublicSellerListings } from '@/lib/marketplace/listingService';
 import { formatPriceCents } from '@/lib/marketplace/constants';
-import { computeMatch } from '@shared/match';
-import { distanceMilesOrNull, formatMiles } from '@shared/geo';
+import { formatMiles } from '@shared/geo';
 import {
-  normalizeSchedule, isScheduleEmpty, scheduleOverlap, describeOverlap, summarizeSchedule,
-} from '@shared/availability';
-import {
-  playStyleSummary,
-  lookingStatusLabel, genderLabel, handLabel, preferredFormatLabel, playIntensityLabel,
-} from '@shared/play-profile';
+  buildPublicProfile, PUBLIC_PROFILE_SELECT,
+  type PublicProfile, type ProfileRelationship, type PublicProfileRow, type ProfileViewer,
+} from '@shared/public-profile';
 import { useSupportContext } from '@/lib/support/supportContext';
 import { ReportUserSheet } from '@/components/safety/ReportUserSheet';
 
-const { width: SW } = Dimensions.get('window');
-const HERO_H = SW * 1.1;
+/**
+ * The public player profile — the ONE of them.
+ *
+ * Consolidated 2026-09-21 (PROFILE_CONSOLIDATION_PLAN.md). This screen holds
+ * the connect and safety flows, which were the expensive half to reimplement,
+ * and it already had most of the inbound links; it takes players/[id]'s layout,
+ * which is the half people preferred. What a profile CONTAINS is decided in
+ * @shared/public-profile so web cannot drift from it again.
+ */
 
 const L = {
   bg: colors.bg, page: colors.page, navy: colors.navy,
-  gold: colors.gold, goldBg: colors.goldBg,
+  gold: colors.gold, goldBg: colors.goldBg, goldBorder: colors.goldBorder,
   text: colors.text, textSub: colors.textSub, border: colors.border,
-  success: colors.success, danger: colors.danger,
+  success: colors.success, white: colors.white,
 };
 
-type ProfileData = {
-  name: string;
-  dupr: number;
-  ratingSource: RatingSource;
-  location: string;
-  /** Miles, or null when either side has no coordinates. Was hardcoded to 0,
-   *  so every profile claimed "0 mi" regardless of where the player was. */
-  distanceMi: number | null;
-  lookingFor: string;
-  skillRange: string;
-  hand: string | null;
-  style: string | null;
-  age: number | null;
-  bio: string;
-  verifiedDupr: boolean;
-  gender: string | null;
-  formats: string[];
-  intensity: string | null;
-  homeCourt: string | null;
-  /** Slots BOTH players share, when the viewer has a schedule; otherwise this
-   *  player's own availability summary. */
-  availabilityLabel: string | null;
-  availabilityIsShared: boolean;
-  listings: { id: string; title: string; priceCents: number; photo: string | null }[];
-  upcomingEvents: { name: string; date: string; type: string }[];
-  groups: { name: string; role: string }[];
-  stats: { label: string; value: string }[];
-  photos: string[];
-};
+type Tab = 'overview' | 'events' | 'marketplace';
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={sec.wrap}>
-      <Text style={sec.title}>{title}</Text>
-      {children}
-    </View>
-  );
+function SectionLabel({ label }: { label: string }) {
+  return <Text style={s.sectionLabel}>{label}</Text>;
 }
-const sec = StyleSheet.create({
-  wrap: { marginBottom: 24 },
-  title: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginBottom: 10 },
-});
 
 export default function PartnerProfileScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  // No setter: the hero opens the shared viewer rather than advancing in
-  // place, and the viewer owns paging across a set.
-  const [photoIdx]                = useState(0);
+
   const [loading, setLoading]       = useState(true);
-  const [profile, setProfile]       = useState<ProfileData | null>(null);
+  const [profile, setProfile]       = useState<PublicProfile | null>(null);
   const [myId, setMyId]             = useState<string | null>(null);
   const [connected, setConnected]   = useState(false);
   const [pending, setPending]       = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
+  const [tab, setTab]               = useState<Tab>('overview');
 
   useSupportContext({ feature: 'partner_finder', entityType: 'player_profile', entityId: id, entityLabel: profile?.name });
   const [msgLoading, setMsgLoading] = useState(false);
   const [connectLoading, setConnectLoading] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+
+  const overflow = useContextMenu();
+  const isSelf = !!myId && myId === id;
 
   useEffect(() => {
     if (!id) { setLoading(false); return; }
@@ -111,165 +79,109 @@ export default function PartnerProfileScreen() {
       const uid = user?.id ?? null;
 
       const [
-        { data: p }, { count }, myLikes, { data: myProfile },
+        { data: row }, { count: connectionCount }, myLikes, { data: me },
         { data: regRows }, { data: playRows }, { data: groupRows },
-        sellerListings,
+        listings, { data: reviewRow }, { data: settingRows },
       ] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('full_name, avatar_url, dupr, self_rating, skill_level, hand, play_style, bio, dupr_verified, location_city, location_state, looking_status, availability, availability_schedule, location_lat, location_lng, preferred_formats, play_intensity, gender, home_court_id, facilities:home_court_id(name, city, state)')
-          .eq('id', id)
-          .single(),
-        supabase
-          .from('partner_matches')
-          .select('*', { count: 'exact', head: true })
+        supabase.from('profiles').select(PUBLIC_PROFILE_SELECT).eq('id', id).single(),
+        supabase.from('partner_matches').select('*', { count: 'exact', head: true })
           .or(`user_a.eq.${id},user_b.eq.${id}`),
         uid
-          ? supabase
-              .from('partner_likes')
-              .select('kind')
-              .eq('from_user_id', uid)
-              .eq('to_user_id', id)
+          ? supabase.from('partner_likes').select('kind').eq('from_user_id', uid).eq('to_user_id', id)
           : Promise.resolve({ data: [] as { kind: string }[] }),
         uid
-          ? supabase.from('profiles').select('dupr, self_rating, availability, availability_schedule, location_lat, location_lng').eq('id', uid).maybeSingle()
+          ? supabase.from('profiles')
+              .select('id, dupr, availability_schedule, location_lat, location_lng')
+              .eq('id', uid).maybeSingle()
           : Promise.resolve({ data: null }),
-        // Activity. Both sections existed in the UI with hardcoded empty arrays
-        // behind them, so the render blocks could never fire. The queries are
-        // lifted from app/players/[id].tsx, which has had them all along but is
-        // reachable from exactly one screen (the round-robin roster).
-        supabase
-          .from('registrations')
-          .select('tournament_id, tournaments(name, event_date, city)')
-          .or(`player_id.eq.${id},partner_id.eq.${id}`)
-          .limit(20),
-        supabase
-          .from('play_participants')
-          .select('event_id, play_events(name, event_date, city, state)')
-          .eq('claimed_by', id)
-          .limit(20),
-        supabase
-          .from('group_members')
-          .select('role, groups(name)')
-          .eq('user_id', id)
-          .eq('status', 'active')
-          .limit(20),
-        // Active only — fetchListings({ sellerId }) deliberately returns every
-        // status for "My Listings", which on someone else's profile would
-        // publish their drafts and sold items.
+        supabase.from('registrations')
+          .select('tournament_id, tournaments(name, event_date)')
+          .or(`player_id.eq.${id},partner_id.eq.${id}`).limit(20),
+        supabase.from('play_participants')
+          .select('event_id, play_events(name, event_date)')
+          .eq('claimed_by', id).limit(20),
+        supabase.from('group_members').select('role, groups(name)')
+          .eq('user_id', id).eq('status', 'active').limit(20),
+        // Active only: fetchListings({ sellerId }) returns every status for
+        // "My Listings", which here would publish a stranger's drafts.
         fetchPublicSellerListings(id, 6).catch(() => []),
+        supabase.from('v_review_summary')
+          .select('average_rating, review_count')
+          .eq('subject_type', 'player').eq('subject_id', id).maybeSingle(),
+        // The gate is a product decision, not a missing feature: kept off
+        // "until enough transactions exist for an average to mean anything".
+        supabase.from('platform_settings').select('key, value')
+          .in('key', ['reviews_display_enabled', 'reviews_display_min_count']),
       ]);
 
       if (cancelled) return;
-      if (!p) { setLoading(false); return; }
+      if (!row) { setLoading(false); return; }
 
-      const rating = resolvePlayerRating(p.dupr, p.self_rating);
-      const dupr = rating.value;
-      const location = [p.location_city, p.location_state].filter(Boolean).join(', ') || 'Unknown';
-      const photos = p.avatar_url ? [p.avatar_url] : [];
-      // date_of_birth is no longer readable by the client — a birth date is
-      // identity-grade PII and this screen only ever wanted the age, so the
-      // server returns the integer instead (20260921130000).
-      const { data: ageValue } = await supabase.rpc('profile_age', { p_user_id: id });
-      const age = typeof ageValue === 'number' ? ageValue : null;
+      const likes = (myLikes.data ?? []) as { kind: string }[];
+      const isBookmarked = likes.some((l) => l.kind === 'save');
+      const hasLiked = likes.some((l) => l.kind === 'like');
 
-      // Real distance, from the same helper web and the finder use.
-      const distanceMi = distanceMilesOrNull(
-        myProfile?.location_lat != null && myProfile?.location_lng != null
-          ? { lat: myProfile.location_lat, lng: myProfile.location_lng }
-          : null,
-        { lat: p.location_lat, lng: p.location_lng },
-      );
-
-      const { pct } = computeMatch(
-        { dupr: dupr || null, schedule: p.availability_schedule, distanceMi },
-        {
-          dupr: myProfile?.dupr ?? (myProfile?.self_rating ? parseFloat(myProfile.self_rating) : null),
-          schedule: myProfile?.availability_schedule ?? null,
-        },
-      );
-
-      setMyId(uid);
-      setBookmarked((myLikes.data ?? []).some(l => l.kind === 'save'));
-      setPending((myLikes.data ?? []).some(l => l.kind === 'like'));
-      if (uid) {
+      let isConnected = false;
+      if (uid && uid !== id) {
         const { data: match } = await supabase
-          .from('partner_matches')
-          .select('id')
+          .from('partner_matches').select('id')
           .or(`and(user_a.eq.${uid},user_b.eq.${id}),and(user_a.eq.${id},user_b.eq.${uid})`)
           .maybeSingle();
-        if (!cancelled) setConnected(!!match);
+        isConnected = !!match;
       }
+      if (cancelled) return;
 
-      // Prefer what the two of you SHARE — "Both free Wednesday evenings" is a
-      // reason to message someone; "Wed, Sat" is a fact about a stranger.
-      const theirSchedule = normalizeSchedule(p.availability_schedule);
-      const mySchedule = normalizeSchedule(myProfile?.availability_schedule);
-      const overlap = isScheduleEmpty(mySchedule) ? [] : scheduleOverlap(mySchedule, theirSchedule);
-      const sharedLabel = overlap.length > 0 ? describeOverlap(overlap) : null;
-      const ownLabel = isScheduleEmpty(theirSchedule) ? null : summarizeSchedule(theirSchedule);
+      const { data: ageValue } = await supabase.rpc('profile_age', { p_user_id: id });
+      if (cancelled) return;
 
-      const homeCourtRow = (p as { facilities?: { name: string; city: string | null; state: string | null } | null }).facilities;
+      const relationship: ProfileRelationship =
+        uid === id ? 'self' : isConnected ? 'connected' : hasLiked ? 'pending' : 'none';
 
-      const tournaments = (regRows ?? [])
-        .map((r) => (r as { tournaments?: { name: string; event_date: string; city: string | null } | null }).tournaments)
-        .filter((t): t is { name: string; event_date: string; city: string | null } => !!t)
-        .map((t) => ({ name: t.name, date: t.event_date, type: 'Tournament' }));
+      const settings = Object.fromEntries((settingRows ?? []).map((r) => [r.key, r.value]));
 
-      const communityEvents = (playRows ?? [])
-        .map((r) => (r as { play_events?: { name: string; event_date: string } | null }).play_events)
-        .filter((e): e is { name: string; event_date: string } => !!e)
-        .map((e) => ({ name: e.name, date: e.event_date, type: 'Community Play' }));
+      const activity = [
+        ...(regRows ?? []).flatMap((r) => {
+          const t = (r as { tournaments?: { name: string; event_date: string } | null }).tournaments;
+          return t ? [{ name: t.name, date: t.event_date, kind: 'tournament' as const }] : [];
+        }),
+        ...(playRows ?? []).flatMap((r) => {
+          const e = (r as { play_events?: { name: string; event_date: string } | null }).play_events;
+          return e ? [{ name: e.name, date: e.event_date, kind: 'community' as const }] : [];
+        }),
+      ];
 
-      // Newest first, and capped: this is a profile, not a history screen.
-      const activity = [...tournaments, ...communityEvents]
-        .sort((a, b) => b.date.localeCompare(a.date))
-        .slice(0, 5);
-
-      const groups = (groupRows ?? [])
-        .map((r) => {
-          const row = r as { role: string | null; groups?: { name: string } | null };
-          return row.groups ? { name: row.groups.name, role: row.role ?? 'member' } : null;
-        })
-        .filter((g): g is { name: string; role: string } => !!g);
-
-      setProfile({
-        name: p.full_name,
-        dupr,
-        ratingSource: rating.source,
-        location,
-        distanceMi,
-        lookingFor: p.looking_status || 'Partner',
-        skillRange: p.skill_level || '',
-        hand: p.hand,
-        style: playStyleSummary(p.play_style),
-        age,
-        bio: p.bio || '',
-        verifiedDupr: p.dupr_verified,
-        gender: p.gender ?? null,
-        formats: Array.isArray(p.preferred_formats) ? p.preferred_formats : [],
-        intensity: p.play_intensity ?? null,
-        homeCourt: homeCourtRow?.name ?? null,
-        availabilityLabel: sharedLabel ?? ownLabel,
-        availabilityIsShared: !!sharedLabel,
-        listings: (sellerListings ?? []).map((l) => ({
-          id: l.id,
-          title: l.title,
-          priceCents: l.asking_price_cents,
-          photo: l.primaryPhotoUrl,
+      setMyId(uid);
+      setBookmarked(isBookmarked);
+      setPending(hasLiked && !isConnected);
+      setConnected(isConnected);
+      setProfile(buildPublicProfile({
+        row: row as unknown as PublicProfileRow,
+        viewer: (me ?? null) as ProfileViewer,
+        relationship,
+        age: typeof ageValue === 'number' ? ageValue : null,
+        connectionCount: connectionCount ?? 0,
+        // Every registration and claimed participation IS an event played.
+        eventsPlayed: activity.length,
+        partnersPlayed: connectionCount ?? 0,
+        activity,
+        groups: (groupRows ?? []).flatMap((r) => {
+          const g = r as { role: string | null; groups?: { name: string } | null };
+          return g.groups ? [{ name: g.groups.name, role: g.role ?? 'member' }] : [];
+        }),
+        listings: (listings ?? []).map((l) => ({
+          id: l.id, title: l.title, priceCents: l.asking_price_cents, photo: l.primaryPhotoUrl,
         })),
-        upcomingEvents: activity,
-        groups,
-        stats: [
-          { label: 'Connections', value: String(count ?? 0) },
-          ...(uid ? [{ label: 'Match', value: `${pct}%` }] : []),
-        ],
-        photos,
-      });
+        reviews: {
+          displayEnabled: settings.reviews_display_enabled === 'true',
+          minCount: Number.parseInt(settings.reviews_display_min_count ?? '3', 10) || 3,
+          averageRating: reviewRow?.average_rating != null ? Number(reviewRow.average_rating) : null,
+          reviewCount: reviewRow?.review_count ?? 0,
+        },
+      }));
       setLoading(false);
     }
 
-    load();
+    load().catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [id]);
 
@@ -296,11 +208,7 @@ export default function PartnerProfileScreen() {
       const a = myId < id ? myId : id;
       const b = myId < id ? id : myId;
       const { data: match } = await supabase
-        .from('partner_matches')
-        .select('id')
-        .eq('user_a', a)
-        .eq('user_b', b)
-        .maybeSingle();
+        .from('partner_matches').select('id').eq('user_a', a).eq('user_b', b).maybeSingle();
       if (match) {
         setConnected(true);
         Alert.alert("It's a Match!", `You and ${profile.name} liked each other.`);
@@ -330,6 +238,44 @@ export default function PartnerProfileScreen() {
     }
   }
 
+  async function handleMessage() {
+    if (!id || msgLoading) return;
+    setMsgLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { Alert.alert('Sign in required', 'Please sign in to send messages.'); return; }
+      if (user.id === id) return;
+      const convId = await getOrCreateConversation(user.id, id);
+      router.push(`/conversation/${convId}` as never);
+    } catch (e: unknown) {
+      Alert.alert('Could not open chat', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setMsgLoading(false);
+    }
+  }
+
+  // The "…" was a TouchableOpacity with no onPress at all. Share lives here
+  // rather than in the action bar so it is not offered in two places.
+  const menuItems: MenuItem[] = [
+    { icon: 'share-outline', label: 'Share Profile' },
+    ...(isSelf ? [] : [
+      { icon: 'flag-outline', label: 'Report', danger: true } as MenuItem,
+    ]),
+  ];
+
+  function handleMenu(label: string) {
+    overflow.close(() => {
+      if (label === 'Share Profile' && profile) {
+        // shareEntity has no 'player' type — profiles are not a shareable
+        // entity with an Open Graph page yet, so this opens the OS sheet with
+        // the profile's app link rather than inventing a share card.
+        void Share.share({ message: `${profile.name} on Pickleball App` });
+      } else if (label === 'Report') {
+        setReportOpen(true);
+      }
+    });
+  }
+
   if (loading) {
     return (
       <View style={[s.root, { alignItems: 'center', justifyContent: 'center' }]}>
@@ -353,322 +299,316 @@ export default function PartnerProfileScreen() {
     );
   }
 
+  const distanceLabel = formatMiles(profile.distanceMi);
+  const initials = profile.name.split(/\s+/).filter(Boolean).slice(0, 2)
+    .map((w) => w[0]?.toUpperCase()).join('') || '?';
+
   return (
-    <View style={s.root}>
-      <StatusBar style="light" />
+    <View style={[s.root, { paddingTop: insets.top }]}>
+      <StatusBar style="dark" />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}>
-
-        {/* ── Hero section ── */}
-        <View style={{ height: HERO_H }}>
-          <Image source={{ uri: profile.photos[photoIdx] }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-
-          {/* Photo dots */}
-          {profile.photos.length > 1 && (
-            <View style={[s.photoDots, { top: insets.top + 48 }]}>
-              {profile.photos.map((_, i) => (
-                <View key={i} style={[s.dot, i === photoIdx && s.dotActive]} />
-              ))}
-            </View>
-          )}
-
-          {/* Tap the photo to see it whole, as in chat and group feeds.
-              This replaced left/right advance zones: `photos` is built from
-              avatar_url alone, so there has only ever been one photo and both
-              zones were no-ops — tapping a face did nothing. The viewer
-              advances across a set by itself if profiles ever gain more. */}
-          {profile.photos.length > 0 && (
-            <Pressable
-              style={StyleSheet.absoluteFill}
-              onPress={() => openPhotoViewer(profile.photos, photoIdx, profile.name)}
-              accessibilityRole="imagebutton"
-              accessibilityLabel={`View ${profile.name}'s photo full screen`}
-            />
-          )}
-
-          {/* Top bar */}
-          <View style={[s.heroTopBar, { top: insets.top + 12 }]}>
-            <TouchableOpacity style={s.iconBtn} onPress={() => router.back()}>
-              <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            {/* Actions group RIGHT, back stays left. With three children under
-                space-between the bookmark sat dead centre, reading as a badge
-                on the photo rather than a control — and it drifted whenever
-                the report button was hidden on your own profile. */}
-            <View style={s.heroActions}>
-              {/* Saving a player IS adding a contact — same partner_likes
-                  kind='save' row the Contacts tab reads. */}
-              <PressableCTA
-                style={s.iconBtn}
-                onPress={handleBookmark}
-                hapticType="light"
-                pulseOn={bookmarked}
-                accessibilityLabel={bookmarked ? 'Remove from contacts' : 'Save to contacts'}
-              >
-                <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={bookmarked ? L.gold : '#FFFFFF'} />
-              </PressableCTA>
-              {/* 4.3. Hidden on your own profile — reporting yourself is not a
-                  thing, and blocked_users has a no_self_block constraint that
-                  would reject it anyway. */}
-              {myId && myId !== id ? (
-                <TouchableOpacity
-                  style={s.iconBtn}
-                  onPress={() => setReportOpen(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Report this person"
-                >
-                  <Ionicons name="flag-outline" size={20} color="#FFFFFF" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          </View>
-
-          {/* Name overlay */}
-          <View style={s.heroOverlay}>
-            <View style={s.heroNameRow}>
-              <Text style={s.heroName}>{profile.name}</Text>
-              {profile.verifiedDupr && (
-                <Ionicons name="checkmark-circle" size={22} color={L.gold} style={{ marginLeft: 6, marginTop: 4 }} />
-              )}
-            </View>
-            <View style={s.heroMeta}>
-              <View style={s.heroMetaChip}>
-                <Ionicons name="speedometer-outline" size={12} color={L.gold} />
-                <Text style={s.heroMetaText}>
-                  {formatPlayerRating({ value: profile.dupr, source: profile.ratingSource })}
-                </Text>
-              </View>
-              <View style={s.heroMetaChip}>
-                <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.8)" />
-                <Text style={s.heroMetaText}>
-                  {profile.location}
-                  {formatMiles(profile.distanceMi) ? ` · ${formatMiles(profile.distanceMi)}` : ''}
-                </Text>
-              </View>
-              <View style={s.heroMetaChip}>
-                <Ionicons name="trophy-outline" size={12} color="rgba(255,255,255,0.8)" />
-                <Text style={s.heroMetaText}>
-                  {lookingStatusLabel(profile.lookingFor) ?? profile.lookingFor}
-                </Text>
-              </View>
-            </View>
-            {/* Quick info pills */}
-            <View style={s.heroPills}>
-              {([
-                profile.age    ? { icon: 'calendar-outline',  label: `${profile.age} yrs` }                : null,
-                genderLabel(profile.gender) ? { icon: 'person-outline', label: genderLabel(profile.gender)! } : null,
-                handLabel(profile.hand)     ? { icon: 'hand-left-outline', label: handLabel(profile.hand)! }  : null,
-                profile.intensity ? { icon: 'flame-outline', label: playIntensityLabel(profile.intensity) }   : null,
-                profile.style  ? { icon: 'heart-outline',     label: profile.style }                          : null,
-              ] as ({ icon: string; label: string } | null)[])
-                .filter((p): p is { icon: string; label: string } => p !== null)
-                .map(p => (
-                <View key={p.label} style={s.heroPill}>
-                  <Ionicons name={p.icon as never} size={11} color="rgba(255,255,255,0.85)" />
-                  <Text style={s.heroPillText}>{p.label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        {/* ── Stats row ── */}
-        <View style={s.statsRow}>
-          {profile.stats.map((stat, i) => (
-            <View key={stat.label} style={[s.statCell, i < profile.stats.length - 1 && s.statCellBorder]}>
-              <Text style={s.statVal}>{stat.value}</Text>
-              <Text style={s.statLabel}>{stat.label}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* ── Body sections ── */}
-        <View style={s.body}>
-
-          {/* About. Rendered only when there is something in it — an empty
-              card under a heading reads as broken, not as "no bio". */}
-          {(!!profile.bio || !!profile.skillRange) && (
-            <Section title="ABOUT">
-              <View style={s.card}>
-                {!!profile.bio && <Text style={s.bioText}>{profile.bio}</Text>}
-                {!!profile.skillRange && (
-                  <View style={s.bioMeta}>
-                    <Text style={s.bioMetaChip}>Skill: {profile.skillRange}</Text>
-                  </View>
-                )}
-              </View>
-            </Section>
-          )}
-
-          {/* Availability. The shared version leads when there is one: "Both
-              free Wednesday evenings" is a reason to message someone, where
-              "Wed, Sat" is a fact about a stranger. */}
-          {!!profile.availabilityLabel && (
-            <Section title={profile.availabilityIsShared ? 'WHEN YOU BOTH PLAY' : 'AVAILABILITY'}>
-              <View style={s.card}>
-                <View style={s.infoRow}>
-                  <Ionicons
-                    name={profile.availabilityIsShared ? 'people-outline' : 'calendar-outline'}
-                    size={16}
-                    color={profile.availabilityIsShared ? L.success : L.gold}
-                  />
-                  <Text style={s.infoText}>{profile.availabilityLabel}</Text>
-                </View>
-              </View>
-            </Section>
-          )}
-
-          {/* Where and how they play */}
-          {(!!profile.homeCourt || profile.formats.length > 0) && (
-            <Section title="PLAYS">
-              <View style={s.card}>
-                {!!profile.homeCourt && (
-                  <View style={s.infoRow}>
-                    <Ionicons name="location-outline" size={16} color={L.gold} />
-                    <Text style={s.infoText}>Home court: {profile.homeCourt}</Text>
-                  </View>
-                )}
-                {profile.formats.length > 0 && (
-                  <View style={s.chipWrap}>
-                    {profile.formats.map((f) => (
-                      <View key={f} style={s.chip}>
-                        <Text style={s.chipText}>{preferredFormatLabel(f)}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-            </Section>
-          )}
-
-          {/* What they're selling. A horizontal rail rather than a list: it
-              is supporting detail on a profile, not the marketplace. */}
-          {profile.listings.length > 0 && (
-            <Section title="MARKETPLACE">
-              <View style={s.card}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={s.listingScroll}
-                >
-                  {profile.listings.map((l) => (
-                    <TouchableOpacity
-                      key={l.id}
-                      style={s.listingCard}
-                      activeOpacity={0.85}
-                      onPress={() => router.push(`/marketplace/${l.id}` as never)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${l.title}, ${formatPriceCents(l.priceCents)}`}
-                    >
-                      {l.photo ? (
-                        <Image source={{ uri: l.photo }} style={s.listingPhoto} resizeMode="cover" />
-                      ) : (
-                        <View style={[s.listingPhoto, s.listingPhotoEmpty]}>
-                          <Ionicons name="pricetag-outline" size={22} color={L.textSub} />
-                        </View>
-                      )}
-                      <Text style={s.listingTitle} numberOfLines={1}>{l.title}</Text>
-                      <Text style={s.listingPrice}>{formatPriceCents(l.priceCents)}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            </Section>
-          )}
-
-          {/* Upcoming events */}
-          {profile.upcomingEvents.length > 0 && (
-            <Section title="UPCOMING EVENTS">
-              <View style={s.card}>
-                {profile.upcomingEvents.map((ev, i) => (
-                  <View key={ev.name} style={[s.listRow, i > 0 && s.listRowBorder]}>
-                    <View style={s.eventIcon}>
-                      <Ionicons
-                        name={ev.type === 'Tournament' ? 'trophy-outline' : 'people-outline'}
-                        size={18}
-                        color={L.gold}
-                      />
-                    </View>
-                    <View style={s.eventInfo}>
-                      <Text style={s.eventName}>{ev.name}</Text>
-                      <Text style={s.eventMeta}>{ev.date} · {ev.type}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            </Section>
-          )}
-
-          {/* Groups */}
-          {profile.groups.length > 0 && (
-            <Section title="GROUPS">
-              <View style={s.card}>
-                {profile.groups.map((g, i) => (
-                  <View key={g.name} style={[s.listRow, i > 0 && s.listRowBorder]}>
-                    <View style={s.groupIcon}>
-                      <Ionicons name="people-outline" size={18} color={L.textSub} />
-                    </View>
-                    <View style={s.eventInfo}>
-                      <Text style={s.eventName}>{g.name}</Text>
-                      <Text style={s.eventMeta}>{g.role}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            </Section>
-          )}
-
-        </View>
-      </ScrollView>
-
-      {/* ── Sticky CTA ── */}
-      <View style={[s.cta, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity style={s.passBtn} activeOpacity={0.8} onPress={() => router.back()}>
-          <Ionicons name="close" size={22} color={L.textSub} />
+      {/* ── Header ── */}
+      <View style={s.header}>
+        <TouchableOpacity style={s.headerBack} onPress={() => router.back()} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={20} color={L.navy} />
+          <Text style={s.headerBackText}>Back</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[s.connectBtn, connected && s.connectBtnDone]}
-          onPress={handleConnect}
-          disabled={connectLoading}
-          activeOpacity={0.85}
+          style={s.headerOverflow}
+          activeOpacity={0.7}
+          onPress={() => overflow.present(menuItems, handleMenu)}
+          accessibilityRole="button"
+          accessibilityLabel="More actions"
         >
-          {connectLoading
-            ? <ActivityIndicator size="small" color="#FFFFFF" />
-            : <Ionicons name={connected ? 'checkmark' : pending ? 'time-outline' : 'heart'} size={18} color="#FFFFFF" />}
-          <Text style={s.connectText}>
-            {connected ? 'Connected' : pending ? 'Pending' : 'Connect'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={s.msgBtn}
-          disabled={msgLoading}
-          activeOpacity={0.8}
-          onPress={async () => {
-            if (!id) return;
-            setMsgLoading(true);
-            try {
-              const { data: { user } } = await supabase.auth.getUser();
-              if (!user) {
-                Alert.alert('Sign in required', 'Please sign in to send messages.');
-                return;
-              }
-              if (user.id === id) return;
-              const convId = await getOrCreateConversation(user.id, id);
-              router.push(`/conversation/${convId}` as never);
-            } catch (e: unknown) {
-              Alert.alert('Could not open chat', e instanceof Error ? e.message : 'Please try again.');
-            } finally {
-              setMsgLoading(false);
-            }
-          }}
-        >
-          {msgLoading
-            ? <ActivityIndicator size="small" color={L.navy} />
-            : <Ionicons name="chatbubble-outline" size={22} color={L.navy} />}
+          <Ionicons name="ellipsis-horizontal" size={20} color={L.navy} />
         </TouchableOpacity>
       </View>
 
-      {myId && profile && myId !== id ? (
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+      >
+        {/* ── Hero ── */}
+        <View style={s.hero}>
+          <Pressable
+            onPress={() => profile.avatarUrl && openPhotoViewer([profile.avatarUrl], 0, profile.name)}
+            disabled={!profile.avatarUrl}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={`View ${profile.name}'s photo full screen`}
+          >
+            {profile.avatarUrl ? (
+              <Image source={{ uri: profile.avatarUrl }} style={s.avatar} />
+            ) : (
+              <View style={[s.avatar, s.avatarEmpty]}>
+                <Text style={s.avatarInitials}>{initials}</Text>
+              </View>
+            )}
+          </Pressable>
+
+          <View style={s.heroInfo}>
+            <View style={s.heroNameRow}>
+              <Text style={s.heroName} numberOfLines={2}>{profile.name}</Text>
+              {profile.duprVerified && (
+                <Ionicons name="shield-checkmark" size={17} color={L.gold} />
+              )}
+            </View>
+
+            <View style={s.heroChips}>
+              {profile.ratingSource !== 'none' && (
+                <View style={[s.heroChip, s.heroChipRating]}>
+                  <Ionicons name="speedometer-outline" size={12} color={L.navy} />
+                  <Text style={s.heroChipText}>
+                    {formatPlayerRating({ value: profile.ratingValue, source: profile.ratingSource })}
+                  </Text>
+                </View>
+              )}
+              {!!profile.skillBand && <View style={s.heroChip}><Text style={s.heroChipText}>{profile.skillBand}</Text></View>}
+              {!!profile.playStyle && <View style={s.heroChip}><Text style={s.heroChipText}>{profile.playStyle}</Text></View>}
+            </View>
+
+            {(!!profile.location || !!distanceLabel) && (
+              <View style={s.heroMeta}>
+                <Ionicons name="location-outline" size={13} color={L.textSub} />
+                <Text style={s.heroMetaText} numberOfLines={1}>
+                  {profile.location}
+                  {distanceLabel ? ` · ` : ''}
+                </Text>
+                {!!distanceLabel && <Text style={s.heroDistance}>{distanceLabel}</Text>}
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* ── Actions. Message · Connect · Invite side by side; Share is in "…" ── */}
+        {!isSelf && (
+          <View style={s.actions}>
+            <TouchableOpacity style={s.actionPrimary} onPress={handleMessage} disabled={msgLoading} activeOpacity={0.85}>
+              {msgLoading
+                ? <ActivityIndicator size="small" color={L.white} />
+                : <Text style={s.actionPrimaryText}>Message</Text>}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[s.actionSecondary, connected && s.actionDone]}
+              onPress={handleConnect}
+              disabled={connectLoading}
+              activeOpacity={0.85}
+            >
+              {connectLoading
+                ? <ActivityIndicator size="small" color={L.navy} />
+                : <Text style={s.actionSecondaryText}>{connected ? 'Connected' : pending ? 'Pending' : 'Connect'}</Text>}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={s.actionGhost}
+              onPress={() => router.push(`/players/${id}/invite` as never)}
+              activeOpacity={0.85}
+            >
+              <Text style={s.actionGhostText}>Invite</Text>
+            </TouchableOpacity>
+
+            <PressableCTA
+              style={s.actionIcon}
+              onPress={handleBookmark}
+              hapticType="light"
+              pulseOn={bookmarked}
+              accessibilityLabel={bookmarked ? 'Remove from contacts' : 'Save to contacts'}
+            >
+              <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={19} color={bookmarked ? L.gold : L.navy} />
+            </PressableCTA>
+          </View>
+        )}
+
+        {/* ── Attributes ── */}
+        {(!!profile.hand || !!profile.playStyle || !!profile.skillBand) && (
+          <View style={s.gridCard}>
+            {!!profile.hand && <AttrCol value={profile.hand} label="Dominant Hand" />}
+            {!!profile.playStyle && <AttrCol value={profile.playStyle} label="Play Style" />}
+            {!!profile.skillBand && <AttrCol value={profile.skillBand} label="Skill Level" last />}
+          </View>
+        )}
+
+        {/* ── Stats. Every cell earns its place — see buildPublicProfile. ── */}
+        {profile.stats.length > 0 && (
+          <View style={s.gridCard}>
+            {profile.stats.map((stat, i) => (
+              <View key={stat.key} style={[s.statCol, i < profile.stats.length - 1 && s.colBorder]}>
+                <Text style={s.statValue}>{stat.value}</Text>
+                <Text style={s.statLabel}>{stat.label}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* ── Tabs ── */}
+        <View style={s.tabs}>
+          {([['overview', 'Overview'], ['events', 'Events'], ['marketplace', 'Marketplace']] as const).map(([key, label]) => (
+            <TouchableOpacity
+              key={key}
+              style={[s.tab, tab === key && s.tabActive]}
+              onPress={() => setTab(key)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+            >
+              <Text style={[s.tabText, tab === key && s.tabTextActive]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {tab === 'overview' && (
+          <>
+            {!!profile.availabilityLabel && (
+              <View style={s.section}>
+                <SectionLabel label={profile.availabilityIsShared ? 'WHEN YOU BOTH PLAY' : 'AVAILABILITY'} />
+                <View style={s.card}>
+                  <View style={s.infoRow}>
+                    <Ionicons
+                      name={profile.availabilityIsShared ? 'people-outline' : 'calendar-outline'}
+                      size={16}
+                      color={profile.availabilityIsShared ? L.success : L.gold}
+                    />
+                    <Text style={s.infoText}>{profile.availabilityLabel}</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {!!profile.lookingFor && (
+              <View style={s.section}>
+                <SectionLabel label="LOOKING FOR" />
+                <View style={[s.card, s.cardCentered]}>
+                  <Text style={s.lookingValue}>{profile.lookingFor}</Text>
+                  <Text style={s.lookingLabel}>Status</Text>
+                </View>
+              </View>
+            )}
+
+            {(!!profile.homeCourt || profile.formats.length > 0 || !!profile.intensity || !!profile.gender) && (
+              <View style={s.section}>
+                <SectionLabel label="PLAYS" />
+                <View style={s.card}>
+                  {!!profile.homeCourt && (
+                    <View style={s.infoRow}>
+                      <Ionicons name="location-outline" size={16} color={L.gold} />
+                      <Text style={s.infoText}>Home court: {profile.homeCourt}</Text>
+                    </View>
+                  )}
+                  {(profile.formats.length > 0 || !!profile.intensity || !!profile.gender) && (
+                    <View style={s.chipWrap}>
+                      {profile.formats.map((f) => (
+                        <View key={f} style={s.chip}><Text style={s.chipText}>{f}</Text></View>
+                      ))}
+                      {!!profile.intensity && <View style={s.chip}><Text style={s.chipText}>{profile.intensity}</Text></View>}
+                      {!!profile.gender && <View style={s.chip}><Text style={s.chipText}>{profile.gender}</Text></View>}
+                    </View>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {!!profile.bio && (
+              <View style={s.section}>
+                <SectionLabel label={`ABOUT ${profile.name.split(' ')[0].toUpperCase()}`} />
+                <View style={s.card}><Text style={s.bioText}>{profile.bio}</Text></View>
+              </View>
+            )}
+
+            {profile.groups.length > 0 && (
+              <View style={s.section}>
+                <SectionLabel label="GROUPS" />
+                <View style={s.card}>
+                  {profile.groups.map((g, i) => (
+                    <View key={g.name} style={[s.listRow, i > 0 && s.listRowBorder]}>
+                      <Ionicons name="people-outline" size={16} color={L.textSub} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.rowTitle}>{g.name}</Text>
+                        <Text style={s.rowMeta}>{g.role}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </>
+        )}
+
+        {tab === 'events' && (
+          <View style={s.section}>
+            <SectionLabel label="RECENT ACTIVITY" />
+            {profile.activity.length > 0 ? (
+              <View style={s.card}>
+                {profile.activity.map((a, i) => (
+                  <View key={`${a.name}-${a.date}`} style={[s.listRow, i > 0 && s.listRowBorder]}>
+                    <Ionicons
+                      name={a.kind === 'tournament' ? 'trophy-outline' : 'people-circle-outline'}
+                      size={16}
+                      color={L.gold}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.rowTitle}>{a.name}</Text>
+                      <Text style={s.rowMeta}>
+                        {a.kind === 'tournament' ? 'Tournament' : 'Community Play'} · {a.date}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={[s.card, s.cardCentered]}>
+                <Text style={s.emptyText}>No events yet.</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {tab === 'marketplace' && (
+          <View style={s.section}>
+            <SectionLabel label="LISTINGS" />
+            {profile.listings.length > 0 ? (
+              <View style={s.listingGrid}>
+                {profile.listings.map((l) => (
+                  <TouchableOpacity
+                    key={l.id}
+                    style={s.listingCard}
+                    activeOpacity={0.85}
+                    onPress={() => router.push(`/marketplace/${l.id}` as never)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${l.title}, ${formatPriceCents(l.priceCents)}`}
+                  >
+                    {l.photo ? (
+                      <Image source={{ uri: l.photo }} style={s.listingPhoto} resizeMode="cover" />
+                    ) : (
+                      <View style={[s.listingPhoto, s.listingPhotoEmpty]}>
+                        <Ionicons name="pricetag-outline" size={22} color={L.textSub} />
+                      </View>
+                    )}
+                    <Text style={s.listingTitle} numberOfLines={1}>{l.title}</Text>
+                    <Text style={s.listingPrice}>{formatPriceCents(l.priceCents)}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <View style={[s.card, s.cardCentered]}>
+                <Text style={s.emptyText}>Nothing listed right now.</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Android only; on iOS present() shows the system action sheet. */}
+      {overflow.visible && (
+        <ContextMenu
+          items={menuItems}
+          top={insets.top + 56}
+          right={16}
+          opacity={overflow.opacity}
+          scale={overflow.scale}
+          onItemPress={handleMenu}
+        />
+      )}
+
+      {myId && myId !== id ? (
         <ReportUserSheet
           visible={reportOpen}
           onClose={() => setReportOpen(false)}
@@ -683,140 +623,130 @@ export default function PartnerProfileScreen() {
   );
 }
 
+function AttrCol({ value, label, last }: { value: string; label: string; last?: boolean }) {
+  return (
+    <View style={[s.statCol, !last && s.colBorder]}>
+      <Text style={s.attrValue} numberOfLines={1}>{value}</Text>
+      <Text style={s.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: L.page },
 
-  photoDots: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 5 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.35)' },
-  dotActive: { backgroundColor: L.gold, width: 18 },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 12, paddingVertical: 6, backgroundColor: L.bg,
+  },
+  headerBack: { flexDirection: 'row', alignItems: 'center', gap: 2, padding: 6 },
+  headerBackText: { color: L.navy, fontSize: 16, fontWeight: '500' },
+  headerOverflow: { padding: 8 },
 
-  // DESIGN_STANDARD.md roles, not eyeballed values:
-  //   rowTitle 14/700      "primary label in a list or INFO ROW" — was body
-  //                        15/500, which is the bio's role and read oversized
-  //                        here, wrapping the home-court line onto two lines.
-  //   controlLabel 13/700  "tabs, filter chips" — was caption.
-  //   space.gutter         card padding. The row had NO horizontal padding at
-  //                        all, so the pin icon sat against the card border
-  //                        while every sibling card was inset.
+  hero: { flexDirection: 'row', gap: 14, alignItems: 'flex-start', paddingHorizontal: space.gutter, paddingTop: space.gap },
+  avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 2, borderColor: L.goldBorder },
+  avatarEmpty: { backgroundColor: L.page, alignItems: 'center', justifyContent: 'center' },
+  avatarInitials: { color: L.textSub, fontSize: 30, fontWeight: '700' },
+  heroInfo: { flex: 1, gap: 6, paddingTop: 4 },
+  heroNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  heroName: { color: L.navy, fontSize: text.pageTitle.size - 2, fontWeight: '800', flexShrink: 1 },
+  heroChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  heroChip: { borderRadius: shape.pill, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: L.goldBg },
+  heroChipRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  heroChipText: { color: L.navy, fontSize: text.controlLabel.size, fontWeight: text.controlLabel.weight },
+  heroMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  heroMetaText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', flexShrink: 1 },
+  heroDistance: { color: L.navy, fontSize: text.caption.size, fontWeight: '700' },
+
+  actions: { flexDirection: 'row', gap: space.gapTight, paddingHorizontal: space.gutter, paddingTop: space.sectionBottom },
+  actionPrimary: {
+    flex: 1, minHeight: 46, borderRadius: shape.cta, backgroundColor: L.navy,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  actionPrimaryText: { color: L.white, fontSize: text.action.size, fontWeight: '800' },
+  actionSecondary: {
+    flex: 1, minHeight: 46, borderRadius: shape.cta, backgroundColor: L.bg,
+    borderWidth: 1.5, borderColor: L.goldBorder, alignItems: 'center', justifyContent: 'center',
+  },
+  actionDone: { borderColor: L.success },
+  actionSecondaryText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
+  actionGhost: {
+    flex: 1, minHeight: 46, borderRadius: shape.cta, backgroundColor: L.bg,
+    borderWidth: 1.5, borderColor: L.border, alignItems: 'center', justifyContent: 'center',
+  },
+  actionGhostText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
+  actionIcon: {
+    width: 46, minHeight: 46, borderRadius: shape.cta, backgroundColor: L.bg,
+    borderWidth: 1.5, borderColor: L.border, alignItems: 'center', justifyContent: 'center',
+  },
+
+  gridCard: {
+    flexDirection: 'row', marginHorizontal: space.gutter, marginTop: space.gap,
+    backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border,
+  },
+  statCol: { flex: 1, paddingVertical: space.sectionBottom, paddingHorizontal: 6, alignItems: 'center' },
+  colBorder: { borderRightWidth: 1, borderRightColor: L.border },
+  attrValue: { color: L.navy, fontSize: text.rowTitle.size + 1, fontWeight: '800' },
+  statValue: { color: L.navy, fontSize: 22, fontWeight: '800' },
+  statLabel: { color: L.textSub, fontSize: 11, fontWeight: '500', marginTop: 2, textAlign: 'center' },
+
+  tabs: {
+    flexDirection: 'row', gap: 20, marginHorizontal: space.gutter, marginTop: space.gutter,
+    borderBottomWidth: 1, borderBottomColor: L.border,
+  },
+  tab: { paddingVertical: 10, paddingHorizontal: 2, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabActive: { borderBottomColor: L.gold },
+  tabText: { color: L.textSub, fontSize: text.rowTitle.size, fontWeight: '600' },
+  tabTextActive: { color: L.navy, fontWeight: '800' },
+
+  section: { paddingHorizontal: space.gutter, paddingTop: space.gutter },
+  sectionLabel: {
+    color: L.textSub, fontSize: text.cardLabel.size, fontWeight: '800',
+    letterSpacing: text.cardLabel.letterSpacing, marginBottom: space.gapTight,
+  },
+  card: { backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border, overflow: 'hidden' },
+  cardCentered: { alignItems: 'center', paddingVertical: 22 },
+
   infoRow: {
     flexDirection: 'row', alignItems: 'center', gap: space.gapTight,
     paddingHorizontal: space.gutter, paddingVertical: space.gapTight + 2,
   },
-  infoText: {
-    color: L.text, fontSize: text.rowTitle.size, fontWeight: text.rowTitle.weight,
-    flex: 1, lineHeight: 20,
-  },
+  infoText: { color: L.text, fontSize: text.rowTitle.size, fontWeight: text.rowTitle.weight, flex: 1, lineHeight: 20 },
+
   chipWrap: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: space.gapTight - 2,
+    flexDirection: 'row', flexWrap: 'wrap', gap: 6,
     paddingHorizontal: space.gutter, paddingBottom: space.gap,
   },
   chip: {
-    borderRadius: shape.pill, paddingHorizontal: space.gapTight + 2, paddingVertical: 5,
+    borderRadius: shape.pill, paddingHorizontal: 10, paddingVertical: 5,
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.border,
   },
-  chipText: {
-    color: L.navy, fontSize: text.controlLabel.size, fontWeight: text.controlLabel.weight,
+  chipText: { color: L.navy, fontSize: text.controlLabel.size, fontWeight: text.controlLabel.weight },
+
+  lookingValue: { color: L.navy, fontSize: text.rowTitle.size + 1, fontWeight: '800' },
+  lookingLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+
+  bioText: {
+    color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 21,
+    padding: space.gutter,
   },
-  listingScroll: { paddingHorizontal: space.gutter, paddingVertical: space.gap, gap: space.gap },
-  listingCard: { width: 132 },
+
+  listRow: {
+    flexDirection: 'row', alignItems: 'center', gap: space.gap,
+    paddingHorizontal: space.gutter, paddingVertical: space.sectionBottom,
+  },
+  listRowBorder: { borderTopWidth: 1, borderTopColor: L.border },
+  rowTitle: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: text.rowTitle.weight },
+  rowMeta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
+  emptyText: { color: L.textSub, fontSize: text.body.size, fontWeight: '500' },
+
+  listingGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.gap },
+  listingCard: { width: '47%' },
   listingPhoto: {
-    width: 132, height: 100, borderRadius: shape.panel,
+    width: '100%', height: 110, borderRadius: shape.panel,
     backgroundColor: L.page, borderWidth: 1, borderColor: L.border,
   },
   listingPhotoEmpty: { alignItems: 'center', justifyContent: 'center' },
-  listingTitle: {
-    color: L.navy, fontSize: text.rowTitle.size, fontWeight: text.rowTitle.weight, marginTop: 6,
-  },
-  listingPrice: {
-    color: L.gold, fontSize: text.chipValue.size, fontWeight: text.chipValue.weight, marginTop: 2,
-  },
-
-  heroTopBar: {
-    position: 'absolute', left: 16, right: 16,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-  },
-  // Keeps save + report together on the right, so the row is "leave" on one
-  // side and "act on this person" on the other, whether or not report renders.
-  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  iconBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-
-  heroOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 20, paddingBottom: 20, paddingTop: 40,
-  },
-  heroNameRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
-  heroName: { color: '#FFFFFF', fontSize: 34, fontWeight: '900', letterSpacing: -0.5 },
-  heroMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
-  heroMetaChip: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  heroMetaText: { color: 'rgba(255,255,255,0.88)', fontSize: text.caption.size, fontWeight: '500' },
-  heroPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  heroPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: shape.pill,
-    paddingHorizontal: 10, paddingVertical: 5,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.20)',
-  },
-  heroPillText: { color: '#FFFFFF', fontSize: 11, fontWeight: '600' },
-
-  statsRow: {
-    flexDirection: 'row', backgroundColor: L.bg,
-    borderBottomWidth: 1, borderBottomColor: L.border,
-  },
-  statCell: { flex: 1, alignItems: 'center', paddingVertical: 14 },
-  statCellBorder: { borderRightWidth: 1, borderRightColor: L.border },
-  statVal: { color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800' },
-  statLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
-
-  body: { padding: spacing.screenH, paddingTop: 20 },
-
-  card: {
-    backgroundColor: L.bg, borderRadius: shape.panel,
-    borderWidth: 1, borderColor: L.border, overflow: 'hidden',
-  },
-  bioText: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 21, padding: 14, paddingBottom: 8 },
-  bioMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, padding: 14, paddingTop: 0 },
-  bioMetaChip: { color: L.gold, fontSize: text.action.size, fontWeight: '800' },
-
-  listRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  listRowBorder: { borderTopWidth: 1, borderTopColor: L.border },
-  eventIcon: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: L.goldBg, alignItems: 'center', justifyContent: 'center',
-  },
-  groupIcon: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: L.page, alignItems: 'center', justifyContent: 'center',
-  },
-  eventInfo: { flex: 1 },
-  eventName: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
-  eventMeta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
-
-  cta: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: L.bg, borderTopWidth: 1, borderTopColor: L.border,
-    paddingHorizontal: spacing.screenH, paddingTop: 14,
-    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: -3 },
-    elevation: 8,
-  },
-  passBtn: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: L.page, borderWidth: 1.5, borderColor: L.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  connectBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.gold, borderRadius: shape.cta, paddingVertical: 14,
-  },
-  connectBtnDone: { backgroundColor: colors.success },
-  connectText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
-  msgBtn: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: L.page, borderWidth: 1.5, borderColor: L.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  listingTitle: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: text.rowTitle.weight, marginTop: 6 },
+  listingPrice: { color: L.gold, fontSize: text.chipValue.size, fontWeight: text.chipValue.weight, marginTop: 2 },
 });

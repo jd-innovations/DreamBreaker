@@ -75,10 +75,9 @@ export default function InviteSentScreen() {
     } as never);
   }
   function done() {
-    router.replace({
-      pathname: '/players/[id]' as never,
-      params: { id: targetId },
-    } as never);
+    // Back to the ONE public profile. The invite flow keeps its /players/[id]/
+    // route family; only the profile screen moved.
+    router.replace(`/match/profile/${targetId}` as never);
   }
 
   return (
