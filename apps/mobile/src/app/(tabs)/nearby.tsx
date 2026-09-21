@@ -1009,7 +1009,7 @@ export default function ExploreScreen() {
           <Ionicons name="search-outline" size={18} color={L.gold} />
           <TextInput
             style={s.searchInput}
-            placeholder="Search courts, games, or players"
+            placeholder="Search courts and venues"
             placeholderTextColor={L.textMuted}
             value={search}
             onChangeText={setSearch}

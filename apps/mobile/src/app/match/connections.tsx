@@ -331,7 +331,18 @@ export default function MyConnectionsScreen() {
           <Text style={s.title}>My Connections</Text>
           <Text style={s.subtitle}>{connections.length} player{connections.length !== 1 ? 's' : ''} connected</Text>
         </View>
-        <View style={{ width: 36 }} />
+        {/* The directory's entry point. Until now player search existed only
+            inside "new message" and "invite to event" — you could find someone
+            only if you were already doing something else with them. */}
+        <TouchableOpacity
+          style={s.backBtn}
+          onPress={() => router.push('/match/directory' as never)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Find players"
+        >
+          <Ionicons name="search" size={19} color={L.navy} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView

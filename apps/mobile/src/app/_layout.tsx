@@ -276,6 +276,7 @@ function RootLayout() {
         <Stack.Screen name="match/connections"  options={{ headerShown: false }} />
         <Stack.Screen name="match/requests"     options={{ headerShown: false }} />
         <Stack.Screen name="match/preferences"  options={{ headerShown: false }} />
+        <Stack.Screen name="match/directory"    options={{ headerShown: false }} />
         <Stack.Screen name="match/profile/[id]" options={{ headerShown: false }} />
       </Stack>
       </SupportProvider>

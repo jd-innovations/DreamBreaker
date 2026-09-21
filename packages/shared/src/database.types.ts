@@ -8362,6 +8362,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      search_players: {
+        Args: { p_query: string; p_limit?: number }
+        Returns: {
+          id: string
+          full_name: string | null
+          handle: string | null
+          avatar_url: string | null
+          dupr: number | null
+          self_rating: string | null
+          location_city: string | null
+          location_state: string | null
+          is_connected: boolean | null
+          mutual_count: number | null
+        }[]
+      }
       admin_profile_emails: {
         Args: never
         Returns: { id: string; email: string | null }[]
