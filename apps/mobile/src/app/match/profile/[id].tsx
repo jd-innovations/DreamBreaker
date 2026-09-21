@@ -17,7 +17,7 @@ import { EmptyState } from '@/components/states/ScreenState';
 import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateConversation } from '@/lib/conversationService';
-import { computeMatch } from '@/lib/computeMatch';
+import { computeMatch } from '@shared/match';
 import { useSupportContext } from '@/lib/support/supportContext';
 import { ReportUserSheet } from '@/components/safety/ReportUserSheet';
 

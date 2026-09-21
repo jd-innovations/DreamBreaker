@@ -7,12 +7,10 @@ import {
   AVAILABILITY_BLOCKS,
   type AvailabilityDay,
   type AvailabilityBlock,
-  scheduleOverlap,
-  overlapSlotCount,
-  describeOverlap,
   normalizeSchedule,
   type AvailabilitySchedule,
 } from "@shared/availability";
+import { computeMatch } from "@shared/match";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Heart, X, XCircle, Plug, MapPin, Star, ArrowRight, Trophy,
@@ -96,42 +94,13 @@ function matchesAvailabilityFilter(schedule: AvailabilitySchedule, filter: strin
 const DISTANCES = ["Any", "5 mi", "10 mi", "25 mi", "50 mi"];
 
 // ─── Compute match score ──────────────────────────────────────────────────────
-
-function computeMatch(
-  p: { dupr: number | null; availability_schedule: unknown; distance: string | null },
-  myDupr: number | null,
-  mySchedule: AvailabilitySchedule,
-): { pct: number; reasons: string[] } {
-  let score = 0;
-  const reasons: string[] = [];
-
-  if (p.dupr && myDupr && Math.abs(p.dupr - myDupr) <= 0.5) {
-    score += 35; reasons.push("Same DUPR range");
-  }
-
-  // Real overlap — same day AND same block. This used to compare the derived
-  // `availability` summary by string equality, which is wrong in both
-  // directions: that summary drops the time of day, so two players both
-  // reading "Wed, Sat" scored the full 30 even when one meant Wednesday
-  // morning and the other Wednesday evening, while two people genuinely
-  // sharing Wednesday and Saturday scored zero because their summary strings
-  // differed. See AVAILABILITY_MODEL.md.
-  const overlap = scheduleOverlap(mySchedule, normalizeSchedule(p.availability_schedule));
-  if (overlap.length) {
-    // Weighted by how much time they actually share, so one coincidental slot
-    // does not read the same as a whole week in common.
-    score += Math.min(30, 15 + overlapSlotCount(overlap) * 5);
-    reasons.push(describeOverlap(overlap)!);
-  }
-  const dist = p.distance ? parseInt(p.distance) : 99;
-  if (dist <= 10) { score += 25; reasons.push("Near you"); }
-  else if (dist <= 25) { score += 15; }
-
-  // base
-  score += 10;
-
-  return { pct: Math.min(score, 99), reasons };
-}
+//
+// Now imported from @shared/match. This file used to carry its own copy, and
+// the two disagreed: mobile still compared the derived availability summary
+// with ===, the weights differed, and distance here was parsed out of a
+// display string ("5 mi") that profileToPartner always passed as null — so it
+// never scored at all. The same pair could get different percentages depending
+// on which client you opened.
 
 // ─── Adapters ────────────────────────────────────────────────────────────────
 
@@ -147,10 +116,12 @@ function profileToPartner(
   myDupr: number | null,
   mySchedule: AvailabilitySchedule,
 ): Partner {
+  // distanceMi stays null until this page computes a real distance: the web
+  // matchmaker has a distance FILTER but no coordinates to measure with, and
+  // computeMatch scores an unknown distance as zero rather than as "far".
   const { pct, reasons } = computeMatch(
-    { dupr: p.dupr, availability_schedule: p.availability_schedule, distance: null },
-    myDupr,
-    mySchedule,
+    { dupr: p.dupr, schedule: p.availability_schedule, distanceMi: null },
+    { dupr: myDupr, schedule: mySchedule },
   );
   return {
     id: p.id,

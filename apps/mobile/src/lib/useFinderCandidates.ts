@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from './supabase';
 import { playStyleSummary } from '@shared/play-profile';
-import { computeMatch } from './computeMatch';
+import { computeMatch } from '@shared/match';
 import { useCurrentLocation, type Coordinates } from './location';
 import { useLocationSettings } from '@/hooks/useLocationSettings';
 

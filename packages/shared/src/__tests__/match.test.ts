@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeMatch } from '../computeMatch';
+import { computeMatch } from '../match';
 
 const SCHEDULE_WED_EVE = { wed: ['evening'] };
 const SCHEDULE_WED_MORN = { wed: ['morning'] };

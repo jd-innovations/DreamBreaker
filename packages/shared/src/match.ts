@@ -4,10 +4,16 @@ import {
   overlapSlotCount,
   describeOverlap,
   type AvailabilitySchedule,
-} from '@shared/availability';
+} from './availability';
 
 /**
  * How well two players suit each other, 0–99.
+ *
+ * Shared because mobile and web each had their own copy and they disagreed:
+ * web already used scheduleOverlap() while mobile still compared the derived
+ * availability summary with ===, and the two used different weights, so the
+ * same pair scored differently depending on which client you opened. One
+ * implementation, one answer.
  *
  * ── What changed, 2026-09-21 ────────────────────────────────────────────────
  *
