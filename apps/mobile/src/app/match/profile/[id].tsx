@@ -46,6 +46,11 @@ const L = {
 
 type Tab = 'overview' | 'events' | 'marketplace';
 
+/** Minimum tappable edge. A hit target, not a spacing role. */
+const TOUCH_TARGET = 46;
+/** Avatar diameter, and its radius. A size, not a spacing role. */
+const AVATAR = 96;
+
 function SectionLabel({ label }: { label: string }) {
   return <Text style={s.sectionLabel}>{label}</Text>;
 }
@@ -304,11 +309,14 @@ export default function PartnerProfileScreen() {
     .map((w) => w[0]?.toUpperCase()).join('') || '?';
 
   return (
-    <View style={[s.root, { paddingTop: insets.top }]}>
+    <View style={s.root}>
       <StatusBar style="dark" />
 
-      {/* ── Header ── */}
-      <View style={s.header}>
+      {/* Safe-area inset on the HEADER, not the root, so the white header
+          colour runs to the top of the screen. On the root, the status-bar
+          strip takes the root's page grey and the header reads as a band
+          floating below it. Pattern and rationale from wallet.tsx. */}
+      <View style={[s.header, { paddingTop: insets.top + space.gap }]}>
         <TouchableOpacity style={s.headerBack} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={L.navy} />
           <Text style={s.headerBackText}>Back</Text>
@@ -488,10 +496,23 @@ export default function PartnerProfileScreen() {
                 <SectionLabel label="PLAYS" />
                 <View style={s.card}>
                   {!!profile.homeCourt && (
-                    <View style={s.infoRow}>
+                    // A real directory entry, not a dead string: facilities are
+                    // a first-class screen and this is the one place a player's
+                    // home court gets named.
+                    <TouchableOpacity
+                      style={s.infoRow}
+                      activeOpacity={profile.homeCourtId ? 0.7 : 1}
+                      disabled={!profile.homeCourtId}
+                      onPress={() => router.push(`/facility/${profile.homeCourtId}` as never)}
+                      accessibilityRole={profile.homeCourtId ? 'link' : undefined}
+                      accessibilityLabel={profile.homeCourtId ? `Home court ${profile.homeCourt}, open facility` : undefined}
+                    >
                       <Ionicons name="location-outline" size={16} color={L.gold} />
                       <Text style={s.infoText}>Home court: {profile.homeCourt}</Text>
-                    </View>
+                      {!!profile.homeCourtId && (
+                        <Ionicons name="chevron-forward" size={15} color={L.textSub} />
+                      )}
+                    </TouchableOpacity>
                   )}
                   {(profile.formats.length > 0 || !!profile.intensity || !!profile.gender) && (
                     <View style={s.chipWrap}>
@@ -637,21 +658,28 @@ const s = StyleSheet.create({
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 12, paddingVertical: 6, backgroundColor: L.bg,
+    paddingHorizontal: space.gap, paddingBottom: space.gap, backgroundColor: L.bg,
+    borderBottomWidth: 1, borderBottomColor: L.border,
   },
-  headerBack: { flexDirection: 'row', alignItems: 'center', gap: 2, padding: 6 },
-  headerBackText: { color: L.navy, fontSize: 16, fontWeight: '500' },
-  headerOverflow: { padding: 8 },
+  headerBack: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingVertical: space.gapTight },
+  headerBackText: { color: L.navy, fontSize: text.body.size, fontWeight: text.body.weight },
+  headerOverflow: { minWidth: TOUCH_TARGET, minHeight: TOUCH_TARGET, alignItems: 'flex-end', justifyContent: 'center' },
 
-  hero: { flexDirection: 'row', gap: 14, alignItems: 'flex-start', paddingHorizontal: space.gutter, paddingTop: space.gap },
-  avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 2, borderColor: L.goldBorder },
+  hero: { flexDirection: 'row', gap: space.sectionBottom, alignItems: 'flex-start', paddingHorizontal: space.gutter, paddingTop: space.gutter },
+  avatar: { width: AVATAR, height: AVATAR, borderRadius: AVATAR / 2, borderWidth: 2, borderColor: L.goldBorder },
   avatarEmpty: { backgroundColor: L.page, alignItems: 'center', justifyContent: 'center' },
-  avatarInitials: { color: L.textSub, fontSize: 30, fontWeight: '700' },
-  heroInfo: { flex: 1, gap: 6, paddingTop: 4 },
+  avatarInitials: { color: L.textSub, fontSize: text.heroTitle.size, fontWeight: '700' },
+  heroInfo: { flex: 1, gap: 6, paddingTop: space.gapTight / 2 },
   heroNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  heroName: { color: L.navy, fontSize: text.pageTitle.size - 2, fontWeight: '800', flexShrink: 1 },
+  heroName: {
+    color: L.navy, fontSize: text.heroTitle.size, fontWeight: text.heroTitle.weight,
+    lineHeight: text.heroTitle.lineHeight, flexShrink: 1,
+  },
   heroChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  heroChip: { borderRadius: shape.pill, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: L.goldBg },
+  heroChip: {
+    borderRadius: shape.pill, paddingHorizontal: space.gapTight + 2, paddingVertical: 4,
+    backgroundColor: L.goldBg,
+  },
   heroChipRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   heroChipText: { color: L.navy, fontSize: text.controlLabel.size, fontWeight: text.controlLabel.weight },
   heroMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -660,23 +688,23 @@ const s = StyleSheet.create({
 
   actions: { flexDirection: 'row', gap: space.gapTight, paddingHorizontal: space.gutter, paddingTop: space.sectionBottom },
   actionPrimary: {
-    flex: 1, minHeight: 46, borderRadius: shape.cta, backgroundColor: L.navy,
+    flex: 1, minHeight: TOUCH_TARGET, borderRadius: shape.cta, backgroundColor: L.navy,
     alignItems: 'center', justifyContent: 'center',
   },
   actionPrimaryText: { color: L.white, fontSize: text.action.size, fontWeight: '800' },
   actionSecondary: {
-    flex: 1, minHeight: 46, borderRadius: shape.cta, backgroundColor: L.bg,
+    flex: 1, minHeight: TOUCH_TARGET, borderRadius: shape.cta, backgroundColor: L.bg,
     borderWidth: 1.5, borderColor: L.goldBorder, alignItems: 'center', justifyContent: 'center',
   },
   actionDone: { borderColor: L.success },
   actionSecondaryText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
   actionGhost: {
-    flex: 1, minHeight: 46, borderRadius: shape.cta, backgroundColor: L.bg,
+    flex: 1, minHeight: TOUCH_TARGET, borderRadius: shape.cta, backgroundColor: L.bg,
     borderWidth: 1.5, borderColor: L.border, alignItems: 'center', justifyContent: 'center',
   },
   actionGhostText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
   actionIcon: {
-    width: 46, minHeight: 46, borderRadius: shape.cta, backgroundColor: L.bg,
+    width: TOUCH_TARGET, minHeight: TOUCH_TARGET, borderRadius: shape.cta, backgroundColor: L.bg,
     borderWidth: 1.5, borderColor: L.border, alignItems: 'center', justifyContent: 'center',
   },
 
@@ -686,15 +714,20 @@ const s = StyleSheet.create({
   },
   statCol: { flex: 1, paddingVertical: space.sectionBottom, paddingHorizontal: 6, alignItems: 'center' },
   colBorder: { borderRightWidth: 1, borderRightColor: L.border },
-  attrValue: { color: L.navy, fontSize: text.rowTitle.size + 1, fontWeight: '800' },
-  statValue: { color: L.navy, fontSize: 22, fontWeight: '800' },
-  statLabel: { color: L.textSub, fontSize: 11, fontWeight: '500', marginTop: 2, textAlign: 'center' },
+  attrValue: { color: L.navy, fontSize: text.rowValue.size, fontWeight: text.rowValue.weight },
+  // statValueSm is the named role for exactly this: "a stat value smaller
+  // than statNumber -- a profile stat, a rating".
+  statValue: { color: L.navy, fontSize: text.statValueSm.size, fontWeight: text.statValueSm.weight },
+  statLabel: {
+    color: L.textSub, fontSize: text.caption.size, fontWeight: text.caption.weight,
+    marginTop: 2, textAlign: 'center',
+  },
 
   tabs: {
-    flexDirection: 'row', gap: 20, marginHorizontal: space.gutter, marginTop: space.gutter,
+    flexDirection: 'row', gap: space.sectionTop - 4, marginHorizontal: space.gutter, marginTop: space.gutter,
     borderBottomWidth: 1, borderBottomColor: L.border,
   },
-  tab: { paddingVertical: 10, paddingHorizontal: 2, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tab: { paddingVertical: space.gapTight + 2, paddingHorizontal: 2, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabActive: { borderBottomColor: L.gold },
   tabText: { color: L.textSub, fontSize: text.rowTitle.size, fontWeight: '600' },
   tabTextActive: { color: L.navy, fontWeight: '800' },
@@ -705,7 +738,7 @@ const s = StyleSheet.create({
     letterSpacing: text.cardLabel.letterSpacing, marginBottom: space.gapTight,
   },
   card: { backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border, overflow: 'hidden' },
-  cardCentered: { alignItems: 'center', paddingVertical: 22 },
+  cardCentered: { alignItems: 'center', paddingVertical: space.sectionTop - 2 },
 
   infoRow: {
     flexDirection: 'row', alignItems: 'center', gap: space.gapTight,
@@ -718,12 +751,12 @@ const s = StyleSheet.create({
     paddingHorizontal: space.gutter, paddingBottom: space.gap,
   },
   chip: {
-    borderRadius: shape.pill, paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: shape.pill, paddingHorizontal: space.gapTight + 2, paddingVertical: 5,
     backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.border,
   },
   chipText: { color: L.navy, fontSize: text.controlLabel.size, fontWeight: text.controlLabel.weight },
 
-  lookingValue: { color: L.navy, fontSize: text.rowTitle.size + 1, fontWeight: '800' },
+  lookingValue: { color: L.navy, fontSize: text.titleSm.size, fontWeight: text.titleSm.weight },
   lookingLabel: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
 
   bioText: {

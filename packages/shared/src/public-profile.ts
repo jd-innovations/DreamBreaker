@@ -150,6 +150,9 @@ export type PublicProfile = {
   intensity: string | null;
   formats: string[];
   homeCourt: string | null;
+  /** The facility row's id, so the home court can LINK to the directory
+   *  rather than being a dead string. */
+  homeCourtId: string | null;
 
   /** Shared slots when the viewer has a schedule, else this player's own. */
   availabilityLabel: string | null;
@@ -242,6 +245,7 @@ export function buildPublicProfile(input: BuildPublicProfileInput): PublicProfil
     intensity: row.play_intensity ? playIntensityLabel(row.play_intensity) : null,
     formats: (row.preferred_formats ?? []).map(preferredFormatLabel),
     homeCourt: row.facilities?.name ?? null,
+    homeCourtId: row.home_court_id,
 
     availabilityLabel: sharedLabel ?? ownLabel,
     availabilityIsShared: !!sharedLabel,
