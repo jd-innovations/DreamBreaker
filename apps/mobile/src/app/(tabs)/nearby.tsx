@@ -257,23 +257,25 @@ function usePinBookmarks(): PinBookmarks {
 }
 
 function PinBookmarkButton({
-  pin, bookmarks, size, style,
+  pin, bookmarks, size, containerStyle,
 }: {
   pin: ExplorePin;
   bookmarks: PinBookmarks;
   size: number;
-  style?: StyleProp<ViewStyle>;
+  /** Layout within the parent row — goes on the animated wrapper, not the
+   *  inner Pressable, which is inert for positioning. */
+  containerStyle?: StyleProp<ViewStyle>;
 }) {
   if (!bookmarks.enabled || pin.category === 'court') return null;
 
   const saved = bookmarks.isSaved(pin);
   return (
     <PressableCTA
-      style={style}
+      containerStyle={containerStyle}
       onPress={() => bookmarks.toggle(pin)}
       // A toggle, so the pulse fires only on the false -> true edge: saving
       // bounces, un-saving does not. The selection haptic fires either way.
-      hapticType="selection"
+      hapticType="light"
       pulseOn={saved}
       hitSlop={8}
       accessibilityLabel={saved ? `Remove ${pin.name} from saved` : `Save ${pin.name}`}
@@ -619,7 +621,7 @@ function ListCard({ pin, bookmarks }: { pin: ExplorePin; bookmarks: PinBookmarks
         <View style={lc.catRow}>
           <Ionicons name={catIcon} size={12} color={L.gold} />
           <Text style={lc.catLabel}>{catLabel}</Text>
-          <PinBookmarkButton pin={pin} bookmarks={bookmarks} size={17} style={{ marginLeft: 'auto' }} />
+          <PinBookmarkButton pin={pin} bookmarks={bookmarks} size={17} containerStyle={{ marginLeft: 'auto' }} />
         </View>
         <Text style={lc.title} numberOfLines={1}>{pin.name}</Text>
         <View style={lc.metaRow}>

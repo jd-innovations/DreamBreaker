@@ -38,9 +38,15 @@ import { haptics } from '@/lib/haptics';
 export type PressableCTAProps = {
   onPress: () => void;
   /**
-   * `selection` for a toggle changing state (favorite/bookmark), `light` for
-   * a one-shot action (share, calendar). Matches the taxonomy in
-   * lib/haptics.ts — see HAPTICS_PHASE3.md.
+   * `light` for anything a finger commits to — favorite, bookmark, share,
+   * calendar. `selection` only for picker-style ticks.
+   *
+   * Favorite/bookmark started on `selection`, following the taxonomy's
+   * "selection-state change" reading. On device it could not be felt:
+   * `selection` is UISelectionFeedbackGenerator, the faintest effect iOS has,
+   * built for scroll-wheel detents rather than for an action that writes to
+   * the server. All nine toggle call sites moved to `light` on 2026-09-21.
+   * See lib/haptics.ts and HAPTICS_PHASE3.md.
    */
   hapticType?: 'selection' | 'light';
   /**
@@ -49,7 +55,18 @@ export type PressableCTAProps = {
    */
   pulseOn?: boolean;
   disabled?: boolean;
+  /** The pressable's own box: size, background, radius, content alignment. */
   style?: StyleProp<ViewStyle>;
+  /**
+   * The OUTER animated wrapper's box — use this for anything positioning the
+   * CTA within its parent: `marginLeft: 'auto'`, `alignSelf`, `flex`.
+   *
+   * The distinction is not cosmetic. `style` goes on the inner Pressable, but
+   * the parent's flex child is the wrapper, so layout styles passed as `style`
+   * are silently inert. That cost a right-aligned bookmark its alignment on
+   * Nearby's list card before this prop existed.
+   */
+  containerStyle?: StyleProp<ViewStyle>;
   hitSlop?: number;
   accessibilityLabel?: string;
   children: React.ReactNode;
@@ -67,6 +84,7 @@ export function PressableCTA({
   pulseOn,
   disabled = false,
   style,
+  containerStyle,
   hitSlop = 8,
   accessibilityLabel,
   children,
@@ -115,7 +133,7 @@ export function PressableCTA({
   }
 
   return (
-    <Animated.View style={animatedStyle}>
+    <Animated.View style={[containerStyle, animatedStyle]}>
       <Pressable
         onPressIn={handlePressIn}
         onPress={onPress}

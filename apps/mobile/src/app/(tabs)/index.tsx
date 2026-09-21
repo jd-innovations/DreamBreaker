@@ -441,7 +441,7 @@ function CommunityCard({ item, saved, onSave }: { item: CommunityCardData; saved
           </View>
           <PressableCTA
             onPress={onSave}
-            hapticType="selection"
+            hapticType="light"
             pulseOn={saved}
             hitSlop={8}
             accessibilityLabel={saved ? 'Remove from favorites' : 'Add to favorites'}

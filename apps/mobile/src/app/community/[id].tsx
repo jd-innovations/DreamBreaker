@@ -1670,7 +1670,7 @@ export default function CommunityEventScreen() {
               <PressableCTA
                 style={s.circleBtn}
                 onPress={() => setSaved(v => !v)}
-                hapticType="selection"
+                hapticType="light"
                 pulseOn={saved}
                 accessibilityLabel={saved ? 'Remove from saved' : 'Save event'}
               >

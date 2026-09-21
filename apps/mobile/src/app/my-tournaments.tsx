@@ -476,7 +476,7 @@ function SavedTournamentCard({ tournament, onUnsave }: { tournament: BookmarkedT
         <PressableCTA
           style={c.cancelBtn}
           onPress={onUnsave}
-          hapticType="selection"
+          hapticType="light"
           pulseOn={false}
           accessibilityLabel="Remove from saved"
         >

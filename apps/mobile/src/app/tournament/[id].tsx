@@ -577,7 +577,7 @@ export default function TournamentDetail() {
           <PressableCTA
             style={s.topCircle}
             onPress={() => toggleBookmark(id)}
-            hapticType="selection"
+            hapticType="light"
             pulseOn={isBookmarked(id)}
             accessibilityLabel={isBookmarked(id) ? 'Remove from favorites' : 'Add to favorites'}
           >
@@ -1246,7 +1246,7 @@ export default function TournamentDetail() {
               <PressableCTA
                 style={s.saveBtn}
                 onPress={() => toggleBookmark(id)}
-                hapticType="selection"
+                hapticType="light"
                 pulseOn={isBookmarked(id)}
                 accessibilityLabel={isBookmarked(id) ? 'Remove from saved' : 'Save tournament'}
               >

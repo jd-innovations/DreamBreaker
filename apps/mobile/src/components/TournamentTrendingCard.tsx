@@ -124,7 +124,7 @@ export function TournamentTrendingCard({ item, onSave, saved, registered, style 
           <Text style={tc.name}>{item.name}</Text>
           <PressableCTA
             onPress={onSave}
-            hapticType="selection"
+            hapticType="light"
             pulseOn={saved}
             hitSlop={8}
             accessibilityLabel={saved ? 'Remove from favorites' : 'Add to favorites'}

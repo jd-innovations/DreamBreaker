@@ -48,7 +48,7 @@ function SavedCard({
       <PressableCTA
         style={c.unsaveBtn}
         onPress={onUnsave}
-        hapticType="selection"
+        hapticType="light"
         pulseOn={false}
         accessibilityLabel="Remove from saved"
       >

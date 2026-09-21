@@ -51,7 +51,19 @@ Classification summary:
 ## Haptic Taxonomy
 
 - `selection`: selection-state changes such as onboarding options/selectable chips
-- `light`: subtle physical interaction such as opening the slide menu
+- `light`: subtle physical interaction such as opening the slide menu, and every
+  event-menu CTA — share, add-to-calendar, favorite/bookmark
+
+**Amended 2026-09-21.** Favorite/bookmark CTAs originally used `selection`, which
+reads correctly on paper: they are a selection-state change. On device they could
+not be felt. `selection` is `UISelectionFeedbackGenerator`, the faintest effect
+iOS offers, designed for scroll-wheel detents — not for an action that writes to
+the server and that the user is deliberately reaching for. All nine `PressableCTA`
+toggle call sites moved to `light`.
+
+Worth remembering when classifying a future CTA: the taxonomy describes *what
+kind of event* happened, but the choice has to survive a thumb on real hardware.
+Those two can disagree, and the hardware wins.
 - `medium`: higher-intent submitted actions such as sign in/sign up attempts
 - `success`: confirmed success such as auth success, onboarding finalization, join celebration, marketplace report submitted, and push token registration
 - `warning`: available for future destructive confirmations; no Phase 3 call site needed it

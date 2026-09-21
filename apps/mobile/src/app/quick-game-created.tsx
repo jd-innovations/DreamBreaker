@@ -633,7 +633,7 @@ export default function QuickGameCreatedScreen() {
                 <PressableCTA
                   style={s.navBtn}
                   onPress={() => { void toggleBookmark(g.id); }}
-                  hapticType="selection"
+                  hapticType="light"
                   pulseOn={isBookmarked(g.id)}
                   accessibilityLabel={isBookmarked(g.id) ? 'Remove from saved' : 'Save event'}
                 >
