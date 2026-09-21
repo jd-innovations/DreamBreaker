@@ -19,6 +19,7 @@ import { DraggableQuickActions } from '@/components/DraggableQuickActions';
 import { useSession } from '@/hooks/useSession';
 import { useProfile } from '@/hooks/useProfile';
 import { useUnreadCounts } from '@/hooks/useUnreadCounts';
+import { useConnectionCount } from '@/hooks/useConnectionCount';
 import { useTournamentBookmarks } from '@/hooks/useTournamentBookmarks';
 import { usePlayEventBookmarks } from '@/hooks/usePlayEventBookmarks';
 import { useQuickActionsOrder } from '@/hooks/useQuickActionsOrder';
@@ -557,7 +558,10 @@ export default function HomeScreen() {
   const completion = getProfileCompletion(profile);
   const displayName = profile?.full_name ?? readAuthFullName(user?.user_metadata) ?? user?.email?.split('@')[0] ?? 'Player';
   const displayAvatarUrl = profile?.avatar_url ?? readAuthAvatarUrl(user?.user_metadata) ?? null;
-  const { unreadMessages, unreadNotifications } = useUnreadCounts();
+  // Messages moved off this screen; the unread badge lives on AppHeader's
+  // chat icon, which reads the same hook itself.
+  const { unreadNotifications } = useUnreadCounts();
+  const connectionCount = useConnectionCount();
   const { isBookmarked, toggleBookmark } = useTournamentBookmarks();
   const { isBookmarked: isPlayEventBookmarked, toggleBookmark: togglePlayEventBookmark } = usePlayEventBookmarks();
   const quickActionDefaults = __DEV__
@@ -997,25 +1001,29 @@ export default function HomeScreen() {
 
           <View style={s.statDivider} />
 
-          {/* Messages */}
+          {/* Connections — replaced Messages here. Messages is still one tap
+              away from the header chat icon, which carries the unread badge;
+              this tile was a duplicate of it, while My Connections had no
+              entry point outside the Partner tab's menu.
+
+              No red bubble: the number IS the content. A badge means
+              "something needs your attention", and a connection total never
+              does. */}
           <TouchableOpacity
             style={s.statCell}
             activeOpacity={0.75}
-            onPress={() => router.push('/(tabs)/chat' as never)}
+            onPress={() => router.push('/match/connections' as never)}
+            accessibilityRole="button"
+            accessibilityLabel={`My Connections, ${connectionCount} ${connectionCount === 1 ? 'player' : 'players'} connected`}
           >
             <View style={s.statCellLeft}>
-              <Text style={s.statCellNum}>{unreadMessages}</Text>
-              <Text style={s.statCellLabel}>Messages</Text>
+              <Text style={s.statCellNum}>{connectionCount}</Text>
+              <Text style={s.statCellLabel}>Connections</Text>
             </View>
             <View style={s.statIconWrap}>
               <View style={s.statIconCircle}>
-                <Ionicons name="chatbubble-outline" size={34} color={L.navy} />
+                <Ionicons name="people-outline" size={34} color={L.navy} />
               </View>
-              {unreadMessages > 0 && (
-                <View style={s.notifBubble}>
-                  <Text style={s.notifText}>{unreadMessages > 9 ? '9+' : unreadMessages}</Text>
-                </View>
-              )}
             </View>
           </TouchableOpacity>
         </View>
