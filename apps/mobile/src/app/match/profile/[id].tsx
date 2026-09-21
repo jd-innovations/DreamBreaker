@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { playStyleSummary } from '@shared/play-profile';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Image, Dimensions, Alert, ActivityIndicator,
+  StyleSheet, Image, Dimensions, Alert, ActivityIndicator, Pressable,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,7 +16,16 @@ import { EmptyState } from '@/components/states/ScreenState';
 import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateConversation } from '@/lib/conversationService';
+import { openPhotoViewer } from '@/lib/photoViewer';
 import { computeMatch } from '@shared/match';
+import { distanceMilesOrNull, formatMiles } from '@shared/geo';
+import {
+  normalizeSchedule, isScheduleEmpty, scheduleOverlap, describeOverlap, summarizeSchedule,
+} from '@shared/availability';
+import {
+  playStyleSummary,
+  lookingStatusLabel, genderLabel, handLabel, preferredFormatLabel, playIntensityLabel,
+} from '@shared/play-profile';
 import { useSupportContext } from '@/lib/support/supportContext';
 import { ReportUserSheet } from '@/components/safety/ReportUserSheet';
 
@@ -36,7 +44,9 @@ type ProfileData = {
   dupr: number;
   ratingSource: RatingSource;
   location: string;
-  distance: number;
+  /** Miles, or null when either side has no coordinates. Was hardcoded to 0,
+   *  so every profile claimed "0 mi" regardless of where the player was. */
+  distanceMi: number | null;
   lookingFor: string;
   skillRange: string;
   hand: string | null;
@@ -44,6 +54,14 @@ type ProfileData = {
   age: number | null;
   bio: string;
   verifiedDupr: boolean;
+  gender: string | null;
+  formats: string[];
+  intensity: string | null;
+  homeCourt: string | null;
+  /** Slots BOTH players share, when the viewer has a schedule; otherwise this
+   *  player's own availability summary. */
+  availabilityLabel: string | null;
+  availabilityIsShared: boolean;
   upcomingEvents: { name: string; date: string; type: string }[];
   groups: { name: string; role: string }[];
   stats: { label: string; value: string }[];
@@ -66,7 +84,9 @@ const sec = StyleSheet.create({
 export default function PartnerProfileScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [photoIdx, setPhotoIdx]   = useState(0);
+  // No setter: the hero opens the shared viewer rather than advancing in
+  // place, and the viewer owns paging across a set.
+  const [photoIdx]                = useState(0);
   const [loading, setLoading]       = useState(true);
   const [profile, setProfile]       = useState<ProfileData | null>(null);
   const [myId, setMyId]             = useState<string | null>(null);
@@ -87,10 +107,13 @@ export default function PartnerProfileScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       const uid = user?.id ?? null;
 
-      const [{ data: p }, { count }, myLikes, { data: myProfile }] = await Promise.all([
+      const [
+        { data: p }, { count }, myLikes, { data: myProfile },
+        { data: regRows }, { data: playRows }, { data: groupRows },
+      ] = await Promise.all([
         supabase
           .from('profiles')
-          .select('full_name, avatar_url, dupr, self_rating, skill_level, hand, play_style, bio, dupr_verified, location_city, location_state, looking_status, availability, availability_schedule')
+          .select('full_name, avatar_url, dupr, self_rating, skill_level, hand, play_style, bio, dupr_verified, location_city, location_state, looking_status, availability, availability_schedule, location_lat, location_lng, preferred_formats, play_intensity, gender, home_court_id, facilities:home_court_id(name, city, state)')
           .eq('id', id)
           .single(),
         supabase
@@ -105,8 +128,28 @@ export default function PartnerProfileScreen() {
               .eq('to_user_id', id)
           : Promise.resolve({ data: [] as { kind: string }[] }),
         uid
-          ? supabase.from('profiles').select('dupr, self_rating, availability, availability_schedule').eq('id', uid).maybeSingle()
+          ? supabase.from('profiles').select('dupr, self_rating, availability, availability_schedule, location_lat, location_lng').eq('id', uid).maybeSingle()
           : Promise.resolve({ data: null }),
+        // Activity. Both sections existed in the UI with hardcoded empty arrays
+        // behind them, so the render blocks could never fire. The queries are
+        // lifted from app/players/[id].tsx, which has had them all along but is
+        // reachable from exactly one screen (the round-robin roster).
+        supabase
+          .from('registrations')
+          .select('tournament_id, tournaments(name, event_date, city)')
+          .or(`player_id.eq.${id},partner_id.eq.${id}`)
+          .limit(20),
+        supabase
+          .from('play_participants')
+          .select('event_id, play_events(name, event_date, city, state)')
+          .eq('claimed_by', id)
+          .limit(20),
+        supabase
+          .from('group_members')
+          .select('role, groups(name)')
+          .eq('user_id', id)
+          .eq('status', 'active')
+          .limit(20),
       ]);
 
       if (cancelled) return;
@@ -122,11 +165,16 @@ export default function PartnerProfileScreen() {
       const { data: ageValue } = await supabase.rpc('profile_age', { p_user_id: id });
       const age = typeof ageValue === 'number' ? ageValue : null;
 
-      // No distance: this screen does not know where the viewer is, and
-      // passing null is honest — computeMatch scores it zero and says nothing,
-      // rather than treating unknown as far away.
+      // Real distance, from the same helper web and the finder use.
+      const distanceMi = distanceMilesOrNull(
+        myProfile?.location_lat != null && myProfile?.location_lng != null
+          ? { lat: myProfile.location_lat, lng: myProfile.location_lng }
+          : null,
+        { lat: p.location_lat, lng: p.location_lng },
+      );
+
       const { pct } = computeMatch(
-        { dupr: dupr || null, schedule: p.availability_schedule, distanceMi: null },
+        { dupr: dupr || null, schedule: p.availability_schedule, distanceMi },
         {
           dupr: myProfile?.dupr ?? (myProfile?.self_rating ? parseFloat(myProfile.self_rating) : null),
           schedule: myProfile?.availability_schedule ?? null,
@@ -145,12 +193,44 @@ export default function PartnerProfileScreen() {
         if (!cancelled) setConnected(!!match);
       }
 
+      // Prefer what the two of you SHARE — "Both free Wednesday evenings" is a
+      // reason to message someone; "Wed, Sat" is a fact about a stranger.
+      const theirSchedule = normalizeSchedule(p.availability_schedule);
+      const mySchedule = normalizeSchedule(myProfile?.availability_schedule);
+      const overlap = isScheduleEmpty(mySchedule) ? [] : scheduleOverlap(mySchedule, theirSchedule);
+      const sharedLabel = overlap.length > 0 ? describeOverlap(overlap) : null;
+      const ownLabel = isScheduleEmpty(theirSchedule) ? null : summarizeSchedule(theirSchedule);
+
+      const homeCourtRow = (p as { facilities?: { name: string; city: string | null; state: string | null } | null }).facilities;
+
+      const tournaments = (regRows ?? [])
+        .map((r) => (r as { tournaments?: { name: string; event_date: string; city: string | null } | null }).tournaments)
+        .filter((t): t is { name: string; event_date: string; city: string | null } => !!t)
+        .map((t) => ({ name: t.name, date: t.event_date, type: 'Tournament' }));
+
+      const communityEvents = (playRows ?? [])
+        .map((r) => (r as { play_events?: { name: string; event_date: string } | null }).play_events)
+        .filter((e): e is { name: string; event_date: string } => !!e)
+        .map((e) => ({ name: e.name, date: e.event_date, type: 'Community Play' }));
+
+      // Newest first, and capped: this is a profile, not a history screen.
+      const activity = [...tournaments, ...communityEvents]
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 5);
+
+      const groups = (groupRows ?? [])
+        .map((r) => {
+          const row = r as { role: string | null; groups?: { name: string } | null };
+          return row.groups ? { name: row.groups.name, role: row.role ?? 'member' } : null;
+        })
+        .filter((g): g is { name: string; role: string } => !!g);
+
       setProfile({
         name: p.full_name,
         dupr,
         ratingSource: rating.source,
         location,
-        distance: 0,
+        distanceMi,
         lookingFor: p.looking_status || 'Partner',
         skillRange: p.skill_level || '',
         hand: p.hand,
@@ -158,8 +238,14 @@ export default function PartnerProfileScreen() {
         age,
         bio: p.bio || '',
         verifiedDupr: p.dupr_verified,
-        upcomingEvents: [],
-        groups: [],
+        gender: p.gender ?? null,
+        formats: Array.isArray(p.preferred_formats) ? p.preferred_formats : [],
+        intensity: p.play_intensity ?? null,
+        homeCourt: homeCourtRow?.name ?? null,
+        availabilityLabel: sharedLabel ?? ownLabel,
+        availabilityIsShared: !!sharedLabel,
+        upcomingEvents: activity,
+        groups,
         stats: [
           { label: 'Connections', value: String(count ?? 0) },
           ...(uid ? [{ label: 'Match', value: `${pct}%` }] : []),
@@ -272,15 +358,19 @@ export default function PartnerProfileScreen() {
             </View>
           )}
 
-          {/* Photo tap zones */}
-          <View style={StyleSheet.absoluteFill}>
-            <View style={{ flex: 1, flexDirection: 'row' }}>
-              <TouchableOpacity style={{ flex: 1 }} activeOpacity={1}
-                onPress={() => setPhotoIdx(i => Math.max(0, i - 1))} />
-              <TouchableOpacity style={{ flex: 1 }} activeOpacity={1}
-                onPress={() => setPhotoIdx(i => Math.min(profile.photos.length - 1, i + 1))} />
-            </View>
-          </View>
+          {/* Tap the photo to see it whole, as in chat and group feeds.
+              This replaced left/right advance zones: `photos` is built from
+              avatar_url alone, so there has only ever been one photo and both
+              zones were no-ops — tapping a face did nothing. The viewer
+              advances across a set by itself if profiles ever gain more. */}
+          {profile.photos.length > 0 && (
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => openPhotoViewer(profile.photos, photoIdx, profile.name)}
+              accessibilityRole="imagebutton"
+              accessibilityLabel={`View ${profile.name}'s photo full screen`}
+            />
+          )}
 
           {/* Top bar */}
           <View style={[s.heroTopBar, { top: insets.top + 12 }]}>
@@ -336,19 +426,26 @@ export default function PartnerProfileScreen() {
               </View>
               <View style={s.heroMetaChip}>
                 <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.8)" />
-                <Text style={s.heroMetaText}>{profile.location} · {profile.distance} mi</Text>
+                <Text style={s.heroMetaText}>
+                  {profile.location}
+                  {formatMiles(profile.distanceMi) ? ` · ${formatMiles(profile.distanceMi)}` : ''}
+                </Text>
               </View>
               <View style={s.heroMetaChip}>
                 <Ionicons name="trophy-outline" size={12} color="rgba(255,255,255,0.8)" />
-                <Text style={s.heroMetaText}>{profile.lookingFor}</Text>
+                <Text style={s.heroMetaText}>
+                  {lookingStatusLabel(profile.lookingFor) ?? profile.lookingFor}
+                </Text>
               </View>
             </View>
             {/* Quick info pills */}
             <View style={s.heroPills}>
               {([
-                profile.age   ? { icon: 'calendar-outline',  label: `${profile.age} yrs` }    : null,
-                profile.hand  ? { icon: 'hand-left-outline', label: `${profile.hand} Hand` }   : null,
-                profile.style ? { icon: 'heart-outline',     label: profile.style }             : null,
+                profile.age    ? { icon: 'calendar-outline',  label: `${profile.age} yrs` }                : null,
+                genderLabel(profile.gender) ? { icon: 'person-outline', label: genderLabel(profile.gender)! } : null,
+                handLabel(profile.hand)     ? { icon: 'hand-left-outline', label: handLabel(profile.hand)! }  : null,
+                profile.intensity ? { icon: 'flame-outline', label: playIntensityLabel(profile.intensity) }   : null,
+                profile.style  ? { icon: 'heart-outline',     label: profile.style }                          : null,
               ] as ({ icon: string; label: string } | null)[])
                 .filter((p): p is { icon: string; label: string } => p !== null)
                 .map(p => (
@@ -374,15 +471,61 @@ export default function PartnerProfileScreen() {
         {/* ── Body sections ── */}
         <View style={s.body}>
 
-          {/* About */}
-          <Section title="ABOUT">
-            <View style={s.card}>
-              <Text style={s.bioText}>{profile.bio}</Text>
-              <View style={s.bioMeta}>
-                <Text style={s.bioMetaChip}>Skill: {profile.skillRange}</Text>
+          {/* About. Rendered only when there is something in it — an empty
+              card under a heading reads as broken, not as "no bio". */}
+          {(!!profile.bio || !!profile.skillRange) && (
+            <Section title="ABOUT">
+              <View style={s.card}>
+                {!!profile.bio && <Text style={s.bioText}>{profile.bio}</Text>}
+                {!!profile.skillRange && (
+                  <View style={s.bioMeta}>
+                    <Text style={s.bioMetaChip}>Skill: {profile.skillRange}</Text>
+                  </View>
+                )}
               </View>
-            </View>
-          </Section>
+            </Section>
+          )}
+
+          {/* Availability. The shared version leads when there is one: "Both
+              free Wednesday evenings" is a reason to message someone, where
+              "Wed, Sat" is a fact about a stranger. */}
+          {!!profile.availabilityLabel && (
+            <Section title={profile.availabilityIsShared ? 'WHEN YOU BOTH PLAY' : 'AVAILABILITY'}>
+              <View style={s.card}>
+                <View style={s.infoRow}>
+                  <Ionicons
+                    name={profile.availabilityIsShared ? 'people-outline' : 'calendar-outline'}
+                    size={16}
+                    color={profile.availabilityIsShared ? L.success : L.gold}
+                  />
+                  <Text style={s.infoText}>{profile.availabilityLabel}</Text>
+                </View>
+              </View>
+            </Section>
+          )}
+
+          {/* Where and how they play */}
+          {(!!profile.homeCourt || profile.formats.length > 0) && (
+            <Section title="PLAYS">
+              <View style={s.card}>
+                {!!profile.homeCourt && (
+                  <View style={s.infoRow}>
+                    <Ionicons name="location-outline" size={16} color={L.gold} />
+                    <Text style={s.infoText}>Home court: {profile.homeCourt}</Text>
+                  </View>
+                )}
+                {profile.formats.length > 0 && (
+                  <View style={s.chipWrap}>
+                    {profile.formats.map((f) => (
+                      <View key={f} style={s.chip}>
+                        <Text style={s.chipText}>{preferredFormatLabel(f)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </Section>
+          )}
 
           {/* Upcoming events */}
           {profile.upcomingEvents.length > 0 && (
@@ -497,6 +640,15 @@ const s = StyleSheet.create({
   photoDots: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 5 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.35)' },
   dotActive: { backgroundColor: L.gold, width: 18 },
+
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 },
+  infoText: { color: L.text, fontSize: text.body.size, fontWeight: '500', flex: 1, lineHeight: 21 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+  chip: {
+    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5,
+    backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.border,
+  },
+  chipText: { color: L.navy, fontSize: text.caption.size, fontWeight: '700' },
 
   heroTopBar: {
     position: 'absolute', left: 16, right: 16,

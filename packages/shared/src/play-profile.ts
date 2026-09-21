@@ -183,3 +183,57 @@ export function playStyleSummary(keys: string[] | null | undefined): string | nu
   if (!keys || keys.length === 0) return null;
   return keys.map(playStyleLabel).join(", ");
 }
+
+// ─── Looking status ──────────────────────────────────────────────────────────
+//
+// `profiles.looking_status`. Added here in 2026-09-21 because the match profile
+// was printing the raw column — a player card read "actively_looking", enum
+// casing and all.
+
+export const LOOKING_STATUS_LABELS: Record<string, string> = {
+  actively_looking: "Actively looking",
+  open_to_play: "Open to play",
+  not_looking: "Not looking right now",
+};
+
+export function lookingStatusLabel(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  return LOOKING_STATUS_LABELS[raw] ?? titleCaseKey(raw);
+}
+
+// ─── Gender ──────────────────────────────────────────────────────────────────
+//
+// Collected for tournament divisions. Displayed on the public profile by
+// product decision (2026-09-21).
+
+export const GENDER_LABELS: Record<string, string> = {
+  male: "Male",
+  female: "Female",
+  non_binary: "Non-binary",
+  prefer_not_to_say: "Prefer not to say",
+};
+
+export function genderLabel(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  // prefer_not_to_say is a choice to withhold, so the profile shows nothing
+  // rather than announcing that the person declined to answer.
+  if (raw === "prefer_not_to_say") return null;
+  return GENDER_LABELS[raw] ?? titleCaseKey(raw);
+}
+
+// ─── Handedness ──────────────────────────────────────────────────────────────
+
+export function handLabel(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const key = raw.toLowerCase();
+  if (key === "right") return "Right-handed";
+  if (key === "left") return "Left-handed";
+  if (key === "ambidextrous" || key === "both") return "Ambidextrous";
+  return titleCaseKey(raw);
+}
+
+/** "actively_looking" → "Actively looking". The last resort for an unmapped key. */
+function titleCaseKey(raw: string): string {
+  const words = raw.replace(/_/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
