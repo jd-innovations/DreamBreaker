@@ -49,15 +49,17 @@ function formatSkillLabel(value: string) {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export function getProfileInitials(profile: Pick<UserProfile, 'full_name' | 'email'>) {
+export function getProfileInitials(profile: Pick<UserProfile, 'full_name'>) {
   const name = cleanText(profile.full_name);
   if (name) {
     const parts = name.split(/\s+/).filter(Boolean);
     return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'DB';
   }
 
-  const email = cleanText(profile.email);
-  return email?.[0]?.toUpperCase() ?? 'DB';
+  // Previously fell back to the first letter of the email address. That field
+  // is gone from UserProfile — and an avatar is a poor place for a fragment of
+  // someone's address anyway.
+  return 'DB';
 }
 
 function getLocationLabel(profile: UserProfile) {

@@ -9,7 +9,13 @@ export type AvailabilitySchedule = Partial<Record<AvailabilityDay, AvailabilityB
 export type UserProfile = {
   id: string;
   full_name: string;
-  email: string;
+  // NO `email`. profiles.email is not client-readable: RLS on profiles allows
+  // reading every row, so a column grant would hand every signed-in user the
+  // whole address book. fetchProfile() is called for OTHER people (marketplace
+  // seller, tournament director), so it must never carry one.
+  //
+  // A user's own address is on the auth session as `user.email`; read it from
+  // useSession(), not from here.
   avatar_url: string | null;
   bio: string | null;
   cover_url: string | null;
@@ -40,26 +46,25 @@ export type UserProfile = {
 };
 
 const PROFILE_SELECT = [
-  'id', 'full_name', 'email', 'avatar_url', 'bio', 'cover_url', 'handle',
+  'id', 'full_name', 'avatar_url', 'bio', 'cover_url', 'handle',
   'location_city', 'location_state', 'location_lat', 'location_lng', 'home_court_id', 'story_radius_miles', 'dupr', 'dupr_verified', 'hand',
   'play_style', 'skill_level', 'availability', 'self_rating', 'is_director', 'director_status', 'is_coach', 'coach_status',
   'stripe_connect_onboarded_at', 'role', 'availability_schedule', 'created_at', 'marketplace_listing_limit',
 ].join(', ');
 
 const CORE_PROFILE_SELECT = [
-  'id', 'full_name', 'email', 'avatar_url', 'bio', 'cover_url', 'handle',
+  'id', 'full_name', 'avatar_url', 'bio', 'cover_url', 'handle',
   'location_city', 'location_state', 'location_lat', 'location_lng', 'dupr', 'dupr_verified', 'hand',
   'play_style', 'skill_level', 'availability', 'self_rating', 'is_director', 'director_status', 'is_coach', 'coach_status',
   'stripe_connect_onboarded_at', 'role',
 ].join(', ');
 
-type ProfileRow = Partial<UserProfile> & Pick<UserProfile, 'id' | 'full_name' | 'email'>;
+type ProfileRow = Partial<UserProfile> & Pick<UserProfile, 'id' | 'full_name'>;
 
 function hydrateProfile(row: ProfileRow): UserProfile {
   return {
     id: row.id,
     full_name: row.full_name,
-    email: row.email,
     avatar_url: row.avatar_url ?? null,
     bio: row.bio ?? null,
     cover_url: row.cover_url ?? null,

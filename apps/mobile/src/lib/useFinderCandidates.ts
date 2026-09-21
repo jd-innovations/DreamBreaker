@@ -42,7 +42,6 @@ type ProfileRow = {
   // compiler.
   play_style: string[] | null;
   availability: string | null;
-  date_of_birth: string | null;
 };
 
 type LookingFor = { activelyLooking: boolean; gameTypes: string[] };
@@ -183,7 +182,7 @@ export function useFinderCandidates(opts?: UseFinderCandidatesOptions) {
         supabase
           .from('profiles')
           .select(
-            'id, full_name, avatar_url, bio, location_city, location_state, location_lat, location_lng, dupr, self_rating, skill_level, hand, play_style, availability, date_of_birth'
+            'id, full_name, avatar_url, bio, location_city, location_state, location_lat, location_lng, dupr, self_rating, skill_level, hand, play_style, availability'
           )
           .eq('is_discoverable', true)
           .neq('id', user?.id ?? '')

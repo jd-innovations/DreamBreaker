@@ -840,14 +840,17 @@ export default function CommunityEventScreen() {
       if (joiningEvent) return;
       setJoiningEvent(true);
       try {
-        // Fetch profile for real name + email
+        // Name from the profile; email from the SESSION, not profiles.
+        // profiles.email is leaving the client-readable grant — every signed-in
+        // user could read every address through it. The auth session already
+        // carries this user's own address, which is the only one needed here.
         const { data: profile } = await supabase
           .from('profiles')
-          .select('full_name, email')
+          .select('full_name')
           .eq('id', user.id)
           .single();
         const fullName: string = profile?.full_name ?? user.email ?? 'Player';
-        const email: string    = (profile?.email ?? user.email ?? '').trim();
+        const email: string    = (user.email ?? '').trim();
         if (!email) {
           platformAlert('Email required', 'Please add an email address to your profile before joining.');
           return;
