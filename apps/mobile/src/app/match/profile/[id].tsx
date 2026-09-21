@@ -8,6 +8,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import type { RatingSource } from '@/lib/playerRating';
+import { resolvePlayerRating, formatPlayerRating } from '@/lib/playerRating';
 import { colors, spacing } from '@/theme';
 import { EmptyState } from '@/components/states/ScreenState';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
@@ -31,6 +33,7 @@ const L = {
 type ProfileData = {
   name: string;
   dupr: number;
+  ratingSource: RatingSource;
   location: string;
   distance: number;
   lookingFor: string;
@@ -108,7 +111,8 @@ export default function PartnerProfileScreen() {
       if (cancelled) return;
       if (!p) { setLoading(false); return; }
 
-      const dupr = p.dupr ?? (p.self_rating ? parseFloat(p.self_rating) : 0);
+      const rating = resolvePlayerRating(p.dupr, p.self_rating);
+      const dupr = rating.value;
       const location = [p.location_city, p.location_state].filter(Boolean).join(', ') || 'Unknown';
       const photos = p.avatar_url ? [p.avatar_url] : [];
       const age = p.date_of_birth
@@ -138,6 +142,7 @@ export default function PartnerProfileScreen() {
       setProfile({
         name: p.full_name,
         dupr,
+        ratingSource: rating.source,
         location,
         distance: 0,
         lookingFor: p.looking_status || 'Partner',
@@ -304,8 +309,10 @@ export default function PartnerProfileScreen() {
             </View>
             <View style={s.heroMeta}>
               <View style={s.heroMetaChip}>
-                <Ionicons name="star" size={12} color={L.gold} />
-                <Text style={s.heroMetaText}>{profile.dupr.toFixed(1)} DUPR</Text>
+                <Ionicons name="speedometer-outline" size={12} color={L.gold} />
+                <Text style={s.heroMetaText}>
+                  {formatPlayerRating({ value: profile.dupr, source: profile.ratingSource })}
+                </Text>
               </View>
               <View style={s.heroMetaChip}>
                 <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.8)" />

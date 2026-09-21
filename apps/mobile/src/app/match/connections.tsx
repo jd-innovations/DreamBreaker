@@ -7,6 +7,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { resolvePlayerRating, formatPlayerRating } from '@/lib/playerRating';
 import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -87,8 +88,10 @@ function ConnectionCard({ conn, onMore, onMessage, messaging }: {
         <View style={cc.info}>
           <Text style={cc.name} numberOfLines={2}>{conn.player.name}</Text>
           <View style={cc.duprBadge}>
-            <Ionicons name="star" size={10} color={L.gold} />
-            <Text style={cc.duprText}>{conn.player.dupr.toFixed(1)}</Text>
+            <Ionicons name="speedometer-outline" size={10} color={L.gold} />
+            <Text style={cc.duprText}>
+              {formatPlayerRating({ value: conn.player.dupr, source: conn.player.ratingSource })}
+            </Text>
           </View>
           <Text style={cc.meta} numberOfLines={1}>
             {conn.player.location}
@@ -200,7 +203,7 @@ async function fetchMatches(userId: string, mine: Coordinates | null): Promise<C
       const otherId = m.user_a === user.id ? m.user_b : m.user_a;
       const p = profileMap[otherId];
       if (!p) return null;
-      const dupr = p.dupr ?? (p.self_rating ? parseFloat(p.self_rating) : 0);
+      const rating = resolvePlayerRating(p.dupr, p.self_rating);
       const location = [p.location_city, p.location_state].filter(Boolean).join(', ') || 'Unknown';
       // Was hardcoded to 0, so every card read "0 mi". null means unknown —
       // either the viewer's location is unavailable or the other player never
@@ -213,7 +216,8 @@ async function fetchMatches(userId: string, mine: Coordinates | null): Promise<C
         player: {
           id: p.id,
           name: p.full_name,
-          dupr,
+          dupr: rating.value,
+          ratingSource: rating.source,
           location,
           distance,
           lookingFor: p.looking_status || 'Partner',

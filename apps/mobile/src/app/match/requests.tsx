@@ -7,6 +7,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { resolvePlayerRating, formatPlayerRating } from '@/lib/playerRating';
 import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -64,8 +65,10 @@ function IncomingCard({ req, onAccept, onDecline }: {
           <View style={ic.nameRow}>
             <Text style={ic.name}>{req.player.name}</Text>
             <View style={ic.duprBadge}>
-              <Ionicons name="star" size={10} color={L.gold} />
-              <Text style={ic.duprText}>{req.player.dupr.toFixed(1)}</Text>
+              <Ionicons name="speedometer-outline" size={10} color={L.gold} />
+              <Text style={ic.duprText}>
+                {formatPlayerRating({ value: req.player.dupr, source: req.player.ratingSource })}
+              </Text>
             </View>
           </View>
           <View style={ic.metaRow}>
@@ -145,8 +148,10 @@ function OutgoingCard({ req, onCancel }: { req: ConnectionRequest; onCancel: () 
         <View style={oc.nameRow}>
           <Text style={oc.name}>{req.player.name}</Text>
           <View style={oc.duprBadge}>
-            <Ionicons name="star" size={10} color={L.gold} />
-            <Text style={oc.duprText}>{req.player.dupr.toFixed(1)}</Text>
+            <Ionicons name="speedometer-outline" size={10} color={L.gold} />
+            <Text style={oc.duprText}>
+              {formatPlayerRating({ value: req.player.dupr, source: req.player.ratingSource })}
+            </Text>
           </View>
         </View>
         <Text style={oc.sent}>Sent {relativeTime(req.sentAt)}</Text>
@@ -203,10 +208,12 @@ function profileToPlayer(p: {
   location_city: string | null; location_state: string | null;
   looking_status: string;
 }) {
+  const rating = resolvePlayerRating(p.dupr, p.self_rating);
   return {
     id: p.id,
     name: p.full_name,
-    dupr: p.dupr ?? (p.self_rating ? parseFloat(p.self_rating) : 0),
+    dupr: rating.value,
+    ratingSource: rating.source,
     location: [p.location_city, p.location_state].filter(Boolean).join(', ') || 'Unknown',
     distance: 0,
     lookingFor: p.looking_status || 'Partner',

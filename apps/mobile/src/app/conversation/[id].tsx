@@ -23,6 +23,7 @@ import EmojiPicker from 'rn-emoji-keyboard';
 import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
+import { resolvePlayerRating, formatPlayerRating, type PlayerRating } from '@/lib/playerRating';
 import { goBack } from '@/lib/navigation';
 import { openPhotoViewer } from '@/lib/photoViewer';
 import {
@@ -842,7 +843,7 @@ function RealDMScreen({ conversationId }: { conversationId: string }) {
   const [sending, setSending]   = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [attachmentSheetVisible, setAttachmentSheetVisible] = useState(false);
-  const [partner, setPartner]   = useState<{ id: string; name: string; photoUri?: string; dupr?: number } | null>(null);
+  const [partner, setPartner]   = useState<{ id: string; name: string; photoUri?: string; rating?: PlayerRating } | null>(null);
   const [messages, setMessages] = useState<DbMessage[]>([]);
   const [loading, setLoading]   = useState(true);
   const [msgError, setMsgError] = useState<string | null>(null);
@@ -893,7 +894,7 @@ function RealDMScreen({ conversationId }: { conversationId: string }) {
           id: partnerId,
           name: p.full_name,
           photoUri: p.avatar_url ?? undefined,
-          dupr: p.dupr ?? (p.self_rating ? parseFloat(p.self_rating) : undefined),
+          rating: resolvePlayerRating(p.dupr, p.self_rating),
         });
       }
     })();
@@ -1051,10 +1052,12 @@ function RealDMScreen({ conversationId }: { conversationId: string }) {
           <View style={s.nameRow}>
             <Text style={s.hdrName}>{name}</Text>
           </View>
-          {partner?.dupr != null && (
+          {/* Unrated partners show nothing rather than "0.0" or "Unrated" —
+              a chat header is not the place to label someone. */}
+          {partner?.rating != null && partner.rating.source !== 'none' && (
             <View style={s.hdrMeta}>
-              <Ionicons name="star" size={13} color={L.gold} />
-              <Text style={s.hdrMetaText}>{partner.dupr.toFixed(1)} DUPR</Text>
+              <Ionicons name="speedometer-outline" size={13} color={L.gold} />
+              <Text style={s.hdrMetaText}>{formatPlayerRating(partner.rating)}</Text>
             </View>
           )}
         </View>

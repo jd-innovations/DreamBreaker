@@ -7,6 +7,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { resolvePlayerRating, formatPlayerRating } from '@/lib/playerRating';
 import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -49,8 +50,8 @@ function PlayerCard({ sp, onRemove }: { sp: SavedPlayer; onRemove: () => void })
           <View style={pc.nameRow}>
             <Text style={pc.name}>{p.name}</Text>
             <View style={pc.duprBadge}>
-              <Ionicons name="star" size={11} color={L.gold} />
-              <Text style={pc.duprText}>{p.dupr.toFixed(1)} DUPR</Text>
+              <Ionicons name="speedometer-outline" size={11} color={L.gold} />
+              <Text style={pc.duprText}>{formatPlayerRating({ value: p.dupr, source: p.ratingSource })}</Text>
             </View>
           </View>
           <View style={pc.metaRow}>
@@ -154,13 +155,14 @@ async function fetchSaved(): Promise<SavedPlayer[]> {
     .map(l => {
       const p = profileMap[l.to_user_id];
       if (!p) return null;
-      const dupr = p.dupr ?? (p.self_rating ? parseFloat(p.self_rating) : 0);
+      const rating = resolvePlayerRating(p.dupr, p.self_rating);
       const location = [p.location_city, p.location_state].filter(Boolean).join(', ') || 'Unknown';
       return {
         player: {
           id: p.id,
           name: p.full_name,
-          dupr,
+          dupr: rating.value,
+          ratingSource: rating.source,
           location,
           distance: 0,
           lookingFor: p.looking_status || 'Partner',
