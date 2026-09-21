@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet,
-  Image, ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +11,8 @@ import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
-import { AttachmentOptionsSheet, FileAttachmentRow } from '@/components';
+import { AttachmentOptionsSheet, FileAttachmentRow, ChatPhoto } from '@/components';
+import { openPhotoViewer } from '@/lib/photoViewer';
 import { useSession } from '@/hooks/useSession';
 import {
   fetchMessages, sendMessage as sendMessageToDb, markConversationRead,
@@ -182,7 +183,13 @@ export default function SupportTicketScreen() {
               <View key={msg.id} style={isMine ? s.sentRow : s.receivedRow}>
                 <View style={isMine ? s.sentBubble : s.receivedBubble}>
                   {msg.attachment_type === 'image' ? (
-                    <Image source={{ uri: msg.attachment_url! }} style={s.msgPhoto} />
+                    <ChatPhoto
+                      uri={msg.attachment_url!}
+                      style={s.msgPhoto}
+                      // Unlike a conversation bubble, this one is an inert View with
+                      // no reactions, so the press can live on the photo itself.
+                      onPress={() => openPhotoViewer([msg.attachment_url!])}
+                    />
                   ) : msg.attachment_type === 'file' ? (
                     <FileAttachmentRow url={msg.attachment_url!} name={msg.attachment_name} onDark={isMine} />
                   ) : (
@@ -291,7 +298,9 @@ const s = StyleSheet.create({
   },
   sentText: { color: L.bg, fontSize: text.body.size, fontWeight: '500', lineHeight: 20 },
   receivedText: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 20 },
-  msgPhoto: { width: 200, height: 200, borderRadius: shape.cta },
+  // No fixed height: ChatPhoto supplies aspectRatio once the image reports
+  // its real dimensions. backgroundColor fills the reserved box during load.
+  msgPhoto: { width: 200, borderRadius: shape.cta, backgroundColor: L.received },
   msgTime: { color: L.textMuted, fontSize: 11, marginTop: 4 },
 
   closedBanner: {

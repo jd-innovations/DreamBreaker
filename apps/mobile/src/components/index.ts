@@ -27,6 +27,8 @@ export { ReactionPills } from './ReactionPills';
 export { AttachmentOptionsSheet } from './AttachmentOptionsSheet';
 export { ManageEventSheet } from './ManageEventSheet';
 export { FileAttachmentRow } from './FileAttachmentRow';
+export { ChatPhoto } from './ChatPhoto';
+export type { ChatPhotoProps } from './ChatPhoto';
 export { Avatar } from './Avatar';
 export type { AvatarProps } from './Avatar';
 export { WalletCard } from './wallet/WalletCard';
