@@ -3436,6 +3436,15 @@ export type Database = {
           scheduled_at: string | null
           sent_by: string | null
           started_at: string | null
+          stats_accepted: number | null
+          stats_failed: number | null
+          stats_frozen_at: string | null
+          stats_invalid_token: number | null
+          stats_receipt_failed: number | null
+          stats_receipt_ok: number | null
+          stats_skipped: number | null
+          stats_tap_capable_accepted: number | null
+          stats_unconfirmed: number | null
           status: string
           title: string
           updated_at: string
@@ -3464,6 +3473,15 @@ export type Database = {
           scheduled_at?: string | null
           sent_by?: string | null
           started_at?: string | null
+          stats_accepted?: number | null
+          stats_failed?: number | null
+          stats_frozen_at?: string | null
+          stats_invalid_token?: number | null
+          stats_receipt_failed?: number | null
+          stats_receipt_ok?: number | null
+          stats_skipped?: number | null
+          stats_tap_capable_accepted?: number | null
+          stats_unconfirmed?: number | null
           status?: string
           title: string
           updated_at?: string
@@ -3492,6 +3510,15 @@ export type Database = {
           scheduled_at?: string | null
           sent_by?: string | null
           started_at?: string | null
+          stats_accepted?: number | null
+          stats_failed?: number | null
+          stats_frozen_at?: string | null
+          stats_invalid_token?: number | null
+          stats_receipt_failed?: number | null
+          stats_receipt_ok?: number | null
+          stats_skipped?: number | null
+          stats_tap_capable_accepted?: number | null
+          stats_unconfirmed?: number | null
           status?: string
           title?: string
           updated_at?: string
@@ -5207,6 +5234,7 @@ export type Database = {
       }
       push_tickets: {
         Row: {
+          campaign_delivery_id: string | null
           checked_at: string | null
           created_at: string
           error_code: string | null
@@ -5215,6 +5243,7 @@ export type Database = {
           ticket_id: string
         }
         Insert: {
+          campaign_delivery_id?: string | null
           checked_at?: string | null
           created_at?: string
           error_code?: string | null
@@ -5223,6 +5252,7 @@ export type Database = {
           ticket_id: string
         }
         Update: {
+          campaign_delivery_id?: string | null
           checked_at?: string | null
           created_at?: string
           error_code?: string | null
@@ -5230,7 +5260,15 @@ export type Database = {
           status?: string | null
           ticket_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "push_tickets_campaign_delivery_id_fkey"
+            columns: ["campaign_delivery_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_deliveries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_tokens: {
         Row: {
@@ -7579,6 +7617,7 @@ export type Database = {
           error_message: string
           id: string
           next_attempt_at: string
+          provider_receipt_status: string
           reconciled_at: string
           status: string
           submitted_at: string
@@ -7601,14 +7640,19 @@ export type Database = {
           internal_name: string
           invalid_token: number
           queued: number
+          receipt_failed: number
+          receipt_ok: number
+          receipt_pending: number
           recipient_device_count: number
           recipient_user_count: number
           retry_pending: number
           skipped: number
+          stats_frozen_at: string
           status: string
           submitted: number
           tap_capable_accepted: number
           taps: number
+          unconfirmed: number
         }[]
       }
       admin_clear_handle: {

@@ -842,6 +842,85 @@ by an unschedule resumes correctly when rescheduled, because all state is in del
 
 # Phase 4 — Receipt-sweeper integration and 90-day cleanup
 
+> **Status 2026-09-22: DONE, re-specified.** Migrations
+> `20260922100000_campaign_receipt_reconcile.sql` and
+> `20260922100100_campaign_receipt_jobs.sql` applied to production. **No edge
+> function was changed or deployed.** Types hand-patched (45 added, 1 removed;
+> `storage` and `reserved_handles` intact).
+>
+> **Why re-specified.** The text below assumes deliveries stay `submitted` until a
+> receipt arrives. Phase 3 instead sets `accepted` when Expo issues a ticket and fails
+> anything still `submitted` after 10 minutes, so `submitted` is a seconds-long
+> in-flight state. The owner approved the re-spec on 2026-09-22.
+>
+> **What was built:**
+>
+> 1. **`push_tickets.campaign_delivery_id`** (nullable, FK `on delete set null`,
+>    partial index). **`worker_record_results`** (SQL, not the edge function) inserts a
+>    ticket row for each accepted delivery, inside its own exception block: a failed
+>    ticket write costs that delivery its receipt, never its recorded outcome.
+> 2. **`reconcile_campaign_receipts()`** on its own cron job (`campaign-receipt-reconcile`,
+>    `5,20,35,50 * * * *`). **`push-receipt-sweeper` is untouched:** it already checks
+>    every unchecked ticket and deletes tokens on `DeviceNotRegistered`, so campaign
+>    tickets only need to be in the table. A reconcile failure cannot reach the DM path.
+>    Mapping: receipt `ok` → stays `accepted`, `provider_receipt_status = 'ok'`;
+>    `DeviceNotRegistered` → `invalid_token`; any other receipt error → `failed` with
+>    Expo's code. Only `accepted`, unreconciled rows move; a re-run is a no-op.
+> 3. **"Unconfirmed" is derived, not relabelled:** `accepted`, no `ok` receipt, and past
+>    24h. No nightly job.
+> 4. **Frozen counts (new — the plan's premise was wrong).** The campaign row held no
+>    outcome counts; every number was computed live from delivery rows, so the prune
+>    would have erased them. `notification_campaigns` gains `stats_*` columns +
+>    `stats_frozen_at`; `freeze_campaign_stats()` (cron `campaign-stats-freeze`, daily
+>    03:30 UTC) fills them for terminal campaigns ended >25h ago with no row in flight.
+> 5. **`prune_campaign_deliveries()`** (cron `campaign-delivery-prune`, daily 04:00 UTC),
+>    behind `platform_settings.campaign_delivery_prune_enabled = 'false'`. Off, it deletes
+>    nothing and records what it would delete. Every run writes one audit row
+>    (`deliveries_prune_run`, campaign_id null); a real delete adds `deliveries_pruned`
+>    per campaign. Taps and audit are never pruned.
+> 6. **`admin_campaign_summary`** gains `receipt_ok`, `receipt_pending`, `unconfirmed`,
+>    `receipt_failed`, `stats_frozen_at`, and reads frozen counts once set.
+>    **`admin_campaign_deliveries`** gains `provider_receipt_status`. Both dropped and
+>    recreated (return shape changed); no caller exists until Phase 5.
+>
+> **Deviations from the text below, all deliberate:**
+>
+> 1. No change to `process-campaign-batch` or `push-receipt-sweeper` — see 1 and 2.
+> 2. No "relabel `submitted` older than 25h" job — see 3.
+> 3. Receipt errors other than `DeviceNotRegistered` mark the delivery `failed` (the text
+>    only named `accepted`/`invalid_token`). **The campaign's own status is not
+>    revisited:** `sent`/`partially_failed` is the send-time verdict; receipt failures
+>    are reported alongside it. Phase 7's alert email must read `receipt_failed` too.
+> 4. Prune age is measured from when the **campaign** ended, not per delivery row, so a
+>    campaign's detail goes all at once. It requires frozen counts, not merely non-null
+>    audience counts.
+> 5. An aborted campaign whose worker died mid-send keeps a `submitted` row forever
+>    (`worker_finalize_campaign` only runs on `queuing`/`sending` — a Phase 3 gap, not
+>    fixed here). Such a campaign is never frozen and so never pruned; the prune reports
+>    it as `refused_unfrozen`.
+>
+> **Verified** (rolled-back dry run against production, then applied): worker links 6
+> tickets for 6 accepted rows, none for the failed one; a forced ticket-insert failure
+> still records the delivery `accepted`; receipts ok×3 / DeviceNotRegistered / MessageTooBig
+> reconcile to accepted/ok, invalid_token, failed; re-run reconciles 0; a message-push
+> ticket is ignored; summary live counts correct (receipt_pending and unconfirmed split
+> on the 24h line); non-admin refused; new service functions not executable by anon or
+> authenticated; freeze freezes once and skips an aborted campaign with an orphaned row;
+> prune: too young → nothing, off → dry run with counts, on → 4 rows deleted, frozen
+> counts and taps survive, ticket links nulled, unfrozen campaign refused and untouched,
+> both audit rows written.
+>
+> **Live end-to-end, 2026-09-22:** the E2E campaign's 2 real tickets were backfilled into
+> `push_tickets` with their original 03:13 `created_at` and linked deliveries. The 10:15
+> `push-receipt-sweeper` run (unchanged code) checked both → `ok`; the 10:20
+> `campaign-receipt-reconcile` run set both deliveries `provider_receipt_status = 'ok'`,
+> `reconciled_at` 10:15:02, status still `accepted`. No token deleted (8 before and after).
+> Matches the receipts fetched from Expo by hand at 09:57.
+>
+> **Prune enablement.** The only campaign ends its 90 days on **2026-12-21**; until then
+> every run logs zeros. Leave the switch off until a week of dry-run rows after that date
+> shows the expected counts.
+
 ## Existing components reused
 
 - `push_tickets` and `push-receipt-sweeper` in full (decision 5). The sweeper already handles the hard part: the settle delay, the 1,000-id batch, the "only `DeviceNotRegistered` deletes a token" rule, and the 24-hour prune.
