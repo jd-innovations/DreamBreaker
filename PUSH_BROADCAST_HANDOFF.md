@@ -19,8 +19,10 @@ the boxes where they disagree with the prose beneath them.
 | 1 — schema + `notif_announcements` opt-out | **Live** | `ce820d1` |
 | 2 — admin campaign API | **Live, dormant** (no UI until Phase 5) | `6f75d1c` |
 | 3 — batched worker, kill switch, abort, retries | **Live, dormant** — and proven end to end | `8f1d4a7`, `4ca7591`, `4dfafb2` |
-| 4 — receipt reconciliation + 90-day prune | **Next.** Not started | — |
-| 5–7 | Not started | — |
+| 4 — receipt reconciliation + 90-day prune | **Live** (re-specified; prune ships OFF) | `2c02101` |
+| 5 — lean admin interface | **Built, not deployed** (web; needs a promote) | the `feat(push): Phase 5` commit after `2c02101` |
+| 6 — mobile tap tracking | **Next.** Not started | — |
+| 7 | Not started | — |
 
 **Branch:** `feature/push-broadcast`, created from `168bd4a`. Working tree clean.
 **Nothing is pushed.** `feature/push-broadcast` has no upstream; `feature/marketplace-map`
@@ -33,48 +35,71 @@ is 4 commits ahead of its remote (the Phase 0 work). Ask the owner before pushin
   503 `broadcast_disabled`. Stays off until Phase 7.
 - **Cron jobs:** `campaign-batch-worker` and `campaign-scheduler`, every minute. Inert
   while the switch is off (the worker job makes no HTTP call unless the switch is on
-  and a campaign is active).
+  and a campaign is active). Phase 4 added `campaign-receipt-reconcile`
+  (`5,20,35,50 * * * *`), `campaign-stats-freeze` (03:30 UTC) and
+  `campaign-delivery-prune` (04:00 UTC) — all pure SQL, all live.
+- **Prune switch:** `platform_settings.campaign_delivery_prune_enabled = 'false'`. The
+  prune only logs (`campaign_audit_log`, action `deliveries_prune_run`) until enabled.
 - **Edge functions deployed:** `send-message-push`, `push-receipt-sweeper`,
   `admin-campaign-send`, `admin-campaign-test-send`, `process-campaign-batch`.
 - **One real campaign exists:** `5b5a45c7-d54c-42f7-a18e-518c9667199e`, "E2E test
   2026-09-22", status `sent`, 2 deliveries `accepted` with Expo ticket ids. Sent to the
-  owner's two phones; arrival and tap routing confirmed by the owner.
+  owner's two phones; arrival and tap routing confirmed by the owner. Both receipts
+  reconciled live through Phase 4 (`provider_receipt_status = 'ok'`, 10:15 UTC). Its
+  counts freeze on 2026-09-24 03:30 UTC; its detail becomes prunable 2026-12-21.
 - **Dispatch secret:** Vault `push_dispatch_secret`, 64 bare hex chars. Vault is the ONLY
   copy — there is deliberately no edge-function secret. Never read `decrypted_secret`;
   check shape or SHA-256 only.
 
 ---
 
-## Read this before starting Phase 4
+## Phase 4, as built (2026-09-22)
 
-**The plan's Phase 4 text is written against a model Phase 3 did not build.** It assumes
-a delivery stays `submitted` until its receipt arrives, and asks for a nightly job that
-relabels `submitted` rows older than 25h as "unconfirmed". The built Phase 3 instead:
+Re-specified with the owner's approval — the plan's original text assumed deliveries
+stay `submitted` until a receipt arrives, which Phase 3 did not build. The Phase 4
+Status box in the plan has the full record. In short:
 
-- sets a delivery to **`accepted` when Expo issues a ticket** (receipt not yet known);
-- marks any row still `submitted` after 10 minutes as `failed` / `interrupted` (a worker
-  died mid-send; never retried, to avoid duplicate pushes).
+- **Migration-only.** The worker's ticket write lives in `worker_record_results` (SQL),
+  and reconciliation is its own cron job, so **neither `process-campaign-batch` nor
+  `push-receipt-sweeper` changed** and nothing needed deploying.
+- `accepted` = Expo took it. The receipt sets `provider_receipt_status` + `reconciled_at`;
+  `DeviceNotRegistered` → `invalid_token`; other receipt errors → `failed`. The
+  campaign's `sent` / `partially_failed` is NOT revisited — Phase 7's alerting must read
+  `receipt_failed` from `admin_campaign_summary` as well.
+- "Unconfirmed" is derived in the summary (accepted, no `ok` receipt, >24h).
+- Outcome counts are frozen onto `notification_campaigns.stats_*` 25h after a campaign
+  ends; the prune refuses anything unfrozen.
 
-So `submitted` is only ever a seconds-long in-flight state here. Phase 4 must be
-re-specified against that before coding. The likely shape — **propose it to the owner,
-don't assume it:**
+## Phase 5, as built (2026-09-22)
 
-- `accepted` means "Expo took it"; the receipt refines it via `provider_receipt_status`
-  + `reconciled_at`, and a `DeviceNotRegistered` receipt moves it to `invalid_token`.
-- "Unconfirmed" = `accepted` with `reconciled_at is null` once its ticket is past Expo's
-  24h window — derived for display, so no relabelling job is needed.
+Web admin at `/admin/notifications` (list, `compose`, `[id]` detail), linked from the
+admin sidebar as "Push Campaigns". Server layout 404s non-admins. Design-token classes
+only. Full record in the plan's Phase 5 Status box. **Not deployed:** web production is
+a manual promote of a preview deployment. **Not browser-tested** against a real admin
+session yet — do that on the preview before promoting.
 
-Also:
+- New setting `push_broadcast_send_confirm_threshold = '100'` (typed-SEND gate).
+- "Review and send" is disabled while `push_broadcast_enabled` is off; drafts and
+  "Send me a test" still work.
 
-- **The worker does not write `push_tickets` yet** — that is Phase 4's job
-  (`campaign_delivery_id` column, worker writes it, sweeper reconciles it).
-- **The E2E campaign's 2 tickets are only in `campaign_deliveries.ticket_id`.** Expo keeps
-  receipts 24h, so they can be backfilled into `push_tickets` for a real reconciliation
-  test **until about 2026-09-23 03:13 UTC**. After that, test with a fresh campaign
-  (needs the owner to flip the switch — see below).
-- `push-receipt-sweeper` is on the **live DM path**. Its new campaign work must be
-  wrapped so a failure there cannot abort the token cleanup messaging depends on.
-- The 90-day prune ships **disabled**: log what it would delete for a week, then enable.
+## Open items
+
+- **Prune enablement:** the only campaign reaches 90 days on **2026-12-21**. Leave
+  `campaign_delivery_prune_enabled` off until a week of dry-run audit rows after that
+  date shows the expected counts.
+- **Phase 3 gap, not fixed:** an aborted campaign whose worker died mid-send keeps a
+  `submitted` row forever (`worker_finalize_campaign` ignores `aborted`). Phase 4 copes
+  (never frozen, never pruned, reported as `refused_unfrozen`), but the row is wrong.
+- **Sweeper throughput:** 1,000 tickets per 15-minute run, shared by DMs and campaigns
+  (~96k/day). Fine at current scale; a large campaign would delay DM receipt checks.
+- **`prune_push_tickets()` is executable by anon and authenticated** (its 2026-08-31
+  migration only revoked from `public`). Low impact — it deletes only tickets past 24h —
+  but it is a public RPC. Owner's call.
+- **Four admin pages redirect signed-out users to `/login`, which does not exist**
+  (`email-preview`, `facility-applications`, `reviews`, `wallet`); sign-in is `/auth`.
+  Pre-existing; not fixed.
+- **The composer can't check that a destination id exists.** A typo sends everyone to
+  an error screen. The test send is the practical check until a lookup is added.
 
 ---
 

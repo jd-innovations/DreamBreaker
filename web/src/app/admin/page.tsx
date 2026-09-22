@@ -878,6 +878,12 @@ export default function AdminPage() {
             <Star size={16} /> Review Invitations
           </button>
         </Link>
+        <Link href="/admin/notifications">
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Megaphone size={16} /> Push Campaigns
+          </button>
+        </Link>
         <Link href="/admin/email-preview">
           <button
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">

@@ -7607,6 +7607,10 @@ export type Database = {
             }
             Returns: string
           }
+      admin_abort_campaign: {
+        Args: { p_campaign_id: string }
+        Returns: undefined
+      }
       admin_campaign_deliveries: {
         Args: { p_campaign_id: string; p_limit?: number; p_offset?: number }
         Returns: {
@@ -7654,6 +7658,10 @@ export type Database = {
           taps: number
           unconfirmed: number
         }[]
+      }
+      admin_cancel_campaign: {
+        Args: { p_campaign_id: string }
+        Returns: undefined
       }
       admin_clear_handle: {
         Args: { p_reason?: string; p_user_id: string }
@@ -7778,6 +7786,14 @@ export type Database = {
           severity: string
         }[]
       }
+      admin_preview_campaign_audience: {
+        Args: { p_audience_platform?: string; p_audience_type: string }
+        Returns: {
+          device_count: number
+          excluded_unknown_platform: number
+          user_count: number
+        }[]
+      }
       admin_promo_code_stock: {
         Args: never
         Returns: {
@@ -7867,6 +7883,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_schedule_campaign: {
+        Args: { p_campaign_id: string; p_scheduled_at?: string }
+        Returns: string
+      }
       admin_stage_facility_import: {
         Args: { p_filename: string; p_rows: Json; p_storage_path: string }
         Returns: string
@@ -7878,6 +7898,18 @@ export type Database = {
           p_partner_id: string
         }
         Returns: Json
+      }
+      admin_upsert_campaign: {
+        Args: {
+          p_audience_platform?: string
+          p_audience_type: string
+          p_body: string
+          p_campaign_id?: string
+          p_destination_url: string
+          p_internal_name: string
+          p_title: string
+        }
+        Returns: string
       }
       apply_to_be_director: {
         Args: never

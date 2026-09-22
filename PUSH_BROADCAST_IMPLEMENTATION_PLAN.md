@@ -992,6 +992,54 @@ unreconciled but harms nothing else. Unschedule the prune job to stop deletion i
 
 # Phase 5 — Lean admin interface
 
+> **Status 2026-09-22: BUILT, not yet deployed.** Web only. Migration
+> `20260922110000_push_broadcast_send_confirm_threshold.sql` applied. Web production
+> is a manual promote of a preview, so nothing is live until the owner promotes.
+> Sending stays impossible while `push_broadcast_enabled` is off.
+>
+> **Files:** `web/src/app/admin/notifications/{layout,page}.tsx`, `compose/page.tsx`,
+> `[id]/page.tsx`; `web/src/components/admin/campaign-{preview,confirm-dialog,status-badge}.tsx`;
+> `web/src/lib/campaigns/campaign-{logic,service}.ts` (rules and data kept out of the
+> route files); `web/src/lib/__tests__/campaign-logic.test.ts` (33 tests); the nav
+> link in `admin/page.tsx` (6 lines, no refactor); `database.types.ts` hand-patched.
+>
+> **Design tokens only.** Every colour comes from the generated roles in
+> `packages/shared/src/tokens.ts` (`primary`, `muted`, `destructive`, `card`,
+> `border`, …) — no raw Tailwind palette, no hex. The palette has no success or
+> warning role, so status weight is carried by fill: solid primary = sent, tinted
+> primary = in progress, tinted destructive = trouble, muted = inert.
+>
+> **Deviations from the text below, all deliberate:**
+>
+> 1. **The typed-SEND threshold row did not exist** (the plan assumed Phase 3 seeded
+>    it). New setting `push_broadcast_send_confirm_threshold = '100'`, editable from
+>    admin Settings. The UI reads a missing or bad value as 1 — every send asks for SEND.
+> 2. **Five admin RPCs were missing from `database.types.ts`** (Phase 2 never patched
+>    them): `admin_upsert_campaign`, `admin_preview_campaign_audience`,
+>    `admin_schedule_campaign`, `admin_cancel_campaign`, `admin_abort_campaign`. Added.
+> 3. **Server-side gate is a layout, and it 404s.** `notifications/layout.tsx` checks the
+>    session and `is_admin()` server-side: signed out → `/auth`, non-admin → `notFound()`.
+>    (The other admin pages redirect client-side to `/login`, which does not exist.)
+> 4. **"Review and send" is blocked while the kill switch is off.** Scheduling while off
+>    would leave a campaign that fires the moment someone turns broadcasts on. Drafts,
+>    editing and test sends still work.
+> 5. **Send-now/schedule is chosen in the composer; the confirm dialog shows it.**
+>    Confirm = `admin_schedule_campaign` (freezes content, mints the key) then, for now,
+>    `admin-campaign-send` with that key. A later time needs nothing more: the scheduler
+>    cron queues it.
+> 6. **"Send me a test"** (the Phase 2 `admin-campaign-test-send`) is on the detail page
+>    for drafts and scheduled campaigns — the only way to see a real notification
+>    before the switch is on.
+> 7. **Double-click** is guarded by a ref lock around every write; drafts have no
+>    server idempotency key, so the client lock is what prevents a duplicate draft.
+>    Sends are protected server-side by the key and the atomic claim.
+> 8. **Errors grouped by cause** use the first 1,000 delivery rows (the page says so if
+>    capped); counts above them come from the summary and are exact.
+> 9. The detail page shows receipt counts, frozen-at and pruned states (Phase 4).
+>
+> **Not verified:** the pages were not exercised in a browser against a real admin
+> session — that needs the owner signed in on a preview deployment.
+
 ## Existing components reused
 
 - [`web/src/app/admin/page.tsx`](web/src/app/admin/page.tsx) patterns and its Phosphor icon set (`Megaphone` and `Broadcast` are already imported).
