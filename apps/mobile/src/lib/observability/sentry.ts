@@ -19,9 +19,12 @@ import { APP_ENV } from '@/lib/featureFlags';
 const REDACTED = '[redacted]';
 
 const SENSITIVE_KEY =
-  /^(authorization|cookie|apikey|api[-_]?key|token|access[-_]?token|refresh[-_]?token|id[-_]?token|password|secret|session|email|e[-_]?mail|full[-_]?name|first[-_]?name|last[-_]?name|phone|body|message|notes|content|description|latitude|longitude|lat|lng|coords)$/i;
+  /^(authorization|cookie|apikey|api[-_]?key|token|access[-_]?token|refresh[-_]?token|id[-_]?token|(expo[-_]?)?push[-_]?token|password|secret|session|email|e[-_]?mail|full[-_]?name|first[-_]?name|last[-_]?name|phone|body|message|notes|content|description|latitude|longitude|lat|lng|coords)$/i;
 
 const EMAIL = /[\w.+-]+@[\w-]+\.[\w.-]+/g;
+
+/** An Expo push token is a delivery credential for one device (push broadcast Phase 7). */
+const PUSH_TOKEN = /Expo(?:nent)?PushToken\[[^\]]*\]/g;
 
 /**
  * Supabase access tokens ride in query strings on storage/realtime URLs, and
@@ -51,7 +54,7 @@ function scrubUrl(url: string): string {
 const URL_QUERY_KEYS = ['http.query', 'http.fragment'];
 
 function scrubText<T>(value: T): T {
-  return (typeof value === 'string' ? value.replace(EMAIL, REDACTED) : value) as T;
+  return (typeof value === 'string' ? value.replace(EMAIL, REDACTED).replace(PUSH_TOKEN, REDACTED) : value) as T;
 }
 
 function scrubObject(input: unknown, depth = 0): unknown {

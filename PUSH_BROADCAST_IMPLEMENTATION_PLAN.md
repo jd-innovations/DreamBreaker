@@ -1279,6 +1279,55 @@ preference column cannot be rolled back once clients read it — forward-fix onl
 
 # Phase 7 — Testing, staged rollout, monitoring, rollback
 
+> **Status 2026-09-22: BUILT except the owner-run rollout.** Owner decisions:
+> **email-only alerts** (Sentry in edge functions deferred); **iOS only** — there is
+> no Android build, so Android checks are N/A until one exists.
+>
+> **Found and fixed on the way — an open email relay** (standalone, like Phase 0; see
+> `EMAIL_RELAY_REMEDIATION.md`): `send-transactional-email` accepted any
+> to/subject/html from the public anon key, and `fn_send_transactional_email` was
+> anon-executable. Migration applied (direct RPC now 401); the caller gate ships in
+> log mode and **still needs the owner's deploy, then enforce**.
+>
+> **Built:**
+>
+> - **Alerts** (`20260922150000_campaign_alerts.sql` + `campaign-alerts` cron, every
+>   5 min): `failed`, `high_failure_rate` (>20%, uninstalls excluded), `stalled` (due
+>   work, no progress 10 min, switch on), `paused` (switch off mid-send — a deviation:
+>   the plan had no alert for a forgotten switch), `scheduler_missed`. Emailed to
+>   support@ once per campaign per kind via `fn_send_transactional_email` (dispatch
+>   secret, so it passes the email gate in either mode); each recorded as an
+>   `alert_sent` audit row. Carries id, status, counts, link — never content or tokens.
+> - **SQL suite** `supabase/_rls_tests/20260922_push_broadcast.sql`: 50 tests —
+>   access for anon/player/admin on all four tables, service-only lockdown of 13
+>   functions, admin RPCs refuse players, the audience rule (opt-out, deleted,
+>   tokenless, unknown platform, shared phone), snapshot idempotence, kill switch,
+>   claim-once + wrong key + admin-only actor, disjoint worker batches, one delivery
+>   per device, tap attribution, destination check. **50/50 passing** against
+>   production inside a rolled-back transaction; verified nothing persisted.
+> - **Sentry scrubbing:** neither platform redacted `expo_push_token` (the key
+>   patterns are exact-match; `token` did not cover it) and free text redacted only
+>   emails. Both now redact `(expo_)push_token` keys and any `ExponentPushToken[…]`
+>   in text; web has 4 new tests.
+> - **Runbook** `docs/PUSH_BROADCAST_RUNBOOK.md`; **device checks** appended to
+>   `docs/DEVICE_QA_CHECKLIST.md` (13 iPhone cases; Android N/A).
+> - Admin audit history labels `alert_sent`.
+>
+> **Deviations:** no "only me" audience exists, so rollout step 4's narrow campaign is
+> an *All users* campaign while every production device is the owner's (check the
+> count in the dialog first); two-admin concurrency and mid-send network loss are
+> covered by the SQL and Deno suites rather than by hand; the DST case waits for
+> 2026-11-01.
+>
+> **Found, not fixed:** opt-out is per account, and a signed-out account's token
+> survives on the phone (known open item) — so a phone signed into several accounts
+> keeps receiving campaigns through any account still opted in. Fixing sign-out
+> token removal fixes this too.
+>
+> **Remaining (owner):** the email-gate deploy → enforce; then the staged rollout —
+> switch on, a real campaign to yourself, device cases 1–13, switch off. That run is
+> also Phase 6's last check (a real tap counted).
+
 ## Automated tests
 
 | Area | Coverage |

@@ -29,12 +29,15 @@ const REDACTED = "[redacted]";
  * against the whole key, so `email` is stripped but `emailTemplateKey` is not.
  */
 const SENSITIVE_KEY =
-  /^(authorization|cookie|set-cookie|apikey|api[-_]?key|x-api-key|token|access[-_]?token|refresh[-_]?token|id[-_]?token|password|secret|session|email|e[-_]?mail|full[-_]?name|first[-_]?name|last[-_]?name|phone|body|message|notes|content|description|latitude|longitude|lat|lng|coords)$/i;
+  /^(authorization|cookie|set-cookie|apikey|api[-_]?key|x-api-key|token|access[-_]?token|refresh[-_]?token|id[-_]?token|(expo[-_]?)?push[-_]?token|password|secret|session|email|e[-_]?mail|full[-_]?name|first[-_]?name|last[-_]?name|phone|body|message|notes|content|description|latitude|longitude|lat|lng|coords)$/i;
 
 /** Path prefixes where the NEXT segment is itself a credential. */
 const TOKEN_IN_PATH = [/\/claim\/[^/?#]+/gi];
 
 const EMAIL = /[\w.+-]+@[\w-]+\.[\w.-]+/g;
+
+/** An Expo push token is a delivery credential for one device (push broadcast Phase 7). */
+const PUSH_TOKEN = /Expo(?:nent)?PushToken\[[^\]]*\]/g;
 
 /**
  * Strips the query string and any credential-bearing path segment.
@@ -53,9 +56,9 @@ export function scrubUrl(url: string): string {
   return out;
 }
 
-/** Redacts email addresses appearing inside free text (messages, stack frames). */
+/** Redacts email addresses and push tokens appearing inside free text (messages, stack frames). */
 export function scrubText<T>(value: T): T {
-  return (typeof value === "string" ? value.replace(EMAIL, REDACTED) : value) as T;
+  return (typeof value === "string" ? value.replace(EMAIL, REDACTED).replace(PUSH_TOKEN, REDACTED) : value) as T;
 }
 
 /**

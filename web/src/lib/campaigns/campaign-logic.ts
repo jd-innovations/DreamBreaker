@@ -325,4 +325,5 @@ export const AUDIT_ACTION_LABEL: Readonly<Record<string, string>> = {
   completed: "Finished",
   test_sent: "Test sent",
   deliveries_pruned: "Delivery detail pruned",
+  alert_sent: "Alert emailed to support",
 };

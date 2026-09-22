@@ -250,3 +250,44 @@ prompt again.
 system camera scanning a check-in QR opens the website, not the app. That is
 probably intended (the director scans in-app, where the payload is handled
 directly), but it is worth a deliberate answer rather than an accident.
+
+---
+
+## Push broadcast — Phase 7 device checks (added 2026-09-22)
+
+From `PUSH_BROADCAST_IMPLEMENTATION_PLAN.md` Phase 7. **iPhone only:** there is no
+Android build yet, so every Android case is N/A until one exists — then repeat this
+table on Android.
+
+**Before you start.** Cases 1–9 send a **real campaign**, which needs the kill switch
+on (Admin → Settings → *Push broadcasts*). Right now every device in production is
+yours, so an *All users* campaign reaches only you — confirm the device count in the
+confirmation dialog says so before sending, then **switch it back off** when done.
+Test sends ("Send me a test") never count as taps, by design.
+
+Use a real tournament as the destination; the composer shows its name when the id
+is right.
+
+| # | Case | Steps | Expected | Result |
+| --- | --- | --- | --- | --- |
+| 1 | Foreground | App open on any screen; send a campaign | Banner appears; tapping opens the tournament | |
+| 2 | Background | App in background; send | Notification on lock screen; tap opens the app **on the tournament** | |
+| 3 | Terminated | Force-quit the app; send | Tap cold-starts the app **onto the tournament**, not home | |
+| 4 | Tap counted | After case 1, 2 or 3 | Campaign page → Taps shows **1 tap** out of 1 accepted delivery on a tap-capable build | |
+| 5 | Receipt | ~20 min after sending | Campaign page → *Confirmed delivered* = 1 | |
+| 6 | Opt-out honoured | Settings → Notifications → Announcements **off** on **every account this phone has been signed into**; send | Nothing arrives; the confirmation shows one device fewer. *Opt-out is per account: while another account's registration survives on the phone (see case 8) the phone still receives through it* | |
+| 7 | Opt back in | Announcements **on** again; send | Arrives | |
+| 8 | Signed out | Sign out of the app; send | **Record what happens.** Known open bug (PUSH_BROADCAST_HANDOFF.md): a signed-out account's token can stay on the phone, so this may still arrive | |
+| 9 | Long title | Title with emoji and accents, near 100 characters | Arrives; iOS truncates cleanly; nothing garbled | |
+| 10 | Permission off → on | iOS Settings → notifications off; reopen app; then back on and reopen | While off: Settings screen shows push off. Back on: the next campaign arrives | |
+| 11 | Reinstall | Delete and reinstall the preview build; sign in | A new token registers (the old one is removed later by a `DeviceNotRegistered` receipt) | |
+| 12 | Abort wording | Start a campaign, press Abort | Dialog says plainly that messages already sent cannot be recalled | |
+| 13 | Non-admin | Sign in on the web as a non-admin; open `/admin/notifications` | Page not found | |
+| — | Android (all of the above) | — | **N/A — no Android build** | N/A |
+
+**Not practical on one phone, deliberately left out:** two admins acting at once
+(covered by the SQL suite `supabase/_rls_tests/20260922_push_broadcast.sql`, which
+proves a campaign can be claimed once), and cutting the network mid-send (the worker's
+retry handling is covered by `process-campaign-batch/logic.test.ts`). A schedule that
+crosses a DST change can first be tried for 2026-11-01 (US clocks go back): schedule
+a campaign for 2026-11-02 09:00 local and check it arrives at 09:00.

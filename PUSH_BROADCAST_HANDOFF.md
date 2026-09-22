@@ -21,8 +21,9 @@ the boxes where they disagree with the prose beneath them.
 | 3 — batched worker, kill switch, abort, retries | **Live, dormant** — and proven end to end | `8f1d4a7`, `4ca7591`, `4dfafb2` |
 | 4 — receipt reconciliation + 90-day prune | **Live** (re-specified; prune ships OFF) | `2c02101` |
 | 5 — lean admin interface | **Live** (promoted 2026-09-22; sending blocked by kill switch) | `58b0e84` |
-| 6 — mobile tap tracking | **Built** — migration live; OTA to preview; web toggle needs a promote | see git log |
-| 7 | Not started | — |
+| 6 — mobile tap tracking | **Live** (OTA + web promoted); a real tap awaits the rollout | `e0cd9b8` |
+| 7 — alerts, tests, runbook, rollout | **Built**; owner-run rollout remaining | see git log |
+| — email relay fix (found in 7) | Migration live; **gate deploy + enforce pending the owner** | `6a03420` |
 
 **Branch:** `feature/push-broadcast`, created from `168bd4a`. Working tree clean.
 **Pushed 2026-09-22:** `feature/push-broadcast` tracks `origin`, and
@@ -94,6 +95,16 @@ Web production is a promoted preview. `feature/marketplace-map` was fast-forward
 `feature/push-broadcast` on 2026-09-22, so both branches hold the same history and
 either is safe to promote. Before promoting ANY branch, check it contains the live
 commit: `git merge-base --is-ancestor <live-sha> <branch>`.
+
+## Next steps (owner)
+
+1. **Email gate** — `EMAIL_RELAY_REMEDIATION.md`: deploy the three functions (log
+   mode), let Claude read the `[email-gate]` logs, then flip to enforce and redeploy.
+2. **Staged rollout** — `docs/DEVICE_QA_CHECKLIST.md` → *Push broadcast — Phase 7*:
+   switch on, one real campaign to yourself (every production device is yours), cases
+   1–13, switch off. This is also Phase 6's last check (a real tap counted).
+3. **OTA** — the mobile Sentry push-token scrub rides the next
+   `node ./scripts/publish-update.js preview`.
 
 ## Open items
 
