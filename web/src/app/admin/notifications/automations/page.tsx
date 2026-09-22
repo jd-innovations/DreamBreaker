@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, BellRinging, DeviceMobile, PencilSimple, Warning } from "@phosphor-icons/react";
+import { ArrowLeft, BellRinging, DeviceMobile, PaperPlaneTilt, PencilSimple, Warning } from "@phosphor-icons/react";
 import { NotificationsTabs } from "@/components/admin/notifications-tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,7 @@ export default function AutomationsPage() {
   const [rows, setRows] = useState<Automation[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Automation | null>(null);
+  const [testing, setTesting] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const r = await listAutomations();
@@ -55,6 +56,22 @@ export default function AutomationsPage() {
   }, []);
 
   useEffect(() => { void (async () => { await load(); })(); }, [load]);
+
+  // Sends the automation's saved copy to the admin's own devices. Works while
+  // the automation is off — that is the point of it.
+  async function sendTest(a: Automation) {
+    setTesting(a.key);
+    const r = await testAutomation(a.key);
+    setTesting(null);
+    if (!r.ok) { toast.error(r.message); return; }
+    if (!r.data.sent) {
+      toast.error(r.data.reason === "no_device"
+        ? "No device is registered for your account — open the app and allow notifications first."
+        : "Nothing was sent.");
+      return;
+    }
+    toast.success(`Test sent to your device: ${a.name}.`);
+  }
 
   async function toggle(a: Automation, enabled: boolean) {
     const r = await updateAutomation(a.key, { enabled });
@@ -119,8 +136,15 @@ export default function AutomationsPage() {
                   </p>
                 </div>
 
-                <div className="flex shrink-0 gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setEditing(a)}>
+                {/* Secondary, not outline: an outline button on the card's own
+                    background is hard to pick out, and Test was previously
+                    reachable only from inside the editor. */}
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button variant="secondary" size="sm" disabled={testing === a.key}
+                    onClick={() => void sendTest(a)}>
+                    <PaperPlaneTilt size={14} /> {testing === a.key ? "Sending…" : "Test"}
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setEditing(a)}>
                     <PencilSimple size={14} /> Edit
                   </Button>
                   <Button
@@ -321,8 +345,8 @@ function EditDialog({ automation, onClose, onSaved }: {
         </div>
 
         <DialogFooter className="gap-2 sm:justify-between">
-          <Button type="button" variant="outline" disabled={busy} onClick={() => void test()}>
-            Send me a test
+          <Button type="button" variant="secondary" disabled={busy} onClick={() => void test()}>
+            <PaperPlaneTilt size={14} /> Send me a test
           </Button>
           <div className="flex gap-2">
             <Button type="button" variant="outline" disabled={busy} onClick={onClose}>Cancel</Button>
