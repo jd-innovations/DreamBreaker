@@ -10,7 +10,7 @@ import {
   ArrowSquareOut, Envelope, Megaphone,
   CheckFat, WarningCircle, Broadcast, ChatCircleDots,
   Star, PencilSimple, Trash, Prohibit, DotsThree, Buildings,
-  Flag, Ticket, Wallet,
+  Flag, Ticket, Wallet, Storefront,
 } from "@phosphor-icons/react";
 import { Logo } from "@/components/layout/logo";
 import { toast } from "sonner";
@@ -180,6 +180,8 @@ interface UserReport {
   reporter_id: string;
   reported_id: string;
   conversation_id: string | null;
+  // Set when the report is about a marketplace listing (Report Listing in the app).
+  related_listing_id?: string | null;
   reason: string;
   notes: string | null;
   status: string;
@@ -358,7 +360,7 @@ export default function AdminPage() {
       // merged into one review queue.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: rpts } = await (supabase as any).from("user_reports")
-        .select("id,reporter_id,reported_id,conversation_id,reason,notes,status,created_at")
+        .select("id,reporter_id,reported_id,conversation_id,related_listing_id,reason,notes,status,created_at")
         .order("created_at", { ascending: false });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: groupRpts } = await (supabase as any).from("group_post_reports")
@@ -888,6 +890,12 @@ export default function AdminPage() {
           <button
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
             <Wallet size={16} /> Wallet Grants
+          </button>
+        </Link>
+        <Link href="/admin/marketplace">
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Storefront size={16} /> Marketplace
           </button>
         </Link>
         <Link href="/admin/email-preview">
@@ -1929,6 +1937,12 @@ export default function AdminPage() {
                                 {r.source === "group_post" ? "GROUP POST" : "GROUP COMMENT"}
                                 {r.group_name ? ` · ${r.group_name}` : ""}
                               </span>
+                            )}
+                            {r.related_listing_id && (
+                              <Link href={`/admin/marketplace?q=${r.related_listing_id}`}
+                                className="font-mono text-[10px] px-2 py-0.5 rounded-full border border-primary/30 text-primary bg-primary/10 hover:bg-primary/20">
+                                LISTING →
+                              </Link>
                             )}
                             <span className="font-mono text-[10px] px-2 py-0.5 rounded-full border border-destructive/30 text-destructive bg-destructive/10">
                               {reasonLabel[r.reason] ?? r.reason}

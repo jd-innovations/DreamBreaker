@@ -3024,6 +3024,7 @@ export type Database = {
           pickup_source:
             | Database["public"]["Enums"]["marketplace_pickup_source"]
             | null
+          removed_at: string | null
           seller_id: string
           sold_at: string | null
           status: Database["public"]["Enums"]["marketplace_listing_status"]
@@ -3056,6 +3057,7 @@ export type Database = {
           pickup_source?:
             | Database["public"]["Enums"]["marketplace_pickup_source"]
             | null
+          removed_at?: string | null
           seller_id: string
           sold_at?: string | null
           status?: Database["public"]["Enums"]["marketplace_listing_status"]
@@ -3088,6 +3090,7 @@ export type Database = {
           pickup_source?:
             | Database["public"]["Enums"]["marketplace_pickup_source"]
             | null
+          removed_at?: string | null
           seller_id?: string
           sold_at?: string | null
           status?: Database["public"]["Enums"]["marketplace_listing_status"]
@@ -3110,6 +3113,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      marketplace_moderation_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          listing_id: string
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          listing_id: string
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          listing_id?: string
+          reason?: string | null
+        }
+        Relationships: []
       }
       marketplace_saved_listings: {
         Row: {
@@ -7771,6 +7801,33 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_list_listings: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_status?: string
+        }
+        Returns: {
+          asking_price_cents: number
+          brand: string
+          created_at: string
+          expires_at: string
+          id: string
+          location_city: string
+          location_state: string
+          model: string
+          open_reports: number
+          photo_url: string
+          removed_at: string
+          report_reasons: string[]
+          seller_id: string
+          seller_name: string
+          status: string
+          title: string
+          total_count: number
+        }[]
+      }
       admin_payment_reconciliation: {
         Args: { p_limit?: number; p_stuck_minutes?: number }
         Returns: {
@@ -7809,9 +7866,17 @@ export type Database = {
           voided: number
         }[]
       }
+      admin_remove_listing: {
+        Args: { p_listing_id: string; p_reason: string }
+        Returns: undefined
+      }
       admin_renew_membership: {
         Args: { p_expires_at: string; p_note?: string; p_user_id: string }
         Returns: Json
+      }
+      admin_restore_listing: {
+        Args: { p_listing_id: string }
+        Returns: string
       }
       admin_revoke_membership: {
         Args: { p_reason?: string; p_user_id: string }
@@ -7930,6 +7995,41 @@ export type Database = {
       booking_convenience_fee_cents: {
         Args: { p_players?: number }
         Returns: number
+      }
+      browse_listing_filters: {
+        Args: never
+        Returns: {
+          brands: string[]
+          states: string[]
+        }[]
+      }
+      browse_listings: {
+        Args: {
+          p_brand?: string
+          p_condition?: string
+          p_fulfillment?: string
+          p_limit?: number
+          p_max_cents?: number
+          p_min_cents?: number
+          p_offset?: number
+          p_search?: string
+          p_sort?: string
+          p_state?: string
+        }
+        Returns: {
+          asking_price_cents: number
+          brand: string
+          condition: string
+          fulfillment: string
+          id: string
+          listed_on: string
+          location_city: string
+          location_state: string
+          model: string
+          photo_url: string
+          title: string
+          total_count: number
+        }[]
       }
       can_review: {
         Args: { p_subject_id: string; p_subject_type: string }

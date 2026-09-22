@@ -19,6 +19,14 @@ import { NavigationArrow } from "@phosphor-icons/react";
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
+/**
+ * One loader id for every map on the site. @react-google-maps/api loads the
+ * script once per page session and throws if a second map asks with different
+ * options — so the marketplace map (components/marketplace/marketplace-map.tsx)
+ * reuses this id rather than choosing its own.
+ */
+export const GOOGLE_MAPS_LOADER_ID = "community-play-nearby-map";
+
 export function isMapAvailable(): boolean {
   return GOOGLE_MAPS_API_KEY.length > 0;
 }
@@ -50,7 +58,7 @@ export function NearbyMap({
   onSearchThisArea?: (center: { lat: number; lng: number }) => void;
 }) {
   const { isLoaded } = useJsApiLoader({
-    id: "community-play-nearby-map",
+    id: GOOGLE_MAPS_LOADER_ID,
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
   });
   const [activePin, setActivePin] = useState<MapPin | null>(null);

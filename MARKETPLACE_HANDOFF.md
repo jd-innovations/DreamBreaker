@@ -34,7 +34,14 @@ Read `MARKETPLACE_MAP_AUDIT.md` for the *why* behind the map decisions. This fil
 
 ---
 
-## Decisions that will look odd without the reason
+### Web (added 2026-09-22)
+
+| | |
+| --- | --- |
+| **Browse `/marketplace`** | Public, server-rendered, filters in the URL (search, brand, condition, pickup/shipping, state, price, sort, pages). Reads `browse_listings` / `browse_listing_filters` (`20260922160100`) — SECURITY DEFINER, returns brand/model/listed date (owner decision) and **never** seller, coordinates or minimum offer. In the site header. |
+| **Map** | **Signed-in only** (owner decision). Same as the app: map-visibility listings only, price-band pins + legend, exact price on the tap card, "Search this area" after ~2 miles. Uses `search_listings_nearby` under the viewer's session. **Hidden until `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is set in Vercel** (owner to provide) — the same key turns on the Community Play map. Web pin colours are kept equal to the app's by a test. |
+| **Moderation `/admin/marketplace`** | Every listing, most-reported first; **Remove** (reason required, seller gets an in-app notice, cannot undo) and **Restore**. Removal = `status 'deleted'` + `removed_at`; a trigger blocks the seller from touching a removed row; `marketplace_moderation_log` is append-only (`20260922160000`). The Reports queue links listing reports to it. |
+
 
 **Pins carry a price *band*, not the price.** A `$145` badge over the map was built, tested on a device, and rejected: 19–28 px of vertical placement error against the SDK's own `pointForCoordinate()`, against a 2 px gate. Fabric safety and smoothness both passed — only placement failed. Full write-up in the audit §5.1a. **Do not reopen the projection maths**; if exact prices ever become load-bearing, the path is pre-rendered `<Marker image>` assets, or positioning from `pointForCoordinate` at settle time.
 
