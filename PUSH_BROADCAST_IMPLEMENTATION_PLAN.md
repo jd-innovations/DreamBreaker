@@ -289,6 +289,42 @@ the trigger depends on it.
 
 # Phase 1 — Minimal schema and preferences
 
+> **Status 2026-09-22: DONE** on `feature/push-broadcast`. Migrations
+> `20260921190000_notification_announcements_pref.sql` and
+> `20260921190100_notification_campaigns.sql` applied to production; types
+> hand-patched (302 lines added, 0 removed; `storage` and `reserved_handles`
+> intact). Every acceptance check below passed in a rolled-back dry run first.
+>
+> **Deviations from the text below, all deliberate:**
+>
+> 1. **Admin reads are functions, not views.** The text asks for `security_invoker`
+>    views *and* for `authenticated` to hold no grant on `campaign_deliveries`. Those
+>    contradict — an invoker view runs with the caller's privileges, so the admin
+>    would get "permission denied". Built instead: `admin_campaign_summary(uuid)` and
+>    `admin_campaign_deliveries(uuid, limit, offset)`, SECURITY DEFINER, `is_admin()`
+>    checked inside, token masked to `…` + last six. Same pattern as
+>    `admin_profile_emails`. The security property is unchanged: no browser role can
+>    read `campaign_deliveries` at all.
+> 2. **Ten states, not eleven.** The text says "eleven" and then lists ten. The ten
+>    listed are what the check constraint holds.
+> 3. **`campaign_audit_log` has no foreign keys at all**, not merely no cascade. Even
+>    `ON DELETE SET NULL` is an UPDATE, which the immutability trigger refuses — the
+>    FK would have made campaigns and admin profiles undeletable. TRUNCATE is also
+>    blocked by trigger.
+> 4. **No separate `campaign_taps (campaign_id)` index** — the primary key
+>    `(campaign_id, user_id)` leads with it.
+> 5. **Explicit `REVOKE ALL` on every new table.** Supabase's default privileges
+>    grant anon and authenticated everything on new public tables (TRUNCATE ignores
+>    RLS). Grants added back: SELECT on campaigns, audit and taps for authenticated,
+>    admin-only by RLS. Nothing on deliveries.
+> 6. **`grant select (notif_announcements) on profiles to authenticated`.** profiles is
+>    on column-level SELECT grants, so without it Phase 6's settings query would
+>    fail outright. UPDATE is already table-level.
+>
+> **Advisor:** three new notices, all intended — RLS with no policies on
+> `campaign_deliveries` (deny-all by design) and the two admin functions being
+> executable by `authenticated` (they check `is_admin()` themselves).
+
 ## Existing components reused
 
 - `profiles` one-boolean-per-category preference model, and [`notificationPreferences.ts`](apps/mobile/src/lib/notificationPreferences.ts), which already distinguishes honoured preferences from stored intent and should keep doing so.

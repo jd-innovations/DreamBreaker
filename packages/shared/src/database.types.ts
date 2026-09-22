@@ -347,6 +347,141 @@ export type Database = {
           },
         ]
       }
+      campaign_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          campaign_id: string | null
+          created_at: string
+          id: string
+          metadata: Json
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+        }
+        Relationships: []
+      }
+      campaign_deliveries: {
+        Row: {
+          app_version: string | null
+          attempt_count: number
+          campaign_id: string
+          created_at: string
+          error_code: string | null
+          error_message: string | null
+          expo_push_token: string
+          id: string
+          next_attempt_at: string | null
+          provider_receipt_status: string | null
+          reconciled_at: string | null
+          status: string
+          submitted_at: string | null
+          tap_capable: boolean
+          ticket_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_version?: string | null
+          attempt_count?: number
+          campaign_id: string
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          expo_push_token: string
+          id?: string
+          next_attempt_at?: string | null
+          provider_receipt_status?: string | null
+          reconciled_at?: string | null
+          status?: string
+          submitted_at?: string | null
+          tap_capable?: boolean
+          ticket_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_version?: string | null
+          attempt_count?: number
+          campaign_id?: string
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          expo_push_token?: string
+          id?: string
+          next_attempt_at?: string | null
+          provider_receipt_status?: string | null
+          reconciled_at?: string | null
+          status?: string
+          submitted_at?: string | null
+          tap_capable?: boolean
+          ticket_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_deliveries_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "notification_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_deliveries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_taps: {
+        Row: {
+          campaign_id: string
+          occurred_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          occurred_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          occurred_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_taps_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "notification_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_taps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_offer_images: {
         Row: {
           coach_offer_id: string
@@ -3276,6 +3411,122 @@ export type Database = {
           },
         ]
       }
+      notification_campaigns: {
+        Row: {
+          aborted_at: string | null
+          aborted_by: string | null
+          audience_platform: string | null
+          audience_type: string
+          body: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          category: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          destination_type: string
+          destination_url: string
+          excluded_unknown_platform_count: number | null
+          id: string
+          idempotency_key: string | null
+          internal_name: string
+          queued_at: string | null
+          recipient_device_count: number | null
+          recipient_user_count: number | null
+          scheduled_at: string | null
+          sent_by: string | null
+          started_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          aborted_at?: string | null
+          aborted_by?: string | null
+          audience_platform?: string | null
+          audience_type: string
+          body: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          destination_type: string
+          destination_url: string
+          excluded_unknown_platform_count?: number | null
+          id?: string
+          idempotency_key?: string | null
+          internal_name: string
+          queued_at?: string | null
+          recipient_device_count?: number | null
+          recipient_user_count?: number | null
+          scheduled_at?: string | null
+          sent_by?: string | null
+          started_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          aborted_at?: string | null
+          aborted_by?: string | null
+          audience_platform?: string | null
+          audience_type?: string
+          body?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          destination_type?: string
+          destination_url?: string
+          excluded_unknown_platform_count?: number | null
+          id?: string
+          idempotency_key?: string | null
+          internal_name?: string
+          queued_at?: string | null
+          recipient_device_count?: number | null
+          recipient_user_count?: number | null
+          scheduled_at?: string | null
+          sent_by?: string | null
+          started_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_campaigns_aborted_by_fkey"
+            columns: ["aborted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_campaigns_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_campaigns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_campaigns_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string | null
@@ -4790,6 +5041,7 @@ export type Database = {
           location_state: string | null
           looking_status: string
           marketplace_listing_limit: number | null
+          notif_announcements: boolean
           notif_email_enabled: boolean
           notif_hold_expiry: boolean
           notif_liked_you: boolean
@@ -4851,6 +5103,7 @@ export type Database = {
           location_state?: string | null
           looking_status?: string
           marketplace_listing_limit?: number | null
+          notif_announcements?: boolean
           notif_email_enabled?: boolean
           notif_hold_expiry?: boolean
           notif_liked_you?: boolean
@@ -4912,6 +5165,7 @@ export type Database = {
           location_state?: string | null
           looking_status?: string
           marketplace_listing_limit?: number | null
+          notif_announcements?: boolean
           notif_email_enabled?: boolean
           notif_hold_expiry?: boolean
           notif_liked_you?: boolean
@@ -4980,23 +5234,29 @@ export type Database = {
       }
       push_tokens: {
         Row: {
+          app_version: string | null
           created_at: string
           expo_push_token: string
           platform: string
+          tap_events_supported: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
+          app_version?: string | null
           created_at?: string
           expo_push_token: string
           platform?: string
+          tap_events_supported?: boolean
           updated_at?: string
           user_id: string
         }
         Update: {
+          app_version?: string | null
           created_at?: string
           expo_push_token?: string
           platform?: string
+          tap_events_supported?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -7309,6 +7569,48 @@ export type Database = {
             }
             Returns: string
           }
+      admin_campaign_deliveries: {
+        Args: { p_campaign_id: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          app_version: string
+          attempt_count: number
+          created_at: string
+          error_code: string
+          error_message: string
+          id: string
+          next_attempt_at: string
+          reconciled_at: string
+          status: string
+          submitted_at: string
+          tap_capable: boolean
+          token_masked: string
+          user_id: string
+        }[]
+      }
+      admin_campaign_summary: {
+        Args: { p_campaign_id?: string }
+        Returns: {
+          accepted: number
+          audience_platform: string
+          audience_type: string
+          campaign_id: string
+          completed_at: string
+          created_at: string
+          excluded_unknown_platform_count: number
+          failed: number
+          internal_name: string
+          invalid_token: number
+          queued: number
+          recipient_device_count: number
+          recipient_user_count: number
+          retry_pending: number
+          skipped: number
+          status: string
+          submitted: number
+          tap_capable_accepted: number
+          taps: number
+        }[]
+      }
       admin_clear_handle: {
         Args: { p_reason?: string; p_user_id: string }
         Returns: Json
