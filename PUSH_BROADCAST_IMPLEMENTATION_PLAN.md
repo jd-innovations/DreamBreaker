@@ -657,6 +657,57 @@ genuinely safe here — prefer forward-fix only once Phase 5 is live.
 
 # Phase 3 — Batched worker, abort, retries, Expo budgeting
 
+> **Status 2026-09-22: DONE, dormant.** Migrations `20260921210000_campaign_worker.sql`
+> and `20260921210100_campaign_worker_jobs.sql` applied; `process-campaign-batch`
+> deployed; cron jobs `campaign-batch-worker` and `campaign-scheduler` running every
+> minute. Kill switch `platform_settings.push_broadcast_enabled` is **'false'** — the
+> worker claims nothing, the scheduler queues nothing, `admin-campaign-send` answers
+> 503 `broadcast_disabled`. Turned on in Phase 7.
+>
+> **Budget, confirmed 2026-09-22** against Expo's docs (100 messages/request, 600
+> notifications/s per project, few concurrent connections — their SDK uses six,
+> 4096-byte payload) and Supabase's (150s wall clock free / 400s paid, 2s CPU):
+> 100 per request, concurrency 3, **300/s**, 2,000 deliveries or 50s per run, 30s
+> request timeout, 3 attempts with 30s·2ⁿ backoff ±20%. All in
+> `process-campaign-batch/logic.ts`, with the doc links.
+>
+> **Verified:** 16 Deno tests (batching 250→100/100/50, 5,000-delivery pacing under
+> 300/s, 429/5xx/network → retry, 429 and MessageRateExceeded widen the pace,
+> DeviceNotRegistered → invalid_token, MessageTooBig and unknown codes → failed without
+> retry, InvalidCredentials / MismatchSenderId / Expo 401 → campaign-fatal, missing
+> ticket → failed not retried, error text capped, no token in any outcome). SQL state
+> machine in a rolled-back transaction against 250 synthetic deliveries: kill switch
+> touches nothing; claims disjoint; outcomes recorded and dead tokens deleted; replay
+> ignored; retry ladder ~25s → ~59s → failed; abort skips the 55 unsent rows and lands
+> `aborted`; fatal halts with rows skipped; all six terminal cases; scheduler claims
+> due campaigns once and leaves future ones; grants service_role only. Live: worker
+> 200 with the secret, 401 without. **Not verified live: a real send through Expo**
+> (needs the kill switch on — owner's decision).
+>
+> **Deviations, all deliberate:**
+>
+> 1. **No `campaign-scheduler` edge function.** Queuing due campaigns touches only the
+>    database, so the cron job calls `claim_due_campaigns()` directly — no HTTP hop, no
+>    secret, nothing to deploy.
+> 2. **The state machine is in SQL, the edge function only talks to Expo.** Claim,
+>    record, backoff, abort, fatal halt and finalize are service-role functions — where
+>    `SKIP LOCKED` and the conditional updates live, and testable without sending.
+> 3. **Interrupted deliveries fail, never retry.** A row still `submitted` ten minutes
+>    later means a worker died after handing it to Expo, maybe. `failed`/`interrupted`:
+>    a missing broadcast beats a duplicate. Same for a missing ticket.
+> 4. **`invalid_token` does not make a campaign `partially_failed`.** Uninstalled apps
+>    are churn. A campaign with no recipients at all is `sent`.
+> 5. **`MismatchSenderId` and an Expo 401/403 are campaign-fatal** alongside
+>    `InvalidCredentials` — all mean our credentials are wrong.
+> 6. **The worker cron makes its HTTP call only when the switch is on and a campaign is
+>    active** — an idle system costs a query a minute, not an edge invocation.
+> 7. **Retry backoff is 30s then 60s**: `MAX_ATTEMPTS = 3` means two retries, so the
+>    plan's third value (120s) is never reached.
+>
+> **Runbook — stop everything with no deploy:** flip the switch off in admin settings,
+> or `select cron.unschedule('campaign-batch-worker');`. Interrupted campaigns resume
+> when re-enabled; all state is in `campaign_deliveries`.
+
 ## Existing components reused
 
 - The **pattern** from `send-message-push`: ticket-vs-receipt distinction, `DeviceNotRegistered` in a ticket meaning delete now, bookkeeping never failing the send.
