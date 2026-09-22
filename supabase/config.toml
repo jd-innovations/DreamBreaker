@@ -131,6 +131,14 @@ verify_jwt = true
 [functions.admin-campaign-test-send]
 verify_jwt = true
 
+# process-campaign-batch: the broadcast worker (Phase 3). Called every minute
+# by the campaign-batch-worker cron job with the anon key AND the
+# x-dispatch-secret header from Vault; as with send-message-push, verify_jwt is
+# only the outer gate and the dispatch secret is the boundary. Takes no input.
+# Stop it instantly with: select cron.unschedule('campaign-batch-worker');
+[functions.process-campaign-batch]
+verify_jwt = true
+
 # create-tournament-entry-payment-intent: first domain-specific consumer of the
 # shared payment foundation (supabase/functions/_shared/payments.ts). Computes
 # the authoritative entry fee server-side, then delegates to the generic

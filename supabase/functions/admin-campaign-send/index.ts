@@ -113,6 +113,9 @@ Deno.serve(async (req: Request) => {
       // A retry of a send that already went through. Same key, so this is the
       // idempotent success case, not an error.
       return json(202, { status: "already_queued", campaignStatus: result.status });
+    case "disabled":
+      // platform_settings.push_broadcast_enabled is off. Nothing was changed.
+      return json(503, { error: "broadcast_disabled" });
     case "not_due":
       return json(409, { error: "not_due", scheduledAt: result.scheduled_at });
     case "key_mismatch":
