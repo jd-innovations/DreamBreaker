@@ -9,9 +9,13 @@
 //
 // ── Which of these actually do anything ─────────────────────────────────────
 //
-// Only `messages`. notify_new_message is the one trigger in the project that
-// sends a push, and as of 20260831020000 it skips recipients whose
-// notif_messages is false.
+// `messages`: notify_new_message skips recipients whose notif_messages is
+// false (20260831020000). `marketplace`: fn_notify_price_drop checks
+// notif_marketplace before pushing.
+//
+// `announcements` is honoured too: admin push campaigns (PUSH_BROADCAST
+// Phase 3) leave out anyone whose notif_announcements is false when the
+// campaign's audience is snapshotted.
 //
 // The rest are STORED INTENT: saved faithfully, honoured by nothing yet,
 // because the notifications they describe have no sender. That is a real state
@@ -33,6 +37,8 @@ export type NotificationPreferences = {
   marketplace: boolean;
   /** Stored intent — send-transactional-email does not check it. */
   email: boolean;
+  /** Honoured by admin push campaigns: false keeps you out of the audience. */
+  announcements: boolean;
 };
 
 /**
@@ -52,10 +58,11 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   holdExpiry: true,
   marketplace: true,
   email: true,
+  announcements: true,
 };
 
 const COLUMNS =
-  'notif_messages, notif_tournaments, notif_new_match, notif_liked_you, notif_hold_expiry, notif_marketplace, notif_email_enabled';
+  'notif_messages, notif_tournaments, notif_new_match, notif_liked_you, notif_hold_expiry, notif_marketplace, notif_email_enabled, notif_announcements';
 
 export type LoadResult =
   | { ok: true; preferences: NotificationPreferences }
@@ -89,6 +96,7 @@ export async function loadNotificationPreferences(userId: string): Promise<LoadR
       holdExpiry: row.notif_hold_expiry ?? true,
       marketplace: row.notif_marketplace ?? true,
       email: row.notif_email_enabled ?? true,
+      announcements: row.notif_announcements ?? true,
     },
   };
 }
@@ -121,6 +129,7 @@ export async function saveNotificationPreference(
     : key === 'likedYou' ? { notif_liked_you: value }
     : key === 'holdExpiry' ? { notif_hold_expiry: value }
     : key === 'marketplace' ? { notif_marketplace: value }
+    : key === 'announcements' ? { notif_announcements: value }
     : { notif_email_enabled: value };
 
   const { error } = await supabase

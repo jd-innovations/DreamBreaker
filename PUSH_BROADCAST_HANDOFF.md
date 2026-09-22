@@ -21,7 +21,7 @@ the boxes where they disagree with the prose beneath them.
 | 3 — batched worker, kill switch, abort, retries | **Live, dormant** — and proven end to end | `8f1d4a7`, `4ca7591`, `4dfafb2` |
 | 4 — receipt reconciliation + 90-day prune | **Live** (re-specified; prune ships OFF) | `2c02101` |
 | 5 — lean admin interface | **Live** (promoted 2026-09-22; sending blocked by kill switch) | `58b0e84` |
-| 6 — mobile tap tracking | **Next.** Not started | — |
+| 6 — mobile tap tracking | **Built** — migration live; OTA to preview; web toggle needs a promote | see git log |
 | 7 | Not started | — |
 
 **Branch:** `feature/push-broadcast`, created from `168bd4a`. Working tree clean.

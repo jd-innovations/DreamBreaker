@@ -8744,6 +8744,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      record_campaign_tap: { Args: { p_campaign_id: string }; Returns: boolean }
       search_players: {
         Args: { p_query: string; p_limit?: number }
         Returns: {

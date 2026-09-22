@@ -1131,6 +1131,47 @@ the lowest-risk phase.
 
 # Phase 6 — Mobile routing and version-aware tap tracking
 
+> **Status 2026-09-22: BUILT.** Migration `20260922130000_record_campaign_tap.sql`
+> applied. Mobile changes are confined to `apps/mobile/src/**`; the fingerprint was
+> measured before and after (iOS `9ad75807…`, Android `d63d3f94…`, unchanged), so this
+> ships over the air to the installed preview build. Web gains the Announcements
+> toggle in `match-settings-panel.tsx` (decision 16) — live after the next promote.
+>
+> **Built:** `notificationPreferences.ts` + `notifications-settings.tsx` gain
+> Announcements ("Product news and platform updates"), honoured; the registration
+> upsert reports `app_version` and `tap_events_supported: true`;
+> `routeFromNotificationResponse` records the tap first (fire-and-forget, before and
+> regardless of routing) via `record_campaign_tap`. Routing itself is unchanged.
+>
+> **Deviations, all deliberate:**
+>
+> 1. **`record_campaign_tap` only counts a tap the user could have made.** It requires
+>    an `accepted`, `tap_capable` delivery of that campaign belonging to the caller —
+>    by `user_id`, or through one of the caller's own push tokens (a shared phone gets
+>    one delivery, keyed to one account). The plan's bare insert would have counted
+>    taps outside the denominator, taps on admin test sends, and taps on arbitrary ids.
+>    Still identity-from-`auth.uid()` only; returns a boolean.
+> 2. **Test sends are skipped on the device** (`data.test === true`) as well as refused
+>    by the server — no round trip for a tap that can never count.
+> 3. **The snapshot now prefers a device's tap-capable row.** One phone signed into
+>    several accounts has one `push_tokens` row per account, and the snapshot kept an
+>    arbitrary one — so a capable phone could be recorded as incapable if the kept
+>    account last registered from an old build. `snapshot_campaign_recipients` uses
+>    `DISTINCT ON (token)` ordered capable-first. Nothing else in it changed.
+> 4. **Five broadcast destination types, not nine.** Conversation, booking, claim and
+>    review are personal routes and cannot be campaign destinations (Phase 2).
+>
+> **Verified** (rolled-back dry run on production): shared device → one delivery,
+> capable; owner's tap recorded, repeat deduplicated; the other account on the same
+> phone can record its own tap; old-build device, unsent user and random campaign id
+> record nothing; signed-out call refused; anon cannot execute; the snapshot stays
+> service-role only. Mobile and web `tsc` and touched-file ESLint clean.
+>
+> **Not yet verified — needs the owner's phone:** toggle persistence across relaunch,
+> capability columns written on the next app start, a real tap recorded (requires the
+> kill switch on for a real campaign — test sends deliberately never count), routing
+> from foreground/background/terminated, and navigation with the network down.
+
 **Sequencing note:** the mobile half should ship in the first TestFlight build even if
 Phases 2–5 are deferred. It is the only part that cannot be fixed server-side later.
 

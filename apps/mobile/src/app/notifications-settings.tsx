@@ -306,13 +306,20 @@ export default function NotificationsSettingsScreen() {
             sub="Price drops on listings you saved"
             value={prefs.marketplace}
             onChange={(next) => { void updatePref('marketplace', next); }}
+          />
+          <ToggleRow
+            icon="megaphone-outline"
+            label="Announcements"
+            sub="Product news and platform updates"
+            value={prefs.announcements}
+            onChange={(next) => { void updatePref('announcements', next); }}
             last
           />
         </Group>
         <Text style={s.groupNote}>
           {prefsStatus === 'loading'
             ? 'Loading your settings...'
-            : 'Messages and Marketplace are delivered according to these settings today. The rest are saved and will apply as those notifications are added.'}
+            : 'Messages, Marketplace and Announcements are delivered according to these settings today. The rest are saved and will apply as those notifications are added.'}
         </Text>
         {prefsError ? <Text style={s.groupNote}>{prefsError}</Text> : null}
 

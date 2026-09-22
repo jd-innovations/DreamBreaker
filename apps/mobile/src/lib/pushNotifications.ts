@@ -18,6 +18,12 @@ type RegisterOptions = {
 };
 
 let lastHandledResponseKey: string | null = null;
+// Notifications whose campaign tap has already been sent. The response
+// listener and getLastNotificationResponseAsync can both deliver the same tap
+// on a cold start; the server dedups too, this just saves the round trip.
+const recordedCampaignTaps = new Set<string>();
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 let lastRegisteredUserId: string | null = null;
 let lastRegisteredToken: string | null = null;
 
@@ -144,6 +150,15 @@ export async function registerPushTokenForUser(
           user_id: userId,
           expo_push_token: token,
           platform: platformValue(),
+          // Capability report for admin push campaigns (Phase 6 of
+          // PUSH_BROADCAST_IMPLEMENTATION_PLAN.md). This build records
+          // notification taps, so the tap-rate may count it. Older builds omit
+          // both fields; an upsert that omits them leaves them as they were,
+          // and a fresh row from an old build gets the false default — so
+          // false/null reliably means "cannot report taps". Self-reported:
+          // used for reporting only, never for targeting or authorization.
+          app_version: Constants.expoConfig?.version?.slice(0, 32) ?? null,
+          tap_events_supported: true,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id,expo_push_token' },
@@ -186,7 +201,45 @@ export async function deleteCurrentDevicePushToken(userId: string): Promise<void
   if (__DEV__) console.log('[push] current device token removed');
 }
 
+/**
+ * Records that an admin push campaign was tapped (Phase 6, decision 8).
+ *
+ * Fire-and-forget: a failed analytics write must never delay or block the
+ * navigation that follows. Identity is the signed-in session — the RPC takes
+ * no user id, and it only counts the tap if this user was actually sent the
+ * campaign on a tap-capable build.
+ *
+ * Admin test sends carry `test: true` and have no delivery to count against,
+ * so they are skipped here rather than sent to be refused.
+ */
+function recordCampaignTap(response: Notifications.NotificationResponse): void {
+  const data = response.notification.request.content.data as Record<string, unknown> | null | undefined;
+  const campaignId = typeof data?.campaignId === 'string' ? data.campaignId : null;
+  if (!campaignId || !UUID_RE.test(campaignId) || data?.test === true) return;
+
+  const key = response.notification.request.identifier;
+  if (recordedCampaignTaps.has(key)) return;
+  recordedCampaignTaps.add(key);
+
+  try {
+    supabase.rpc('record_campaign_tap', { p_campaign_id: campaignId }).then(
+      ({ error }) => {
+        if (error && __DEV__) console.warn('[push] campaign tap not recorded', error.message);
+      },
+      (err: unknown) => {
+        if (__DEV__) console.warn('[push] campaign tap failed', err);
+      },
+    );
+  } catch (err) {
+    if (__DEV__) console.warn('[push] campaign tap threw', err);
+  }
+}
+
 export function routeFromNotificationResponse(response: Notifications.NotificationResponse): void {
+  // Before routing, and even when there is nowhere to route: an unroutable
+  // campaign tap is still a tap (the plan's no-destination rule).
+  recordCampaignTap(response);
+
   const destination = resolveNotificationDestination(response.notification.request.content.data);
   if (!destination) {
     if (__DEV__) console.log('[push] notification response had no supported route');

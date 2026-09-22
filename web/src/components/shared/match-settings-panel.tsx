@@ -21,6 +21,7 @@ interface Settings {
   notifLikedYou: boolean;
   notifHoldExpiry: boolean;
   notifTournaments: boolean;
+  notifAnnouncements: boolean;
 }
 
 interface CompletionField {
@@ -95,6 +96,7 @@ export function MatchSettingsPanel({ myDupr, myAvail, myLocation, myStyle, myBio
     notifLikedYou: true,
     notifHoldExpiry: true,
     notifTournaments: true,
+    notifAnnouncements: true,
   });
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -118,7 +120,7 @@ export function MatchSettingsPanel({ myDupr, myAvail, myLocation, myStyle, myBio
       const user = { id: userId };
       const { data } = await supabase
         .from("profiles")
-        .select("is_discoverable,looking_status,notif_new_match,notif_liked_you,notif_hold_expiry,notif_tournaments")
+        .select("is_discoverable,looking_status,notif_new_match,notif_liked_you,notif_hold_expiry,notif_tournaments,notif_announcements")
         .eq("id", user.id)
         .single();
       if (data) {
@@ -129,6 +131,7 @@ export function MatchSettingsPanel({ myDupr, myAvail, myLocation, myStyle, myBio
           notifLikedYou: data.notif_liked_you ?? true,
           notifHoldExpiry: data.notif_hold_expiry ?? true,
           notifTournaments: data.notif_tournaments ?? true,
+          notifAnnouncements: data.notif_announcements ?? true,
         });
       }
     });
@@ -147,6 +150,7 @@ export function MatchSettingsPanel({ myDupr, myAvail, myLocation, myStyle, myBio
       notif_liked_you: next.notifLikedYou,
       notif_hold_expiry: next.notifHoldExpiry,
       notif_tournaments: next.notifTournaments,
+      notif_announcements: next.notifAnnouncements,
     }).eq("id", userId);
     setSaving(false);
     if (error) toast.error("Failed to save settings.");
@@ -259,6 +263,7 @@ export function MatchSettingsPanel({ myDupr, myAvail, myLocation, myStyle, myBio
             { label: "Someone liked you", sub: "Get notified on new likes", key: "notifLikedYou" as keyof Settings },
             { label: "Hold expiry", sub: "Remind before spot expires", key: "notifHoldExpiry" as keyof Settings },
             { label: "Tournament alerts", sub: "Reminders & updates", key: "notifTournaments" as keyof Settings },
+            { label: "Announcements", sub: "Product news and platform updates", key: "notifAnnouncements" as keyof Settings },
           ].map(({ label, sub, key }) => (
             <div key={key} className="flex items-center justify-between gap-3">
               <div className="min-w-0">
