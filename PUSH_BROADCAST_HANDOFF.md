@@ -20,13 +20,14 @@ the boxes where they disagree with the prose beneath them.
 | 2 — admin campaign API | **Live, dormant** (no UI until Phase 5) | `6f75d1c` |
 | 3 — batched worker, kill switch, abort, retries | **Live, dormant** — and proven end to end | `8f1d4a7`, `4ca7591`, `4dfafb2` |
 | 4 — receipt reconciliation + 90-day prune | **Live** (re-specified; prune ships OFF) | `2c02101` |
-| 5 — lean admin interface | **Built, not deployed** (web; needs a promote) | the `feat(push): Phase 5` commit after `2c02101` |
+| 5 — lean admin interface | **Live** (promoted 2026-09-22; sending blocked by kill switch) | `58b0e84` |
 | 6 — mobile tap tracking | **Next.** Not started | — |
 | 7 | Not started | — |
 
 **Branch:** `feature/push-broadcast`, created from `168bd4a`. Working tree clean.
-**Nothing is pushed.** `feature/push-broadcast` has no upstream; `feature/marketplace-map`
-is 4 commits ahead of its remote (the Phase 0 work). Ask the owner before pushing.
+**Pushed 2026-09-22:** `feature/push-broadcast` tracks `origin`, and
+`feature/marketplace-map` is in sync with its remote (Phase 0 commits included).
+Production web is a promoted preview of `feature/push-broadcast`. Ask the owner before pushing.
 
 ### Live production state (Supabase project `fbzetvkbhneptvfruilw`)
 
