@@ -103,8 +103,8 @@ commit: `git merge-base --is-ancestor <live-sha> <branch>`.
 2. **Staged rollout** — `docs/DEVICE_QA_CHECKLIST.md` → *Push broadcast — Phase 7*:
    switch on, one real campaign to yourself (every production device is yours), cases
    1–13, switch off. This is also Phase 6's last check (a real tap counted).
-3. **OTA** — the mobile Sentry push-token scrub rides the next
-   `node ./scripts/publish-update.js preview`.
+3. **Web promote** — `6810e04` onward carries the web push-token scrub and the
+   `alert_sent` label. (The mobile scrub was published as an OTA on 2026-09-22.)
 
 ## Open items
 
