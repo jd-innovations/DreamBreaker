@@ -1,6 +1,6 @@
 # Push Notification Broadcasting — Corrected Implementation Plan
 
-**Status: Phases 1–7 PARKED 2026-09-21 by the product owner. Phase 0a/0c DONE and enforcing 2026-09-22; 0b blocked on a decision (see Phase 0).**
+**Status: Phases 1–7 PARKED 2026-09-21 by the product owner. Phase 0a/0c DONE and enforcing 2026-09-22; 0b moved into Phase 2 (decided 2026-09-22).**
 
 Not rejected — deferred. The plan is complete and all eighteen decisions are settled, so
 resuming means picking up at Phase 0 with no re-litigation. Decisions 16–18 were answered
@@ -148,21 +148,27 @@ Expo receipt lookups and function invocations, and it is fixed by the same mecha
 > **Status 2026-09-22 — 0a ENFORCING, the open relay is closed.** Verified after
 > the enforce deploy: anon key without header → 401; wrong secret → 401; right
 > secret → 200; sweeper without header → 401; the 02:15 scheduled sweep passed the
-> gate; real DMs delivered (3 in log mode, all `ok`). Only 0b remains.
+> gate; real DMs delivered (3 in log mode, all `ok`). 0b is DEFERRED to Phase 2.
 >
 > History: 0a and 0c first went LIVE in log-only mode: migration
 > `20260921180000_push_dispatch_secret.sql` applied (recorded as 20260922015921),
 > `send-message-push` v17 and `push-receipt-sweeper` v6 deployed. Verified by
 > hand-firing the sweeper: with the header → `[dispatch-gate] …: ok`; without →
 > `would reject (missing)`. Then `DISPATCH_GATE_MODE` was flipped to `"enforce"`.
-> **0b is blocked** on a design decision — see "Second caller" below.
+> **0b is deferred to Phase 2** — see "Second caller" below and Phase 2's 0b section.
 >
 > **Second caller (missed by this plan).** `fn_notify_price_drop`
 > (20260909230000) also posts a raw token list to `send-message-push`. 0a covers it
 > — the migration gives it the header. 0b as written does not: a price drop has no
 > message to reference, and the old price is gone by the time the function runs.
 > 0b needs either a second payload kind (`{ kind: "price_drop", listingId, dropCents }`,
-> recipients resolved server-side) or its own function. Decide before starting 0b.
+> recipients resolved server-side) or its own function.
+>
+> **Decision (2026-09-22): 0b moves into Phase 2, whole.** Do NOT ship it for DMs
+> alone. Its only value is that no caller can hand the function a token list, and
+> that holds only once the token path is gone for EVERY caller — a DM-only 0b
+> leaves the price-drop token path open and buys nothing, at the cost of touching
+> the one working push path. Until Phase 2 the dispatch gate is the boundary.
 >
 > **Order actually used.** Migration first, then the log-only deploys — the reverse
 > of steps 2–4 below. Safe because the old functions ignore an unknown header, and
@@ -429,6 +435,15 @@ irreversible from that point and forward-fix instead.
 ---
 
 # Phase 2 — Authenticated campaign API and server-side audience snapshot
+
+> **Includes Phase 0b (moved here 2026-09-22).** `send-message-push` stops
+> accepting `tokens` and resolves recipients server-side, for BOTH callers in one
+> change: DMs (`{ kind: "message", messageId }` → `resolve_message_push_recipients`)
+> and price drops (`fn_notify_price_drop`, e.g. `{ kind: "price_drop", listingId,
+> dropCents }` → savers with `notif_marketplace`). Phase 0b's text above still
+> describes the DM half; its tests and grant checks apply unchanged. Build it
+> alongside this phase's server-side audience resolution, which solves the same
+> problem, and remove the `tokens` field only after both callers have switched.
 
 ## Existing components reused
 
