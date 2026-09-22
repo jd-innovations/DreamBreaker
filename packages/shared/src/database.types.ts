@@ -3584,6 +3584,123 @@ export type Database = {
           },
         ]
       }
+      notification_automation_audit: {
+        Row: {
+          action: string
+          after: Json | null
+          automation_key: string
+          before: Json | null
+          changed_at: string
+          changed_by: string | null
+          id: string
+        }
+        Insert: {
+          action: string
+          after?: Json | null
+          automation_key: string
+          before?: Json | null
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+        }
+        Update: {
+          action?: string
+          after?: Json | null
+          automation_key?: string
+          before?: Json | null
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      notification_automations: {
+        Row: {
+          category: string
+          channels: string[]
+          created_at: string
+          description: string | null
+          enabled: boolean
+          key: string
+          link_template: string | null
+          name: string
+          pref_column: string | null
+          sort_order: number
+          throttle_hours: number | null
+          timing: Json
+          title_template: string
+          body_template: string
+          updated_at: string
+          updated_by: string | null
+          wired: boolean
+        }
+        Insert: {
+          category: string
+          channels?: string[]
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          key: string
+          link_template?: string | null
+          name: string
+          pref_column?: string | null
+          sort_order?: number
+          throttle_hours?: number | null
+          timing?: Json
+          title_template: string
+          body_template: string
+          updated_at?: string
+          updated_by?: string | null
+          wired?: boolean
+        }
+        Update: {
+          category?: string
+          channels?: string[]
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          key?: string
+          link_template?: string | null
+          name?: string
+          pref_column?: string | null
+          sort_order?: number
+          throttle_hours?: number | null
+          timing?: Json
+          title_template?: string
+          body_template?: string
+          updated_at?: string
+          updated_by?: string | null
+          wired?: boolean
+        }
+        Relationships: []
+      }
+      notification_push_log: {
+        Row: {
+          automation_key: string
+          category: string
+          id: string
+          notification_id: string | null
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          automation_key: string
+          category: string
+          id?: string
+          notification_id?: string | null
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          automation_key?: string
+          category?: string
+          id?: string
+          notification_id?: string | null
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
@@ -5119,6 +5236,7 @@ export type Database = {
           stripe_connect_account_id: string | null
           stripe_connect_onboarded_at: string | null
           stripe_customer_id: string | null
+          timezone: string | null
           updated_at: string
         }
         Insert: {
@@ -5181,6 +5299,7 @@ export type Database = {
           stripe_connect_account_id?: string | null
           stripe_connect_onboarded_at?: string | null
           stripe_customer_id?: string | null
+          timezone?: string | null
           updated_at?: string
         }
         Update: {
@@ -5243,6 +5362,7 @@ export type Database = {
           stripe_connect_account_id?: string | null
           stripe_connect_onboarded_at?: string | null
           stripe_customer_id?: string | null
+          timezone?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -7659,6 +7779,34 @@ export type Database = {
           token_masked: string
           user_id: string
         }[]
+      }
+      admin_list_automations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          body_template: string
+          category: string
+          channels: string[]
+          description: string
+          enabled: boolean
+          key: string
+          last_sent_at: string
+          link_template: string
+          name: string
+          pref_column: string
+          sent_7d: number
+          sent_total: number
+          sort_order: number
+          throttle_hours: number
+          timing: Json
+          title_template: string
+          updated_at: string
+          updated_by_name: string
+          wired: boolean
+        }[]
+      }
+      admin_test_automation: {
+        Args: { p_key: string }
+        Returns: Json
       }
       admin_campaign_destination_preview: {
         Args: { p_url: string }

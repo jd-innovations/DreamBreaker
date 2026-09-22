@@ -9,6 +9,8 @@ import { checkDispatch } from "../_shared/dispatch-gate.ts";
 //
 //   { kind: "message",    messageId }   a DM — notify_new_message
 //   { kind: "price_drop", listingId }   a marketplace price drop — fn_notify_price_drop
+//   { kind: "automation",  notificationId } any catalogued automatic notification —
+//                                       fn_dispatch_automation_push (20260922191000)
 //
 // The function looks the recipients up itself (resolve_*_push_recipients,
 // 20260921200000), so a caller names WHICH notification, never WHO gets it or
@@ -66,6 +68,7 @@ const ACCEPT_LEGACY_TOKENS = false;
 type PushRequest =
   | { kind: "message"; messageId: string }
   | { kind: "price_drop"; listingId: string }
+  | { kind: "automation"; notificationId: string; test?: boolean }
   | { kind?: undefined; tokens: string[]; title: string; body: string; data?: Record<string, unknown> };
 
 type Resolved = { tokens: string[]; title: string | null; body: string | null; data: Record<string, unknown> };
@@ -89,8 +92,12 @@ const DEAD_TOKEN_ERRORS = new Set(["DeviceNotRegistered"]);
  * caller reports as `skipped` — the same answer the old path gave.
  */
 async function resolvePayload(payload: PushRequest): Promise<Resolved | Response> {
-  if (payload && (payload.kind === "message" || payload.kind === "price_drop")) {
-    const id = payload.kind === "message" ? payload.messageId : payload.listingId;
+  if (payload && (payload.kind === "message" || payload.kind === "price_drop" || payload.kind === "automation")) {
+    const id = payload.kind === "message"
+      ? payload.messageId
+      : payload.kind === "price_drop"
+      ? payload.listingId
+      : payload.notificationId;
     if (typeof id !== "string" || !UUID_RE.test(id)) {
       return new Response("Invalid id", { status: 400 });
     }
@@ -101,9 +108,20 @@ async function resolvePayload(payload: PushRequest): Promise<Resolved | Response
       return new Response("Server misconfigured", { status: 500 });
     }
 
+    // Each kind names its own resolver. The resolver — not this function —
+    // decides who gets it and what it says, and re-checks every catalog rule
+    // (enabled, user preference, throttle, quiet hours, caps) for automations.
     const { data, error } = payload.kind === "message"
       ? await supabase.rpc("resolve_message_push_recipients", { p_message_id: id })
-      : await supabase.rpc("resolve_price_drop_push_recipients", { p_listing_id: id });
+      : payload.kind === "price_drop"
+      ? await supabase.rpc("resolve_price_drop_push_recipients", { p_listing_id: id })
+      : await supabase.rpc("resolve_automation_push_recipients", {
+        p_notification_id: id,
+        // Only admin_test_automation sets this, and only for its own caller's
+        // devices: it skips the enabled/preference/cap gate so a push can be
+        // previewed on a real phone before the automation is switched on.
+        p_test: payload.kind === "automation" && payload.test === true,
+      });
 
     if (error) {
       console.error(`[send-message-push] resolve ${payload.kind} failed: ${error.message}`);

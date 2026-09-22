@@ -166,6 +166,16 @@ export async function registerPushTokenForUser(
 
     if (error) throw error;
 
+    // Quiet hours are meaningless without a timezone: a server-side rule
+    // cannot know when 9pm is for this player (20260831020000 removed the
+    // mobile quiet-hours toggle for exactly that reason). Read from the
+    // device's own locale, so no native module and no rebuild is needed.
+    //
+    // Best effort by design: a failure here must not fail push registration,
+    // which is the thing the user actually asked for. Worst case the
+    // dispatcher treats them as UTC.
+    void syncDeviceTimezone(userId);
+
     lastRegisteredUserId = userId;
     lastRegisteredToken = token;
     if (__DEV__) console.log('[push] token registered', { platform: platformValue(), alreadyRegistered });
@@ -252,4 +262,23 @@ export function routeFromNotificationResponse(response: Notifications.Notificati
 
   if (__DEV__) console.log('[push] routing notification response', { destination });
   navigateToExternalDestination(destination);
+}
+
+/**
+ * Stores the device's IANA timezone (e.g. America/New_York) on the profile,
+ * for notification quiet hours. Written only when it has changed, so a player
+ * who never travels writes it once.
+ */
+export async function syncDeviceTimezone(userId: string): Promise<void> {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (!tz) return;
+
+    const { data } = await supabase.from('profiles').select('timezone').eq('id', userId).maybeSingle();
+    if (data?.timezone === tz) return;
+
+    await supabase.from('profiles').update({ timezone: tz }).eq('id', userId);
+  } catch (err) {
+    if (__DEV__) console.warn('[push] timezone sync failed', err);
+  }
 }

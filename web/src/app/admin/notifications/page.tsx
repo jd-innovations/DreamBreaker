@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ArrowLeft, MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { CampaignStatusBadge } from "@/components/admin/campaign-status-badge";
+import { NotificationsTabs } from "@/components/admin/notifications-tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { INPUT_TEXT, SELECT } from "@/components/ui/field-classes";
@@ -69,6 +70,8 @@ export default function CampaignListPage() {
       <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft size={14} /> Admin
       </Link>
+
+      <NotificationsTabs />
 
       <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
         <div>
