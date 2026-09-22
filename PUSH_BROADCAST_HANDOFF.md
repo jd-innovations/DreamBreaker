@@ -96,6 +96,17 @@ Web production is a promoted preview. `feature/marketplace-map` was fast-forward
 either is safe to promote. Before promoting ANY branch, check it contains the live
 commit: `git merge-base --is-ancestor <live-sha> <branch>`.
 
+## PARKED 2026-09-22 — resume here
+
+Everything buildable is done and live (production web `975f503`). Parked by the owner
+until they are at a desktop:
+
+1. **Email gate deploy → enforce** (`EMAIL_RELAY_REMEDIATION.md`). Until then the
+   sender still accepts the public anon key; the direct-RPC route is already closed.
+2. **Remaining device cases** 2–3, 6–13 (checklist below).
+3. **4 stale `push_tokens` rows** (device `…u0I5ab`, an old install) — delete only with
+   the owner's OK.
+
 ## Next steps (owner)
 
 1. **Email gate** — `EMAIL_RELAY_REMEDIATION.md`: deploy the three functions (log
