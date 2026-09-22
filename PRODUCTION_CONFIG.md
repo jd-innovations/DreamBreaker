@@ -126,6 +126,36 @@ manage.
 **Naming note:** the Anthropic key is `CLAUDE_API`, **not** `ANTHROPIC_API_KEY`.
 Earlier notes called it the latter. It is set and working.
 
+### Vault secrets (not edge-function secrets)
+
+| Vault name | Consumed by | Secret? | Owner | Verify |
+| --- | --- | --- | --- | --- |
+| `push_dispatch_secret` | `private.push_dispatch_headers()` (sets the header on every internal push call) and `public.is_valid_push_dispatch()` (checks it) | **YES** | Platform | function logs show `[dispatch-gate] …: ok` |
+
+**Vault is the only copy.** There is deliberately no `PUSH_DISPATCH_SECRET`
+edge-function secret: an earlier design kept two copies, they drifted twice
+during setup, and a drift here silently stops DM push. Do not add one.
+
+Value: 64 bare hex characters — no quotes, no angle brackets. Check the shape
+without reading the value:
+
+```sql
+select decrypted_secret ~ '^[0-9a-f]{64}$' as ok, updated_at
+from vault.decrypted_secrets where name = 'push_dispatch_secret';
+```
+
+Rotate (one statement, takes effect on the next push):
+
+```sql
+select vault.update_secret(
+  (select id from vault.secrets where name = 'push_dispatch_secret'),
+  encode(extensions.gen_random_bytes(32), 'hex')
+);
+```
+
+The new value is generated inside the database, so it never passes through a
+terminal or a clipboard.
+
 ---
 
 ## 3. Supabase Dashboard

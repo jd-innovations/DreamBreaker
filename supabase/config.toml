@@ -102,6 +102,22 @@ verify_jwt = true
 [functions.waitlist-sweeper]
 verify_jwt = true
 
+# send-message-push / push-receipt-sweeper: internal only. Called by the
+# notify_new_message and fn_notify_price_drop triggers and the
+# push-receipt-sweeper cron job, never by a client.
+#
+# verify_jwt = true is NOT the authorization boundary here. Those callers
+# present the public anon key, which ships in the mobile app, so the JWT check
+# admits anyone. The boundary is the x-dispatch-secret header, read from Vault
+# by the callers and verified by _shared/dispatch-gate.ts via
+# is_valid_push_dispatch() (20260921180000_push_dispatch_secret.sql). Vault is
+# the only copy of the secret; there is no edge-function secret to set.
+[functions.send-message-push]
+verify_jwt = true
+
+[functions.push-receipt-sweeper]
+verify_jwt = true
+
 # create-tournament-entry-payment-intent: first domain-specific consumer of the
 # shared payment foundation (supabase/functions/_shared/payments.ts). Computes
 # the authoritative entry fee server-side, then delegates to the generic

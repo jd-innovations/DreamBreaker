@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { checkDispatch } from "../_shared/dispatch-gate.ts";
 
 // Relay to Expo's push API, plus the bookkeeping that makes dead tokens
 // findable (TODO1.1 5.1).
@@ -34,6 +35,13 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // The bookkeeping never fails the send. A push that was delivered but not
 // recorded costs one uncleaned token; a send rejected because the database was
 // briefly unavailable costs a user their notification. The push is the product.
+//
+// ── Who may call ────────────────────────────────────────────────────────────
+//
+// Only the database: notify_new_message and fn_notify_price_drop. Both send an
+// x-dispatch-secret header read from Vault; checkDispatch() verifies it. Until
+// that shipped, anyone holding the public anon key could push any text to any
+// token through this function. See _shared/dispatch-gate.ts.
 
 interface PushRequest {
   tokens: string[];
@@ -63,6 +71,11 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
+
+  // Before the body is even parsed: an unauthorised caller learns nothing
+  // about what shape of request would have been accepted.
+  const refused = await checkDispatch(req, serviceClient(), "send-message-push");
+  if (refused) return refused;
 
   let payload: PushRequest;
   try {

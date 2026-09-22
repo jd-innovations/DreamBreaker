@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { checkDispatch } from "../_shared/dispatch-gate.ts";
 
 // Fetches Expo push receipts and deletes the tokens that are dead (TODO1.1 5.1).
 //
@@ -24,6 +25,12 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //
 // Deleting on any of those would silently unsubscribe real, reachable users at
 // exactly the moment something else is already going wrong.
+//
+// ── Who may call ────────────────────────────────────────────────────────────
+//
+// Only the push-receipt-sweeper cron job, which sends an x-dispatch-secret
+// header read from Vault. Without it, anyone holding the public anon key could
+// force sweeps. See _shared/dispatch-gate.ts.
 
 const EXPO_RECEIPTS_URL = "https://exp.host/--/api/v2/push/getReceipts";
 
@@ -43,7 +50,7 @@ interface ExpoReceipt {
   details?: { error?: string };
 }
 
-Deno.serve(async () => {
+Deno.serve(async (req: Request) => {
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !key) {
@@ -51,6 +58,9 @@ Deno.serve(async () => {
     return new Response(JSON.stringify({ error: "missing_env" }), { status: 500 });
   }
   const supabase = createClient(url, key, { auth: { persistSession: false } });
+
+  const refused = await checkDispatch(req, supabase, "push-receipt-sweeper");
+  if (refused) return refused;
 
   const settledBefore = new Date(Date.now() - SETTLE_MINUTES * 60_000).toISOString();
 
