@@ -16,7 +16,7 @@ import { createClient } from "@/lib/supabase/server";
 export default async function NotificationsAdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth");
+  if (!user) redirect("/auth?next=/admin/notifications");
 
   const { data: isAdmin } = await supabase.rpc("is_admin");
   if (isAdmin !== true) notFound();

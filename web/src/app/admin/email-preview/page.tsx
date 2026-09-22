@@ -66,7 +66,7 @@ export default function EmailPreviewPage() {
   useEffect(() => {
     (async () => {
       const userId = await getUserId();
-      if (!userId) { router.push("/login"); return; }
+      if (!userId) { router.push("/auth?next=/admin/email-preview"); return; }
       const { data: profile } = await supabase
         .from("profiles").select("role").eq("id", userId).maybeSingle();
       if (!profile || profile.role !== "admin") { router.push("/dashboard"); return; }
