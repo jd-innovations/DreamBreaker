@@ -32,7 +32,9 @@
 
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 
-export const DISPATCH_GATE_MODE: "log" | "enforce" = "log";
+// Enforcing since 2026-09-22: three real DMs and a hand-fired sweep all logged
+// `ok` in log mode first, and nothing logged `would reject`.
+export const DISPATCH_GATE_MODE: "log" | "enforce" = "enforce";
 
 const HEADER = "x-dispatch-secret";
 

@@ -145,13 +145,17 @@ Expo receipt lookups and function invocations, and it is fixed by the same mecha
 
 ## Work
 
-> **Status 2026-09-22.** 0a and 0c are LIVE in log-only mode: migration
+> **Status 2026-09-22 — 0a ENFORCING, the open relay is closed.** Verified after
+> the enforce deploy: anon key without header → 401; wrong secret → 401; right
+> secret → 200; sweeper without header → 401; the 02:15 scheduled sweep passed the
+> gate; real DMs delivered (3 in log mode, all `ok`). Only 0b remains.
+>
+> History: 0a and 0c first went LIVE in log-only mode: migration
 > `20260921180000_push_dispatch_secret.sql` applied (recorded as 20260922015921),
 > `send-message-push` v17 and `push-receipt-sweeper` v6 deployed. Verified by
 > hand-firing the sweeper: with the header → `[dispatch-gate] …: ok`; without →
-> `would reject (missing)`. **Next:** a real DM must log `send-message-push: ok`,
-> then flip `DISPATCH_GATE_MODE` to `"enforce"` in `_shared/dispatch-gate.ts` and
-> redeploy both. **0b is blocked** on a design decision — see "Second caller" below.
+> `would reject (missing)`. Then `DISPATCH_GATE_MODE` was flipped to `"enforce"`.
+> **0b is blocked** on a design decision — see "Second caller" below.
 >
 > **Second caller (missed by this plan).** `fn_notify_price_drop`
 > (20260909230000) also posts a raw token list to `send-message-push`. 0a covers it
