@@ -21,7 +21,13 @@ export interface Automation {
   title_template: string;
   body_template: string;
   link_template: string | null;
-  timing: { offsets_hours?: number[] } & Record<string, unknown>;
+  /**
+   * Shape depends on the automation. Two exist today: `offsets_hours` for
+   * "N hours before" rules, and `days_before` + `send_local_hour` for rules
+   * that fire at a local time of day (events carry no timezone, so a
+   * day-before reminder cannot be an hours offset — see 20260922194000).
+   */
+  timing: { offsets_hours?: number[]; days_before?: number; send_local_hour?: number } & Record<string, unknown>;
   throttle_hours: number | null;
   enabled: boolean;
   /** False = catalogued but nothing senses the event yet; cannot be enabled. */
@@ -100,8 +106,13 @@ export async function testAutomation(key: string): Promise<Result<{ sent: boolea
   return { ok: true, data: data as { sent: boolean; reason?: string } };
 }
 
-/** "24h and 2h before" from {offsets_hours:[24,2]}; "" when there are none. */
+/** Human timing for the list row; "" when an automation has no schedule. */
 export function describeTiming(a: Automation): string {
+  if (typeof a.timing?.send_local_hour === "number") {
+    const d = a.timing.days_before ?? 1;
+    const day = d === 0 ? "on the day" : d === 1 ? "the day before" : `${d} days before`;
+    return `${day}, ${formatHour(a.timing.send_local_hour)} their time`;
+  }
   const offsets = a.timing?.offsets_hours;
   if (!Array.isArray(offsets) || offsets.length === 0) return "";
   // Days only from two days out. "1d and 2h before" mixes units for no gain,
@@ -133,4 +144,12 @@ const SAMPLE: Record<string, string> = {
 
 export function renderPreview(template: string): string {
   return template.replace(/\{\{(\w+)\}\}/g, (m, k: string) => SAMPLE[k] ?? m);
+}
+
+/** 17 -> "5 PM", 0 -> "12 AM". Whole hours only; that is all the rule has. */
+export function formatHour(h: number): string {
+  const hour = ((h % 24) + 24) % 24;
+  const suffix = hour < 12 ? "AM" : "PM";
+  const twelve = hour % 12 === 0 ? 12 : hour % 12;
+  return `${twelve} ${suffix}`;
 }

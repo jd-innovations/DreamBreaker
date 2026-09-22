@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
-  describeTiming, parseOffsets, renderPreview, variablesFor, type Automation,
+  describeTiming, formatHour, parseOffsets, renderPreview, variablesFor, type Automation,
 } from "../notifications/automations";
 
 function make(overrides: Partial<Automation> = {}): Automation {
@@ -94,4 +94,33 @@ describe("renderPreview", () => {
   it("leaves an unknown variable in place", () => {
     expect(renderPreview("Hi {{nickname}}")).toBe("Hi {{nickname}}");
   });
+});
+
+// The second timing shape: fire at a local hour rather than an offset. Events
+// carry no timezone, so the day-before reminder has to work this way.
+describe("describeTiming, local-hour rules", () => {
+  it("reads a day-before rule in the player's own time", () => {
+    expect(describeTiming(make({ timing: { days_before: 1, send_local_hour: 17 } })))
+      .toBe("the day before, 5 PM their time");
+  });
+
+  it("handles same-day and multi-day rules", () => {
+    expect(describeTiming(make({ timing: { days_before: 0, send_local_hour: 8 } })))
+      .toBe("on the day, 8 AM their time");
+    expect(describeTiming(make({ timing: { days_before: 3, send_local_hour: 12 } })))
+      .toBe("3 days before, 12 PM their time");
+  });
+
+  // A send_local_hour of 0 is midnight, not "unset" — a falsy check here would
+  // silently fall through to the offsets branch and describe the wrong rule.
+  it("treats hour 0 as midnight rather than missing", () => {
+    expect(describeTiming(make({ timing: { days_before: 1, send_local_hour: 0 } })))
+      .toBe("the day before, 12 AM their time");
+  });
+});
+
+describe("formatHour", () => {
+  it.each([[0, "12 AM"], [8, "8 AM"], [12, "12 PM"], [17, "5 PM"], [23, "11 PM"]])(
+    "%i reads as %s", (h, expected) => { expect(formatHour(h as number)).toBe(expected); },
+  );
 });

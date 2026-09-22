@@ -26,8 +26,8 @@ import {
 import { FIELD, INPUT_TEXT } from "@/components/ui/field-classes";
 import { cn } from "@/lib/utils";
 import {
-  CATEGORY_LABEL, CATEGORY_NOTE, CHANNEL_LABEL, describeTiming, listAutomations, parseOffsets,
-  renderPreview, testAutomation, updateAutomation, variablesFor,
+  CATEGORY_LABEL, CATEGORY_NOTE, CHANNEL_LABEL, describeTiming, formatHour, listAutomations,
+  parseOffsets, renderPreview, testAutomation, updateAutomation, variablesFor,
   type Automation, type Channel,
 } from "@/lib/notifications/automations";
 
@@ -163,10 +163,17 @@ function EditDialog({ automation, onClose, onSaved }: {
     Array.isArray(automation.timing?.offsets_hours) ? automation.timing.offsets_hours.join(", ") : "",
   );
   const [throttle, setThrottle] = useState(automation.throttle_hours?.toString() ?? "");
+  const [daysBefore, setDaysBefore] = useState(automation.timing?.days_before?.toString() ?? "1");
+  const [sendHour, setSendHour] = useState(automation.timing?.send_local_hour?.toString() ?? "17");
   const [channels, setChannels] = useState<Channel[]>(automation.channels);
   const [busy, setBusy] = useState(false);
 
   const hasOffsets = Array.isArray(automation.timing?.offsets_hours);
+  // The other timing shape: fire at a local time of day rather than an offset
+  // (events carry no timezone — see the event_reminder migration).
+  const hasLocalHour = typeof automation.timing?.send_local_hour === "number";
+  const daysBad = hasLocalHour && !(Number(daysBefore) >= 0 && Number(daysBefore) <= 30);
+  const hourBad = hasLocalHour && !(Number(sendHour) >= 0 && Number(sendHour) <= 23);
   const parsedOffsets = hasOffsets ? parseOffsets(offsets) : [];
   const offsetsBad = hasOffsets && parsedOffsets === null;
   const throttleBad = throttle !== "" && !(Number(throttle) > 0);
@@ -177,7 +184,7 @@ function EditDialog({ automation, onClose, onSaved }: {
   }
 
   async function save() {
-    if (offsetsBad || throttleBad || channels.length === 0 || !title.trim() || !body.trim()) return;
+    if (offsetsBad || throttleBad || daysBad || hourBad || channels.length === 0 || !title.trim() || !body.trim()) return;
     setBusy(true);
     const r = await updateAutomation(automation.key, {
       title_template: title.trim(),
@@ -185,6 +192,9 @@ function EditDialog({ automation, onClose, onSaved }: {
       channels,
       throttle_hours: throttle === "" ? null : Number(throttle),
       ...(hasOffsets ? { timing: { ...automation.timing, offsets_hours: parsedOffsets ?? [] } } : {}),
+      ...(hasLocalHour
+        ? { timing: { ...automation.timing, days_before: Number(daysBefore), send_local_hour: Number(sendHour) } }
+        : {}),
     });
     setBusy(false);
     if (!r.ok) { toast.error(r.message); return; }
@@ -271,6 +281,27 @@ function EditDialog({ automation, onClose, onSaved }: {
               </div>
             )}
 
+            {hasLocalHour && (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="a-days">Days before</Label>
+                  <Input id="a-days" value={daysBefore} onChange={(e) => setDaysBefore(e.target.value)}
+                    className={INPUT_TEXT} inputMode="numeric" />
+                  <p className="text-xs text-muted-foreground">0 sends on the day itself.</p>
+                  {daysBad && <p className="text-xs text-destructive">Use a whole number from 0 to 30.</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="a-hour">Send at (their local hour)</Label>
+                  <Input id="a-hour" value={sendHour} onChange={(e) => setSendHour(e.target.value)}
+                    className={INPUT_TEXT} inputMode="numeric" />
+                  <p className="text-xs text-muted-foreground">
+                    0–23, in each player&rsquo;s own timezone{hourBad ? "" : ` — ${formatHour(Number(sendHour))}`}.
+                  </p>
+                  {hourBad && <p className="text-xs text-destructive">Use a whole number from 0 to 23.</p>}
+                </div>
+              </>
+            )}
+
             <div className="space-y-1.5">
               <Label htmlFor="a-throttle">Throttle (hours)</Label>
               <Input id="a-throttle" value={throttle} onChange={(e) => setThrottle(e.target.value)}
@@ -296,7 +327,7 @@ function EditDialog({ automation, onClose, onSaved }: {
           <div className="flex gap-2">
             <Button type="button" variant="outline" disabled={busy} onClick={onClose}>Cancel</Button>
             <Button type="button" variant="secondary"
-              disabled={busy || offsetsBad || throttleBad || channels.length === 0 || !title.trim() || !body.trim()}
+              disabled={busy || offsetsBad || throttleBad || daysBad || hourBad || channels.length === 0 || !title.trim() || !body.trim()}
               onClick={() => void save()}>
               {busy ? "Saving…" : "Save"}
             </Button>
