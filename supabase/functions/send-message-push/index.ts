@@ -5,9 +5,20 @@ import { checkDispatch } from "../_shared/dispatch-gate.ts";
 // Relay to Expo's push API, plus the bookkeeping that makes dead tokens
 // findable (TODO1.1 5.1).
 //
-// Recipient and mute resolution still happen in Postgres (notify_new_message,
-// 20260708010000) — this function only forwards an already-resolved token list.
-// What changed is that it no longer throws Expo's answer away.
+// ── What a caller may send (Phase 0b, PUSH_BROADCAST_IMPLEMENTATION_PLAN.md) ──
+//
+//   { kind: "message",    messageId }   a DM — notify_new_message
+//   { kind: "price_drop", listingId }   a marketplace price drop — fn_notify_price_drop
+//
+// The function looks the recipients up itself (resolve_*_push_recipients,
+// 20260921200000), so a caller names WHICH notification, never WHO gets it or
+// WHAT it says. Even with the dispatch secret, the most anyone can do is
+// re-send a real notification from the last ten minutes to its real
+// recipients.
+//
+// The old { tokens, title, body } shape is accepted only while
+// ACCEPT_LEGACY_TOKENS is true — the window between this deploy and both
+// triggers switching over. After that it is refused outright.
 //
 // ── Why the response matters ────────────────────────────────────────────────
 //
@@ -43,12 +54,21 @@ import { checkDispatch } from "../_shared/dispatch-gate.ts";
 // that shipped, anyone holding the public anon key could push any text to any
 // token through this function. See _shared/dispatch-gate.ts.
 
-interface PushRequest {
-  tokens: string[];
-  title: string;
-  body: string;
-  data?: Record<string, unknown>;
-}
+/**
+ * Transition switch. true only until both triggers send `kind` payloads
+ * (verified from logs: no `[send-message-push] legacy token payload` lines),
+ * then false and redeploy — that is the moment 0b's guarantee takes effect.
+ */
+const ACCEPT_LEGACY_TOKENS = true;
+
+type PushRequest =
+  | { kind: "message"; messageId: string }
+  | { kind: "price_drop"; listingId: string }
+  | { kind?: undefined; tokens: string[]; title: string; body: string; data?: Record<string, unknown> };
+
+type Resolved = { tokens: string[]; title: string | null; body: string | null; data: Record<string, unknown> };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface ExpoTicket {
   status?: string;
@@ -59,6 +79,61 @@ interface ExpoTicket {
 
 /** Errors meaning "this token will never work again". Anything else is transient. */
 const DEAD_TOKEN_ERRORS = new Set(["DeviceNotRegistered"]);
+
+/**
+ * Turns a request into recipients + content. A Response means stop: bad
+ * request, refused shape, or lookup failure. Nothing found (message too old,
+ * listing no longer active, nobody opted in) resolves to zero tokens, which the
+ * caller reports as `skipped` — the same answer the old path gave.
+ */
+async function resolvePayload(payload: PushRequest): Promise<Resolved | Response> {
+  if (payload && (payload.kind === "message" || payload.kind === "price_drop")) {
+    const id = payload.kind === "message" ? payload.messageId : payload.listingId;
+    if (typeof id !== "string" || !UUID_RE.test(id)) {
+      return new Response("Invalid id", { status: 400 });
+    }
+
+    const supabase = serviceClient();
+    if (!supabase) {
+      console.error("[send-message-push] service role env missing; cannot resolve recipients");
+      return new Response("Server misconfigured", { status: 500 });
+    }
+
+    const { data, error } = payload.kind === "message"
+      ? await supabase.rpc("resolve_message_push_recipients", { p_message_id: id })
+      : await supabase.rpc("resolve_price_drop_push_recipients", { p_listing_id: id });
+
+    if (error) {
+      console.error(`[send-message-push] resolve ${payload.kind} failed: ${error.message}`);
+      return new Response("Lookup failed", { status: 502 });
+    }
+
+    const row = Array.isArray(data) ? data[0] : null;
+    if (!row) return { tokens: [], title: null, body: null, data: {} };
+    return {
+      tokens: Array.isArray(row.tokens) ? row.tokens : [],
+      title: row.title ?? null,
+      body: row.body ?? null,
+      data: (row.data && typeof row.data === "object") ? row.data : {},
+    };
+  }
+
+  if (payload && Array.isArray((payload as { tokens?: unknown }).tokens)) {
+    if (!ACCEPT_LEGACY_TOKENS) {
+      console.warn("[send-message-push] refused a token-list payload");
+      return new Response(JSON.stringify({ error: "tokens_not_accepted" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    // Logged so the switch-off can be timed from evidence, not hope.
+    console.log("[send-message-push] legacy token payload");
+    const legacy = payload as { tokens: string[]; title: string; body: string; data?: Record<string, unknown> };
+    return { tokens: legacy.tokens, title: legacy.title ?? null, body: legacy.body ?? null, data: legacy.data ?? {} };
+  }
+
+  return new Response("Unrecognised payload", { status: 400 });
+}
 
 function serviceClient() {
   const url = Deno.env.get("SUPABASE_URL");
@@ -84,11 +159,12 @@ Deno.serve(async (req: Request) => {
     return new Response("Invalid JSON body", { status: 400 });
   }
 
-  const tokens = Array.isArray(payload.tokens)
-    ? payload.tokens.filter((t): t is string => typeof t === "string" && t.startsWith("ExponentPushToken"))
-    : [];
+  const resolved = await resolvePayload(payload);
+  if (resolved instanceof Response) return resolved;
 
-  if (tokens.length === 0 || !payload.title || !payload.body) {
+  const tokens = resolved.tokens.filter((t): t is string => typeof t === "string" && t.startsWith("ExponentPushToken"));
+
+  if (tokens.length === 0 || !resolved.title || !resolved.body) {
     return new Response(JSON.stringify({ skipped: true }), {
       headers: { "Content-Type": "application/json" },
     });
@@ -96,9 +172,9 @@ Deno.serve(async (req: Request) => {
 
   const messages = tokens.map((to) => ({
     to,
-    title: payload.title,
-    body: payload.body,
-    data: payload.data ?? {},
+    title: resolved.title,
+    body: resolved.body,
+    data: resolved.data,
     sound: "default",
   }));
 

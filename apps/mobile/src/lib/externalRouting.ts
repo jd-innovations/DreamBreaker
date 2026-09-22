@@ -1,16 +1,12 @@
 import { router } from 'expo-router';
-import { APP_LINK_DOMAIN, appRoutes } from '@/lib/appLinks';
+import { resolveDeepLink, type DeepLinkType } from '@shared/deep-link';
+import { appRoutes } from '@/lib/appLinks';
 
-export type ExternalDestinationType =
-  | 'conversation'
-  | 'group'
-  | 'tournament'
-  | 'community'
-  | 'marketplace'
-  | 'booking'
-  | 'coach_offer'
-  | 'claim'
-  | 'review';
+// Which URLs open which screen is defined once, in packages/shared, because
+// the push-broadcast composer and the database's campaign validation need the
+// same answer (PUSH_BROADCAST_IMPLEMENTATION_PLAN.md, Phase 2). This file only
+// maps a resolved destination to an expo-router href.
+export type ExternalDestinationType = DeepLinkType;
 
 export type ExternalDestination = {
   href: string;
@@ -18,87 +14,22 @@ export type ExternalDestination = {
   requiresAuth: boolean;
 };
 
-type ParsedExternalUrl = {
-  pathname: string;
-  search: string;
+const HREF: Record<DeepLinkType, (id: string) => string> = {
+  conversation: appRoutes.conversation,
+  group: appRoutes.group,
+  tournament: appRoutes.tournament,
+  community: appRoutes.communityEvent,
+  marketplace: appRoutes.marketplaceListing,
+  booking: appRoutes.booking,
+  coach_offer: appRoutes.coachOffer,
+  claim: appRoutes.claim,
+  review: appRoutes.review,
 };
 
-function safeDecode(value: string): string {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-}
-
-function parseExternalUrl(rawUrl: string): ParsedExternalUrl | null {
-  if (!rawUrl.trim()) return null;
-
-  if (rawUrl.startsWith('/')) {
-    const [pathname, query = ''] = rawUrl.split('?');
-    return { pathname, search: query ? `?${query}` : '' };
-  }
-
-  try {
-    const url = new URL(rawUrl);
-
-    if (url.protocol === 'https:' && (url.hostname === APP_LINK_DOMAIN || url.hostname === `www.${APP_LINK_DOMAIN}`)) {
-      return { pathname: url.pathname, search: url.search };
-    }
-
-    if (url.protocol === 'pickleballapp:') {
-      if (url.hostname === 'app') return { pathname: url.pathname || '/', search: url.search };
-      if (url.hostname) return { pathname: `/${url.hostname}${url.pathname}`, search: url.search };
-      return { pathname: url.pathname || '/', search: url.search };
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
-}
-
-function firstTwoSegments(pathname: string): [string | null, string | null] {
-  const parts = pathname.split('/').filter(Boolean).map(safeDecode);
-  return [parts[0] ?? null, parts[1] ?? null];
-}
-
 export function resolveExternalUrl(rawUrl: string): ExternalDestination | null {
-  const parsed = parseExternalUrl(rawUrl);
-  if (!parsed) return null;
-
-  const [root, id] = firstTwoSegments(parsed.pathname);
-  if (!root || !id) return null;
-
-  switch (root) {
-    case 'conversation':
-      return { href: appRoutes.conversation(id), type: 'conversation', requiresAuth: true };
-    case 'groups':
-      return { href: appRoutes.group(id), type: 'group', requiresAuth: true };
-    case 'tournament':
-      return { href: appRoutes.tournament(id), type: 'tournament', requiresAuth: false };
-    case 'community':
-      return { href: appRoutes.communityEvent(id), type: 'community', requiresAuth: false };
-    case 'marketplace':
-      return { href: appRoutes.marketplaceListing(id), type: 'marketplace', requiresAuth: false };
-    case 'booking':
-      return { href: appRoutes.booking(id), type: 'booking', requiresAuth: true };
-    case 'coach':
-      if (id === 'offers') {
-        const offerId = parsed.pathname.split('/').filter(Boolean)[2];
-        if (offerId) return { href: appRoutes.coachOffer(safeDecode(offerId)), type: 'coach_offer', requiresAuth: true };
-      }
-      return null;
-    case 'claim':
-      return { href: appRoutes.claim(id), type: 'claim', requiresAuth: false };
-    // requiresAuth: the invitation belongs to one person, and
-    // resolve_review_invitation refuses a token that is not theirs. Sending an
-    // unauthenticated visitor to the form would only fail at submit.
-    case 'review':
-      return { href: appRoutes.review(id), type: 'review', requiresAuth: true };
-    default:
-      return null;
-  }
+  const resolved = resolveDeepLink(rawUrl);
+  if (!resolved) return null;
+  return { href: HREF[resolved.type](resolved.id), type: resolved.type, requiresAuth: resolved.requiresAuth };
 }
 
 export function resolveNotificationDestination(data: Record<string, unknown> | undefined): ExternalDestination | null {

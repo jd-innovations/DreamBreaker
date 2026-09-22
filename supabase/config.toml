@@ -118,6 +118,19 @@ verify_jwt = true
 [functions.push-receipt-sweeper]
 verify_jwt = true
 
+# admin-campaign-send / admin-campaign-test-send: admin push broadcasts
+# (PUSH_BROADCAST_IMPLEMENTATION_PLAN.md, Phase 2). verify_jwt = true is the
+# outer gate; each function then re-verifies the caller's own JWT resolves to
+# an admin via is_admin() before switching to SUPABASE_SERVICE_ROLE_KEY
+# (two-step trust, as admin-facility-import-commit). Neither accepts a
+# recipient list — send takes { campaignId, idempotencyKey }, test-send takes
+# { campaignId } and targets only the caller's own devices.
+[functions.admin-campaign-send]
+verify_jwt = true
+
+[functions.admin-campaign-test-send]
+verify_jwt = true
+
 # create-tournament-entry-payment-intent: first domain-specific consumer of the
 # shared payment foundation (supabase/functions/_shared/payments.ts). Computes
 # the authoritative entry fee server-side, then delegates to the generic
