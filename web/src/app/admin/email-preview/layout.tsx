@@ -17,8 +17,11 @@
 
 import { notFound } from "next/navigation";
 import { isFeatureEnabled } from "@/lib/features";
+import { PageShell } from "@/components/layout/page-shell";
 
 export default function EmailPreviewLayout({ children }: { children: React.ReactNode }) {
   if (!isFeatureEnabled("devTools")) notFound();
-  return <>{children}</>;
+  // Inside the site shell (footer hidden) like every admin tool page. The page's
+  // full-height split view is sized to the space below the 4rem header.
+  return <PageShell hideFooter>{children}</PageShell>;
 }

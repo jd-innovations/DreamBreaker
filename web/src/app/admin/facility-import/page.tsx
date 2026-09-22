@@ -256,7 +256,7 @@ export default function FacilityImportPage() {
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex items-center justify-center py-24">
         <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
@@ -265,7 +265,7 @@ export default function FacilityImportPage() {
   const filteredRows = rowFilter === "all" ? rows : rows.filter((r) => r.match_type === rowFilter);
 
   return (
-    <div className="min-h-screen bg-background px-4 sm:px-6 lg:px-8 py-8 max-w-5xl mx-auto">
+    <div className="px-4 sm:px-6 lg:px-8 py-8 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-display text-2xl tracking-wide">Facility Directory Import</h1>

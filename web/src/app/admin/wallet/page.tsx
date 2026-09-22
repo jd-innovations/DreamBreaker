@@ -419,7 +419,7 @@ export default function AdminWalletPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 px-6 py-10">
+    <div className="mx-auto max-w-3xl space-y-8 px-4 py-10 sm:px-6">
       <div>
         <h1 className="font-display text-3xl tracking-wide">Wallet grants</h1>
         <p className="mt-1 text-sm text-muted-foreground">

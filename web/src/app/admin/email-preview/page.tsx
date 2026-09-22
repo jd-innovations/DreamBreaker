@@ -128,7 +128,7 @@ export default function EmailPreviewPage() {
   const current = templates.find((t) => t.key === selected);
 
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "system-ui, sans-serif" }}>
+    <div style={{ display: "flex", height: "calc(100vh - 4rem)", fontFamily: "system-ui, sans-serif" }}>
       {/* Controls */}
       <aside style={{ width: 340, borderRight: "1px solid #E0E8F5", padding: 20, overflowY: "auto" }}>
         <h1 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 4px" }}>Email preview</h1>
@@ -192,7 +192,7 @@ export default function EmailPreviewPage() {
       </aside>
 
       {/* Preview */}
-      <main style={{ flex: 1, background: dark ? "#050A18" : "#F3F6FC", overflow: "auto" }}>
+      <section style={{ flex: 1, background: dark ? "#050A18" : "#F3F6FC", overflow: "auto" }}>
         {error && (
           <pre style={{ margin: 20, padding: 16, borderRadius: 8, background: "#FEF2F2", color: "#991B1B", fontSize: 13, whiteSpace: "pre-wrap" }}>
             {error}
@@ -207,7 +207,7 @@ export default function EmailPreviewPage() {
             sandbox=""
           />
         )}
-      </main>
+      </section>
     </div>
   );
 }
