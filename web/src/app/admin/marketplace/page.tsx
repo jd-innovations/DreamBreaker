@@ -209,12 +209,12 @@ function Moderation() {
 
               <div className="grid grid-cols-2 gap-2 sm:flex sm:w-40 sm:flex-col">
                 {displayStatus === "active" && (
-                  <Button asChild variant="outline" size="sm">
+                  <Button asChild variant="secondary" size="sm">
                     <Link href={`/marketplace/${l.id}`} target="_blank">View listing</Link>
                   </Button>
                 )}
                 {l.removed_at ? (
-                  <Button variant="outline" size="sm" onClick={() => setRestoring(l)} disabled={busy}>
+                  <Button variant="secondary" size="sm" onClick={() => setRestoring(l)} disabled={busy}>
                     <ArrowCounterClockwise size={14} /> Restore
                   </Button>
                 ) : (
@@ -230,7 +230,7 @@ function Moderation() {
 
       {!loading && rows.length < total && (
         <div className="mt-4 text-center">
-          <Button variant="outline" onClick={() => void more()} disabled={loadingMore}>
+          <Button variant="secondary" onClick={() => void more()} disabled={loadingMore}>
             {loadingMore ? "Loading…" : `Load ${Math.min(ADMIN_PAGE_SIZE, total - rows.length)} more`}
           </Button>
         </div>

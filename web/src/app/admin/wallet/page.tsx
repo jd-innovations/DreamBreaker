@@ -527,7 +527,7 @@ export default function AdminWalletPage() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") search(); }}
           />
-          <Button variant="outline" onClick={search} disabled={searching}>
+          <Button variant="secondary" onClick={search} disabled={searching}>
             {searching ? "Searching…" : "Search"}
           </Button>
         </div>
@@ -608,7 +608,7 @@ export default function AdminWalletPage() {
                   {/* Deliberately NOT the primary button. Extending is the
                       common, free action; starting a term spends $25, so it
                       reads as the heavier choice and asks before doing it. */}
-                  <Button variant="outline" onClick={renewMembership} disabled={busy}>
+                  <Button variant="secondary" onClick={renewMembership} disabled={busy}>
                     Start new term
                   </Button>
                   <Button variant="destructive" onClick={revokeMembership} disabled={busy}>
@@ -638,7 +638,7 @@ export default function AdminWalletPage() {
                 ) : (
                   <>
                     <span className="text-destructive">No PGD voucher issued.</span>
-                    <Button variant="outline" size="sm" onClick={issueVoucher} disabled={busy}>
+                    <Button variant="secondary" size="sm" onClick={issueVoucher} disabled={busy}>
                       Issue voucher
                     </Button>
                   </>

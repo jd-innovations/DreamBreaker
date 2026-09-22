@@ -196,13 +196,13 @@ export default async function MarketplacePage({
             {pages > 1 && (
               <nav className="mt-8 flex items-center justify-between gap-3" aria-label="Pages">
                 {filters.page > 1 ? (
-                  <Button asChild variant="outline">
+                  <Button asChild variant="secondary">
                     <Link href={browseHref(filters, { page: filters.page - 1 })}><ArrowLeft size={16} /> Previous</Link>
                   </Button>
                 ) : <span />}
                 <span className="text-sm text-muted-foreground">Page {filters.page} of {pages}</span>
                 {filters.page < pages ? (
-                  <Button asChild variant="outline">
+                  <Button asChild variant="secondary">
                     <Link href={browseHref(filters, { page: filters.page + 1 })}>Next <ArrowRight size={16} /></Link>
                   </Button>
                 ) : <span />}
