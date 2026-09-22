@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { INPUT_TEXT } from "@/components/ui/field-classes";
 import { requiresTypedSend, SEND_WORD } from "@/lib/campaigns/campaign-logic";
 import type { AudiencePreview } from "@/lib/campaigns/campaign-service";
 
@@ -62,7 +63,7 @@ export function CampaignConfirmDialog({
         onOpenChange(o);
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+      <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl tracking-wide">Confirm broadcast</DialogTitle>
           <DialogDescription>
@@ -137,7 +138,7 @@ export function CampaignConfirmDialog({
               onChange={(e) => setTyped(e.target.value)}
               autoComplete="off"
               spellCheck={false}
-              className="mt-2 font-mono tracking-widest"
+              className={`mt-2 font-mono tracking-widest ${INPUT_TEXT}`}
             />
           </div>
         )}

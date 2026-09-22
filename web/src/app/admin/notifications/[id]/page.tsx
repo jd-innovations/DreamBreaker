@@ -130,7 +130,7 @@ export default function CampaignDetailPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
           {(c.status === "draft" || c.status === "scheduled") && (
             <ActionButton onClick={() => void onTest()} disabled={busy} icon={<DeviceMobile size={16} />}>
               Send me a test
@@ -369,7 +369,7 @@ function ActionDialog({ open, onOpenChange, title, description, confirmLabel, ic
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="w-[calc(100%-2rem)]">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>

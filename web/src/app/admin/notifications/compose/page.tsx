@@ -299,7 +299,7 @@ function Composer() {
               </select>
               <label className="sr-only" htmlFor="dest-id">Item id or link</label>
               <input id="dest-id" placeholder="Id, or paste a link" value={destId} onChange={(e) => setDestId(e.target.value)}
-                aria-describedby="dest-msg" className={cn(inputClass(showErrors && !destination.ok), "font-mono text-sm")} />
+                aria-describedby="dest-msg" className={cn(inputClass(showErrors && !destination.ok), "font-mono")} />
             </div>
             <div id="dest-msg" className="mt-2 space-y-1 text-xs" aria-live="polite">
               {!destination.ok ? (

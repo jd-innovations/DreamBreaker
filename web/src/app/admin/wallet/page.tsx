@@ -26,7 +26,8 @@ import { getUserId } from "@/lib/dev-user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FIELD, SELECT } from "@/components/ui/field-classes";
+import { FIELD, INPUT_TEXT, SELECT } from "@/components/ui/field-classes";
+import { cn } from "@/lib/utils";
 
 // Only the types admin_grant_wallet_item accepts. `credit` and `membership` are
 // excluded server-side too: nothing decrements remaining_value_amount and no
@@ -472,7 +473,7 @@ export default function AdminWalletPage() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="pool-batch">Batch label</Label>
-            <Input
+            <Input className={INPUT_TEXT}
               id="pool-batch"
               placeholder="e.g. 2026-09 launch"
               value={batchLabel}
@@ -485,7 +486,7 @@ export default function AdminWalletPage() {
           <Label htmlFor="pool-codes">Codes</Label>
           <textarea
             id="pool-codes"
-            className={`${FIELD} font-mono text-xs`}
+            className={cn(FIELD, "font-mono sm:text-xs")}
             rows={5}
             placeholder={"One per line, or comma separated\nPGD-XXXX-1\nPGD-XXXX-2"}
             value={codesText}
@@ -520,7 +521,7 @@ export default function AdminWalletPage() {
         <div className="flex gap-2">
           <Input
             id="person-search"
-            className="flex-1"
+            className={`flex-1 ${INPUT_TEXT}`}
             placeholder="Email or name"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -536,7 +537,7 @@ export default function AdminWalletPage() {
             {results.map((p) => (
               <li key={p.id}>
                 <button
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  className="w-full break-words px-3 py-2 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                   onClick={() => choose(p)}
                 >
                   <span className="font-medium">{p.full_name ?? "(no name)"}</span>
@@ -553,8 +554,8 @@ export default function AdminWalletPage() {
           {/* The email is shown throughout, not just at search time: granting to
               the wrong person is the mistake this screen can actually make. */}
           <section className="rounded-lg border bg-card p-4 text-card-foreground">
-            <div className="text-sm font-semibold">{person.full_name ?? "(no name)"}</div>
-            <div className="text-sm text-muted-foreground">{person.email ?? "no email"}</div>
+            <div className="break-words text-sm font-semibold">{person.full_name ?? "(no name)"}</div>
+            <div className="break-words text-sm text-muted-foreground">{person.email ?? "no email"}</div>
           </section>
 
           <section className="space-y-3 rounded-lg border bg-card p-4 text-card-foreground">
@@ -594,7 +595,7 @@ export default function AdminWalletPage() {
                 <Input
                   id="membership-expiry"
                   type="date"
-                  className="w-auto"
+                  className={`w-auto ${INPUT_TEXT}`}
                   value={membershipExpiry}
                   onChange={(e) => setMembershipExpiry(e.target.value)}
                 />
@@ -680,7 +681,7 @@ export default function AdminWalletPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="grant-title">Title</Label>
-              <Input
+              <Input className={INPUT_TEXT}
                 id="grant-title"
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
@@ -691,7 +692,7 @@ export default function AdminWalletPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="grant-subtitle">Subtitle</Label>
-                <Input
+                <Input className={INPUT_TEXT}
                   id="grant-subtitle"
                   value={form.subtitle}
                   onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))}
@@ -699,7 +700,7 @@ export default function AdminWalletPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="grant-value">Value label</Label>
-                <Input
+                <Input className={INPUT_TEXT}
                   id="grant-value"
                   value={form.valueLabel}
                   onChange={(e) => setForm((f) => ({ ...f, valueLabel: e.target.value }))}
@@ -722,7 +723,7 @@ export default function AdminWalletPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="grant-expires">Expires</Label>
-                <Input
+                <Input className={INPUT_TEXT}
                   id="grant-expires"
                   type="date"
                   value={form.expiresAt}
@@ -734,7 +735,7 @@ export default function AdminWalletPage() {
             {form.actionType === "external_url" && (
               <div className="space-y-1.5">
                 <Label htmlFor="grant-url">Link (https only)</Label>
-                <Input
+                <Input className={INPUT_TEXT}
                   id="grant-url"
                   value={form.actionUrl}
                   onChange={(e) => setForm((f) => ({ ...f, actionUrl: e.target.value }))}
@@ -745,7 +746,7 @@ export default function AdminWalletPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="grant-reference">Reference</Label>
-              <Input
+              <Input className={INPUT_TEXT}
                 id="grant-reference"
                 aria-describedby="grant-reference-hint"
                 value={form.sourceId}
@@ -759,7 +760,7 @@ export default function AdminWalletPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="grant-note">Note</Label>
-              <Input
+              <Input className={INPUT_TEXT}
                 id="grant-note"
                 value={form.note}
                 onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
@@ -780,8 +781,8 @@ export default function AdminWalletPage() {
               <ul className="divide-y rounded-lg border bg-card">
                 {items.map((it) => (
                   <li key={it.id} className="flex items-start justify-between gap-4 p-3">
-                    <div className="text-sm">
-                      <div className="font-medium">
+                    <div className="min-w-0 text-sm">
+                      <div className="break-words font-medium">
                         {it.title}
                         {it.value_label ? <span className="text-muted-foreground"> · {it.value_label}</span> : null}
                       </div>

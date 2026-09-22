@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { CampaignStatusBadge } from "@/components/admin/campaign-status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SELECT } from "@/components/ui/field-classes";
+import { INPUT_TEXT, SELECT } from "@/components/ui/field-classes";
 import {
   audienceLabel, CAMPAIGN_STATUSES, DESTINATION_LABEL, STATUS_LABEL, type CampaignStatus,
 } from "@/lib/campaigns/campaign-logic";
@@ -20,6 +20,17 @@ import {
 import type { DeepLinkType } from "@shared/deep-link";
 
 type Row = CampaignRow & { summary: CampaignSummary | undefined };
+
+/** The most telling date for a campaign, and what it means. */
+function whenOf(c: Row): { label: string; at: string } {
+  if (c.completed_at) return { label: "Finished", at: c.completed_at };
+  if (c.scheduled_at) return { label: "Scheduled", at: c.scheduled_at };
+  return { label: "Created", at: c.created_at };
+}
+
+function fmtWhen(iso: string) {
+  return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
 
 export default function CampaignListPage() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -87,7 +98,7 @@ export default function CampaignListPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search name or title"
-            className="pl-9"
+            className={`pl-9 ${INPUT_TEXT}`}
           />
         </div>
         <label htmlFor="campaign-status" className="sr-only">Status</label>
@@ -105,7 +116,47 @@ export default function CampaignListPage() {
         </Button>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-border bg-card">
+      {/* Phones: one card per campaign. The table below needs ~52rem, which on
+          a phone means scrolling sideways to find the status. */}
+      <ul className="mt-6 space-y-3 sm:hidden">
+        {loading && <li className="rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">Loading…</li>}
+        {!loading && visible.length === 0 && (
+          <li className="rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
+            {rows.length === 0 ? "No campaigns yet." : "Nothing matches."}
+          </li>
+        )}
+        {!loading && visible.map((c) => {
+          const s = c.summary;
+          const w = whenOf(c);
+          const counted = s && c.recipient_device_count !== null;
+          return (
+            <li key={c.id}>
+              <Link
+                href={`/admin/notifications/${c.id}`}
+                className="block rounded-lg border border-border bg-card p-4 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <span className="min-w-0 break-words font-semibold">{c.internal_name}</span>
+                  <CampaignStatusBadge status={c.status} className="shrink-0" />
+                </div>
+                <div className="mt-0.5 truncate text-xs text-muted-foreground">{c.title}</div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {audienceLabel(c.audience_type, c.audience_platform)}
+                  {" · "}{DESTINATION_LABEL[c.destination_type as DeepLinkType] ?? c.destination_type}
+                </div>
+                <div className="mt-1 flex flex-wrap gap-x-3 text-xs tabular-nums">
+                  <span>{c.recipient_device_count ?? "—"} devices</span>
+                  <span>{counted ? s.accepted : "—"} accepted</span>
+                  <span className={counted && s.failed > 0 ? "text-destructive" : ""}>{counted ? s.failed : "—"} failed</span>
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">{w.label} {fmtWhen(w.at)}</div>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="mt-6 hidden overflow-x-auto rounded-lg border border-border bg-card sm:block">
         <table className="w-full min-w-[52rem] text-sm">
           <thead>
             <tr className="border-b border-border text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -132,8 +183,7 @@ export default function CampaignListPage() {
             )}
             {!loading && visible.map((c) => {
               const s = c.summary;
-              const when = c.completed_at ?? c.scheduled_at ?? c.created_at;
-              const whenLabel = c.completed_at ? "Finished" : c.scheduled_at ? "Scheduled" : "Created";
+              const w = whenOf(c);
               return (
                 <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/40">
                   <td className="max-w-[18rem] px-4 py-3">
@@ -151,7 +201,7 @@ export default function CampaignListPage() {
                     {s && c.recipient_device_count !== null ? s.failed : "—"}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
-                    {whenLabel} {new Date(when).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                    {w.label} {fmtWhen(w.at)}
                   </td>
                 </tr>
               );
