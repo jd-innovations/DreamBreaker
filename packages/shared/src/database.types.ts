@@ -5217,6 +5217,7 @@ export type Database = {
           marketplace_listing_limit: number | null
           notif_announcements: boolean
           notif_email_enabled: boolean
+          notif_games: boolean
           notif_hold_expiry: boolean
           notif_liked_you: boolean
           notif_marketplace: boolean
@@ -5280,6 +5281,7 @@ export type Database = {
           marketplace_listing_limit?: number | null
           notif_announcements?: boolean
           notif_email_enabled?: boolean
+          notif_games?: boolean
           notif_hold_expiry?: boolean
           notif_liked_you?: boolean
           notif_marketplace?: boolean
@@ -5343,6 +5345,7 @@ export type Database = {
           marketplace_listing_limit?: number | null
           notif_announcements?: boolean
           notif_email_enabled?: boolean
+          notif_games?: boolean
           notif_hold_expiry?: boolean
           notif_liked_you?: boolean
           notif_marketplace?: boolean

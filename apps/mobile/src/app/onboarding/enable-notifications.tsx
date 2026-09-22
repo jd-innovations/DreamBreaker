@@ -9,6 +9,7 @@ import { radius as shape, text } from '@shared/tokens';
 import { OnboardingCTA, OnboardingProgressBar } from '@/lib/onboarding/components';
 import { useSession } from '@/hooks/useSession';
 import { registerPushTokenForUser, type PushRegistrationResult } from '@/lib/pushNotifications';
+import { saveNotificationPreference } from '@/lib/notificationPreferences';
 import { haptics } from '@/lib/haptics';
 
 const L = colors;
@@ -34,13 +35,34 @@ export default function EnableNotificationsScreen() {
   const [registering, setRegistering] = useState(false);
   const [registrationResult, setRegistrationResult] = useState<PushRegistrationResult | null>(null);
 
+  // This screen used to sit BEFORE create-account, where a first-time user had
+  // no account yet: registerPushTokenForUser had nobody to attach a token to,
+  // so the CTA fell through to the next screen and the system prompt never
+  // appeared. New signups were therefore never actually asked, which is why
+  // almost nobody had a device registered. It now runs after the profile
+  // steps, where user.id always exists (owner-approved 2026-09-22).
   function next() {
-    // The root gate routes signed-in users with an incomplete profile back
-    // through onboarding to fill the gaps. They already have an account, so
-    // skip the create-account step rather than asking them to sign up again —
-    // skipping here (at the source) instead of redirecting out of
-    // create-account keeps the back button from bouncing between the two.
-    router.push(user?.id ? '/onboarding/your-name' : '/onboarding/create-account');
+    router.push('/onboarding/all-set');
+  }
+
+  /**
+   * The three switches used to be component state and nothing else: whatever
+   * the player chose here was discarded on the next screen. They now write the
+   * real preference columns the dispatcher reads, so turning one off at
+   * onboarding actually stops those notifications.
+   *
+   * Best effort, and deliberately not blocking: a failed write leaves the
+   * default (on), which the player can change in Settings. Losing a preference
+   * is worth less than trapping someone in onboarding.
+   */
+  async function savePrefs() {
+    if (!user?.id) return;
+    await Promise.all([
+      saveNotificationPreference(user.id, 'games', prefs.newGames),
+      saveNotificationPreference(user.id, 'newMatch', prefs.partners),
+      saveNotificationPreference(user.id, 'likedYou', prefs.partners),
+      saveNotificationPreference(user.id, 'tournaments', prefs.tournaments),
+    ]);
   }
 
   async function enableNotifications() {
@@ -66,13 +88,16 @@ export default function EnableNotificationsScreen() {
     // explaining what happened is the point.
     if (result.ok) {
       haptics.success();
+      await savePrefs();
       next();
     }
   }
 
   function handleCta() {
     if (registrationResult?.ok || registrationResult?.status === 'permission_denied' || !user?.id) {
-      next();
+      // Preferences are saved even when permission was denied: they govern
+      // in-app notifications and email too, not only push.
+      void savePrefs().finally(next);
       return;
     }
     void enableNotifications();

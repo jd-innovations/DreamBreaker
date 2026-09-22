@@ -301,6 +301,13 @@ export default function NotificationsSettingsScreen() {
             onChange={(next) => { void updatePref('holdExpiry', next); }}
           />
           <ToggleRow
+            icon="tennisball-outline"
+            label="Games"
+            sub="Game invitations and games near you"
+            value={prefs.games}
+            onChange={(next) => { void updatePref('games', next); }}
+          />
+          <ToggleRow
             icon="pricetag-outline"
             label="Marketplace"
             sub="Price drops on listings you saved"

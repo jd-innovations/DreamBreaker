@@ -39,6 +39,8 @@ export type NotificationPreferences = {
   email: boolean;
   /** Honoured by admin push campaigns: false keeps you out of the audience. */
   announcements: boolean;
+  /** Community games: invitations, a saved game starting soon, games near you. */
+  games: boolean;
 };
 
 /**
@@ -59,10 +61,11 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   marketplace: true,
   email: true,
   announcements: true,
+  games: true,
 };
 
 const COLUMNS =
-  'notif_messages, notif_tournaments, notif_new_match, notif_liked_you, notif_hold_expiry, notif_marketplace, notif_email_enabled, notif_announcements';
+  'notif_messages, notif_tournaments, notif_new_match, notif_liked_you, notif_hold_expiry, notif_marketplace, notif_email_enabled, notif_announcements, notif_games';
 
 export type LoadResult =
   | { ok: true; preferences: NotificationPreferences }
@@ -97,6 +100,7 @@ export async function loadNotificationPreferences(userId: string): Promise<LoadR
       marketplace: row.notif_marketplace ?? true,
       email: row.notif_email_enabled ?? true,
       announcements: row.notif_announcements ?? true,
+      games: row.notif_games ?? true,
     },
   };
 }
@@ -130,6 +134,7 @@ export async function saveNotificationPreference(
     : key === 'holdExpiry' ? { notif_hold_expiry: value }
     : key === 'marketplace' ? { notif_marketplace: value }
     : key === 'announcements' ? { notif_announcements: value }
+    : key === 'games' ? { notif_games: value }
     : { notif_email_enabled: value };
 
   const { error } = await supabase

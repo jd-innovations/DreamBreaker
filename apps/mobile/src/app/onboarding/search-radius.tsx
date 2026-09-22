@@ -3,6 +3,7 @@ import { Animated, View, Text, StyleSheet, TouchableOpacity } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useSession } from '@/hooks/useSession';
 import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { text } from '@shared/tokens';
@@ -17,7 +18,17 @@ const AnimatedView = Animated.createAnimatedComponent(View);
 
 type RadiusOption = typeof RADIUS_OPTIONS[number];
 
+// Radius used to lead to enable-notifications, which then chose between
+// create-account and your-name. That screen has moved to after the profile
+// steps (it could not ask for permission before an account existed), so the
+// choice it used to make lives here now: a signed-in user finishing a partial
+// profile skips sign-up rather than being asked to create a second account.
+function nextAfterRadius(hasAccount: boolean) {
+  return hasAccount ? '/onboarding/your-name' : '/onboarding/create-account';
+}
+
 export default function SearchRadiusScreen() {
+  const { user } = useSession();
   const insets = useSafeAreaInsets();
   const { draft, update } = useOnboarding();
   const radiusMiles = normalizeRadius(draft.searchRadiusMiles);
@@ -48,7 +59,7 @@ export default function SearchRadiusScreen() {
         <TouchableOpacity style={s.headerBtn} activeOpacity={0.7} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={24} color={L.navy} />
         </TouchableOpacity>
-        <TouchableOpacity style={s.skipBtn} activeOpacity={0.7} onPress={() => router.push('/onboarding/enable-notifications')}>
+        <TouchableOpacity style={s.skipBtn} activeOpacity={0.7} onPress={() => router.push(nextAfterRadius(!!user?.id))}>
           <Text style={s.skipText}>Skip</Text>
         </TouchableOpacity>
       </View>
@@ -110,7 +121,7 @@ export default function SearchRadiusScreen() {
 
       <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
         <OnboardingProgressBar progress={54} />
-        <OnboardingCTA label="Continue" onPress={() => router.push('/onboarding/enable-notifications')} />
+        <OnboardingCTA label="Continue" onPress={() => router.push(nextAfterRadius(!!user?.id))} />
       </View>
     </View>
   );

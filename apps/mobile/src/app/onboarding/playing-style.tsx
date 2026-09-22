@@ -140,7 +140,7 @@ export default function PlayingStyleScreen() {
 
       <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
         <OnboardingProgressBar progress={90} />
-        <OnboardingCTA label="Continue" disabled={!canContinue} onPress={() => router.push('/onboarding/all-set')} />
+        <OnboardingCTA label="Continue" disabled={!canContinue} onPress={() => router.push('/onboarding/enable-notifications')} />
       </View>
     </View>
   );
