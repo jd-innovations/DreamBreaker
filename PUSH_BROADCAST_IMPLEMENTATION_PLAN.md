@@ -681,8 +681,15 @@ genuinely safe here — prefer forward-fix only once Phase 5 is live.
 > ignored; retry ladder ~25s → ~59s → failed; abort skips the 55 unsent rows and lands
 > `aborted`; fatal halts with rows skipped; all six terminal cases; scheduler claims
 > due campaigns once and leaves future ones; grants service_role only. Live: worker
-> 200 with the secret, 401 without. **Not verified live: a real send through Expo**
-> (needs the kill switch on — owner's decision).
+> 200 with the secret, 401 without.
+>
+> **Live end-to-end, 2026-09-22** (owner-authorised; switch on for ~2 minutes, then off
+> again): campaign `5b5a45c7…` "E2E test 2026-09-22", audience all = 2 devices / 8
+> accounts. The scheduler cron queued it at 03:12:00; the worker cron sent it at
+> 03:13:00; `sending` → `sent` in ~300ms; both deliveries accepted on attempt 1 with
+> Expo tickets; audit `send_claimed` (by scheduler) → `completed`. The owner confirmed
+> the notification arrived on both phones and the tap opened the linked tournament —
+> so `data.url` routes on installed builds with no app change.
 >
 > **Deviations, all deliberate:**
 >
