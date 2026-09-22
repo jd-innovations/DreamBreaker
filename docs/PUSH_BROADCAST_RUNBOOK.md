@@ -34,7 +34,7 @@ admin UI shows the last six characters on purpose; that is enough to match a rep
 
 | Lever | How | Effect |
 | --- | --- | --- |
-| **Kill switch** | Admin → Settings → *Push broadcasts* → off. Or: `update platform_settings set value = 'false' where key = 'push_broadcast_enabled';` | No new campaign starts; a sending campaign stops at its next batch (within ~1 minute). Resumes where it left off when switched back on |
+| **Kill switch** | Admin → Settings → *Push broadcasts* → off → **press Save** (the toggle alone changes nothing). Or: `update platform_settings set value = 'false' where key = 'push_broadcast_enabled';` | No new campaign starts; a sending campaign stops at its next batch (within ~1 minute). Resumes where it left off when switched back on |
 | **Abort one campaign** | Campaign page → **Abort** | Unsent deliveries become `skipped`; the campaign ends `aborted`. Already-sent messages still arrive |
 | **Stop the worker** | `select cron.unschedule('campaign-batch-worker');` | All sending halts, no deploy. Re-create the job from `20260921210100_campaign_worker_jobs.sql` to resume |
 | **Revert the admin UI** | Promote the previous Vercel deployment | Nobody can compose new campaigns |
