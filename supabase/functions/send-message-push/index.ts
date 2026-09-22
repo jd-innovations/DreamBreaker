@@ -55,11 +55,13 @@ import { checkDispatch } from "../_shared/dispatch-gate.ts";
 // token through this function. See _shared/dispatch-gate.ts.
 
 /**
- * Transition switch. true only until both triggers send `kind` payloads
- * (verified from logs: no `[send-message-push] legacy token payload` lines),
- * then false and redeploy — that is the moment 0b's guarantee takes effect.
+ * Transition switch, now OFF (2026-09-22). Both triggers send `kind` payloads
+ * since 20260921200100; real DMs were delivered through the new path, and no
+ * legacy payload was logged after the switch. A token list is refused with
+ * `tokens_not_accepted`. Do not turn this back on except as a rollback
+ * alongside restoring the 20260921180000 trigger bodies.
  */
-const ACCEPT_LEGACY_TOKENS = true;
+const ACCEPT_LEGACY_TOKENS = false;
 
 type PushRequest =
   | { kind: "message"; messageId: string }

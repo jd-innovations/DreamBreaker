@@ -472,6 +472,57 @@ irreversible from that point and forward-fix instead.
 
 # Phase 2 — Authenticated campaign API and server-side audience snapshot
 
+> **Status 2026-09-22: DONE, including Phase 0b.** Migrations
+> `20260921200000_campaign_api.sql` and `20260921200100_push_triggers_send_ids.sql`
+> applied; `send-message-push`, `admin-campaign-send` and `admin-campaign-test-send`
+> deployed. The campaign API is dormant until Phase 5's UI.
+>
+> **0b is live.** Both triggers send only `{ kind, id }`; `send-message-push` resolves
+> recipients and text itself and refuses a token list (`tokens_not_accepted`, verified
+> with a valid dispatch secret). Real DMs delivered through the new path before the
+> legacy path was switched off.
+>
+> **Verified** (rolled-back dry run, then live): every admin RPC refuses anon and
+> non-admins; both functions 401 without a user JWT; destination validation rejects
+> `javascript:`, `data:`, other hosts, `www.`, bare roots, personal routes, query
+> strings; the claim succeeds once, then `already_claimed`; wrong key → `key_mismatch`;
+> snapshot re-run changes nothing; opted-out users and `unknown` devices on a platform
+> campaign excluded; preview counts equal snapshot counts; every mutation audited; the
+> 21st preview in a minute is rate-limited; 138 shared tests incl. an oracle proving
+> the moved deep-link resolver is behaviour-identical, and a drift test pinning the
+> SQL pattern to the TypeScript one. NOT verified live: the admin happy path of the
+> two edge functions (needs an admin JWT — first exercised by Phase 5) and a live price
+> drop (no saved listings in production; the resolver was exercised in the dry run).
+>
+> **Deviations, all deliberate:**
+>
+> 1. **Devices are distinct tokens.** `push_tokens` is keyed on `(user_id, token)`, and
+>    one phone signed into several accounts is registered once per account (production:
+>    8 rows, 2 devices). Preview, snapshot and stored counts all count distinct tokens;
+>    one delivery per device.
+> 2. **Send requires `scheduled`.** The claim is `status = 'scheduled'` plus a matching
+>    idempotency key, not `status in ('draft','scheduled')`: a draft has no key, and
+>    scheduling is what freezes content. "Send now" = schedule for now, then send. A
+>    campaign scheduled for later returns `not_due` until its time.
+> 3. **Claim and snapshot are one service-role function** (`claim_campaign_send`), one
+>    transaction — a failed snapshot leaves the campaign `scheduled`, not stranded.
+> 4. **Broadcast destinations are a subset:** tournament, community, marketplace, group,
+>    coach offer. Conversation, booking, claim and review are per-person routes.
+> 5. **Cancel also discards drafts; abort also stops `queuing`.** There was no other way
+>    to discard a draft, and a campaign mid-snapshot is as abortable as one mid-send.
+> 6. **0b price drop carries only `listingId`** — the text comes from the in-app
+>    notification the trigger just wrote, so there is no amount to forge. DM and price
+>    drop are both limited to rows from the last 10 minutes.
+> 7. **Rate limits count the audit log** (preview 20/min, test-send 5/min per admin),
+>    the repo's count-existing-rows pattern. Previews are therefore audited.
+> 8. **Triggers keep a cheap "anyone else has a device?" guard** so a conversation
+>    nobody has the app for costs no edge invocation. The real rules live only in the
+>    resolvers.
+>
+> **Found, not fixed (owner's call):** a signed-out account's token stays on the phone,
+> so one device can receive another account's DMs; and price-drop pushes carry
+> `listingId`, which the app does not route on, so tapping one does nothing.
+
 > **Includes Phase 0b (moved here 2026-09-22).** `send-message-push` stops
 > accepting `tokens` and resolves recipients server-side, for BOTH callers in one
 > change: DMs (`{ kind: "message", messageId }` → `resolve_message_push_recipients`)
