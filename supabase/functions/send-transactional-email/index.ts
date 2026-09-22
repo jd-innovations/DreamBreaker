@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { escapeHtml, renderEmail, renderText } from "../_shared/email-shell.ts";
+import { checkEmailCaller } from "../_shared/email-gate.ts";
 
 // Single shared sender for all real transactional email in this app —
 // either template-driven (looks up email_templates by key, substitutes
@@ -8,6 +9,10 @@ import { escapeHtml, renderEmail, renderText } from "../_shared/email-shell.ts";
 // used by the admin Communications broadcast composer). Not a relay like
 // send-message-push: this one owns the real Resend secret and is the only
 // place it should ever live.
+//
+// Callers are gated (_shared/email-gate.ts): the database with the dispatch
+// secret, server code with the service-role key, or a signed-in admin. It was
+// an open relay until 2026-09-22 — the anon key alone could send anything.
 
 const FROM = "Pickleball App <notifications@pickleballapp.app>";
 
@@ -108,6 +113,11 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
+
+  // Before the body is read: an unauthorised caller learns nothing about
+  // templates, validation or configuration.
+  const refused = await checkEmailCaller(req, supabase);
+  if (refused) return refused;
 
   const resendKey = Deno.env.get("RESEND_API_KEY");
 

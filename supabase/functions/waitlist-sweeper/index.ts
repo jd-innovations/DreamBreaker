@@ -21,14 +21,17 @@ async function sendTemplateEmail(
   variables: Record<string, string>,
   idempotencyKey: string,
 ): Promise<void> {
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  if (!anonKey) {
-    console.error("[waitlist-sweeper] SUPABASE_ANON_KEY not available, skipping email");
+  // Service-role key, not the anon key: send-transactional-email only accepts
+  // the database's dispatch secret, the service-role key, or an admin
+  // (_shared/email-gate.ts). The anon key is public — it ships in the app.
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!serviceKey) {
+    console.error("[waitlist-sweeper] SUPABASE_SERVICE_ROLE_KEY not available, skipping email");
     return;
   }
   const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-transactional-email`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${anonKey}` },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
     body: JSON.stringify({ to, templateKey, variables, idempotencyKey }),
   });
   if (!res.ok) {
