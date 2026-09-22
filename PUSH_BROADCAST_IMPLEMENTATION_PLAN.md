@@ -1,6 +1,6 @@
 # Push Notification Broadcasting — Corrected Implementation Plan
 
-**Status: PARKED 2026-09-21 by the product owner. Nothing here has been implemented.**
+**Status: Phases 1–7 PARKED 2026-09-21 by the product owner. Phase 0a/0c DONE and enforcing 2026-09-22; 0b blocked on a decision (see Phase 0).**
 
 Not rejected — deferred. The plan is complete and all eighteen decisions are settled, so
 resuming means picking up at Phase 0 with no re-litigation. Decisions 16–18 were answered
