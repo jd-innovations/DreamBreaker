@@ -100,9 +100,10 @@ commit: `git merge-base --is-ancestor <live-sha> <branch>`.
 
 1. **Email gate** — `EMAIL_RELAY_REMEDIATION.md`: deploy the three functions (log
    mode), let Claude read the `[email-gate]` logs, then flip to enforce and redeploy.
-2. **Staged rollout** — `docs/DEVICE_QA_CHECKLIST.md` → *Push broadcast — Phase 7*:
-   switch on, one real campaign to yourself (every production device is yours), cases
-   1–13, switch off. This is also Phase 6's last check (a real tap counted).
+2. **Remaining device cases** — `docs/DEVICE_QA_CHECKLIST.md` → *Push broadcast —
+   Phase 7*. Run 1 (2026-09-22) passed cases 1, 4, 5: a real campaign, foreground tap
+   routed, tap counted, receipts `ok`. Background, terminated, opt-out etc. remain.
+   The Settings toggle needs **Save**.
 3. **Web promote** — `6810e04` onward carries the web push-token scrub and the
    `alert_sent` label. (The mobile scrub was published as an OTA on 2026-09-22.)
 

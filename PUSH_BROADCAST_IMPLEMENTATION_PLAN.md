@@ -1324,9 +1324,19 @@ preference column cannot be rolled back once clients read it — forward-fix onl
 > keeps receiving campaigns through any account still opted in. Fixing sign-out
 > token removal fixes this too.
 >
-> **Remaining (owner):** the email-gate deploy → enforce; then the staged rollout —
-> switch on, a real campaign to yourself, device cases 1–13, switch off. That run is
-> also Phase 6's last check (a real tap counted).
+> **Rollout run 1, 2026-09-22** (owner; switch on ~13:24 → off 13:48 UTC): campaign
+> `fc6b47b0…` "Rollout test 1", All users → 2 devices (the owner's phone + a stale
+> token from an old install). Admin "Send now" through the live `admin-campaign-send`
+> (first live use of that path): scheduled 13:24:53, queued 13:24:54, sent and
+> finished 13:25:04; both accepted on attempt 1, tickets linked; receipts `ok`,
+> reconciled 13:45:01; **1 tap counted** on the tap-capable phone — Phase 6's last
+> check. The foreground tap opened the right tournament. No alerts (correct).
+> Gotchas: the admin Settings toggle needs **Save** (now in the runbook); and the
+> signed-in account had Announcements off from the Phase 6 test, which would have
+> marked the phone incapable (its other accounts' rows are stale) — turned back on first.
+>
+> **Remaining (owner):** the email-gate deploy → enforce; device cases 2–3 and 6–13
+> (background, terminated, opt-out, …) with further campaigns when convenient.
 
 ## Automated tests
 
