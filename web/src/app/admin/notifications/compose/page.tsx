@@ -17,8 +17,8 @@ import {
   type AudienceChoice, type LengthState,
 } from "@/lib/campaigns/campaign-logic";
 import {
-  confirmSend, getBroadcastConfig, getCampaign, previewAudience, saveDraft,
-  type AudiencePreview, type BroadcastConfig,
+  confirmSend, getBroadcastConfig, getCampaign, previewAudience, previewDestination, saveDraft,
+  type AudiencePreview, type BroadcastConfig, type DestinationLookup,
 } from "@/lib/campaigns/campaign-service";
 import type { DeepLinkType } from "@shared/deep-link";
 
@@ -85,6 +85,22 @@ function Composer() {
   const titleState = lengthState(title, TITLE_WARN, TITLE_MAX);
   const bodyState = lengthState(body, BODY_WARN, BODY_MAX);
   const destination = useMemo(() => buildDestination(destType, destId), [destType, destId]);
+
+  // What the id actually points at. Looked up after typing pauses; a result
+  // is only trusted for the URL it was fetched for, so a stale answer never
+  // labels a different id.
+  const [lookup, setLookup] = useState<{ url: string; result: DestinationLookup } | null>(null);
+  const destUrl = destination.ok ? destination.url : null;
+  useEffect(() => {
+    if (!destUrl) return;
+    const t = setTimeout(() => {
+      void previewDestination(destUrl).then((r) => {
+        if (r.ok) setLookup({ url: destUrl, result: r.data });
+      });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [destUrl]);
+  const target = destUrl && lookup?.url === destUrl ? lookup.result : null;
   const when = timing === "later" ? scheduleInstant(scheduleLocal) : null;
   const tz = useMemo(() => timezoneLabel(), []);
 
@@ -129,6 +145,16 @@ function Composer() {
     try {
       const saved = await persist();
       if (!saved) return;
+      // Fresh check, not the debounced one: the server refuses to schedule a
+      // destination that matches nothing, so say so before the dialog opens.
+      if (destination.ok) {
+        const t = await previewDestination(destination.url);
+        if (t.ok && !t.data.found) {
+          toast.error(`No ${(DESTINATION_LABEL[destination.type] ?? "item").toLowerCase()} has that id.`);
+          return;
+        }
+        if (t.ok) setLookup({ url: destination.url, result: t.data });
+      }
       setPreview(null);
       setPreviewError(null);
       setConfirmOpen(true);
@@ -171,7 +197,10 @@ function Composer() {
     body: body.trim(),
     audienceLabel: audienceLabel(audience === "all" ? "all" : "platform", audience === "all" ? null : audience),
     isPlatformAudience: audience !== "all",
-    destinationLabel: destination.ok ? (DESTINATION_LABEL[destination.type] ?? destination.type) : "",
+    destinationLabel: destination.ok
+      ? `${DESTINATION_LABEL[destination.type] ?? destination.type}${target?.found ? `: ${target.label}` : ""}`
+      : "",
+    destinationWarning: target?.found ? target.warning : null,
     destinationUrl: destination.ok ? destination.url : "",
     timingLabel: timing === "now"
       ? "Now"
@@ -269,9 +298,28 @@ function Composer() {
               <input id="dest-id" placeholder="Id, or paste a link" value={destId} onChange={(e) => setDestId(e.target.value)}
                 aria-describedby="dest-msg" className={cn(inputClass(showErrors && !destination.ok), "font-mono text-sm")} />
             </div>
-            <p id="dest-msg" className={cn("mt-2 text-xs", destination.ok ? "text-muted-foreground" : showErrors ? "text-destructive" : "text-muted-foreground")}>
-              {destination.ok ? <span className="break-all font-mono">{destination.url}</span> : destination.message}
-            </p>
+            <div id="dest-msg" className="mt-2 space-y-1 text-xs" aria-live="polite">
+              {!destination.ok ? (
+                <p className={showErrors ? "text-destructive" : "text-muted-foreground"}>{destination.message}</p>
+              ) : (
+                <>
+                  <p className="break-all font-mono text-muted-foreground">{destination.url}</p>
+                  {!target ? (
+                    <p className="text-muted-foreground">Checking…</p>
+                  ) : target.found ? (
+                    <p>
+                      <span className="font-semibold">{target.label || "Untitled"}</span>
+                      {target.status && <span className="text-muted-foreground"> · {target.status.replace(/_/g, " ")}</span>}
+                      {target.warning && <span className="block text-destructive">{target.warning}</span>}
+                    </p>
+                  ) : (
+                    <p className="text-destructive">
+                      No {(DESTINATION_LABEL[destination.type] ?? "item").toLowerCase()} has that id. It can be saved as a draft but not sent.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
           </fieldset>
 
           <fieldset>

@@ -75,13 +75,24 @@ Status box in the plan has the full record. In short:
 
 Web admin at `/admin/notifications` (list, `compose`, `[id]` detail), linked from the
 admin sidebar as "Push Campaigns". Server layout 404s non-admins. Design-token classes
-only. Full record in the plan's Phase 5 Status box. **Not deployed:** web production is
-a manual promote of a preview deployment. **Not browser-tested** against a real admin
-session yet — do that on the preview before promoting.
+only. Full record in the plan's Phase 5 Status box. **Live:** production promoted to
+`58b0e84` on 2026-09-22 (verified: the three routes redirect signed-out visitors to
+`/auth`). Not yet exercised by the owner with a real admin session.
 
 - New setting `push_broadcast_send_confirm_threshold = '100'` (typed-SEND gate).
 - "Review and send" is disabled while `push_broadcast_enabled` is off; drafts and
   "Send me a test" still work.
+- **Destination lookup (loose end, 2026-09-22):** the composer shows the name and status
+  of the item an id points at; `admin_schedule_campaign` refuses an id that matches
+  nothing (`destination_not_found`). Non-live targets (sold, cancelled, private, paused)
+  warn but do not block.
+
+### Production branch
+
+Web production is a promoted preview. `feature/marketplace-map` was fast-forwarded to
+`feature/push-broadcast` on 2026-09-22, so both branches hold the same history and
+either is safe to promote. Before promoting ANY branch, check it contains the live
+commit: `git merge-base --is-ancestor <live-sha> <branch>`.
 
 ## Open items
 
@@ -96,11 +107,10 @@ session yet — do that on the preview before promoting.
 - **`prune_push_tickets()` is executable by anon and authenticated** (its 2026-08-31
   migration only revoked from `public`). Low impact — it deletes only tickets past 24h —
   but it is a public RPC. Owner's call.
-- **Four admin pages redirect signed-out users to `/login`, which does not exist**
-  (`email-preview`, `facility-applications`, `reviews`, `wallet`); sign-in is `/auth`.
-  Pre-existing; not fixed.
-- **The composer can't check that a destination id exists.** A typo sends everyone to
-  an error screen. The test send is the practical check until a lookup is added.
+- **Sign-in bounces lose their return path in 9 pages.** `groups` (list, create, detail,
+  edit, join), `matchmaking`, and `play` (create, join, manage) send `/auth?redirect=…`,
+  but `/auth` reads only `?next=`, so the user lands on the dashboard instead of where
+  they were. Found 2026-09-22; not fixed (owner's call).
 
 ---
 

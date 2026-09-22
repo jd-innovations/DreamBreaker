@@ -22,6 +22,8 @@ export type ConfirmSummary = {
   isPlatformAudience: boolean;
   destinationLabel: string;
   destinationUrl: string;
+  /** Non-blocking: the target exists but is not live (sold, cancelled, private…). */
+  destinationWarning: string | null;
   timingLabel: string;
   sendNow: boolean;
 };
@@ -76,6 +78,12 @@ export function CampaignConfirmDialog({
           <dd>
             {summary.destinationLabel}
             <span className="block break-all font-mono text-[11px] text-muted-foreground">{summary.destinationUrl}</span>
+            {summary.destinationWarning && (
+              <span className="mt-1 flex items-start gap-1.5 text-destructive">
+                <WarningCircle size={14} className="mt-0.5 flex-shrink-0" />
+                {summary.destinationWarning}
+              </span>
+            )}
           </dd>
           <dt className="text-muted-foreground">When</dt>
           <dd>{summary.timingLabel}</dd>

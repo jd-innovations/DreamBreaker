@@ -132,6 +132,20 @@ export async function previewAudience(choice: AudienceChoice): Promise<Result<Au
   return { ok: true, data: row };
 }
 
+/** What a destination actually points at (20260922120000_campaign_destination_lookup.sql). */
+export type DestinationLookup =
+  | { found: true; label: string; status: string | null; warning: string | null }
+  | { found: false; reason: string };
+
+export async function previewDestination(url: string): Promise<Result<DestinationLookup>> {
+  const { data, error } = await createClient().rpc("admin_campaign_destination_preview", { p_url: url });
+  if (error) return fail(rpcErrorMessage(error));
+  const d = (data ?? {}) as { found?: boolean; label?: string; status?: string | null; warning?: string | null; reason?: string };
+  return d.found
+    ? { ok: true, data: { found: true, label: d.label ?? "", status: d.status ?? null, warning: d.warning ?? null } }
+    : { ok: true, data: { found: false, reason: d.reason ?? "not_found" } };
+}
+
 export async function cancelCampaign(id: string): Promise<Result<null>> {
   const { error } = await createClient().rpc("admin_cancel_campaign", { p_campaign_id: id });
   return error ? fail(rpcErrorMessage(error)) : { ok: true, data: null };

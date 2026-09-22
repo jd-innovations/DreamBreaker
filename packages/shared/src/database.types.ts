@@ -7630,6 +7630,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_campaign_destination_preview: {
+        Args: { p_url: string }
+        Returns: Json
+      }
       admin_campaign_summary: {
         Args: { p_campaign_id?: string }
         Returns: {

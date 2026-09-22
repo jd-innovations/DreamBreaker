@@ -1037,6 +1037,15 @@ unreconciled but harms nothing else. Unschedule the prune job to stop deletion i
 >    capped); counts above them come from the summary and are exact.
 > 9. The detail page shows receipt counts, frozen-at and pruned states (Phase 4).
 >
+>
+> **Loose ends closed 2026-09-22 (after the promote):** migration
+> `20260922120000_campaign_destination_lookup.sql` — `admin_campaign_destination_preview`
+> shows what an id points at (name, status, warning when not live), and
+> `admin_schedule_campaign` refuses a destination that matches nothing. The composer shows
+> the target as you type and blocks Review and send on "not found". The four older admin
+> pages that bounced signed-out users to the non-existent `/login` now use
+> `/auth?next=<page>`, as does this gate.
+>
 > **Not verified:** the pages were not exercised in a browser against a real admin
 > session — that needs the owner signed in on a preview deployment.
 
