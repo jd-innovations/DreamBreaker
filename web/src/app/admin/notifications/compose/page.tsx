@@ -27,7 +27,7 @@ import type { DeepLinkType } from "@shared/deep-link";
 
 export default function ComposePage() {
   return (
-    <Suspense fallback={<main className="mx-auto max-w-5xl px-6 py-10 text-sm text-muted-foreground">Loading…</main>}>
+    <Suspense fallback={<div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 text-sm text-muted-foreground">Loading…</div>}>
       <Composer />
     </Suspense>
   );
@@ -212,11 +212,11 @@ function Composer() {
   };
 
   if (loading) {
-    return <main className="mx-auto max-w-5xl px-6 py-10 text-sm text-muted-foreground">Loading draft…</main>;
+    return <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 text-sm text-muted-foreground">Loading draft…</div>;
   }
   if (blocked) {
     return (
-      <main className="mx-auto max-w-5xl px-6 py-10">
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
         <BackLink />
         <p className="mt-6 text-sm">{blocked}</p>
         {id && (
@@ -224,12 +224,12 @@ function Composer() {
             Open the campaign →
           </Link>
         )}
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
+    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <BackLink />
       <h1 className="mt-4 font-display text-3xl tracking-wide">{id ? "Edit draft" : "New push campaign"}</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -353,7 +353,7 @@ function Composer() {
           </div>
         </form>
 
-        <aside className="lg:sticky lg:top-8 lg:self-start">
+        <aside className="lg:sticky lg:top-24 lg:self-start">
           <h2 className="mb-3 text-sm font-semibold">Preview</h2>
           <CampaignPreview title={title} body={body} />
           <p className="mt-3 text-xs text-muted-foreground">
@@ -372,7 +372,7 @@ function Composer() {
         busy={sending}
         onConfirm={() => void onConfirm()}
       />
-    </main>
+    </div>
   );
 }
 

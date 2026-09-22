@@ -33,7 +33,7 @@ import {
 
 export default function AdminMarketplacePage() {
   return (
-    <Suspense fallback={<main className="mx-auto max-w-5xl px-4 py-10 text-sm text-muted-foreground sm:px-6">Loading…</main>}>
+    <Suspense fallback={<div className="mx-auto max-w-5xl px-4 py-10 text-sm text-muted-foreground sm:px-6">Loading…</div>}>
       <Moderation />
     </Suspense>
   );
@@ -128,7 +128,7 @@ function Moderation() {
   const reasonOk = reason.trim().length >= 3 && reason.trim().length <= 500;
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft size={14} /> Admin
       </Link>
@@ -276,6 +276,6 @@ function Moderation() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </main>
+    </div>
   );
 }

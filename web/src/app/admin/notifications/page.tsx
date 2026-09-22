@@ -65,7 +65,7 @@ export default function CampaignListPage() {
   }, [rows, query, status]);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft size={14} /> Admin
       </Link>
@@ -212,6 +212,6 @@ export default function CampaignListPage() {
       {!loading && rows.length >= 500 && (
         <p className="mt-2 text-xs text-muted-foreground">Showing the newest 500 campaigns.</p>
       )}
-    </main>
+    </div>
   );
 }

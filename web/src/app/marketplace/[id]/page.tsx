@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import { createClient } from "@/lib/supabase/server";
 import { buildEntityMetadata } from "@/lib/og/metadata";
 import { fetchMarketplaceListingOg } from "@/lib/og/fetchers";
@@ -95,9 +97,12 @@ export default async function MarketplaceListingPage({
   const isSold = listing.status === "sold";
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto w-full max-w-5xl px-5 py-10 sm:px-8 sm:py-14">
-        <p className="font-mono text-xs uppercase tracking-[0.28em] text-primary">
+    <div>
+      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-8 sm:py-14">
+        <Link href="/marketplace" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft size={14} aria-hidden /> All listings
+        </Link>
+        <p className="mt-4 font-mono text-xs uppercase tracking-[0.28em] text-primary">
           Pickleball App Marketplace
         </p>
 
@@ -164,9 +169,9 @@ export default async function MarketplaceListingPage({
 
             <div className="space-y-3 rounded-2xl border border-border bg-card/60 p-5">
               <p className="text-sm text-muted-foreground">
-                {isSold
-                  ? "This paddle has been sold. Browse the rest of the marketplace in the app."
-                  : "Offers and messages with the seller happen in the app."}
+                {isSold ? (
+                  <>This paddle has been sold. <Link href="/marketplace" className="text-primary underline-offset-4 hover:underline">Browse other listings</Link>.</>
+                ) : "Offers and messages with the seller happen in the app."}
               </p>
               <a
                 href={appUrl}
@@ -178,6 +183,6 @@ export default async function MarketplaceListingPage({
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

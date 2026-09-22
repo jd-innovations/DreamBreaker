@@ -68,7 +68,7 @@ export default async function MarketplacePage({
     || filters.minDollars !== null || filters.maxDollars !== null);
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <div>
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
         <p className="font-mono text-xs uppercase tracking-[0.28em] text-primary">Pickleball App Marketplace</p>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
@@ -211,6 +211,6 @@ export default async function MarketplacePage({
           </>
         )}
       </div>
-    </main>
+    </div>
   );
 }

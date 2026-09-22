@@ -17,6 +17,7 @@
 // Signed-in only: the layout redirects signed-out visitors.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import { PageShell } from "@/components/layout/page-shell";
@@ -259,7 +260,9 @@ function ContactsTab({ me, onMessage }: { me: string; onMessage: (p: DirectoryPl
 
 function MessageOverlay({ me, player, onClose }: { me: string; player: DirectoryPlayer; onClose: () => void }) {
   const recipient: MessagingUserProfile = { id: player.id, full_name: player.name, role: "player", avatar_url: player.avatarUrl };
-  return (
+  // Portalled to <body>: rendered in place it sits before the shell's floating
+  // bottom nav, which (same z-index, later in the page) would cover the chat.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/80 p-4 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-label={`Message ${player.name}`}>
       <div className="flex h-[min(620px,90vh)] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-2xl">
         <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
@@ -272,6 +275,7 @@ function MessageOverlay({ me, player, onClose }: { me: string; player: Directory
           <MessagingPanel currentUserId={me} allUsers={[recipient]} initialRecipientId={player.id} compact />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

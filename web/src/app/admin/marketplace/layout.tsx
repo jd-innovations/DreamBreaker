@@ -7,6 +7,7 @@
 
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { PageShell } from "@/components/layout/page-shell";
 
 export default async function MarketplaceAdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -16,5 +17,7 @@ export default async function MarketplaceAdminLayout({ children }: { children: R
   const { data: isAdmin } = await supabase.rpc("is_admin");
   if (isAdmin !== true) notFound();
 
-  return <>{children}</>;
+  // Inside the site shell (no footer) so the header gives navigation from any
+  // admin tool page; PageShell supplies <main>.
+  return <PageShell hideFooter>{children}</PageShell>;
 }
