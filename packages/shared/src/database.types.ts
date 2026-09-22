@@ -8484,6 +8484,33 @@ export type Database = {
           tournaments_hosted: number
         }[]
       }
+      directory_map_pins: {
+        Args: { p_lat: number; p_lng: number; p_radius_meters?: number }
+        Returns: {
+          key: string
+          kind: string
+          label: string
+          lat: number
+          lng: number
+          player_count: number
+          sublabel: string
+        }[]
+      }
+      directory_map_players: {
+        Args: { p_key: string; p_kind: string }
+        Returns: {
+          avatar_url: string
+          dupr: number
+          full_name: string
+          handle: string
+          id: string
+          is_connected: boolean
+          location_city: string
+          location_state: string
+          mutual_count: number
+          self_rating: string
+        }[]
+      }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
