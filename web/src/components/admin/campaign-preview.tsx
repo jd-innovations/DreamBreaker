@@ -22,7 +22,7 @@ export function CampaignPreview({ title, body }: { title: string; body: string }
     <div className="grid gap-3 sm:grid-cols-2">
       <figure>
         <figcaption className="mb-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">iOS</figcaption>
-        <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+        <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <AppIcon />
             <span className="font-semibold uppercase tracking-wide">{APP_NAME}</span>
@@ -34,7 +34,7 @@ export function CampaignPreview({ title, body }: { title: string; body: string }
       </figure>
       <figure>
         <figcaption className="mb-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Android</figcaption>
-        <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+        <div className="rounded-md border border-border bg-card p-3 shadow-sm">
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <AppIcon />
             <span>{APP_NAME}</span>

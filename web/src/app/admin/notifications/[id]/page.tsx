@@ -14,6 +14,7 @@ import { ArrowLeft, DeviceMobile, PencilSimple, Prohibit, StopCircle } from "@ph
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { CampaignPreview } from "@/components/admin/campaign-preview";
 import { CampaignStatusBadge } from "@/components/admin/campaign-status-badge";
 import {
@@ -136,10 +137,11 @@ export default function CampaignDetailPage() {
             </ActionButton>
           )}
           {canEdit(c.status) && (
-            <Link href={`/admin/notifications/compose?id=${c.id}`}
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
-              <PencilSimple size={16} /> Edit and send
-            </Link>
+            <Button asChild variant="secondary">
+              <Link href={`/admin/notifications/compose?id=${c.id}`}>
+                <PencilSimple size={16} /> Edit and send
+              </Link>
+            </Button>
           )}
           {canCancel(c.status) && (
             <ActionButton onClick={() => setDialog("cancel")} disabled={busy} icon={<Prohibit size={16} />}>
@@ -147,10 +149,9 @@ export default function CampaignDetailPage() {
             </ActionButton>
           )}
           {canAbort(c.status) && (
-            <button type="button" onClick={() => setDialog("abort")} disabled={busy}
-              className="inline-flex items-center gap-2 rounded-full bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground disabled:opacity-40">
+            <Button type="button" variant="destructive" onClick={() => setDialog("abort")} disabled={busy}>
               <StopCircle size={16} /> Abort
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -318,7 +319,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
+    <section className="rounded-lg border border-border bg-card p-5">
       <h2 className="mb-3 text-sm font-semibold">{title}</h2>
       {children}
     </section>
@@ -349,10 +350,9 @@ function ActionButton({ onClick, disabled, icon, children }: {
   onClick: () => void; disabled: boolean; icon: React.ReactNode; children: React.ReactNode;
 }) {
   return (
-    <button type="button" onClick={onClick} disabled={disabled}
-      className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold disabled:opacity-40">
+    <Button type="button" variant="outline" onClick={onClick} disabled={disabled}>
       {icon} {children}
-    </button>
+    </Button>
   );
 }
 
@@ -375,15 +375,13 @@ function ActionDialog({ open, onOpenChange, title, description, confirmLabel, ic
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2">
-          <button type="button" disabled={busy} onClick={() => onOpenChange(false)}
-            className="rounded-full border border-border px-4 py-2 text-sm font-semibold disabled:opacity-40">
+          <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
             Keep it
-          </button>
-          <button type="button" disabled={busy} onClick={onConfirm}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-destructive px-5 py-2 text-sm font-semibold text-destructive-foreground disabled:opacity-40">
+          </Button>
+          <Button type="button" variant="destructive" disabled={busy} onClick={onConfirm}>
             {icon}
             {busy ? "Working…" : confirmLabel}
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

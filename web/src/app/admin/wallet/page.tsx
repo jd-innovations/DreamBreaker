@@ -23,6 +23,10 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { FIELD, SELECT } from "@/components/ui/field-classes";
 
 // Only the types admin_grant_wallet_item accepts. `credit` and `membership` are
 // excluded server-side too: nothing decrements remaining_value_amount and no
@@ -414,15 +418,15 @@ export default function AdminWalletPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-6 space-y-8">
+    <div className="mx-auto max-w-3xl space-y-8 px-6 py-10">
       <div>
-        <h1 className="text-2xl font-bold">Wallet grants</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="font-display text-3xl tracking-wide">Wallet grants</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Issue a promo to one person, or withdraw one. Everything here is recorded against your account.
         </p>
       </div>
 
-      <section className="space-y-3 rounded-md border p-4">
+      <section className="space-y-3 rounded-lg border bg-card p-4 text-card-foreground">
         <h2 className="text-lg font-semibold">Voucher pool</h2>
         <p className="text-xs text-muted-foreground">
           Codes cut in Shopify and pasted here. One is assigned automatically when a membership is
@@ -432,15 +436,15 @@ export default function AdminWalletPage() {
         {stock.length === 0 ? (
           <p className="text-sm text-muted-foreground">No codes uploaded yet.</p>
         ) : (
-          <ul className="divide-y rounded-md border text-sm">
+          <ul className="divide-y rounded-md border bg-background text-sm">
             {stock.map((row) => (
-              <li key={row.partner_id} className="flex items-center justify-between px-3 py-2">
+              <li key={row.partner_id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                 <span className="font-medium">{row.partner_name}</span>
                 <span className="text-muted-foreground">
                   {/* Red at zero: comping a membership with an empty pool
                       succeeds and silently issues nothing, so this number is
                       the only warning there is. */}
-                  <span className={row.available === 0 ? "font-semibold text-red-600" : "font-semibold text-foreground"}>
+                  <span className={row.available === 0 ? "font-semibold text-destructive" : "font-semibold text-foreground"}>
                     {row.available} available
                   </span>
                   {" · "}{row.assigned} issued
@@ -451,11 +455,12 @@ export default function AdminWalletPage() {
           </ul>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm">
-            Partner
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="pool-partner">Partner</Label>
             <select
-              className="mt-1 w-full rounded-md border px-3 py-2"
+              id="pool-partner"
+              className={SELECT}
               value={poolPartnerId}
               onChange={(e) => setPoolPartnerId(e.target.value)}
             >
@@ -464,34 +469,36 @@ export default function AdminWalletPage() {
                 <option key={x.id} value={x.id}>{x.name}</option>
               ))}
             </select>
-          </label>
-          <label className="text-sm">
-            Batch label
-            <input
-              className="mt-1 w-full rounded-md border px-3 py-2"
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pool-batch">Batch label</Label>
+            <Input
+              id="pool-batch"
               placeholder="e.g. 2026-09 launch"
               value={batchLabel}
               onChange={(e) => setBatchLabel(e.target.value)}
             />
-          </label>
+          </div>
         </div>
 
-        <label className="block text-sm">
-          Codes
+        <div className="space-y-1.5">
+          <Label htmlFor="pool-codes">Codes</Label>
           <textarea
-            className="mt-1 w-full rounded-md border px-3 py-2 font-mono text-xs"
+            id="pool-codes"
+            className={`${FIELD} font-mono text-xs`}
             rows={5}
             placeholder={"One per line, or comma separated\nPGD-XXXX-1\nPGD-XXXX-2"}
             value={codesText}
             onChange={(e) => setCodesText(e.target.value)}
           />
-        </label>
+        </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <input
             type="file"
             accept=".csv,.txt"
-            className="text-xs"
+            aria-label="Load codes from a file"
+            className="text-xs text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-foreground hover:file:bg-secondary"
             onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
@@ -502,40 +509,36 @@ export default function AdminWalletPage() {
               e.target.value = "";
             }}
           />
-          <button
-            className="rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
-            onClick={uploadCodes}
-            disabled={uploading}
-          >
+          <Button variant="secondary" onClick={uploadCodes} disabled={uploading}>
             {uploading ? "Uploading…" : "Add to pool"}
-          </button>
+          </Button>
         </div>
       </section>
 
       <section className="space-y-3">
-        <label className="text-sm font-semibold">Find someone</label>
+        <Label htmlFor="person-search" className="font-semibold">Find someone</Label>
         <div className="flex gap-2">
-          <input
-            className="flex-1 rounded-md border px-3 py-2 text-sm"
+          <Input
+            id="person-search"
+            className="flex-1"
             placeholder="Email or name"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") search(); }}
           />
-          <button
-            className="rounded-md border px-4 py-2 text-sm font-semibold disabled:opacity-50"
-            onClick={search}
-            disabled={searching}
-          >
+          <Button variant="outline" onClick={search} disabled={searching}>
             {searching ? "Searching…" : "Search"}
-          </button>
+          </Button>
         </div>
 
         {results.length > 0 && (
-          <ul className="divide-y rounded-md border">
+          <ul className="divide-y rounded-lg border bg-card">
             {results.map((p) => (
               <li key={p.id}>
-                <button className="w-full px-3 py-2 text-left text-sm hover:bg-muted" onClick={() => choose(p)}>
+                <button
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  onClick={() => choose(p)}
+                >
                   <span className="font-medium">{p.full_name ?? "(no name)"}</span>
                   <span className="text-muted-foreground"> · {p.email ?? "no email"}</span>
                 </button>
@@ -549,12 +552,12 @@ export default function AdminWalletPage() {
         <>
           {/* The email is shown throughout, not just at search time: granting to
               the wrong person is the mistake this screen can actually make. */}
-          <section className="rounded-md border p-4">
+          <section className="rounded-lg border bg-card p-4 text-card-foreground">
             <div className="text-sm font-semibold">{person.full_name ?? "(no name)"}</div>
             <div className="text-sm text-muted-foreground">{person.email ?? "no email"}</div>
           </section>
 
-          <section className="space-y-3 rounded-md border p-4">
+          <section className="space-y-3 rounded-lg border bg-card p-4 text-card-foreground">
             <h2 className="text-lg font-semibold">Membership</h2>
             {isActiveMember ? (
               <p className="text-sm">
@@ -585,42 +588,31 @@ export default function AdminWalletPage() {
                 extending is the same call as comping — it just needs to be
                 reachable, which it was not when this only appeared while
                 inactive. */}
-            <div className="flex items-end gap-2">
-              <label className="text-sm">
-                Expires
-                <input
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="membership-expiry">Expires</Label>
+                <Input
+                  id="membership-expiry"
                   type="date"
-                  className="mt-1 block rounded-md border px-3 py-2"
+                  className="w-auto"
                   value={membershipExpiry}
                   onChange={(e) => setMembershipExpiry(e.target.value)}
                 />
-              </label>
-              <button
-                className="rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
-                onClick={grantMembership}
-                disabled={busy}
-              >
+              </div>
+              <Button variant="secondary" onClick={grantMembership} disabled={busy}>
                 {isActiveMember ? "Extend" : "Comp membership"}
-              </button>
+              </Button>
               {isActiveMember && (
                 <>
                   {/* Deliberately NOT the primary button. Extending is the
                       common, free action; starting a term spends $25, so it
                       reads as the heavier choice and asks before doing it. */}
-                  <button
-                    className="rounded-md border px-3 py-2 text-sm font-semibold disabled:opacity-50"
-                    onClick={renewMembership}
-                    disabled={busy}
-                  >
+                  <Button variant="outline" onClick={renewMembership} disabled={busy}>
                     Start new term
-                  </button>
-                  <button
-                    className="rounded-md border px-3 py-2 text-sm font-semibold disabled:opacity-50"
-                    onClick={revokeMembership}
-                    disabled={busy}
-                  >
+                  </Button>
+                  <Button variant="destructive" onClick={revokeMembership} disabled={busy}>
                     Revoke
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -636,7 +628,7 @@ export default function AdminWalletPage() {
                 can fail quietly (empty pool), and "did they actually get it"
                 should be answerable by looking rather than by trusting. */}
             {isActiveMember && (
-              <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-background px-3 py-2 text-sm">
                 {items.some((i) => i.source_type === "membership_benefit") ? (
                   <span className="text-muted-foreground">
                     <span className="font-medium text-foreground">PGD voucher issued.</span>
@@ -644,14 +636,10 @@ export default function AdminWalletPage() {
                   </span>
                 ) : (
                   <>
-                    <span className="text-red-600">No PGD voucher issued.</span>
-                    <button
-                      className="rounded-md border px-3 py-1.5 text-sm font-semibold disabled:opacity-50"
-                      onClick={issueVoucher}
-                      disabled={busy}
-                    >
+                    <span className="text-destructive">No PGD voucher issued.</span>
+                    <Button variant="outline" size="sm" onClick={issueVoucher} disabled={busy}>
                       Issue voucher
-                    </button>
+                    </Button>
                   </>
                 )}
               </div>
@@ -661,22 +649,24 @@ export default function AdminWalletPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-semibold">Grant a promo</h2>
 
-            <div className="grid grid-cols-2 gap-3">
-              <label className="text-sm">
-                Type
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="grant-type">Type</Label>
                 <select
-                  className="mt-1 w-full rounded-md border px-3 py-2"
+                  id="grant-type"
+                  className={SELECT}
                   value={form.type}
                   onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as GrantableType }))}
                 >
                   {GRANTABLE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
-              </label>
+              </div>
 
-              <label className="text-sm">
-                Partner
+              <div className="space-y-1.5">
+                <Label htmlFor="grant-partner">Partner</Label>
                 <select
-                  className="mt-1 w-full rounded-md border px-3 py-2"
+                  id="grant-partner"
+                  className={SELECT}
                   value={form.partnerId}
                   onChange={(e) => setForm((f) => ({ ...f, partnerId: e.target.value }))}
                 >
@@ -685,103 +675,101 @@ export default function AdminWalletPage() {
                     <option key={p.id} value={p.id}>{p.name}{p.is_active ? "" : " (inactive)"}</option>
                   ))}
                 </select>
-              </label>
+              </div>
             </div>
 
-            <label className="block text-sm">
-              Title
-              <input
-                className="mt-1 w-full rounded-md border px-3 py-2"
+            <div className="space-y-1.5">
+              <Label htmlFor="grant-title">Title</Label>
+              <Input
+                id="grant-title"
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                 placeholder="15% off your next paddle"
               />
-            </label>
+            </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <label className="text-sm">
-                Subtitle
-                <input
-                  className="mt-1 w-full rounded-md border px-3 py-2"
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="grant-subtitle">Subtitle</Label>
+                <Input
+                  id="grant-subtitle"
                   value={form.subtitle}
                   onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))}
                 />
-              </label>
-              <label className="text-sm">
-                Value label
-                <input
-                  className="mt-1 w-full rounded-md border px-3 py-2"
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="grant-value">Value label</Label>
+                <Input
+                  id="grant-value"
                   value={form.valueLabel}
                   onChange={(e) => setForm((f) => ({ ...f, valueLabel: e.target.value }))}
                   placeholder="15% Off"
                 />
-              </label>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <label className="text-sm">
-                Action
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="grant-action">Action</Label>
                 <select
-                  className="mt-1 w-full rounded-md border px-3 py-2"
+                  id="grant-action"
+                  className={SELECT}
                   value={form.actionType}
                   onChange={(e) => setForm((f) => ({ ...f, actionType: e.target.value as typeof form.actionType }))}
                 >
                   {ACTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
-              </label>
-              <label className="text-sm">
-                Expires
-                <input
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="grant-expires">Expires</Label>
+                <Input
+                  id="grant-expires"
                   type="date"
-                  className="mt-1 w-full rounded-md border px-3 py-2"
                   value={form.expiresAt}
                   onChange={(e) => setForm((f) => ({ ...f, expiresAt: e.target.value }))}
                 />
-              </label>
+              </div>
             </div>
 
             {form.actionType === "external_url" && (
-              <label className="block text-sm">
-                Link (https only)
-                <input
-                  className="mt-1 w-full rounded-md border px-3 py-2"
+              <div className="space-y-1.5">
+                <Label htmlFor="grant-url">Link (https only)</Label>
+                <Input
+                  id="grant-url"
                   value={form.actionUrl}
                   onChange={(e) => setForm((f) => ({ ...f, actionUrl: e.target.value }))}
                   placeholder="https://partner.example/discount/CODE"
                 />
-              </label>
+              </div>
             )}
 
-            <label className="block text-sm">
-              Reference
-              <input
-                className="mt-1 w-full rounded-md border px-3 py-2"
+            <div className="space-y-1.5">
+              <Label htmlFor="grant-reference">Reference</Label>
+              <Input
+                id="grant-reference"
+                aria-describedby="grant-reference-hint"
                 value={form.sourceId}
                 onChange={(e) => setForm((f) => ({ ...f, sourceId: e.target.value }))}
                 placeholder="launch-promo-2026-09"
               />
-              <span className="mt-1 block text-xs text-muted-foreground">
+              <p id="grant-reference-hint" className="text-xs text-muted-foreground">
                 Granting the same reference to the same person twice does nothing the second time.
-              </span>
-            </label>
+              </p>
+            </div>
 
-            <label className="block text-sm">
-              Note
-              <input
-                className="mt-1 w-full rounded-md border px-3 py-2"
+            <div className="space-y-1.5">
+              <Label htmlFor="grant-note">Note</Label>
+              <Input
+                id="grant-note"
                 value={form.note}
                 onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
                 placeholder="Why this was issued"
               />
-            </label>
+            </div>
 
-            <button
-              className="rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
-              onClick={grant}
-              disabled={busy}
-            >
+            <Button variant="secondary" onClick={grant} disabled={busy}>
               {busy ? "Working…" : "Grant"}
-            </button>
+            </Button>
           </section>
 
           <section className="space-y-3">
@@ -789,7 +777,7 @@ export default function AdminWalletPage() {
             {items.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nothing in this wallet.</p>
             ) : (
-              <ul className="divide-y rounded-md border">
+              <ul className="divide-y rounded-lg border bg-card">
                 {items.map((it) => (
                   <li key={it.id} className="flex items-start justify-between gap-4 p-3">
                     <div className="text-sm">
@@ -809,13 +797,15 @@ export default function AdminWalletPage() {
                     {/* Coach vouchers are refunded, not revoked — the RPC refuses
                         them, so the button is not offered in the first place. */}
                     {it.status !== "revoked" && it.type !== "coach_voucher" && (
-                      <button
-                        className="shrink-0 rounded-md border px-3 py-1 text-xs font-semibold disabled:opacity-50"
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 text-destructive hover:text-destructive"
                         onClick={() => revoke(it)}
                         disabled={busy}
                       >
                         Revoke
-                      </button>
+                      </Button>
                     )}
                   </li>
                 ))}

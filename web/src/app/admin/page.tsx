@@ -10,7 +10,7 @@ import {
   ArrowSquareOut, Envelope, Megaphone,
   CheckFat, WarningCircle, Broadcast, ChatCircleDots,
   Star, PencilSimple, Trash, Prohibit, DotsThree, Buildings,
-  Flag, Ticket,
+  Flag, Ticket, Wallet,
 } from "@phosphor-icons/react";
 import { Logo } from "@/components/layout/logo";
 import { toast } from "sonner";
@@ -882,6 +882,12 @@ export default function AdminPage() {
           <button
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
             <Megaphone size={16} /> Push Campaigns
+          </button>
+        </Link>
+        <Link href="/admin/wallet">
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Wallet size={16} /> Wallet Grants
           </button>
         </Link>
         <Link href="/admin/email-preview">

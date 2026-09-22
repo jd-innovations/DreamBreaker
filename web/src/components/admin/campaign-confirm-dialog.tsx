@@ -5,6 +5,9 @@ import { Broadcast, WarningCircle } from "@phosphor-icons/react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { requiresTypedSend, SEND_WORD } from "@/lib/campaigns/campaign-logic";
 import type { AudiencePreview } from "@/lib/campaigns/campaign-service";
 
@@ -89,7 +92,7 @@ export function CampaignConfirmDialog({
           <dd>{summary.timingLabel}</dd>
         </dl>
 
-        <div className="rounded-xl border border-border bg-muted/50 p-3">
+        <div className="rounded-lg border border-border bg-muted/50 p-3">
           {previewError ? (
             <p className="text-sm text-destructive">Couldn&apos;t count the audience: {previewError}</p>
           ) : !preview ? (
@@ -124,39 +127,29 @@ export function CampaignConfirmDialog({
 
         {preview && needsWord && !noDevices && (
           <div>
-            <label htmlFor={inputId} className="text-sm">
+            <Label htmlFor={inputId} className="font-normal leading-normal">
               This reaches {preview.device_count} device{preview.device_count === 1 ? "" : "s"} (the typed-confirm
               threshold is {threshold}). Type <span className="font-mono font-semibold">{SEND_WORD}</span> to confirm.
-            </label>
-            <input
+            </Label>
+            <Input
               id={inputId}
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               autoComplete="off"
               spellCheck={false}
-              className="mt-2 w-full rounded-xl border border-input bg-background px-3 py-2 font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-ring"
+              className="mt-2 font-mono tracking-widest"
             />
           </div>
         )}
 
         <DialogFooter className="gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onOpenChange(false)}
-            className="rounded-full border border-border px-4 py-2 text-sm font-semibold disabled:opacity-40"
-          >
+          <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
             Back
-          </button>
-          <button
-            type="button"
-            disabled={!canConfirm}
-            onClick={onConfirm}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40"
-          >
+          </Button>
+          <Button type="button" variant="secondary" disabled={!canConfirm} onClick={onConfirm}>
             <Broadcast size={16} />
             {busy ? "Working…" : summary.sendNow ? "Send now" : "Schedule"}
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

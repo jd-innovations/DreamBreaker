@@ -8,6 +8,9 @@ import Link from "next/link";
 import { ArrowLeft, MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { CampaignStatusBadge } from "@/components/admin/campaign-status-badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SELECT } from "@/components/ui/field-classes";
 import {
   audienceLabel, CAMPAIGN_STATUSES, DESTINATION_LABEL, STATUS_LABEL, type CampaignStatus,
 } from "@/lib/campaigns/campaign-logic";
@@ -68,24 +71,23 @@ export default function CampaignListPage() {
             )}
           </p>
         </div>
-        <Link
-          href="/admin/notifications/compose"
-          className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground"
-        >
-          <Plus size={16} weight="bold" /> New campaign
-        </Link>
+        <Button asChild variant="secondary">
+          <Link href="/admin/notifications/compose">
+            <Plus size={16} weight="bold" /> New campaign
+          </Link>
+        </Button>
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[14rem] flex-1">
+        <div className="relative min-w-56 flex-1">
           <MagnifyingGlass size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <label htmlFor="campaign-search" className="sr-only">Search campaigns</label>
-          <input
+          <Input
             id="campaign-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search name or title"
-            className="w-full rounded-full border border-input bg-background py-2 pl-9 pr-4 focus:outline-none focus:ring-2 focus:ring-ring"
+            className="pl-9"
           />
         </div>
         <label htmlFor="campaign-status" className="sr-only">Status</label>
@@ -93,21 +95,17 @@ export default function CampaignListPage() {
           id="campaign-status"
           value={status}
           onChange={(e) => setStatus(e.target.value as CampaignStatus | "")}
-          className="rounded-full border border-input bg-background px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+          className={`${SELECT} w-auto`}
         >
           <option value="">All statuses</option>
           {CAMPAIGN_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
         </select>
-        <button
-          type="button"
-          onClick={() => { setLoading(true); void load(); }}
-          className="rounded-full border border-border px-4 py-2 text-sm font-semibold"
-        >
+        <Button type="button" variant="outline" onClick={() => { setLoading(true); void load(); }}>
           Refresh
-        </button>
+        </Button>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-border bg-card">
+      <div className="mt-6 overflow-x-auto rounded-lg border border-border bg-card">
         <table className="w-full min-w-[52rem] text-sm">
           <thead>
             <tr className="border-b border-border text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -139,7 +137,7 @@ export default function CampaignListPage() {
               return (
                 <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/40">
                   <td className="max-w-[18rem] px-4 py-3">
-                    <Link href={`/admin/notifications/${c.id}`} className="font-semibold hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring">
+                    <Link href={`/admin/notifications/${c.id}`} className="rounded-sm font-semibold hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                       {c.internal_name}
                     </Link>
                     <div className="truncate text-xs text-muted-foreground">{c.title}</div>

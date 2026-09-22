@@ -9,6 +9,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowLeft, FloppyDisk, PaperPlaneTilt, WarningCircle } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { FIELD, SELECT } from "@/components/ui/field-classes";
 import { CampaignPreview } from "@/components/admin/campaign-preview";
 import { CampaignConfirmDialog, type ConfirmSummary } from "@/components/admin/campaign-confirm-dialog";
 import {
@@ -235,7 +238,7 @@ function Composer() {
       </p>
 
       {config && !config.enabled && (
-        <div className="mt-6 flex items-start gap-3 rounded-2xl border border-border bg-muted p-4 text-sm">
+        <div className="mt-6 flex items-start gap-3 rounded-lg border border-border bg-muted p-4 text-sm">
           <WarningCircle size={18} className="mt-0.5 flex-shrink-0 text-muted-foreground" />
           <p>
             <span className="font-semibold">Push broadcasts are switched off.</span>{" "}
@@ -288,7 +291,7 @@ function Composer() {
             <div className="mt-2 grid gap-2 sm:grid-cols-[12rem_minmax(0,1fr)]">
               <label className="sr-only" htmlFor="dest-type">Destination type</label>
               <select id="dest-type" value={destType} onChange={(e) => setDestType(e.target.value as DeepLinkType | "")}
-                className={inputClass(showErrors && !destType && !destId.includes("/"))}>
+                className={inputClass(showErrors && !destType && !destId.includes("/"), SELECT)}>
                 <option value="">Choose…</option>
                 {DESTINATION_OPTIONS.map((t) => (
                   <option key={t} value={t}>{DESTINATION_LABEL[t] ?? t}</option>
@@ -330,7 +333,7 @@ function Composer() {
             </div>
             {timing === "later" && (
               <div className="mt-3">
-                <label htmlFor="schedule-at" className="text-xs text-muted-foreground">Date and time in {tz}</label>
+                <Label htmlFor="schedule-at" className="text-xs font-normal text-muted-foreground">Date and time in {tz}</Label>
                 <input id="schedule-at" type="datetime-local" value={scheduleLocal} onChange={(e) => setScheduleLocal(e.target.value)}
                   className={cn(inputClass(showErrors && !(when?.ok ?? false)), "mt-1 max-w-xs")} />
                 {showErrors && when && !when.ok && <p className="mt-1 text-xs text-destructive">{when.message}</p>}
@@ -339,15 +342,14 @@ function Composer() {
           </fieldset>
 
           <div className="flex flex-wrap gap-3 border-t border-border pt-6">
-            <button type="button" onClick={() => void onSaveDraft()} disabled={saving}
-              className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2 text-sm font-semibold disabled:opacity-40">
+            <Button type="button" variant="outline" onClick={() => void onSaveDraft()} disabled={saving}>
               <FloppyDisk size={16} /> {saving ? "Saving…" : "Save draft"}
-            </button>
-            <button type="button" onClick={() => void onReview()} disabled={saving || !config?.enabled}
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => void onReview()} disabled={saving || !config?.enabled}
               title={config && !config.enabled ? "Push broadcasts are switched off" : undefined}
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40">
+            >
               <PaperPlaneTilt size={16} /> Review and send…
-            </button>
+            </Button>
           </div>
         </form>
 
@@ -382,11 +384,10 @@ function BackLink() {
   );
 }
 
-function inputClass(invalid: boolean) {
-  return cn(
-    "w-full rounded-xl border bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring",
-    invalid ? "border-destructive" : "border-input",
-  );
+// The shared field tokens; an invalid field swaps border-input for the
+// destructive token (cn/tailwind-merge makes the later border win).
+function inputClass(invalid: boolean, base: string = FIELD) {
+  return cn(base, invalid && "border-destructive focus-visible:ring-destructive");
 }
 
 function Field({
@@ -408,7 +409,7 @@ function Field({
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3">
-        <label htmlFor={fid} className="text-sm font-semibold">{label}</label>
+        <Label htmlFor={fid} className="font-semibold">{label}</Label>
         <span
           className={cn(
             "font-mono text-[11px] tabular-nums",
@@ -431,7 +432,7 @@ function Choice({ name, checked, onChange, label }: { name: string; checked: boo
   return (
     <label
       className={cn(
-        "cursor-pointer rounded-full border px-4 py-1.5 text-sm transition-colors focus-within:ring-2 focus-within:ring-ring",
+        "cursor-pointer rounded-md border px-4 py-1.5 text-sm transition-colors focus-within:ring-2 focus-within:ring-ring",
         checked ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground",
       )}
     >
