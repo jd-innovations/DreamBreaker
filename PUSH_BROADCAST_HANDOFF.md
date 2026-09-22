@@ -76,8 +76,9 @@ Status box in the plan has the full record. In short:
 Web admin at `/admin/notifications` (list, `compose`, `[id]` detail), linked from the
 admin sidebar as "Push Campaigns". Server layout 404s non-admins. Design-token classes
 only. Full record in the plan's Phase 5 Status box. **Live:** production promoted to
-`58b0e84` on 2026-09-22 (verified: the three routes redirect signed-out visitors to
-`/auth`). Not yet exercised by the owner with a real admin session.
+`58b0e84` on 2026-09-22, then to `37584f8` (loose ends: `/auth?next=` redirects and
+the destination lookup) — verified live: the gate redirects to
+`/auth?next=/admin/notifications`, and the shipped reviews chunk carries the new redirect. Not yet exercised by the owner with a real admin session.
 
 - New setting `push_broadcast_send_confirm_threshold = '100'` (typed-SEND gate).
 - "Review and send" is disabled while `push_broadcast_enabled` is off; drafts and
