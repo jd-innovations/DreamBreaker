@@ -17,7 +17,7 @@ import { getUserId } from "@/lib/dev-user";
 import {
   fetchGroup, getMembership, joinGroup, leaveGroup, approveJoinRequest,
   declineJoinRequest, setMemberRole, removeMember, fetchMembers,
-  fetchGroupEvents, fetchGroupFeed, createPost, createPoll, createPhotoPost,
+  fetchGroupEvents, fetchGroupFeed, createPost, createPoll, createPhotoPost, markGroupRead,
   toggleLike, votePoll, fetchComments, addComment, deletePost, reportContent,
   uploadGroupPostImage, fetchGroupPhotos, uploadGroupPhoto, deleteGroupPhoto,
 } from "@/lib/groups/group-service";
@@ -404,6 +404,10 @@ export default function GroupDetailClient({ params }: { params: Promise<{ id: st
       const [m, inv] = await Promise.all([getMembership(id, uid), fetchPendingGroupInviteForUser(id, uid)]);
       setMembership(m);
       setPendingInvite(inv);
+      // Opening the group IS reading it: clears the badge on /groups and in the
+      // app, which share the same read state. Never awaited — a failed mark
+      // costs a stale badge, a blocked render costs the page.
+      if (m?.status === "active") void markGroupRead(id);
     }
     setLoading(false);
   }, [id]);

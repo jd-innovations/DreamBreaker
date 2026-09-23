@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Users, Plus, Globe, Lock, UsersThree } from "@phosphor-icons/react";
 import { PageShell } from "@/components/layout/page-shell";
 import { getUserId } from "@/lib/dev-user";
-import { fetchMyGroups, fetchDiscoverGroups, joinGroup } from "@/lib/groups/group-service";
+import { fetchMyGroups, fetchDiscoverGroups, fetchGroupUnreadCounts, joinGroup } from "@/lib/groups/group-service";
 import type { Group } from "@/lib/groups/types";
 import { toast } from "sonner";
 
@@ -35,11 +35,20 @@ function GroupBanner({ group }: { group: Group }) {
   );
 }
 
-function MyGroupCard({ g }: { g: Group }) {
+function MyGroupCard({ g, unread }: { g: Group; unread: number }) {
   return (
     <Link href={`/groups/${g.id}`} className="block flex-shrink-0 w-64">
       <div className="border border-border rounded-2xl bg-card overflow-hidden hover:border-primary/40 transition-colors">
-        <GroupBanner group={g} />
+        <div className="relative">
+          <GroupBanner group={g} />
+          {/* Unread activity since this member last opened the group; the same
+              count the app shows, from the shared RPC. */}
+          {unread > 0 && (
+            <span className="absolute right-2 top-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-primary bg-background px-1.5 text-[11px] font-bold text-primary">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </div>
         <div className="p-3.5">
           <div className="flex items-start justify-between gap-2 mb-1.5">
             <h3 className="font-display text-base tracking-tight leading-tight line-clamp-1">{g.name}</h3>
@@ -108,6 +117,7 @@ function DiscoverCard({ g, onJoined }: { g: Group; onJoined: (id: string) => voi
 
 export default function GroupsDirectoryPage() {
   const [myGroups, setMyGroups] = useState<Group[]>([]);
+  const [unread, setUnread] = useState<Record<string, number>>({});
   const [discoverGroups, setDiscoverGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -119,10 +129,13 @@ export default function GroupsDirectoryPage() {
       if (cancelled) return;
       setUserId(uid);
       if (!uid) { setLoading(false); return; }
-      const [mine, discover] = await Promise.all([fetchMyGroups(uid), fetchDiscoverGroups(uid)]);
+      const [mine, discover, counts] = await Promise.all([
+        fetchMyGroups(uid), fetchDiscoverGroups(uid), fetchGroupUnreadCounts(),
+      ]);
       if (cancelled) return;
       setMyGroups(mine);
       setDiscoverGroups(discover);
+      setUnread(counts);
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -179,7 +192,7 @@ export default function GroupsDirectoryPage() {
                 </div>
               ) : (
                 <div className="flex gap-4 overflow-x-auto pb-2">
-                  {myGroups.map((g) => <MyGroupCard key={g.id} g={g} />)}
+                  {myGroups.map((g) => <MyGroupCard key={g.id} g={g} unread={unread[g.id] ?? 0} />)}
                 </div>
               )}
             </div>

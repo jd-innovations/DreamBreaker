@@ -71,11 +71,12 @@ non-admin 404). Cases 1–5 passed; 2 and 3 passed 2026-09-23.
 
 ## Decisions waiting on you
 
-**Membership emails.** `membership_payment_failed`, `membership_renewing` and
-`coach_voucher_expiring` are push and in-app only — no email template exists
-for any of them. A failed renewal is money at risk and a push can be missed, so
-an email is worth building. Say the word and it is three branded templates plus
-a send call each.
+**Membership and voucher emails are built** (2026-09-23). Branded templates for
+`membership_payment_failed`, `membership_renewing` and `coach_voucher_expiring`,
+with the Email channel restored and honoured by each sender — so the toggle is
+now real in both directions. They send nothing until those automations are
+switched on, and nothing exists to send about yet (StoreKit purchasing is not
+live).
 
 **Two automations that are buildable but unspecified:**
 - `play_event_starting_soon` — a game you joined starts in N hours. Ready to
@@ -116,7 +117,11 @@ therefore misses the organizer. Fixable the day reservations record an actor.
   about quiet hours or the caps.
 - Copy for every automation comes from the catalog via
   `private.render_automation`. A sender that hard-codes a string is a bug.
-- There are **no automated tests** for the dispatcher rules — everything was
-  verified by rolled-back dry runs by hand. A SQL suite like
-  `supabase/_rls_tests/20260922_push_broadcast.sql` would lock the behaviour in.
-- `notification_push_log` has no pruning job and grows forever.
+- The dispatcher has a **regression suite**:
+  `supabase/_rls_tests/20260923_notification_automations.sql`, 42 tests over the
+  gate, the renderer, the dispatch trigger, the resolver, RLS and catalog
+  integrity. Run it after touching any of those. It found a duplicate resolver
+  overload on its first run.
+- `notification_push_log` is pruned daily at 180 days
+  (`push_log_retention_days` in Platform settings). The Automations list's
+  "all time" count means "up to 180 days".

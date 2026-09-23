@@ -41,6 +41,27 @@ export async function fetchGroup(id: string): Promise<Group | null> {
   return { ...data, memberCount: count ?? 0 };
 }
 
+/**
+ * Unread activity per group — posts and comments since the member last opened
+ * it, by anyone but them. Shared with mobile (group_unread_counts,
+ * 20260923270000), so a group read on the phone is read here too.
+ *
+ * Best effort: a failure returns an empty map so the list renders without
+ * badges rather than not at all.
+ */
+export async function fetchGroupUnreadCounts(): Promise<Record<string, number>> {
+  const { data, error } = await createClient().rpc("group_unread_counts");
+  if (error) return {};
+  const out: Record<string, number> = {};
+  for (const row of data ?? []) out[row.group_id] = row.unread_count ?? 0;
+  return out;
+}
+
+/** Clears the badge. Called when a group page opens; only ever moves forward. */
+export async function markGroupRead(groupId: string): Promise<void> {
+  await createClient().rpc("mark_group_read", { p_group_id: groupId });
+}
+
 export async function fetchMyGroups(userId: string): Promise<Group[]> {
   const supabase = createClient();
   const { data } = await supabase
