@@ -59,11 +59,13 @@ export function OfferCard({ offer }: { offer: Offer }) {
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3.5">
-        {/* Plain semibold, not font-display: the display face is condensed and
-            is for numbers and labels (the price below, the type chip). A lesson
-            title is something a coach wrote, and reads better unstyled — same
-            split the marketplace card uses. */}
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug">{offer.title}</h3>
+        {/* UPPERCASE, but in the body face rather than font-display: the caps
+            give a lesson title the presence of a title, while the condensed
+            display face made it read as a headline (owner, 2026-09-23). Slight
+            letter-spacing because caps set tight are harder to read. */}
+        <h3 className="line-clamp-2 text-sm font-semibold uppercase leading-snug tracking-wide">
+          {offer.title}
+        </h3>
 
         <p className="truncate text-xs text-muted-foreground">
           with {offer.coach_name ?? "a coach"}
