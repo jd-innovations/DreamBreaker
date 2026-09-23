@@ -88,16 +88,15 @@ a send call each.
 - `coach_session_booked` — nothing in the schema schedules a session;
   redemptions record a lesson *used*.
 
-**Groups have no unread tracking** — no `last_read`, no `seen_at`, no badge.
-That gap is why notifying everyone about every post felt necessary. Since
-2026-09-23 only polls and game-linked posts notify (ordinary chatter is left to
-the feed), which removes the noise but leaves activity invisible until someone
-opens the group. Read state plus a badge is the proper fix and is product work:
-a schema change, a read-marking call on the client, and badge UI. Your call on
-where badges appear.
+**Group badges are built** (2026-09-23). `group_members.last_read_at` plus
+`group_unread_counts()` and `mark_group_read()`; the Partner tab badges each
+group card and opening a group clears it. Unread = posts and comments since you
+last opened, by anyone but you; a brand-new member counts from joining, not
+from the whole history. Needs an OTA to reach your phone.
 
-Fan-out is still per member, which is fine at your size (largest group: 3) and
-wants batching into one push per group somewhere in the hundreds.
+With badges in place, notifications are down to polls and game posts, which is
+where they belong. Fan-out is still per member — fine at your size (largest
+group: 3), wants batching into one push per group somewhere in the hundreds.
 
 **Deep links.** Taps resolve for tournaments, groups, community, bookings,
 marketplace, conversations, coach offers, claims and reviews. They do **not**

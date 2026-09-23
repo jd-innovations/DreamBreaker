@@ -18,6 +18,7 @@ import { useSession } from '@/hooks/useSession';
 import {
   fetchGroup, getMembership, joinGroup, leaveGroup, deleteGroup,
   fetchGroupEvents, fetchGroupFeed, createPost, createPhotoPost, createPoll, toggleLike, votePoll,
+  markGroupRead,
   fetchComments, addComment, updatePost, deletePost, updateComment, deleteComment,
   fetchMembers, approveJoinRequest, declineJoinRequest,
   setMemberRole, removeMember, fetchGroupPhotos, uploadGroupPhoto, deleteGroupPhoto,
@@ -693,7 +694,13 @@ function FeedTab({ groupId, userId }: { groupId: string; userId: string }) {
   const [postingPhoto, setPostingPhoto] = useState(false);
 
   const load = useCallback(async () => {
-    try { setItems(await fetchGroupFeed(groupId, userId)); }
+    try {
+      setItems(await fetchGroupFeed(groupId, userId));
+      // Opening the feed IS reading the group: clears the badge on the groups
+      // list. Never awaited into the render path — a failed mark costs a stale
+      // badge, a blocked render costs the screen.
+      void markGroupRead(groupId);
+    }
     finally { setLoading(false); }
   }, [groupId, userId]);
 

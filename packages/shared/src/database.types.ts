@@ -2480,6 +2480,7 @@ export type Database = {
         Row: {
           group_id: string
           joined_at: string
+          last_read_at: string | null
           role: string
           status: string
           user_id: string
@@ -2487,6 +2488,7 @@ export type Database = {
         Insert: {
           group_id: string
           joined_at?: string
+          last_read_at?: string | null
           role?: string
           status?: string
           user_id: string
@@ -2494,6 +2496,7 @@ export type Database = {
         Update: {
           group_id?: string
           joined_at?: string
+          last_read_at?: string | null
           role?: string
           status?: string
           user_id?: string
@@ -7785,6 +7788,17 @@ export type Database = {
           token_masked: string
           user_id: string
         }[]
+      }
+      group_unread_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          group_id: string
+          unread_count: number
+        }[]
+      }
+      mark_group_read: {
+        Args: { p_group_id: string }
+        Returns: undefined
       }
       admin_list_automations: {
         Args: Record<PropertyKey, never>

@@ -12,7 +12,7 @@ import { colors, spacing } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
 import { useSlideMenu } from '@/components/SlideMenu';
-import { fetchMyGroups, fetchDiscoverGroups, joinGroup, type Group } from '@/lib/groupService';
+import { fetchMyGroups, fetchDiscoverGroups, fetchGroupUnreadCounts, joinGroup, type Group } from '@/lib/groupService';
 
 const L = {
   bg: colors.bg, page: colors.page, navy: colors.navy,
@@ -23,7 +23,7 @@ const L = {
 
 // ─── My Group card ─────────────────────────────────────────────────────────
 
-function MyGroupCard({ g }: { g: Group }) {
+function MyGroupCard({ g, unread }: { g: Group; unread: number }) {
   const FALLBACK = 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=200&fit=crop&q=80';
   return (
     <TouchableOpacity
@@ -31,7 +31,17 @@ function MyGroupCard({ g }: { g: Group }) {
       activeOpacity={0.85}
       onPress={() => router.push(`/groups/${g.id}` as never)}
     >
-      <Image source={{ uri: g.image_url ?? FALLBACK }} style={gc.image} resizeMode="cover" />
+      <View>
+        <Image source={{ uri: g.image_url ?? FALLBACK }} style={gc.image} resizeMode="cover" />
+        {/* Unread activity since this member last opened the group. Groups had
+            no read state until 2026-09-23, which is why every post used to
+            notify everyone — this badge is what that was standing in for. */}
+        {unread > 0 && (
+          <View style={gc.badge}>
+            <Text style={gc.badgeText}>{unread > 9 ? '9+' : unread}</Text>
+          </View>
+        )}
+      </View>
       <View style={gc.info}>
         <Text style={gc.name} numberOfLines={2}>{g.name}</Text>
         <View style={gc.metaRow}>
@@ -57,6 +67,15 @@ const gc = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 }, elevation: 3,
   },
   image: { width: '100%', height: 90 },
+  // Sits on the card image, top-right. Gold on navy like every other count in
+  // the app, and never wider than '9+' so a busy group cannot stretch it.
+  badge: {
+    position: 'absolute', top: 6, right: 6, minWidth: 20, height: 20,
+    borderRadius: 10, paddingHorizontal: 5, backgroundColor: L.navy,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: L.gold,
+  },
+  badgeText: { color: L.gold, fontSize: text.microLabel.size, fontWeight: '800' },
   info: { padding: 10, gap: 5 },
   name: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700', lineHeight: 17 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -172,6 +191,7 @@ export default function GroupsScreen() {
   const { user } = useSession();
   const { setTriggerVisible } = useSlideMenu();
   const [myGroups, setMyGroups] = useState<Group[]>([]);
+  const [unread, setUnread] = useState<Record<string, number>>({});
   const [discoverGroups, setDiscoverGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -186,12 +206,14 @@ export default function GroupsScreen() {
     if (!user?.id) { setLoading(false); return; }
     setLoading(true);
     try {
-      const [mine, discover] = await Promise.all([
+      const [mine, discover, counts] = await Promise.all([
         fetchMyGroups(user.id),
         fetchDiscoverGroups(user.id),
+        fetchGroupUnreadCounts(),
       ]);
       setMyGroups(mine);
       setDiscoverGroups(discover);
+      setUnread(counts);
     } finally {
       setLoading(false);
     }
@@ -244,7 +266,7 @@ export default function GroupsScreen() {
               </View>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.hScroll}>
-                {myGroups.map((g) => <MyGroupCard key={g.id} g={g} />)}
+                {myGroups.map((g) => <MyGroupCard key={g.id} g={g} unread={unread[g.id] ?? 0} />)}
               </ScrollView>
             )}
           </View>

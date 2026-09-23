@@ -57,6 +57,31 @@ function withCounts(rows: GroupRow[], counts: Record<string, number>): Group[] {
 
 // ─── Group CRUD ───────────────────────────────────────────────────────────────
 
+/**
+ * Unread activity per group: posts and comments since the member last opened
+ * it, by anyone but them. Groups had no read state at all until 2026-09-23,
+ * which is why every post used to notify every member — the notification was
+ * standing in for this badge.
+ *
+ * Best effort: a failure returns an empty map, so the list renders without
+ * badges rather than not at all.
+ */
+export async function fetchGroupUnreadCounts(): Promise<Record<string, number>> {
+  const { data, error } = await supabase.rpc('group_unread_counts');
+  if (error) {
+    if (__DEV__) console.warn('[groups] unread counts failed', error.message);
+    return {};
+  }
+  const out: Record<string, number> = {};
+  for (const row of data ?? []) out[row.group_id] = row.unread_count ?? 0;
+  return out;
+}
+
+/** Clears the badge. Called when a group screen opens; only ever moves forward. */
+export async function markGroupRead(groupId: string): Promise<void> {
+  const { error } = await supabase.rpc('mark_group_read', { p_group_id: groupId });
+  if (error && __DEV__) console.warn('[groups] mark read failed', error.message);
+}
 export async function fetchGroup(id: string): Promise<Group | null> {
   const { data, error } = await supabase.from('groups').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
