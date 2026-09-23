@@ -59,7 +59,7 @@ export default async function CoachPage({ params }: { params: Promise<{ id: stri
               className="h-20 w-20 rounded-full object-cover" />
           ) : (
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-              <span className="font-display text-xl tracking-widest text-primary/70">
+              <span className="font-label text-xl tracking-widest text-primary/70">
                 {initialsOf(profile.full_name)}
               </span>
             </div>
@@ -77,7 +77,7 @@ export default async function CoachPage({ params }: { params: Promise<{ id: stri
           </p>
         )}
 
-        <h2 className="mt-8 font-display text-sm uppercase tracking-widest text-muted-foreground">
+        <h2 className="mt-8 font-label text-sm uppercase tracking-widest text-muted-foreground">
           {offers.length > 0 ? `${offers.length} ${offers.length === 1 ? "lesson" : "lessons"}` : "Lessons"}
         </h2>
 
