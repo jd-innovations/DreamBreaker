@@ -41,7 +41,7 @@ export function OfferCard({ offer }: { offer: Offer }) {
           // The typographic fallback: the coach's initials over a flat panel,
           // using theme tokens so it works in both themes.
           <div className="flex h-full w-full items-center justify-center bg-primary/10">
-            <span className="font-label text-3xl tracking-widest text-primary/70">
+            <span className="font-display text-3xl tracking-widest text-primary/70">
               {initialsOf(offer.coach_name)}
             </span>
           </div>
@@ -59,11 +59,11 @@ export function OfferCard({ offer }: { offer: Offer }) {
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3.5">
-        {/* A lesson title is content, so it takes the heading role: the caps
-            give it the presence of a title without the condensed face making
-            it read as a headline (owner, 2026-09-23). Caps, weight and
-            tracking come from .font-heading — size only here. */}
-        <h3 className="line-clamp-2 font-heading text-sm leading-snug">
+        {/* UPPERCASE, but in the body face rather than font-display: the caps
+            give a lesson title the presence of a title, while the condensed
+            display face made it read as a headline (owner, 2026-09-23). Slight
+            letter-spacing because caps set tight are harder to read. */}
+        <h3 className="line-clamp-2 text-sm font-semibold uppercase leading-snug tracking-wide">
           {offer.title}
         </h3>
 
@@ -87,7 +87,7 @@ export function OfferCard({ offer }: { offer: Offer }) {
         )}
 
         <div className="mt-auto flex items-baseline gap-2 pt-2">
-          <span className="font-label text-lg tracking-tight">{formatPrice(cents)}</span>
+          <span className="font-display text-lg tracking-tight">{formatPrice(cents)}</span>
           {wasCents !== null && (
             <span className="text-xs text-muted-foreground line-through">{formatPrice(wasCents)}</span>
           )}

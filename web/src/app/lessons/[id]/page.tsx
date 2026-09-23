@@ -65,7 +65,7 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
               className="h-full w-full object-cover" priority />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-primary/10">
-              <span className="font-label text-5xl tracking-widest text-primary/70">
+              <span className="font-display text-5xl tracking-widest text-primary/70">
                 {initialsOf(offer.coach_name)}
               </span>
             </div>
@@ -77,9 +77,10 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
 
         <div className="space-y-4 p-5 sm:p-6">
           <div>
-            {/* Heading role, same as the card: the condensed face is for
-                numbers and labels, not for something a coach wrote. */}
-            <h1 className="font-heading text-xl sm:text-2xl">{offer.title}</h1>
+            {/* Body face, uppercase: same treatment as the card. The condensed
+                display face is for numbers and labels, not for something a
+                coach wrote (owner, 2026-09-23). */}
+            <h1 className="text-xl font-semibold uppercase tracking-wide sm:text-2xl">{offer.title}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               with{" "}
               <Link href={`/coach/${offer.coach_id}`} className="text-foreground underline-offset-4 hover:underline">
@@ -90,7 +91,7 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
           </div>
 
           <div className="flex flex-wrap items-baseline gap-3">
-            <span className="font-label text-3xl tracking-tight">{formatPrice(cents)}</span>
+            <span className="font-display text-3xl tracking-tight">{formatPrice(cents)}</span>
             {wasCents !== null && (
               <span className="text-base text-muted-foreground line-through">{formatPrice(wasCents)}</span>
             )}
@@ -133,14 +134,14 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
 
           {offer.description && (
             <div>
-              <h2 className="font-label text-sm uppercase tracking-widest text-muted-foreground">About</h2>
+              <h2 className="font-display text-sm uppercase tracking-widest text-muted-foreground">About</h2>
               <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{offer.description}</p>
             </div>
           )}
 
           {offer.terms && (
             <div>
-              <h2 className="font-label text-sm uppercase tracking-widest text-muted-foreground">Terms</h2>
+              <h2 className="font-display text-sm uppercase tracking-widest text-muted-foreground">Terms</h2>
               <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{offer.terms}</p>
             </div>
           )}

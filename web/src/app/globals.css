@@ -73,17 +73,8 @@
   --color-ring:               hsl(var(--ring));
 
   --font-sans:    var(--font-manrope), system-ui, sans-serif;
-  --font-mono:    var(--font-jetbrains-mono), monospace;
-
-  /* No --font-heading / --font-label here on purpose: a --font-* entry in
-     @theme makes Tailwind generate its own font-<name> utility, which would
-     collide by name with the hand-written .font-heading / .font-label below
-     and set only the family. The utilities carry family, caps, weight and
-     tracking together, so they are declared once, in @layer base. */
-
-  /* Deprecated — replaced by the .font-heading / .font-label roles below.
-     Kept only until the remaining call sites are migrated. */
   --font-display: var(--font-bebas-neue), sans-serif;
+  --font-mono:    var(--font-jetbrains-mono), monospace;
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -133,36 +124,7 @@
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "ss01", "cv01";
   }
-  /* ── Type roles ───────────────────────────────────────────────
-     Two utilities named for the JOB, not the font. `font-display` said which
-     typeface to use and nothing about when, so every new page reached for it
-     by default and the condensed face spread onto content it does not suit.
-     Pick by what the text IS:
-
-       .font-heading  anything a person wrote or would call a title — page
-                      headings, card titles, names, lesson titles. Caps and
-                      tracking are baked in, so a call site only sets size.
-       .font-label    interface chrome — section eyebrows, badges, nav, prices,
-                      stat numerals, initials fallbacks. Short, not prose.
-                      This is where the condensed face belongs.
-
-     Add a size class; do not re-declare font-family, weight, uppercase or
-     tracking at the call site. */
-  .font-heading {
-    font-family: var(--font-manrope), system-ui, sans-serif;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.035em;
-  }
-
-  .font-label {
-    font-family: var(--font-bebas-neue), sans-serif;
-    letter-spacing: 0.02em;
-  }
-
-  /* DEPRECATED — the ambiguous predecessor of the two above. Being migrated
-     off (63 files); it will be deleted once the sweep lands, and a CI check
-     will fail the build on any new use. Do not add call sites. */
+  /* Bebas Neue font utility — adds tracking on top of font-family */
   .font-display {
     font-family: var(--font-bebas-neue, sans-serif);
     letter-spacing: 0.02em;
