@@ -77,7 +77,10 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
 
         <div className="space-y-4 p-5 sm:p-6">
           <div>
-            <h1 className="font-display text-2xl tracking-wide sm:text-3xl">{offer.title}</h1>
+            {/* Body face, uppercase: same treatment as the card. The condensed
+                display face is for numbers and labels, not for something a
+                coach wrote (owner, 2026-09-23). */}
+            <h1 className="text-xl font-semibold uppercase tracking-wide sm:text-2xl">{offer.title}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               with{" "}
               <Link href={`/coach/${offer.coach_id}`} className="text-foreground underline-offset-4 hover:underline">

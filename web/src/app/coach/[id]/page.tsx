@@ -65,7 +65,8 @@ export default async function CoachPage({ params }: { params: Promise<{ id: stri
             </div>
           )}
           <div className="min-w-0">
-            <h1 className="font-display text-3xl tracking-wide">{profile.full_name ?? "Coach"}</h1>
+            {/* A person's name is content, not a label — body face. */}
+            <h1 className="text-2xl font-semibold tracking-tight">{profile.full_name ?? "Coach"}</h1>
             {profile.handle && <p className="text-sm text-muted-foreground">@{profile.handle}</p>}
           </div>
         </header>
