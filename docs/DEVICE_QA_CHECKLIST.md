@@ -271,8 +271,8 @@ is right.
 | # | Case | Steps | Expected | Result |
 | --- | --- | --- | --- | --- |
 | 1 | Foreground | App open on any screen; send a campaign | Banner appears; tapping opens the tournament | pass (2026-09-22, "Rollout test 1") |
-| 2 | Background | App in background; send | Notification on lock screen; tap opens the app **on the tournament** | |
-| 3 | Terminated | Force-quit the app; send | Tap cold-starts the app **onto the tournament**, not home | |
+| 2 | Background | App in background; send | Notification on lock screen; tap opens the app **on the tournament** |  pass (2026-09-23, owner) |
+| 3 | Terminated | Force-quit the app; send | Tap cold-starts the app **onto the tournament**, not home |  pass (2026-09-23, owner) |
 | 4 | Tap counted | After case 1, 2 or 3 | Campaign page → Taps shows **1 tap** out of 1 accepted delivery on a tap-capable build | pass (2026-09-22) |
 | 5 | Receipt | ~20 min after sending | Campaign page → *Confirmed delivered* = 1 | pass (2026-09-22; both devices `ok`) |
 | 6 | Opt-out honoured | Settings → Notifications → Announcements **off** on **every account this phone has been signed into**; send | Nothing arrives; the confirmation shows one device fewer. *Opt-out is per account: while another account's registration survives on the phone (see case 8) the phone still receives through it* | |
