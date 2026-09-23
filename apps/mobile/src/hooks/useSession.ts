@@ -3,6 +3,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { claimGuestParticipants } from '@/lib/supabase/playEvents';
 import { identifyPurchases } from '@/lib/purchases';
+import { touchLastActive } from '@/lib/activity';
 
 // ─── Shared auth store ────────────────────────────────────────────────────────
 // Previously every useSession() call opened its own auth subscription, its own
@@ -39,6 +40,9 @@ function init() {
   supabase.auth.getSession().then(({ data: { session } }) => {
     setState({ session, user: session?.user ?? null, loading: false });
     identifyPurchases(session?.user?.id ?? null);
+    // Win-back notifications need to know the app was opened; this store is
+    // the one place that sees every launch and every auth transition.
+    touchLastActive(session?.user?.id);
     if (session?.user?.email) {
       claimGuestParticipants(session.user.id, session.user.email);
     }
@@ -51,6 +55,9 @@ function init() {
     // sign in on this device inherits the previous user's RevenueCat identity.
     if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
       identifyPurchases(session?.user?.id ?? null);
+    }
+    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+      touchLastActive(session?.user?.id);
     }
     if (
       (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') &&

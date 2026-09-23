@@ -5208,6 +5208,7 @@ export type Database = {
           is_coach: boolean
           is_director: boolean
           is_discoverable: boolean
+          last_active_at: string | null
           location_city: string | null
           location_coords: unknown
           location_lat: number | null
@@ -5272,6 +5273,7 @@ export type Database = {
           is_coach?: boolean
           is_director?: boolean
           is_discoverable?: boolean
+          last_active_at?: string | null
           location_city?: string | null
           location_coords?: unknown
           location_lat?: number | null
@@ -5336,6 +5338,7 @@ export type Database = {
           is_coach?: boolean
           is_director?: boolean
           is_discoverable?: boolean
+          last_active_at?: string | null
           location_city?: string | null
           location_coords?: unknown
           location_lat?: number | null
@@ -10417,6 +10420,10 @@ export type Database = {
       submit_review: {
         Args: { p_body?: string; p_rating: number; p_token: string }
         Returns: string
+      }
+      touch_last_active: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       unaccent: { Args: { "": string }; Returns: string }
       unlockrows: { Args: { "": string }; Returns: number }
