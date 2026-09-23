@@ -36,7 +36,15 @@
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-export const EMAIL_GATE_MODE: "log" | "enforce" = "log";
+// Enforcing since 2026-09-23. Ships in log mode first by design; the flip was
+// made on evidence rather than a timer: every caller in the codebase lands in
+// an allowed bucket — DB triggers carry the Vault dispatch secret,
+// waitlist-sweeper / cancel-registration / the web Stripe webhook use the
+// service-role key, and the three admin screens (Communications composer,
+// review invitations, email preview) call as a signed-in admin. The mobile app
+// never calls this function at all. email_log shows no real send since the
+// gate deployed, so the logs alone would have proved nothing either way.
+export const EMAIL_GATE_MODE: "log" | "enforce" = "enforce";
 
 export type CallerKind = "dispatch" | "service" | "admin" | "non_admin" | "anon" | "unverifiable";
 
