@@ -90,3 +90,37 @@ Supabase project `dreambreaker-pb`, id `fbzetvkbhneptvfruilw`. Every migration t
 ## If resuming: recommended first message
 
 "Continue Coach Marketplace V1 from COACH_MARKETPLACE_HANDOFF.md — proceed to Phase 5 (QR/manual-code redemption), building on `coach_voucher_entitlements` as the authoritative entitlement source, following the same dev-simulation-first, Stripe-deferred approach as Phases 0-4." Adjust if priorities have changed.
+
+---
+
+## Web parity (separate track, started 2026-09-23)
+
+Numbering here is its own: these are the *web* phases the owner approved, not the
+mobile Phase 1-9 above.
+
+- **Phase 1 — public discovery (DONE).** `/lessons` browse + filters + map,
+  `/lessons/[id]` detail, `/coach/[id]` coach page. All public, read-only;
+  buying needs an account. Migration `20260923300000_coach_offer_browse.sql`
+  (`browse_coach_offers`, `coach_offer_detail`). Typographic initials stand in
+  for a missing photo — owner decision, coaches are not expected to upload one.
+- **Phase 2 — admin moderation (DONE).** `/admin/coaching`, mirroring
+  `/admin/marketplace`. Migrations `20260923310000_coach_offer_moderation.sql`
+  and `20260923310100_coach_moderation_flag_scope.sql`. Remove requires a
+  reason (shown to the coach), freezes the offer and drops it from both public
+  functions; restore returns it **paused**, never live. Every action is in
+  `coach_offer_moderation_log`, append-only.
+- **Phase 3 — coach self-service on web. NOT STARTED.**
+- **Phase 4 — web checkout. NOT STARTED, and blocked** on the Stripe webhook
+  round-trip above still being unproven.
+
+### Known, deliberately unfixed
+
+`admin_remove_marketplace_listing` / `admin_restore_marketplace_listing`
+(`20260922160000`) set `app.marketplace_moderation` to `'on'` with
+`set_config(..., true)` and never set it back. That is transaction-local, so in
+production — one RPC, one transaction — nothing is exposed. But any future
+caller that wraps a moderation RPC and further statements in one transaction
+runs those statements with the guard disabled. The coach equivalents were
+hardened in `20260923310100`; the marketplace pair was left alone rather than
+widening that migration. Fix both together when marketplace moderation is next
+touched.

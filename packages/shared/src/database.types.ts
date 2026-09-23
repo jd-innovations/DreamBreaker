@@ -559,6 +559,33 @@ export type Database = {
           },
         ]
       }
+      coach_offer_moderation_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          offer_id: string
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          offer_id: string
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          offer_id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       coach_offer_purchases: {
         Row: {
           boost_attributed: boolean
@@ -727,6 +754,7 @@ export type Database = {
           purchase_limit_per_customer: number | null
           quantity_available: number | null
           quantity_remaining: number | null
+          removed_at: string | null
           regular_price_cents: number
           skill_level_label: string | null
           status: Database["public"]["Enums"]["coach_offer_status"]
@@ -752,6 +780,7 @@ export type Database = {
           purchase_limit_per_customer?: number | null
           quantity_available?: number | null
           quantity_remaining?: number | null
+          removed_at?: string | null
           regular_price_cents: number
           skill_level_label?: string | null
           status?: Database["public"]["Enums"]["coach_offer_status"]
@@ -777,6 +806,7 @@ export type Database = {
           purchase_limit_per_customer?: number | null
           quantity_available?: number | null
           quantity_remaining?: number | null
+          removed_at?: string | null
           regular_price_cents?: number
           skill_level_label?: string | null
           status?: Database["public"]["Enums"]["coach_offer_status"]
@@ -7799,6 +7829,37 @@ export type Database = {
       mark_group_read: {
         Args: { p_group_id: string }
         Returns: undefined
+      }
+      admin_list_coach_offers: {
+        Args: { p_search?: string; p_status?: string; p_offset?: number }
+        Returns: {
+          id: string
+          title: string
+          offer_type: string
+          status: string
+          removed_at: string
+          regular_price_cents: number
+          discounted_price_cents: number
+          quantity_remaining: number
+          coach_id: string
+          coach_name: string
+          coach_email: string
+          facility_name: string
+          city: string
+          state: string
+          created_at: string
+          purchase_count: number
+          last_removed_reason: string
+          total_count: number
+        }[]
+      }
+      admin_remove_coach_offer: {
+        Args: { p_offer_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_restore_coach_offer: {
+        Args: { p_offer_id: string }
+        Returns: string
       }
       admin_list_automations: {
         Args: Record<PropertyKey, never>
