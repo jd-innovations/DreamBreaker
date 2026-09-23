@@ -208,6 +208,33 @@ but not Phase 2. Decision 6 is needed during Phase 1.
 
 ---
 
+## PARKED: the condensed display face (2026-09-23)
+
+The owner does not want the condensed display face on CONTENT — a lesson
+title, a person's name, anything a user wrote. Caps are wanted, the condensed
+face is not: "I still want it capitalized, just not condensed."
+
+**Done already**, on the coach-marketplace web pages only: user-written titles
+set UPPERCASE in the body face with slight letter-spacing. `font-display`
+still owns prices, badges, section eyebrows and initials fallbacks.
+
+**Parked**, pending a decision: everything else. `font-display` appears 443
+times across 64 web files — page headings, nav, dashboards — so changing it
+broadly is a brand decision rather than a tweak. Three options were put to the
+owner:
+
+1. Content only (what shipped).
+2. Content plus page headings ("Lessons", "Marketplace", "Players") — roughly a
+   dozen files; reads plainer and more product-like.
+3. Retire the condensed face on web entirely, and separately on mobile.
+
+**The consistency catch:** mobile reads the same display styles from
+`packages/shared/src/tokens.ts`. Anything past option 1 makes web and mobile
+diverge visually until mobile follows.
+
+Recommended next step if this is picked up: mock ONE page both ways and look
+at it before committing to a sweep.
+
 ## Phases
 
 **Phase 0 — decide.** Answer the six above. No code.
