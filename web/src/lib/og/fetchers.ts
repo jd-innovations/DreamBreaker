@@ -203,6 +203,34 @@ export async function fetchCoachOg(id: string): Promise<OgPayload | null> {
   };
 }
 
+/**
+ * A lesson, for a shared link. Reads the same public RPC the page does, so a
+ * draft or archived offer previews as nothing rather than leaking a title —
+ * the RPC returns only active and paused offers.
+ */
+export async function fetchCoachOfferOg(id: string): Promise<OgPayload | null> {
+  if (!isUuid(id)) return null;
+  const { data } = await ogClient().rpc("coach_offer_detail", { p_id: id });
+  const row = (data ?? [])[0];
+  if (!row) return null;
+
+  const price = row.discounted_price_cents ?? row.regular_price_cents;
+  const location = joinParts([row.city, row.state]);
+  const dollars = price != null ? `$${(price / 100) % 1 === 0 ? (price / 100).toFixed(0) : (price / 100).toFixed(2)}` : null;
+
+  return {
+    entityType: "coach_offer",
+    id,
+    title: row.title ?? "Pickleball lesson",
+    description: row.description?.trim()
+      || joinParts([dollars, row.coach_name ? `with ${row.coach_name}` : null, location])
+      || "A pickleball lesson on Pickleball App.",
+    imageUrl: row.photo_url ?? row.coach_avatar_url ?? null,
+    detailLine: joinParts([dollars, location]) || null,
+    ogType: "website",
+  };
+}
+
 export async function fetchFacilityOg(id: string): Promise<OgPayload | null> {
   if (!isUuid(id)) return null;
   const client = ogClient();
@@ -240,6 +268,7 @@ export async function fetchOgPayload(entityType: OgPayload["entityType"], id: st
     case "marketplace": return fetchMarketplaceListingOg(id);
     case "group": return fetchGroupOg(id);
     case "coach": return fetchCoachOg(id);
+    case "coach_offer": return fetchCoachOfferOg(id);
     case "facility": return fetchFacilityOg(id);
   }
 }

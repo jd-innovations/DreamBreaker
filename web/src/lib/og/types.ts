@@ -6,6 +6,7 @@ export type OgEntityType =
   | "marketplace"
   | "group"
   | "coach"
+  | "coach_offer"
   | "facility";
 
 export const OG_ENTITY_TYPES: readonly OgEntityType[] = [
@@ -14,6 +15,7 @@ export const OG_ENTITY_TYPES: readonly OgEntityType[] = [
   "marketplace",
   "group",
   "coach",
+  "coach_offer",
   "facility",
 ];
 
@@ -27,6 +29,9 @@ export const OG_CANONICAL_PATH: Record<OgEntityType, (id: string) => string> = {
   marketplace: (id) => `/marketplace/${id}`,
   group: (id) => `/groups/${id}`,
   coach: (id) => `/coach/${id}`,
+  // The lesson page is the canonical URL; /coach/offers/<id> — the
+  // deep-link root the app registers — redirects to it.
+  coach_offer: (id) => `/lessons/${id}`,
   facility: (id) => `/facility/${id}`,
 };
 

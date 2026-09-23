@@ -11,6 +11,7 @@ const ENTITY_LABEL: Record<OgEntityType, string> = {
   marketplace: "MARKETPLACE",
   group: "GROUP",
   coach: "COACH",
+  coach_offer: "LESSON",
   facility: "FACILITY",
 };
 

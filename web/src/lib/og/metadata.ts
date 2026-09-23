@@ -11,6 +11,7 @@ const ENTITY_SUFFIX: Record<OgEntityType, string> = {
   marketplace: "Marketplace",
   group: "Group",
   coach: "Coach",
+  coach_offer: "Lesson",
   facility: "Facility",
 };
 

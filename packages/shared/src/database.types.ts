@@ -8171,6 +8171,94 @@ export type Database = {
           states: string[]
         }[]
       }
+      browse_coach_offers: {
+        Args: {
+          p_search?: string
+          p_offer_type?: string
+          p_min_cents?: number
+          p_max_cents?: number
+          p_city?: string
+          p_state?: string
+          p_sort?: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: {
+          id: string
+          title: string
+          offer_type: string
+          description: string
+          skill_level_label: string
+          duration_minutes: number
+          max_participants: number
+          lessons_included: number
+          regular_price_cents: number
+          discounted_price_cents: number
+          premium_only: boolean
+          premium_price_cents: number
+          quantity_remaining: number
+          coach_id: string
+          coach_name: string
+          coach_handle: string
+          coach_avatar_url: string
+          facility_id: string
+          facility_name: string
+          city: string
+          state: string
+          latitude: number
+          longitude: number
+          photo_url: string
+          created_at: string
+          total_count: number
+        }[]
+      }
+      coach_offer_detail: {
+        Args: { p_id: string }
+        Returns: {
+          id: string
+          title: string
+          offer_type: string
+          description: string
+          terms: string
+          skill_level_label: string
+          duration_minutes: number
+          max_participants: number
+          lessons_included: number
+          regular_price_cents: number
+          discounted_price_cents: number
+          premium_only: boolean
+          premium_price_cents: number
+          quantity_remaining: number
+          purchase_limit_per_customer: number
+          status: string
+          coach_id: string
+          coach_name: string
+          coach_handle: string
+          coach_avatar_url: string
+          coach_bio: string
+          facility_id: string
+          facility_name: string
+          facility_address: string
+          city: string
+          state: string
+          latitude: number
+          longitude: number
+          photo_url: string
+        }[]
+      }
+      coach_offer_map_pins: {
+        Args: { p_lat: number; p_lng: number; p_radius_meters?: number }
+        Returns: {
+          facility_id: string
+          facility_name: string
+          city: string
+          state: string
+          latitude: number
+          longitude: number
+          offer_count: number
+          min_price_cents: number
+        }[]
+      }
       browse_listings: {
         Args: {
           p_brand?: string
