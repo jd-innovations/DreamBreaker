@@ -413,12 +413,22 @@ export async function createBracket(
   ];
 
   // Track which player UUIDs appear in each match slot (resolved through BYE cascades)
+  //
+  // realCount: how many real entrants exist ANYWHERE in this match's subtree,
+  // computed structurally from round-0 seeding — independent of whether
+  // anything has actually been played, since at generation time nothing has.
+  // This is the piece the auto-cascade below needs and did not have: a null
+  // slot is either PERMANENTLY empty (its feeder's realCount is 0 — a true
+  // bye) or MERELY UNDECIDED (its feeder's realCount is >= 1, and the real
+  // entrant occupying it just hasn't been determined by an actual match yet).
+  // Both look identical as "null" without this count.
   type MatchState = {
     id: string;
     p1: ParticipantRow | null;
     p2: ParticipantRow | null;
     winner: 1 | 2 | null;
     byeCompleted: boolean;
+    realCount: number;
   };
 
   const matchStates: Record<number, Record<number, MatchState>> = {};
@@ -432,6 +442,7 @@ export async function createBracket(
         p2: null,
         winner: null,
         byeCompleted: false,
+        realCount: 0,
       };
     }
   }
@@ -455,27 +466,56 @@ export async function createBracket(
     else              { nextState.p2 = winner; }
   }
 
-  // Auto-advance BYEs in first round
+  // Auto-advance BYEs in first round. A round-0 slot is either a real
+  // participant or a true empty seed — there is no third "TBD" option this
+  // early, so realCount here is exactly 0 or 1 per slot.
   for (let mi = 0; mi < firstRoundCount; mi++) {
     const s = matchStates[0][mi];
+    s.realCount = (s.p1 ? 1 : 0) + (s.p2 ? 1 : 0);
     if (s.p1 && !s.p2) { advance(0, mi, s.p1, 1); }
     else if (!s.p1 && s.p2) { advance(0, mi, s.p2, 2); }
     else if (!s.p1 && !s.p2) { s.byeCompleted = true; }
+    // Both real: a genuine match, left pending — correctly NOT auto-decided.
   }
 
-  // Cascade BYEs through subsequent rounds
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (let ri = 1; ri < totalRounds; ri++) {
-      const matchCount = bracketSize / Math.pow(2, ri + 1);
-      for (let mi = 0; mi < matchCount; mi++) {
-        const s = matchStates[ri][mi];
-        if (s.byeCompleted) continue;
-        if (s.p1 && !s.p2) { advance(ri, mi, s.p1, 1); changed = true; }
-        else if (!s.p1 && s.p2) { advance(ri, mi, s.p2, 2); changed = true; }
-        else if (!s.p1 && !s.p2) { s.byeCompleted = true; changed = true; }
+  // Propagate through subsequent rounds, strictly in round order (round r
+  // depends only on round r-1, already fully resolved by the time we get
+  // here — no fixed-point loop needed).
+  //
+  // THE BUG THIS REPLACES: the old version auto-advanced a match's lone
+  // filled slot whenever the OTHER slot was simply null, with no way to tell
+  // "null because permanently empty" from "null because the real match that
+  // would decide it hasn't been played yet". A single real bye in round 0
+  // would cascade unopposed through every later round — including the final
+  // — because each round it reached still looked "one side filled, other
+  // null" even though that other side's subtree had real, unplayed entrants
+  // in it. That is how a division with zero matches played still ended up
+  // with a declared champion. Found 2026-09-24 on Women's Doubles, RATE LAS
+  // VEGAS OPEN - DEMO.
+  //
+  // The fix: gate every auto-advance on the OTHER side's realCount being
+  // exactly 0 — a real bye, not a real match waiting to happen. A side whose
+  // feeder has realCount >= 1 stays null until an actual score is entered,
+  // which is what makes it render as "Awaiting Previous Round" rather than a
+  // free pass.
+  for (let ri = 1; ri < totalRounds; ri++) {
+    const matchCount = bracketSize / Math.pow(2, ri + 1);
+    for (let mi = 0; mi < matchCount; mi++) {
+      const leftReal  = matchStates[ri - 1][mi * 2].realCount;
+      const rightReal = matchStates[ri - 1][mi * 2 + 1].realCount;
+      const s = matchStates[ri][mi];
+      s.realCount = leftReal + rightReal;
+
+      if (leftReal === 0 && rightReal === 0) {
+        s.byeCompleted = true; // whole subtree is empty — permanently, not just unplayed
+      } else if (rightReal === 0 && s.p1 && !s.p2) {
+        advance(ri, mi, s.p1, 1); // p2's side can never produce an opponent
+      } else if (leftReal === 0 && !s.p1 && s.p2) {
+        advance(ri, mi, s.p2, 2); // p1's side can never produce an opponent
       }
+      // Otherwise both sides have a real entrant somewhere in them: a genuine
+      // match is required before this slot can resolve, so it is left
+      // pending even if one side already shows a name from its own bye chain.
     }
   }
 
