@@ -233,8 +233,19 @@ function MatchCard({
             activeOpacity={canAssign ? 0.8 : 1}
             onPress={canAssign ? () => onAssignCourt(match) : undefined}
           >
-            <Ionicons name="location-outline" size={13} color={canAssign ? L.navy : L.textSub} />
-            <Text style={[mc.actionLabel, !canAssign && mc.actionLabelDisabled]}>
+            <Ionicons name="location-outline" size={12} color={canAssign ? L.navy : L.textSub} />
+            {/* numberOfLines + adjustsFontSizeToFit: a safety net on top of the
+                width fix above, so a locale with a longer label (or an
+                unusually wide court number) shrinks a point rather than
+                wrapping onto a second line and colliding with the next
+                button, which is what "Assign Court" / "Enter Score" were
+                doing at the old card width. */}
+            <Text
+              style={[mc.actionLabel, !canAssign && mc.actionLabelDisabled]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+            >
               {match.courtNumber !== undefined ? `Court ${match.courtNumber}` : 'Assign Court'}
             </Text>
           </TouchableOpacity>
@@ -243,8 +254,13 @@ function MatchCard({
             activeOpacity={canScore ? 0.8 : 1}
             onPress={canScore ? () => onEnterScore(match) : undefined}
           >
-            <Ionicons name="create-outline" size={13} color={canScore ? L.bg : L.textSub} />
-            <Text style={[mc.actionLabelAccent, !canScore && mc.actionLabelDisabled]}>
+            <Ionicons name="create-outline" size={12} color={canScore ? L.bg : L.textSub} />
+            <Text
+              style={[mc.actionLabelAccent, !canScore && mc.actionLabelDisabled]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+            >
               Enter Score
             </Text>
           </TouchableOpacity>
@@ -266,7 +282,12 @@ function MatchCard({
 
 const mc = StyleSheet.create({
   card: {
-    width: 220, backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
+    // 220 left no room for the two action-button labels below ("Assign
+    // Court" / "Enter Score") at their bold, letter-spaced size — the text
+    // overflowed its button and visually collided with its neighbour.
+    // Nothing else in this file keys off this number (checked: no connector
+    // lines, no other hardcoded 220), so widening it is a safe, local fix.
+    width: 240, backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
     borderRadius: shape.card, overflow: 'hidden', marginBottom: 10,
   },
   header: {
@@ -290,12 +311,16 @@ const mc = StyleSheet.create({
   },
   awaitingText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', fontStyle: 'italic' },
   actions: {
-    flexDirection: 'row', gap: 6, padding: 10,
+    flexDirection: 'row', gap: 4, padding: 8,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border,
   },
   actionBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-    borderWidth: 1, borderColor: L.border, borderRadius: shape.badge, paddingVertical: 8,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+    // A little horizontal padding INSIDE each button, not none: with zero
+    // padding the label sat flush against the border, which read as even
+    // more cramped than the missing space actually was.
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.badge,
+    paddingVertical: 8, paddingHorizontal: 4,
   },
   actionBtnAccent: { backgroundColor: L.navy, borderColor: L.navy },
   actionBtnDisabled: { opacity: 0.4 },
@@ -821,7 +846,7 @@ function DivisionBracketScreen() {
               activeOpacity={0.7}
               onPress={() => setRoundFilter(tab)}
             >
-              <Text style={[s.tabLabel, active && s.tabLabelActive]}>{tab}</Text>
+              <Text style={[s.tabLabel, active && s.tabLabelActive]} numberOfLines={1}>{tab}</Text>
             </TouchableOpacity>
           );
         })}
@@ -928,7 +953,11 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 8, gap: 8, flexDirection: 'row',
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  tab: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: shape.pill, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg },
+  // flexShrink: 0 — a pill inside a row ScrollView's contentContainerStyle
+  // can otherwise be compressed below its content's width instead of simply
+  // overflowing into the scrollable area, which is what made "Round of 32"
+  // and "Round of 16" render as near-identical squashed fragments.
+  tab: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: shape.pill, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg, flexShrink: 0 },
   tabActive: { backgroundColor: L.navy, borderColor: L.navy },
   tabLabel: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   tabLabelActive: { color: L.bg },
