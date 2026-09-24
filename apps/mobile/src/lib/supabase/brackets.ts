@@ -345,9 +345,33 @@ export async function createBracket(
     .eq('tournament_id', tournamentId)
     .eq('division_id', divisionId);
 
+  // A doubles/mixed team can exist as TWO registration rows — one per member,
+  // each naming the other as partner — if whatever registered them (bulk
+  // import, director tooling) called the register-a-team step once per
+  // player instead of once per team. Both rows are the same real team, so
+  // seeding one slot per ROW put that team on both sides of a match against
+  // itself, or scattered it into two different matches in the same round.
+  // Found 2026-09-24 on RATE LAS VEGAS OPEN - DEMO: every doubles/mixed
+  // division had exactly 2x its real team count, always an exact mirror
+  // (A w/ partner B, and separately B w/ partner A).
+  //
+  // The unordered pair is the identity of a team regardless of which member
+  // is on which side, so dedup on it rather than on the row. Keeps the
+  // earlier-registered of a mirrored pair; singles are unaffected since a
+  // player alone has no partner half to collide with.
+  const seenTeams = new Set<string>();
   const sorted = [...registrations]
     .filter(r => r.status === 'registered' || r.status === 'checked_in')
-    .sort((a, b) => new Date(a.registrationDate).getTime() - new Date(b.registrationDate).getTime());
+    .sort((a, b) => new Date(a.registrationDate).getTime() - new Date(b.registrationDate).getTime())
+    .filter(r => {
+      const self = r.playerGuestId ?? r.playerId;
+      const partner = r.partnerGuestId ?? r.partnerId;
+      if (!partner) return true; // singles: no team pair to collide on
+      const key = [self, partner].sort().join('|');
+      if (seenTeams.has(key)) return false;
+      seenTeams.add(key);
+      return true;
+    });
 
   if (sorted.length === 0) return null;
 
