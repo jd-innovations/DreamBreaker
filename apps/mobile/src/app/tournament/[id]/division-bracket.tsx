@@ -170,7 +170,14 @@ function MatchCard({
   const isCompleted = match.status === 'completed';
   const p1 = match.participant1;
   const p2 = match.participant2;
-  const isDoubleBye = p1 === null && p2 === null;
+  // A PERMANENT double bye only exists in round 0: a first-round slot that
+  // was empty from seeding (more bracket slots than entrants) and will never
+  // fill. From round 1 on, "both null" instead means "awaiting both feeder
+  // matches" — it WILL resolve once earlier rounds are scored. Conflating the
+  // two hid every later round entirely before any match had been played:
+  // Round of 16 showed a header and nothing else, because every one of its
+  // matches was "both null" and got treated as a dead bye.
+  const isDoubleBye = p1 === null && p2 === null && match.roundIndex === 0;
   const isBye1 = p1 !== null && p2 === null && isCompleted;
   const isBye2 = p2 !== null && p1 === null && isCompleted;
   const canAssign  = !isCompleted && (p1 !== null || p2 !== null);
@@ -324,8 +331,15 @@ const mc = StyleSheet.create({
   },
   actionBtnAccent: { backgroundColor: L.navy, borderColor: L.navy },
   actionBtnDisabled: { opacity: 0.4 },
-  actionLabel: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
-  actionLabelAccent: { color: L.bg, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  // microLabel (10/700, no tracking) rather than cardLabel (11/800/ls0.8) —
+  // the smallest role in the shared scale, picked because these two labels
+  // are exactly the "under a button, no room to spare" case it exists for.
+  // Also buys back the width text.cardLabel's letter-spacing was spending.
+  // Matches this file's existing convention (see tabLabel below): size comes
+  // from the token, weight is written as the plain string RN's fontWeight
+  // wants, matching the token's own (numeric) 700.
+  actionLabel: { color: L.navy, fontSize: text.microLabel.size, fontWeight: '700' },
+  actionLabelAccent: { color: L.bg, fontSize: text.microLabel.size, fontWeight: '700' },
   actionLabelDisabled: { color: L.textSub },
   completedRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -694,9 +708,14 @@ function DivisionBracketScreen() {
       ? bracket.rounds
       : bracket.rounds.filter(r => r.roundName === roundFilter);
 
-  // Phase 10: bracket summary counts
+  // Phase 10: bracket summary counts. Excludes only a round-0 double bye (an
+  // empty slot from seeding, e.g. more bracket slots than entrants — it will
+  // never be played). A later round with both slots still undetermined DOES
+  // count: it is a real match awaiting its feeders, same rule as MatchCard's
+  // isDoubleBye and the round-render filter above, so REMAINING matches what
+  // is actually visible under "All" and under that round's own tab.
   const allMatches  = bracket.rounds.flatMap(r => r.matches).filter(
-    m => m.participant1 !== null || m.participant2 !== null,
+    m => !(m.participant1 === null && m.participant2 === null && m.roundIndex === 0),
   );
   const totalMatches    = allMatches.length;
   const playedMatches   = allMatches.filter(m => m.status === 'completed').length;
@@ -866,7 +885,12 @@ function DivisionBracketScreen() {
             <View key={round.id} style={s.roundCol}>
               <Text style={s.roundHeader}>{round.roundName}</Text>
               {round.matches.map(match => {
-                if (match.participant1 === null && match.participant2 === null) return null;
+                // Same rule as MatchCard's isDoubleBye: only round 0 can be a
+                // permanent bye. Skipping this here as well as in MatchCard
+                // (not just there) matters for the round-header count above
+                // it staying visible with the round's OTHER real matches even
+                // when a genuine round-0 double-bye sits among them.
+                if (match.participant1 === null && match.participant2 === null && match.roundIndex === 0) return null;
                 return (
                   <MatchCard
                     key={match.id}
