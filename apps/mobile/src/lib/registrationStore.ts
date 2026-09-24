@@ -26,8 +26,17 @@ export type TournamentRegistration = {
   /** Raw event_date (YYYY-MM-DD). `date` above is display-formatted and
    *  cannot be compared or sorted; this is what callers filter on. */
   eventDate: string;
+  /**
+   * A registered player OR a director-added guest (no account) —
+   * director_add_tournament_registration() supports both. `playerId` is a
+   * display/key fallback only: `row.player_id ?? row.guest_player_id`. It is
+   * NOT guaranteed to be a `profiles.id` — check `playerGuestId` before using
+   * it as a profile FK (e.g. seeding a bracket_matches.team*_player_* column).
+   */
   playerId: string;
   playerName: string;
+  /** Set when `playerId` is a `personal_guest_players.id`, not a profile. */
+  playerGuestId?: string;
   registrationDate: string;
   status: RegistrationStatus;
   amountPaid: number;
@@ -37,6 +46,8 @@ export type TournamentRegistration = {
   partnerId?: string;
   partnerName?: string;
   partnerDupr?: string;
+  /** Set when `partnerId` is a `personal_guest_players.id`, not a profile. */
+  partnerGuestId?: string;
   // ── Per-player team payment state (doubles/mixed) ───────────────────────────
   // Present only when this registration belongs to a registration_groups team,
   // where every player owes their own entry fee. `amountPaid` above is this

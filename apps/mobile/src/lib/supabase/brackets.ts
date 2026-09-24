@@ -17,6 +17,7 @@ type RoundLabel = Database['public']['Enums']['round_label'];
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ProfileRef = { id: string; full_name: string | null } | null;
+type GuestRef = { id: string; display_name: string | null } | null;
 
 type BracketMatchRow = {
   id: string;
@@ -35,6 +36,12 @@ type BracketMatchRow = {
   p1b: ProfileRef;
   p2a: ProfileRef;
   p2b: ProfileRef;
+  // A slot is a real player (p*) or a director-added guest (g*), never both —
+  // see the comment on team1_guest_a in the migration that added these.
+  g1a: GuestRef;
+  g1b: GuestRef;
+  g2a: GuestRef;
+  g2b: GuestRef;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -51,9 +58,20 @@ function generateUUID(): string {
 export const validateScores = validateSingleGameScore;
 
 function smallestPow2(n: number): number {
+  // No cap here on purpose — the old `Math.min(p, 32)` made this the crash
+  // site for any division over 32 entrants. When n > 32, p keeps doubling
+  // past it (correct), but the cap then forced bracketSize back down below
+  // n, and createBracket's `Array<null>(bracketSize - participants.length)`
+  // received a NEGATIVE length, which throws RangeError: Invalid array
+  // length — an uncaught crash, not a validation error. Found 2026-09-24 on
+  // RATE LAS VEGAS OPEN - DEMO: 4 of 5 divisions (44-88 entrants) exceeded 32.
+  //
+  // round_label's own enum (pool, r64, r32, r16, qf, sf, bronze, final) has
+  // no ceiling either — 'pool' is the deliberate catch-all for any round
+  // earlier than r64, so nothing here needed a cap in the first place.
   let p = 4;
   while (p < n) p *= 2;
-  return Math.min(p, 32);
+  return p;
 }
 
 // Map roundIndex (0 = earliest, N-1 = final) to DB round_label enum
@@ -103,30 +121,33 @@ function rowsToDivisionBracket(
       .sort((a, b) => a.match_number - b.match_number);
 
     const matches: DirectorBracketMatch[] = roundRows.map(row => {
-      const p1 = row.p1a
+      // A slot is a real player (p1a) or a director-added guest (g1a), never
+      // both, so checking p1a first and falling back to g1a picks whichever
+      // one this particular match actually has.
+      const p1 = row.p1a || row.g1a
         ? {
-            id: row.p1a.id,
-            name: row.p1a.full_name ?? '',
-            partnerName: row.p1b?.full_name ?? undefined,
+            id: (row.p1a ?? row.g1a)!.id,
+            name: row.p1a?.full_name ?? row.g1a?.display_name ?? '',
+            partnerName: row.p1b?.full_name ?? row.g1b?.display_name ?? undefined,
             divisionId,
             seed: 0,
           }
         : null;
 
-      const p2 = row.p2a
+      const p2 = row.p2a || row.g2a
         ? {
-            id: row.p2a.id,
-            name: row.p2a.full_name ?? '',
-            partnerName: row.p2b?.full_name ?? undefined,
+            id: (row.p2a ?? row.g2a)!.id,
+            name: row.p2a?.full_name ?? row.g2a?.display_name ?? '',
+            partnerName: row.p2b?.full_name ?? row.g2b?.display_name ?? undefined,
             divisionId,
             seed: 0,
           }
         : null;
 
       const winnerId = row.winner === 1
-        ? (row.p1a?.id ?? undefined)
+        ? (row.p1a?.id ?? row.g1a?.id ?? undefined)
         : row.winner === 2
-        ? (row.p2a?.id ?? undefined)
+        ? (row.p2a?.id ?? row.g2a?.id ?? undefined)
         : undefined;
 
       const status: DirectorBracketMatch['status'] =
@@ -193,11 +214,13 @@ function rowsToDivisionBracket(
     const finalRow = rows.find(r => r.round === sortedLabels[totalRounds - 1] && r.match_number === 0);
     if (finalRow) {
       const winnerProfile = finalRow.winner === 1 ? finalRow.p1a : finalRow.p2a;
+      const winnerGuest   = finalRow.winner === 1 ? finalRow.g1a : finalRow.g2a;
       const loserProfile  = finalRow.winner === 1 ? finalRow.p2a : finalRow.p1a;
-      championId   = winnerProfile?.id;
-      championName = winnerProfile?.full_name ?? undefined;
-      runnerUpId   = loserProfile?.id;
-      runnerUpName = loserProfile?.full_name ?? undefined;
+      const loserGuest    = finalRow.winner === 1 ? finalRow.g2a : finalRow.g1a;
+      championId   = winnerProfile?.id ?? winnerGuest?.id;
+      championName = winnerProfile?.full_name ?? winnerGuest?.display_name ?? undefined;
+      runnerUpId   = loserProfile?.id ?? loserGuest?.id;
+      runnerUpName = loserProfile?.full_name ?? loserGuest?.display_name ?? undefined;
     }
     const completedDates = rows.map(r => r.completed_at).filter(Boolean) as string[];
     completedAt = completedDates.sort().at(-1) ?? undefined;
@@ -234,7 +257,11 @@ const MATCH_SELECT = `
   p1a:profiles!bracket_matches_team1_player_a_fkey(id,full_name),
   p1b:profiles!bracket_matches_team1_player_b_fkey(id,full_name),
   p2a:profiles!bracket_matches_team2_player_a_fkey(id,full_name),
-  p2b:profiles!bracket_matches_team2_player_b_fkey(id,full_name)
+  p2b:profiles!bracket_matches_team2_player_b_fkey(id,full_name),
+  g1a:personal_guest_players!bracket_matches_team1_guest_a_fkey(id,display_name),
+  g1b:personal_guest_players!bracket_matches_team1_guest_b_fkey(id,display_name),
+  g2a:personal_guest_players!bracket_matches_team2_guest_a_fkey(id,display_name),
+  g2b:personal_guest_players!bracket_matches_team2_guest_b_fkey(id,display_name)
 `.trim();
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -292,7 +319,18 @@ export async function hasBracket(
 
 // ─── Bracket generation ───────────────────────────────────────────────────────
 
-type ParticipantRow = DirectorBracketParticipant & { playerUUID: string; partnerUUID?: string };
+// playerUUID/partnerUUID: a real profiles.id, for the team1_player_a-style FK
+// columns. playerGuestUUID/partnerGuestUUID: a personal_guest_players.id, for
+// the team1_guest_a-style columns added alongside them — director-added guest
+// registrants have no profile, and inserting their id into a profiles-FK
+// column would fail the constraint. Exactly one of the pair is set per side;
+// never both, since a slot is either a real player or a guest.
+type ParticipantRow = DirectorBracketParticipant & {
+  playerUUID?: string;
+  playerGuestUUID?: string;
+  partnerUUID?: string;
+  partnerGuestUUID?: string;
+};
 
 export async function createBracket(
   tournamentId: string,
@@ -314,9 +352,14 @@ export async function createBracket(
   if (sorted.length === 0) return null;
 
   const participants: ParticipantRow[] = sorted.map((r, i) => ({
-    id:          r.playerId,
-    playerUUID:  r.playerId,
-    partnerUUID: r.partnerId,
+    id:              r.playerId,
+    // r.playerId falls back to the guest id when there is no profile (see
+    // TournamentRegistration), so it is never used directly as a profiles FK
+    // here — only playerUUID/playerGuestUUID are, and exactly one is set.
+    playerUUID:      r.playerGuestId ? undefined : r.playerId,
+    playerGuestUUID: r.playerGuestId,
+    partnerUUID:      r.partnerGuestId ? undefined : r.partnerId,
+    partnerGuestUUID: r.partnerGuestId,
     name:        r.playerName,
     partnerName: r.partnerName,
     divisionId:  r.divisionId,
@@ -336,10 +379,13 @@ export async function createBracket(
     }
   }
 
-  // Slots for first round (participants + BYEs)
+  // Slots for first round (participants + BYEs). smallestPow2 guarantees
+  // bracketSize >= participants.length by construction, but Math.max(0, …)
+  // costs nothing and means this can never again throw RangeError: Invalid
+  // array length if that invariant is ever broken by a future edit.
   const slots: (ParticipantRow | null)[] = [
     ...participants,
-    ...Array<null>(bracketSize - participants.length).fill(null),
+    ...Array<null>(Math.max(0, bracketSize - participants.length)).fill(null),
   ];
 
   // Track which player UUIDs appear in each match slot (resolved through BYE cascades)
@@ -431,8 +477,12 @@ export async function createBracket(
         match_number:    mi,
         team1_player_a:  s.p1?.playerUUID ?? null,
         team1_player_b:  s.p1?.partnerUUID ?? null,
+        team1_guest_a:   s.p1?.playerGuestUUID ?? null,
+        team1_guest_b:   s.p1?.partnerGuestUUID ?? null,
         team2_player_a:  s.p2?.playerUUID ?? null,
         team2_player_b:  s.p2?.partnerUUID ?? null,
+        team2_guest_a:   s.p2?.playerGuestUUID ?? null,
+        team2_guest_b:   s.p2?.partnerGuestUUID ?? null,
         winner:          s.byeCompleted ? s.winner : null,
         completed_at:    s.byeCompleted && s.winner != null ? now : null,
         next_match_id:   nextMatchId,

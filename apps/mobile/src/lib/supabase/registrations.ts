@@ -26,8 +26,10 @@ export type RegistrationRow = {
   id: string;
   tournament_id: string;
   division_id: string | null;
-  player_id: string;
+  player_id: string | null;
   partner_id: string | null;
+  guest_player_id: string | null;
+  guest_partner_id: string | null;
   status: string;
   hold_fee_paid_cents: number;
   entry_fee_paid_cents: number;
@@ -52,6 +54,13 @@ export type RegistrationRow = {
   } | null;
   player: { full_name: string | null; dupr: number | null } | null;
   partner: { full_name: string | null; dupr: number | null } | null;
+  // Director-added guest registrants (director_add_tournament_registration(),
+  // migration 20260821030000) have no profiles row at all — player_id is NULL
+  // and the person's name lives on personal_guest_players via guest_player_id
+  // instead. REG_SELECT used to join `player`/`partner` only, so every guest
+  // registrant rendered as an empty name on check-in and the roster (2026-09).
+  guest_player: { display_name: string | null } | null;
+  guest_partner: { display_name: string | null } | null;
   // Doubles/mixed teams where each player owes their own entry fee
   // (supabase/migrations/20260817010000_registration_team_payment_groups.sql).
   // NULL for singles and for every registration predating that migration.
@@ -95,8 +104,13 @@ function rowToRegistration(row: RegistrationRow): TournamentRegistration {
     state:            t?.state ?? '',
     date:             t ? formatDate(t.event_date) : '',
     eventDate:        t?.event_date ?? '',
-    playerId:         row.player_id,
-    playerName:       row.player?.full_name ?? '',
+    // Fall back to the guest row's id/name when there is no profile. playerId
+    // stays a plain display/key value here — see the TournamentRegistration
+    // comment for why it must not be treated as a profiles.id without also
+    // checking playerGuestId.
+    playerId:         row.player_id ?? row.guest_player_id ?? '',
+    playerName:       row.player?.full_name ?? row.guest_player?.display_name ?? '',
+    playerGuestId:    row.player_id ? undefined : row.guest_player_id ?? undefined,
     registrationDate: row.created_at,
     status:           dbStatusToAppStatus(row.status),
     amountPaid:       row.entry_fee_paid_cents,
@@ -106,9 +120,10 @@ function rowToRegistration(row: RegistrationRow): TournamentRegistration {
                         row.entry_fee_paid_cents,
                       ),
     partnerRequired:  row.needs_partner,
-    partnerStatus:    row.partner_id ? 'selected' : row.needs_partner ? 'choose_later' : 'none',
-    partnerId:        row.partner_id ?? undefined,
-    partnerName:      row.partner?.full_name ?? undefined,
+    partnerStatus:    (row.partner_id || row.guest_partner_id) ? 'selected' : row.needs_partner ? 'choose_later' : 'none',
+    partnerId:        row.partner_id ?? row.guest_partner_id ?? undefined,
+    partnerName:      row.partner?.full_name ?? row.guest_partner?.display_name ?? undefined,
+    partnerGuestId:   row.partner_id ? undefined : row.guest_partner_id ?? undefined,
     partnerDupr:      row.partner?.dupr != null ? String(Number(row.partner.dupr).toFixed(2)) : undefined,
     ...teamFieldsFor(row),
   };
@@ -159,13 +174,15 @@ function rowToHeldSpot(row: RegistrationRow): HeldSpot {
 }
 
 const REG_SELECT = `
-  id, tournament_id, division_id, player_id, partner_id,
+  id, tournament_id, division_id, player_id, partner_id, guest_player_id, guest_partner_id,
   status, hold_fee_paid_cents, entry_fee_paid_cents, needs_partner, created_at,
   registration_group_id,
   tournaments(name, venue_name, city, state, event_date, entry_fee_cents, hold_fee_cents),
   divisions(name, skill_min, skill_max, entry_fee_cents),
   player:profiles!registrations_player_id_fkey(full_name,dupr),
   partner:profiles!registrations_partner_id_fkey(full_name,dupr),
+  guest_player:personal_guest_players!registrations_guest_player_id_fkey(display_name),
+  guest_partner:personal_guest_players!registrations_guest_partner_id_fkey(display_name),
   registration_groups(id, status, registration_group_members(user_id, payment_state))
 `.trim();
 

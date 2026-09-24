@@ -159,8 +159,12 @@ export type Database = {
           score_team1: number[] | null
           score_team2: number[] | null
           started_at: string | null
+          team1_guest_a: string | null
+          team1_guest_b: string | null
           team1_player_a: string | null
           team1_player_b: string | null
+          team2_guest_a: string | null
+          team2_guest_b: string | null
           team2_player_a: string | null
           team2_player_b: string | null
           tournament_id: string
@@ -183,8 +187,12 @@ export type Database = {
           score_team1?: number[] | null
           score_team2?: number[] | null
           started_at?: string | null
+          team1_guest_a?: string | null
+          team1_guest_b?: string | null
           team1_player_a?: string | null
           team1_player_b?: string | null
+          team2_guest_a?: string | null
+          team2_guest_b?: string | null
           team2_player_a?: string | null
           team2_player_b?: string | null
           tournament_id: string
@@ -207,8 +215,12 @@ export type Database = {
           score_team1?: number[] | null
           score_team2?: number[] | null
           started_at?: string | null
+          team1_guest_a?: string | null
+          team1_guest_b?: string | null
           team1_player_a?: string | null
           team1_player_b?: string | null
+          team2_guest_a?: string | null
+          team2_guest_b?: string | null
           team2_player_a?: string | null
           team2_player_b?: string | null
           tournament_id?: string
@@ -263,6 +275,34 @@ export type Database = {
             columns: ["team2_player_b"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bracket_matches_team1_guest_a_fkey"
+            columns: ["team1_guest_a"]
+            isOneToOne: false
+            referencedRelation: "personal_guest_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bracket_matches_team1_guest_b_fkey"
+            columns: ["team1_guest_b"]
+            isOneToOne: false
+            referencedRelation: "personal_guest_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bracket_matches_team2_guest_a_fkey"
+            columns: ["team2_guest_a"]
+            isOneToOne: false
+            referencedRelation: "personal_guest_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bracket_matches_team2_guest_b_fkey"
+            columns: ["team2_guest_b"]
+            isOneToOne: false
+            referencedRelation: "personal_guest_players"
             referencedColumns: ["id"]
           },
           {
