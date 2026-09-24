@@ -34,6 +34,23 @@ export const appRoutes = {
   claim: (token: string) => `/claim/${segment(token)}`,
   review: (token: string) => `/review/${segment(token)}`,
   facility: (id: string) => `/facility/${segment(id)}`,
+
+  // ── Sections ───────────────────────────────────────────────────────────────
+  // Where a section deep link lands on THIS platform. The names on the left are
+  // the shared vocabulary; the paths on the right are expo-router's, and the
+  // two deliberately differ where the app's own route is spelled differently:
+  // /membership is the link, membership-settings.tsx is the screen.
+  wallet: () => '/wallet',
+  walletItem: (id: string) => `/wallet/${segment(id)}`,
+  stats: () => '/stats',
+  membership: () => '/membership-settings',
+  profileTab: () => '/profile',
+  games: () => '/games',
+  // The partner finder is the tab; connections and requests are the two
+  // screens a notification actually wants.
+  matchmaking: () => '/finder',
+  matchConnections: () => '/match/connections',
+  matchRequests: () => '/match/requests',
 };
 
 export const appLinks = {

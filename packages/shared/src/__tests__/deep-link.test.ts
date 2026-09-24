@@ -97,7 +97,16 @@ describe("resolveDeepLink — behaviour preserved from externalRouting.ts", () =
   });
 
   it("covers every root the legacy switch handled", () => {
-    expect(Object.keys(DEEP_LINK_ROOTS).sort()).toEqual(
+    // ENTITY roots only. The legacy switch knew nothing but these, and the
+    // parity above is what proves the move from externalRouting.ts changed no
+    // behaviour — so this list must keep matching it exactly. Section roots
+    // (added 2026-09-23) are asserted separately below; folding them in here
+    // would quietly weaken the parity guarantee this test exists for.
+    const entityRoots = Object.entries(DEEP_LINK_ROOTS)
+      .filter(([, spec]) => spec.idMode === "required")
+      .map(([root]) => root)
+      .sort();
+    expect(entityRoots).toEqual(
       ["booking", "claim", "coach", "community", "conversation", "groups", "marketplace", "review", "tournament"],
     );
   });
@@ -105,6 +114,111 @@ describe("resolveDeepLink — behaviour preserved from externalRouting.ts", () =
   it("does not resolve prototype keys (the legacy switch never did)", () => {
     expect(resolveDeepLink("/constructor/1")).toBeNull();
     expect(resolveDeepLink("/__proto__/1")).toBeNull();
+  });
+
+  it("does not resolve prototype keys WITHOUT an id either", () => {
+    // The id check used to run before the hasOwnProperty lookup, so a bare
+    // "/__proto__" exited early and never reached it. Sections moved that
+    // check after the lookup, so the guard now carries this case on its own.
+    expect(resolveDeepLink("/__proto__")).toBeNull();
+    expect(resolveDeepLink("/constructor")).toBeNull();
+    expect(resolveDeepLink("/toString")).toBeNull();
+    expect(resolveDeepLink("/hasOwnProperty")).toBeNull();
+    expect(resolveDeepLink("/prototype")).toBeNull();
+  });
+});
+
+describe("section destinations", () => {
+  // Why these exist: 17 of 35 enabled notification automations pointed at
+  // /wallet, /stats, /membership, /profile or /matchmaking, and every tap was
+  // dead — the resolver returned null and the push handler logged "no
+  // supported route". A section is a screen, not a thing with an id.
+
+  it.each([
+    ["/wallet", "wallet"],
+    ["/stats", "stats"],
+    ["/membership", "membership"],
+    ["/profile", "profile"],
+    ["/matchmaking", "matchmaking"],
+    ["/games", "games"],
+  ])("resolves %s with an empty id", (url, type) => {
+    expect(resolveDeepLink(url)).toEqual({ type, id: "", requiresAuth: true });
+  });
+
+  it("every section requires auth — they are a signed-in person's own screens", () => {
+    for (const [, spec] of Object.entries(DEEP_LINK_ROOTS)) {
+      if (spec.idMode !== "required") expect(spec.requiresAuth).toBe(true);
+    }
+  });
+
+  it("no section is broadcastable — the SQL pattern accepts entity roots only", () => {
+    for (const [, spec] of Object.entries(DEEP_LINK_ROOTS)) {
+      if (spec.idMode !== "required") expect(spec.broadcastable).toBe(false);
+    }
+  });
+
+  it("an id-taking section keeps both spellings", () => {
+    expect(resolveDeepLink(`/wallet/${UUID}`)).toEqual({ type: "wallet", id: UUID, requiresAuth: true });
+    expect(resolveDeepLink("/matchmaking/connections"))
+      .toEqual({ type: "matchmaking", id: "connections", requiresAuth: true });
+  });
+
+  it("refuses an id on a section that takes none, rather than truncating to the section", () => {
+    // The dangerous alternative: silently resolving /stats/anything to /stats,
+    // which would make a wrong link look like a working one.
+    expect(resolveDeepLink("/stats/anything")).toBeNull();
+    expect(resolveDeepLink("/profile/../admin")).toBeNull();
+  });
+
+  it("refuses extra segments past an optional id", () => {
+    expect(resolveDeepLink(`/wallet/${UUID}/edit`)).toBeNull();
+  });
+
+  it("still refuses an entity root with no id", () => {
+    expect(resolveDeepLink("/tournament")).toBeNull();
+    expect(resolveDeepLink("/groups")).toBeNull();
+    expect(resolveDeepLink("/booking")).toBeNull();
+  });
+
+  it("does not make a section reachable from another origin", () => {
+    expect(resolveDeepLink("https://evil.example/wallet")).toBeNull();
+    expect(resolveDeepLink("http://pickleballapp.app/wallet")).toBeNull();
+  });
+});
+
+describe("every shape notification_automations.link_template produces", () => {
+  // The distinct link shapes held by the 35 enabled automations, as of
+  // 20260923340000_automation_links_that_resolve.sql. A push whose link does
+  // not resolve here is delivered and then does nothing when tapped, which is
+  // invisible in any test that only checks the copy — so it is asserted
+  // against the REAL resolver rather than a regex that approximates it.
+  //
+  // If an automation gains a new link shape, add it here.
+  it.each([
+    `/tournament/${UUID}`,
+    `/groups/${UUID}`,
+    `/community/${UUID}`,
+    `/booking/${UUID}`,
+    `/conversation/${UUID}`,
+    "/review/sample-token-test",
+    "/wallet",
+    `/wallet/${UUID}`,
+    "/games",
+    "/stats",
+    "/membership",
+    "/profile",
+    "/matchmaking/connections",
+    "/matchmaking/requests",
+  ])("resolves %s", (link) => {
+    expect(resolveDeepLink(link)).not.toBeNull();
+  });
+
+  it("refuses the three spellings that were dead before this change", () => {
+    // Regression guards. Each of these was a live link_template.
+    expect(resolveDeepLink("/(tabs)/stats")).toBeNull();   // expo-router internal
+    expect(resolveDeepLink("/membership-settings")).toBeNull(); // filename, not a route word
+    expect(resolveDeepLink("/community")).toBeNull();      // needs an event id
+    expect(resolveDeepLink("/matchmaking")).not.toBeNull(); // this one now works
   });
 });
 

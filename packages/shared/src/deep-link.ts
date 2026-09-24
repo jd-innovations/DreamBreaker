@@ -18,6 +18,7 @@ export const APP_LINK_DOMAIN = "pickleballapp.app";
 export const APP_URL_SCHEME = "pickleballapp";
 
 export type DeepLinkType =
+  // Entity destinations — one specific thing, addressed by id.
   | "conversation"
   | "group"
   | "tournament"
@@ -26,7 +27,15 @@ export type DeepLinkType =
   | "booking"
   | "coach_offer"
   | "claim"
-  | "review";
+  | "review"
+  // Section destinations — a screen that is the same screen for everyone who
+  // opens it. See `idMode` below for why these exist.
+  | "wallet"
+  | "stats"
+  | "membership"
+  | "profile"
+  | "matchmaking"
+  | "games";
 
 type RootSpec = {
   type: DeepLinkType;
@@ -37,23 +46,58 @@ type RootSpec = {
    * person — broadcast it and everyone else lands on an error.
    */
   broadcastable: boolean;
+  /**
+   * Whether this root takes an id.
+   *
+   *   "required"  the original rule: /tournament with no id is nothing.
+   *   "none"      a SECTION — /stats, /profile. The screen IS the destination.
+   *   "optional"  both spellings mean something: /wallet is the wallet,
+   *               /wallet/<id> is one item in it.
+   *
+   * Sections were added 2026-09-23. The rule used to be "a root with no id is
+   * null: there is no 'all tournaments' destination, and landing on one would
+   * be a dead end" — correct for entities, wrong for screens. 17 of 35 enabled
+   * notification automations pointed at /wallet, /stats, /membership-settings,
+   * /profile or /matchmaking, and every one of those taps did NOTHING: the
+   * resolver returned null and the handler logged "no supported route". The
+   * reasoning behind the old rule still holds for entity roots, which is why
+   * this is per-root rather than a blanket relaxation.
+   */
+  idMode: "required" | "none" | "optional";
 };
 
 /** URL root → what it opens. The root is the first path segment. */
 export const DEEP_LINK_ROOTS: Readonly<Record<string, RootSpec>> = {
-  conversation: { type: "conversation", requiresAuth: true, broadcastable: false },
-  groups: { type: "group", requiresAuth: true, broadcastable: true },
-  tournament: { type: "tournament", requiresAuth: false, broadcastable: true },
-  community: { type: "community", requiresAuth: false, broadcastable: true },
-  marketplace: { type: "marketplace", requiresAuth: false, broadcastable: true },
-  booking: { type: "booking", requiresAuth: true, broadcastable: false },
+  conversation: { type: "conversation", requiresAuth: true, broadcastable: false, idMode: "required" },
+  groups: { type: "group", requiresAuth: true, broadcastable: true, idMode: "required" },
+  tournament: { type: "tournament", requiresAuth: false, broadcastable: true, idMode: "required" },
+  community: { type: "community", requiresAuth: false, broadcastable: true, idMode: "required" },
+  marketplace: { type: "marketplace", requiresAuth: false, broadcastable: true, idMode: "required" },
+  booking: { type: "booking", requiresAuth: true, broadcastable: false, idMode: "required" },
   // Only /coach/offers/<id>. A bare /coach/<id> does not resolve.
-  coach: { type: "coach_offer", requiresAuth: true, broadcastable: true },
-  claim: { type: "claim", requiresAuth: false, broadcastable: false },
+  coach: { type: "coach_offer", requiresAuth: true, broadcastable: true, idMode: "required" },
+  claim: { type: "claim", requiresAuth: false, broadcastable: false, idMode: "required" },
   // requiresAuth: the invitation belongs to one person, and
   // resolve_review_invitation refuses a token that is not theirs. Sending an
   // unauthenticated visitor to the form would only fail at submit.
-  review: { type: "review", requiresAuth: true, broadcastable: false },
+  review: { type: "review", requiresAuth: true, broadcastable: false, idMode: "required" },
+
+  // ── Sections ───────────────────────────────────────────────────────────────
+  // Every one requires auth: these are a signed-in person's own screens, and
+  // there is nothing meaningful to show a stranger. None is broadcastable —
+  // not because a broadcast to "your wallet" is nonsense, but because
+  // BROADCAST_DESTINATION_PATTERN (mirrored in SQL) accepts entity roots only,
+  // and claiming otherwise here would be a lie the composer cannot honour.
+  wallet: { type: "wallet", requiresAuth: true, broadcastable: false, idMode: "optional" },
+  stats: { type: "stats", requiresAuth: true, broadcastable: false, idMode: "none" },
+  membership: { type: "membership", requiresAuth: true, broadcastable: false, idMode: "none" },
+  profile: { type: "profile", requiresAuth: true, broadcastable: false, idMode: "none" },
+  // /matchmaking, plus /matchmaking/connections and /matchmaking/requests —
+  // "you matched" and "someone liked you" are different screens. An unknown
+  // id falls back to the main screen rather than failing (see the mobile HREF
+  // map); the alternative is a dead tap, which is what this change is fixing.
+  matchmaking: { type: "matchmaking", requiresAuth: true, broadcastable: false, idMode: "optional" },
+  games: { type: "games", requiresAuth: true, broadcastable: false, idMode: "none" },
 };
 
 export type ResolvedDeepLink = {
@@ -112,7 +156,7 @@ export function resolveDeepLink(rawUrl: string): ResolvedDeepLink | null {
   const raw = path.split("/").filter(Boolean);
   const root = raw[0] != null ? safeDecode(raw[0]) : null;
   const id = raw[1] != null ? safeDecode(raw[1]) : null;
-  if (!root || !id) return null;
+  if (!root) return null;
 
   // Own-property only: "constructor" or "toString" must not resolve.
   if (!Object.prototype.hasOwnProperty.call(DEEP_LINK_ROOTS, root)) return null;
@@ -123,6 +167,22 @@ export function resolveDeepLink(rawUrl: string): ResolvedDeepLink | null {
     return { type: spec.type, id: safeDecode(raw[2]), requiresAuth: spec.requiresAuth };
   }
 
+  // A section takes no id, and a URL that supplies one is NOT that section —
+  // "/stats/whatever" is somebody's guess, not a route, and resolving it to
+  // /stats would silently swallow the difference.
+  if (spec.idMode === "none") {
+    if (id) return null;
+    return { type: spec.type, id: "", requiresAuth: spec.requiresAuth };
+  }
+
+  if (spec.idMode === "optional") {
+    // Anything past the second segment means the URL is not one this app
+    // knows, so it is refused rather than truncated to something it isn't.
+    if (raw.length > 2) return null;
+    return { type: spec.type, id: id ?? "", requiresAuth: spec.requiresAuth };
+  }
+
+  if (!id) return null;
   return { type: spec.type, id, requiresAuth: spec.requiresAuth };
 }
 

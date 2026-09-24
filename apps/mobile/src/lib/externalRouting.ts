@@ -24,6 +24,21 @@ const HREF: Record<DeepLinkType, (id: string) => string> = {
   coach_offer: appRoutes.coachOffer,
   claim: appRoutes.claim,
   review: appRoutes.review,
+
+  // Sections. The id is "" for all but wallet and matchmaking, which is why
+  // each of these takes the argument and most ignore it.
+  wallet: (id) => (id ? appRoutes.walletItem(id) : appRoutes.wallet()),
+  stats: () => appRoutes.stats(),
+  membership: () => appRoutes.membership(),
+  profile: () => appRoutes.profileTab(),
+  games: () => appRoutes.games(),
+  // An unrecognised sub-screen falls back to the finder rather than failing.
+  // The resolver has already accepted the URL by this point, so returning
+  // nothing here would reintroduce exactly the dead tap this replaced.
+  matchmaking: (id) =>
+    id === 'connections' ? appRoutes.matchConnections()
+      : id === 'requests' ? appRoutes.matchRequests()
+        : appRoutes.matchmaking(),
 };
 
 export function resolveExternalUrl(rawUrl: string): ExternalDestination | null {
