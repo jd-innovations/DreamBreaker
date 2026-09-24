@@ -972,18 +972,26 @@ const s = StyleSheet.create({
   summaryNum: { color: L.navy, fontSize: text.statValueSm.size, fontWeight: '900' },
   summaryLabel: { color: L.textSub, fontSize: 9, fontWeight: '700', letterSpacing: 0.4 },
 
-  tabScroll: { maxHeight: 44, backgroundColor: L.bg },
+  // No maxHeight here (was 44, fixed pixels). Text obeys the device's
+  // accessibility text-size setting by default; 44px was only ever enough for
+  // this row at the system default. Above that, the row's HEIGHT clipped the
+  // pill text — the actual cause of pills reading as fragments regardless of
+  // label length ("All" is 3 characters and still garbled, which a width
+  // problem can't explain but a vertical clip can: only the top sliver of
+  // each glyph survives). roundHeader, action labels etc. all render fine
+  // elsewhere in this same screen because nothing else here has a height cap.
+  tabScroll: { backgroundColor: L.bg },
   tabRow: {
     paddingHorizontal: 16, paddingVertical: 8, gap: 8, flexDirection: 'row',
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  // flexShrink: 0 — a pill inside a row ScrollView's contentContainerStyle
-  // can otherwise be compressed below its content's width instead of simply
-  // overflowing into the scrollable area, which is what made "Round of 32"
-  // and "Round of 16" render as near-identical squashed fragments.
   tab: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: shape.pill, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg, flexShrink: 0 },
   tabActive: { backgroundColor: L.navy, borderColor: L.navy },
-  tabLabel: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
+  // Second, separate bug: L.textSub (#8A9DC0) on white is a 2.84:1 contrast
+  // ratio — under WCAG's 4.5:1 floor for normal text. roundHeader uses
+  // L.navy/L.text (#0A1228, ~19:1) for exactly this reason and reads cleanly
+  // in every screenshot; the inactive pill label just had the wrong token.
+  tabLabel: { color: L.text, fontSize: text.controlLabel.size, fontWeight: '700' },
   tabLabelActive: { color: L.bg },
 
   bracketScroll: { paddingHorizontal: 16, paddingTop: 16, flexDirection: 'row', gap: 16 },
