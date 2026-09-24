@@ -6696,6 +6696,7 @@ export type Database = {
           refund_cutoff_days: number
           registration_closes_at: string | null
           registration_opens_at: string | null
+          cancellation_reason: string | null
           rejected_reason: string | null
           rejection_reason: string | null
           rules: string | null
@@ -6743,6 +6744,7 @@ export type Database = {
           refund_cutoff_days?: number
           registration_closes_at?: string | null
           registration_opens_at?: string | null
+          cancellation_reason?: string | null
           rejected_reason?: string | null
           rejection_reason?: string | null
           rules?: string | null
@@ -6790,6 +6792,7 @@ export type Database = {
           refund_cutoff_days?: number
           registration_closes_at?: string | null
           registration_opens_at?: string | null
+          cancellation_reason?: string | null
           rejected_reason?: string | null
           rejection_reason?: string | null
           rules?: string | null

@@ -214,6 +214,7 @@ export default function AdminPage() {
   const [rejectTarget, setRejectTarget] = useState<Tournament | null>(null);
   const [actioning, setActioning] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ type: "cancel" | "delete"; t: Tournament } | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
   const [editTarget, setEditTarget] = useState<Tournament | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [featuringId, setFeaturingId] = useState<string | null>(null);
@@ -488,16 +489,23 @@ export default function AdminPage() {
     toast.success(next ? "Tournament featured." : "Removed from featured.");
   };
 
-  const cancelTournament = async (id: string) => {
+  // The reason and the status go in ONE update: the trigger reads
+  // NEW.cancellation_reason as it fires, so a second write would arrive after
+  // everyone had already been told, with no reason in the message.
+  const cancelTournament = async (id: string, reason: string) => {
     setActioning(id);
     const supabase = createClient();
+    const trimmed = reason.trim();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from("tournaments").update({ status: "cancelled" }).eq("id", id);
+    const { error } = await (supabase as any).from("tournaments")
+      .update({ status: "cancelled", cancellation_reason: trimmed || null })
+      .eq("id", id);
     setActioning(null);
     setConfirmAction(null);
+    setCancelReason("");
     if (error) { toast.error("Failed to cancel."); return; }
     setTournaments((prev) => prev.map((t) => t.id === id ? { ...t, status: "cancelled" } : t));
-    toast("Tournament cancelled.");
+    toast("Tournament cancelled. Everyone registered has been told.");
   };
 
   const deleteTournament = async (id: string) => {
@@ -2133,11 +2141,47 @@ export default function AdminPage() {
                 <>Mark <strong>{confirmAction.t.name}</strong> as cancelled. It will be removed from the public listing. You can&apos;t un-cancel it from here.</>
               )}
             </p>
+
+            {/* The reason is sent verbatim to everyone registered, by push and
+                email, so it is written here rather than reconstructed later.
+                Optional: a cancellation is often urgent and must not be
+                blocked by a text box. Left blank, the message falls back to a
+                neutral sentence. 300 is the database's own limit. */}
+            {confirmAction.type === "cancel" && (
+              <div className="mb-4 space-y-1.5">
+                <label htmlFor="cancel-reason" className="text-sm font-medium">
+                  Reason <span className="text-muted-foreground">(optional)</span>
+                </label>
+                <textarea
+                  id="cancel-reason"
+                  rows={3}
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  maxLength={300}
+                  placeholder="e.g. The venue could not be confirmed."
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Sent to everyone registered, by notification and email. {300 - cancelReason.trim().length} characters left.
+                </p>
+                {/* The database requires 3 characters when a reason is given.
+                    Saying so beats letting the update fail with a raw
+                    constraint error, and beats silently dropping "ok". */}
+                {cancelReason.trim().length > 0 && cancelReason.trim().length < 3 && (
+                  <p className="text-xs text-destructive">
+                    Give at least 3 characters, or leave it blank.
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-3">
-              <button onClick={() => setConfirmAction(null)} className="flex-1 h-11 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">BACK</button>
+              <button onClick={() => { setConfirmAction(null); setCancelReason(""); }} className="flex-1 h-11 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">BACK</button>
               <button
-                onClick={() => confirmAction.type === "delete" ? deleteTournament(confirmAction.t.id) : cancelTournament(confirmAction.t.id)}
-                disabled={actioning === confirmAction.t.id}
+                onClick={() => confirmAction.type === "delete" ? deleteTournament(confirmAction.t.id) : cancelTournament(confirmAction.t.id, cancelReason)}
+                disabled={actioning === confirmAction.t.id
+                  || (confirmAction.type === "cancel"
+                      && cancelReason.trim().length > 0 && cancelReason.trim().length < 3)}
                 className={`flex-1 h-11 rounded-full text-white text-sm font-display tracking-wider transition-colors disabled:opacity-50 ${confirmAction.type === "delete" ? "bg-red-500 hover:bg-red-600" : "bg-amber-500 hover:bg-amber-600"}`}>
                 {actioning === confirmAction.t.id ? "…" : confirmAction.type === "delete" ? "DELETE" : "CANCEL TOURNAMENT"}
               </button>

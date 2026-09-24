@@ -24,6 +24,10 @@ import {
   type TournamentStatusKey,
 } from '@/lib/tournamentStatus';
 import { useSession } from '@/hooks/useSession';
+import {
+  buildPpaArizonaPreview,
+  PPA_ARIZONA_PREVIEW_ID,
+} from '@/lib/replays/ppaArizonaWomensDoubles';
 
 // ─── Player identity ──────────────────────────────────────────────────────────
 
@@ -308,6 +312,7 @@ export default function PlayerResultsScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useSession();
+  const isReplayPreview = __DEV__ && id === PPA_ARIZONA_PREVIEW_ID;
 
   const [tournament, setTournament]             = useState<Tournament | null>(null);
   const [brackets, setBrackets]                 = useState<DirectorBracket[]>([]);
@@ -317,6 +322,19 @@ export default function PlayerResultsScreen() {
   const [loading, setLoading]                   = useState(true);
 
   const refresh = useCallback(async () => {
+    if (isReplayPreview) {
+      const preview = buildPpaArizonaPreview();
+      if (preview) {
+        setTournament(preview.tournament);
+        setBrackets(preview.brackets);
+        setDivCount(preview.brackets.length);
+        setMatchCounts(preview.matchCounts);
+        setTournamentStatusKey('completed');
+      }
+      setLoading(false);
+      return;
+    }
+
     const [t, divs] = await Promise.all([fetchTournamentById(id), fetchDivisionsForTournament(id)]);
     const divNameMap: Record<string, string> = {};
     for (const d of divs ?? []) divNameMap[d.id] = d.name;
@@ -330,7 +348,7 @@ export default function PlayerResultsScreen() {
     setMatchCounts(counts);
     if (t) setTournamentStatusKey(getTournamentStatus(t));
     setLoading(false);
-  }, [id]);
+  }, [id, isReplayPreview]);
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -440,8 +458,8 @@ export default function PlayerResultsScreen() {
           </Text>
         </View>
         <StatusChip
-          label={getTournamentStatusInfo(tournamentStatusKey).label}
-          variant={getTournamentStatusInfo(tournamentStatusKey).variant}
+          label={isReplayPreview ? 'Replay Preview' : getTournamentStatusInfo(tournamentStatusKey).label}
+          variant={isReplayPreview ? 'gold' : getTournamentStatusInfo(tournamentStatusKey).variant}
         />
       </View>
 
@@ -449,6 +467,16 @@ export default function PlayerResultsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 32 }]}
       >
+
+        {isReplayPreview && (
+          <View style={s.previewNotice}>
+            <Ionicons name="flask-outline" size={16} color={L.gold} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.previewTitle}>PPA replay preview</Text>
+              <Text style={s.previewText}>Development-only data. Nothing on this screen was written to Supabase.</Text>
+            </View>
+          </View>
+        )}
 
         {/* ── Phase 2 — Tournament summary ── */}
         <View style={s.section}>
@@ -500,16 +528,18 @@ export default function PlayerResultsScreen() {
         )}
 
         {/* ── Phase 7 — Share button ── */}
-        <View style={s.section}>
-          <TouchableOpacity
-            style={s.shareBtn}
-            activeOpacity={0.85}
-            onPress={handleShare}
-          >
-            <Ionicons name="share-social-outline" size={18} color={L.bg} />
-            <Text style={s.shareBtnText}>Share Results</Text>
-          </TouchableOpacity>
-        </View>
+        {!isReplayPreview && (
+          <View style={s.section}>
+            <TouchableOpacity
+              style={s.shareBtn}
+              activeOpacity={0.85}
+              onPress={handleShare}
+            >
+              <Ionicons name="share-social-outline" size={18} color={L.bg} />
+              <Text style={s.shareBtnText}>Share Results</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
       </ScrollView>
     </View>
@@ -541,6 +571,14 @@ const s = StyleSheet.create({
   },
 
   summaryRow: { flexDirection: 'row', gap: 8 },
+
+  previewNotice: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    backgroundColor: L.goldBg, borderWidth: 1, borderColor: L.goldBorder,
+    borderRadius: shape.card, padding: 12, marginBottom: 16,
+  },
+  previewTitle: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '800', marginBottom: 2 },
+  previewText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18 },
 
   emptyCard: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
