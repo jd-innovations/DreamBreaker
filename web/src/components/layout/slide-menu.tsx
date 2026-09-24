@@ -21,7 +21,8 @@
  * hamburger there would hide what is currently visible.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -55,6 +56,10 @@ const SECONDARY: Item[] = [
   { href: "/settings", label: "Settings & Privacy", Icon: Gear },
 ];
 
+// Module scope so the identity is stable — a new function each render would
+// make useSyncExternalStore resubscribe every time.
+const subscribeNothing = () => () => {};
+
 function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -71,6 +76,12 @@ export function SlideMenu({
 }) {
   const pathname = usePathname();
   const panelRef = useRef<HTMLDivElement>(null);
+  // document.body does not exist during SSR, so the portal waits for hydration.
+  // useSyncExternalStore rather than setState-in-an-effect: it returns the
+  // server snapshot (false) while rendering on the server and the client
+  // snapshot (true) after — same result, one fewer render, and without the
+  // lint rule that rightly objects to the effect version.
+  const mounted = useSyncExternalStore(subscribeNothing, () => true, () => false);
 
   // Escape closes, and the page behind does not scroll while it is open —
   // without the lock, dragging the menu scrolls the article underneath it.
@@ -98,9 +109,19 @@ export function SlideMenu({
   // itself 404s a non-admin, so this reveals a route, not any data.
   const primary: Item[] = [...withDirector, { href: "/admin", label: "Admin", Icon: Shield }];
 
-  return (
+  // PORTALLED TO document.body, and this is not optional.
+  //
+  // The header is `sticky top-0 z-50 backdrop-blur-xl`. Both the z-index and
+  // the backdrop filter create a stacking context, so a child of the header
+  // cannot paint above anything outside it no matter how high its own z-index
+  // goes — z-50 inside the header competes only with the header's siblings at
+  // z-50, and later ones win. That is why the menu opened BEHIND the page.
+  // Escaping to body is the fix; raising the number is not.
+  if (!mounted) return null;
+
+  return createPortal(
     <div
-      className={cn("lg:hidden fixed inset-0 z-50", open ? "pointer-events-auto" : "pointer-events-none")}
+      className={cn("lg:hidden fixed inset-0 z-[100]", open ? "pointer-events-auto" : "pointer-events-none")}
       aria-hidden={!open}
     >
       {/* Backdrop. Fades rather than appears, so the panel reads as sliding
@@ -224,6 +245,7 @@ export function SlideMenu({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
