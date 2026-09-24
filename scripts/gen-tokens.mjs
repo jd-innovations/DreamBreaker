@@ -84,7 +84,16 @@ if (start === -1 || finish === -1) {
   process.exit(1);
 }
 
-const next = css.slice(0, start) + block() + css.slice(finish + END.length);
+// The block is built with "\n", but this file is stored in git with LF and
+// checked out with CRLF on Windows (core.autocrlf=true). Comparing the two
+// byte-for-byte reported the block as hand-edited on EVERY Windows build, so
+// `npm run build` could not pass here at all — and the suggested remedy, re-
+// running the generator, "fixed" it only by rewriting the whole file to LF and
+// producing a diff touching every line. Adopt whatever the file already uses
+// instead, so both --check and the rewrite are correct on either platform.
+const eol = css.includes("\r\n") ? "\r\n" : "\n";
+const next =
+  css.slice(0, start) + block().replace(/\n/g, eol) + css.slice(finish + END.length);
 
 if (process.argv.includes("--check")) {
   if (next === css) {
