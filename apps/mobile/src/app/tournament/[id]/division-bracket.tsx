@@ -972,17 +972,26 @@ const s = StyleSheet.create({
   summaryNum: { color: L.navy, fontSize: text.statValueSm.size, fontWeight: '900' },
   summaryLabel: { color: L.textSub, fontSize: 9, fontWeight: '700', letterSpacing: 0.4 },
 
-  // No maxHeight here (was 44, fixed pixels). Text obeys the device's
-  // accessibility text-size setting by default; 44px was only ever enough for
-  // this row at the system default. Above that, the row's HEIGHT clipped the
-  // pill text — the actual cause of pills reading as fragments regardless of
-  // label length ("All" is 3 characters and still garbled, which a width
-  // problem can't explain but a vertical clip can: only the top sliver of
-  // each glyph survives). roundHeader, action labels etc. all render fine
-  // elsewhere in this same screen because nothing else here has a height cap.
-  tabScroll: { backgroundColor: L.bg },
+  // No maxHeight (removed — it clipped text at larger accessibility text
+  // sizes; see the git history for that bug). Removing it alone caused a
+  // DIFFERENT regression: a ScrollView with no explicit height, as a child of
+  // a flex column, doesn't reliably shrink-wrap to its single line of
+  // content — Yoga's default alignItems is 'stretch', so each pill filled
+  // whatever ambient height the row resolved to, ballooning into a tall
+  // capsule (same borderRadius: 20, just applied to a much bigger box).
+  // flexGrow/flexShrink: 0 stop the ScrollView claiming flexible VERTICAL
+  // space from its parent column (that is the height fix). Deliberately no
+  // alignSelf here — the row still needs to span the full screen WIDTH so a
+  // touch anywhere across it can start the horizontal drag, even where the
+  // pills themselves don't fill it. alignItems: 'center' below stops each
+  // pill stretching to fill whatever height the row resolves to. Together
+  // they make the row hug its own content height, whatever that is at the
+  // current text size — no fixed number anywhere, so there is nothing left
+  // to clip OR overinflate.
+  tabScroll: { backgroundColor: L.bg, flexGrow: 0, flexShrink: 0 },
   tabRow: {
     paddingHorizontal: 16, paddingVertical: 8, gap: 8, flexDirection: 'row',
+    alignItems: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
   tab: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: shape.pill, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg, flexShrink: 0 },
