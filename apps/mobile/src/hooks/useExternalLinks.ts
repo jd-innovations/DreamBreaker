@@ -5,6 +5,7 @@ import {
   type ExternalDestination,
   navigateToExternalDestination,
   resolveExternalUrl,
+  subscribeExternalDestinations,
 } from '@/lib/externalRouting';
 
 type UseExternalLinksOptions = {
@@ -54,6 +55,11 @@ export function useExternalLinks({ authLoading, isAuthenticated }: UseExternalLi
     const subscription = Linking.addEventListener('url', ({ url }) => handleUrl(url));
     return () => subscription.remove();
   }, [handleUrl]);
+
+  // Taps on a push arrive here too, not straight at the router, so they get the
+  // same auth gate as a universal link. The queue in externalRouting.ts holds a
+  // cold-start tap until this subscription exists.
+  useEffect(() => subscribeExternalDestinations(routeDestination), [routeDestination]);
 
   useEffect(() => {
     const destination = pendingDestination.current;

@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { track } from './analytics';
 import {
-  navigateToExternalDestination,
+  enqueueExternalDestination,
   resolveNotificationDestination,
 } from '@/lib/externalRouting';
 
@@ -261,7 +261,10 @@ export function routeFromNotificationResponse(response: Notifications.Notificati
   lastHandledResponseKey = responseKey;
 
   if (__DEV__) console.log('[push] routing notification response', { destination });
-  navigateToExternalDestination(destination);
+  // Handed to useExternalLinks rather than navigated directly, so a push tap
+  // goes through the same requiresAuth gate a universal link does: signed out,
+  // you get sign-in with a returnTo instead of an empty authed screen.
+  enqueueExternalDestination(destination);
 }
 
 /**
