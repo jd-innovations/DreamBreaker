@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { Sun, Moon, List, X, ShieldStar } from "@phosphor-icons/react";
+import { SlideMenu } from "@/components/layout/slide-menu";
 import { Logo } from "./logo";
 import { useTheme } from "./theme-provider";
 import { createClient } from "@/lib/supabase/client";
@@ -231,44 +232,18 @@ export function Header() {
         </div>
       </div>
 
-      {open && (
-        <div className="lg:hidden border-t border-border bg-background" data-testid="mobile-menu">
-          <div className="px-4 py-3 flex flex-col gap-1">
-            {navLinks.map((l) => (
-              <Link
-                key={l.to}
-                href={l.to}
-                onClick={() => setOpen(false)}
-                data-testid={`mobile-${l.testid}`}
-                className={`px-4 py-3 rounded-lg text-sm font-semibold ${
-                  pathname === l.to ? "bg-secondary text-foreground" : "text-muted-foreground"
-                }`}
-              >
-                {l.label}
-              </Link>
-            ))}
-            {authed ? (
-              <button
-                onClick={() => { setOpen(false); void handleLogout(); }}
-                disabled={loggingOut}
-                className="px-4 py-3 rounded-lg text-sm font-semibold text-muted-foreground text-left disabled:opacity-60"
-                data-testid="mobile-logout-btn"
-              >
-                {loggingOut ? "Signing out…" : "Log Out"}
-              </button>
-            ) : (
-              <Link
-                href="/auth"
-                onClick={() => setOpen(false)}
-                className="px-4 py-3 rounded-lg text-sm font-semibold text-muted-foreground"
-                data-testid="mobile-login-btn"
-              >
-                Login
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+      {/* The app's slide-in menu, not a dropdown under the header
+          (owner request, 2026-09-23). Rendered always so it can animate out;
+          it is pointer-events-none and off-canvas while closed. */}
+      <SlideMenu
+        open={open}
+        onClose={() => setOpen(false)}
+        authed={authed}
+        isDirector={isDirector}
+        onLogout={() => void handleLogout()}
+        loggingOut={loggingOut}
+      />
+
     </header>
   );
 }
