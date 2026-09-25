@@ -965,7 +965,16 @@ const s = StyleSheet.create({
   filterClear: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   filterClearText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
-  tabScroll: { maxHeight: 48, flexGrow: 0 },
+  // Same bug, same fix as the bracket screen's round pills (see
+  // division-bracket.tsx): maxHeight is a fixed pixel cap while the text
+  // scales with the device's accessibility text-size setting, so past the
+  // default size the row's HEIGHT clipped the label into fragments — "All",
+  // "Registered" etc reading as dashes and dots regardless of length.
+  // flexShrink: 0 alongside flexGrow: 0 so the ScrollView neither clips
+  // (no cap) nor claims extra space it doesn't need (tabRow already has
+  // alignItems: 'center', so this file was never at risk of the OTHER
+  // screen's tall-capsule regression — only the clipping half applied here).
+  tabScroll: { flexGrow: 0, flexShrink: 0 },
   tabRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 12, gap: 6, paddingVertical: 6,
@@ -974,17 +983,21 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 12, paddingVertical: 6,
     borderRadius: shape.pill, borderWidth: 1, borderColor: L.border,
-    backgroundColor: L.bg,
+    backgroundColor: L.bg, flexShrink: 0,
   },
   tabActive: { backgroundColor: L.navy, borderColor: L.navy },
-  tabLabel: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
+  // Second bug, also matching the bracket screen: L.textSub (#8A9DC0) on
+  // white is a 2.84:1 contrast ratio, under WCAG's 4.5:1 floor for normal
+  // text. L.text (#0A1228, ~19:1) is what this file already uses for content
+  // meant to be read, not just glanced at (see e.g. the metric tiles above).
+  tabLabel: { color: L.text, fontSize: text.controlLabel.size, fontWeight: '700' },
   tabLabelActive: { color: L.bg },
   tabBadge: {
     backgroundColor: L.page, borderRadius: shape.cta,
     paddingHorizontal: 6, paddingVertical: 1,
   },
   tabBadgeActive: { backgroundColor: 'rgba(255,255,255,0.20)' },
-  tabBadgeText: { color: L.textSub, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  tabBadgeText: { color: L.text, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   tabBadgeTextActive: { color: L.bg },
 
   divList: { padding: 12 },

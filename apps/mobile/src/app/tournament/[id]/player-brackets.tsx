@@ -296,10 +296,10 @@ const dc = StyleSheet.create({
   chip: {
     paddingHorizontal: 14, paddingVertical: 7,
     borderRadius: shape.pill, borderWidth: 1, borderColor: L.border,
-    backgroundColor: L.bg,
+    backgroundColor: L.bg, flexShrink: 0,
   },
   chipActive: { backgroundColor: L.navy, borderColor: L.navy },
-  label: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
+  label: { color: L.text, fontSize: text.controlLabel.size, fontWeight: '700' },
   labelActive: { color: L.bg },
 });
 
@@ -621,20 +621,30 @@ const s = StyleSheet.create({
   title: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
   sub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 1 },
 
-  chipScroll: { maxHeight: 52, flexGrow: 0, backgroundColor: L.bg },
+  // Same bug as division-bracket.tsx's round pills, same fix, in both rows
+  // on this screen: a fixed maxHeight clips the label once system text scale
+  // pushes it past that pixel count ("All", "Round of 32" etc reading as
+  // fragments regardless of length), and flexShrink: 0 on the ScrollView
+  // plus alignItems: 'center' on the row stop it going the OTHER way and
+  // stretching into tall capsules once the cap is gone — both are needed
+  // together, not just the height removal alone.
+  chipScroll: { flexGrow: 0, flexShrink: 0, backgroundColor: L.bg },
   chipRow: {
-    flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, gap: 8,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
 
-  tabScroll: { maxHeight: 44, flexGrow: 0, backgroundColor: L.bg },
+  tabScroll: { flexGrow: 0, flexShrink: 0, backgroundColor: L.bg },
   tabRow: {
     paddingHorizontal: 16, paddingVertical: 8, gap: 8, flexDirection: 'row',
+    alignItems: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
   },
-  tab: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: shape.pill, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg },
+  tab: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: shape.pill, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg, flexShrink: 0 },
   tabActive: { backgroundColor: L.navy, borderColor: L.navy },
-  tabLabel: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
+  // L.textSub (#8A9DC0) on white is 2.84:1 — under WCAG's 4.5:1 floor.
+  // L.text (#0A1228, ~19:1) is what reads cleanly; see division-bracket.tsx.
+  tabLabel: { color: L.text, fontSize: text.controlLabel.size, fontWeight: '700' },
   tabLabelActive: { color: L.bg },
 
   bracketCanvas: { paddingHorizontal: 16, paddingTop: 16, flexDirection: 'row', gap: 16 },
