@@ -203,8 +203,8 @@ function UpNextBanner({ position }: { position: number }) {
       style={[mc.upNextBadge, first ? mc.upNextFirst : mc.upNextDeck, first && { opacity }]}
       accessibilityLabel={first ? 'Up next' : `On deck, number ${position}`}
     >
-      <Ionicons name={first ? 'megaphone' : 'hourglass-outline'} size={first ? 13 : 11} color={L.navy} />
-      <Text style={[mc.upNextText, first && mc.upNextTextFirst]}>
+      <Ionicons name={first ? 'megaphone' : 'hourglass-outline'} size={first ? 13 : 11} color={first ? L.navy : colors.danger} />
+      <Text style={[mc.upNextText, first ? mc.upNextTextFirst : mc.onDeckText]}>
         {first ? 'UP NEXT' : `ON DECK #${position}`}
       </Text>
     </Animated.View>
@@ -388,6 +388,7 @@ const mc = StyleSheet.create({
   upNextDeck: { backgroundColor: L.goldBg, borderColor: L.goldBorder },
   upNextText: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   upNextTextFirst: { fontSize: text.rowTitle.size, fontWeight: '900' },
+  onDeckText: { color: colors.danger },
   participants: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: L.border, marginHorizontal: 10 },
   awaiting: {
