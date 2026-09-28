@@ -152,6 +152,7 @@ export type Database = {
           match_number: number
           next_match_id: string | null
           next_match_slot: number | null
+          pool_label: string | null
           ready_at: string | null
           round: Database["public"]["Enums"]["round_label"]
           scheduled_at: string | null
@@ -181,6 +182,7 @@ export type Database = {
           match_number: number
           next_match_id?: string | null
           next_match_slot?: number | null
+          pool_label?: string | null
           ready_at?: string | null
           round: Database["public"]["Enums"]["round_label"]
           scheduled_at?: string | null
@@ -210,6 +212,7 @@ export type Database = {
           match_number?: number
           next_match_id?: string | null
           next_match_slot?: number | null
+          pool_label?: string | null
           ready_at?: string | null
           round?: Database["public"]["Enums"]["round_label"]
           scheduled_at?: string | null
@@ -1526,10 +1529,12 @@ export type Database = {
           created_at: string
           draw_size: number
           entry_fee_cents: number | null
+          advance_per_pool: number
           format: Database["public"]["Enums"]["tournament_format"]
           gender_category: string | null
           id: string
           name: string
+          pool_count: number | null
           skill_max: number | null
           skill_min: number | null
           spots_filled: number
@@ -1539,10 +1544,12 @@ export type Database = {
           created_at?: string
           draw_size: number
           entry_fee_cents?: number | null
+          advance_per_pool?: number
           format: Database["public"]["Enums"]["tournament_format"]
           gender_category?: string | null
           id?: string
           name: string
+          pool_count?: number | null
           skill_max?: number | null
           skill_min?: number | null
           spots_filled?: number
@@ -1552,10 +1559,12 @@ export type Database = {
           created_at?: string
           draw_size?: number
           entry_fee_cents?: number | null
+          advance_per_pool?: number
           format?: Database["public"]["Enums"]["tournament_format"]
           gender_category?: string | null
           id?: string
           name?: string
+          pool_count?: number | null
           skill_max?: number | null
           skill_min?: number | null
           spots_filled?: number
@@ -8816,6 +8825,25 @@ export type Database = {
       decline_registration_group_invite: {
         Args: { p_group_id: string }
         Returns: boolean
+      }
+      division_pool_standings: {
+        Args: { p_division_id: string }
+        Returns: {
+          guest_a: string | null
+          guest_b: string | null
+          h2h_wins: number
+          losses: number
+          played: number
+          player_a: string | null
+          player_b: string | null
+          point_diff: number
+          points_against: number
+          points_for: number
+          pool_label: string
+          pool_rank: number
+          team_key: string
+          wins: number
+        }[]
       }
       director_add_tournament_registration: {
         Args: {

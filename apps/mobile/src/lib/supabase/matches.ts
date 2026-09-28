@@ -21,7 +21,7 @@ export type CourtInUse = {
 export async function fetchCourtsInUse(tournamentId: string): Promise<CourtInUse[]> {
   const { data, error } = await supabase
     .from('bracket_matches')
-    .select('id, court, division_id, round, match_number, divisions(name)')
+    .select('id, court, division_id, round, pool_label, match_number, divisions(name)')
     .eq('tournament_id', tournamentId)
     .not('court', 'is', null)
     .is('completed_at', null);
@@ -31,7 +31,7 @@ export async function fetchCourtsInUse(tournamentId: string): Promise<CourtInUse
     matchId:      r.id,
     divisionId:   r.division_id,
     divisionName: (r.divisions as { name?: string } | null)?.name ?? 'Another division',
-    roundName:    roundDisplayName(String(r.round)),
+    roundName:    r.pool_label ? `Pool ${r.pool_label}` : roundDisplayName(String(r.round)),
     matchNumber:  r.match_number,
   }));
 }

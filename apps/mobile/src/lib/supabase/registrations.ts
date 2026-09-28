@@ -133,6 +133,7 @@ function rowToRegistration(row: RegistrationRow): TournamentRegistration {
     partnerName:      row.partner?.full_name ?? row.guest_partner?.display_name ?? undefined,
     partnerGuestId:   row.partner_id ? undefined : row.guest_partner_id ?? undefined,
     partnerDupr:      row.partner?.dupr != null ? String(Number(row.partner.dupr).toFixed(2)) : undefined,
+    playerDupr:       row.player?.dupr != null ? String(Number(row.player.dupr).toFixed(2)) : undefined,
     ...teamFieldsFor(row),
   };
 }

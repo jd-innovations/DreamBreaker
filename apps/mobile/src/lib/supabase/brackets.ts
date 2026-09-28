@@ -19,13 +19,15 @@ type RoundLabel = Database['public']['Enums']['round_label'];
 type ProfileRef = { id: string; full_name: string | null } | null;
 type GuestRef = { id: string; display_name: string | null } | null;
 
-type BracketMatchRow = {
+export type BracketMatchRow = {
   id: string;
   tournament_id: string;
   division_id: string | null;
   match_number: number;
   round: RoundLabel;
   court: string | null;
+  /** Pool letter for pool-play matches (20260928170000); null for elimination rounds. */
+  pool_label: string | null;
   winner: number | null;
   completed_at: string | null;
   score_team1: number[] | null;
@@ -104,6 +106,67 @@ const ROUND_ORDER: Record<string, number> = {
   pool: 0, r64: 1, r32: 2, r16: 3, qf: 4, sf: 5, bronze: 6, final: 7,
 };
 
+// One bracket_matches row -> DirectorBracketMatch. Shared by the elimination
+// bracket (rowsToDivisionBracket) and pool play (lib/supabase/pools.ts), so a
+// pool match behaves exactly like any other match in the UI.
+export function rowToMatch(
+  row: BracketMatchRow,
+  divisionId: string,
+  roundIndex: number,
+  roundName: string,
+): DirectorBracketMatch {
+  // A slot is a real player (p1a) or a director-added guest (g1a), never
+  // both, so checking p1a first and falling back to g1a picks whichever
+  // one this particular match actually has.
+  const p1 = row.p1a || row.g1a
+    ? {
+        id: (row.p1a ?? row.g1a)!.id,
+        name: row.p1a?.full_name ?? row.g1a?.display_name ?? '',
+        partnerName: row.p1b?.full_name ?? row.g1b?.display_name ?? undefined,
+        divisionId,
+        seed: 0,
+      }
+    : null;
+
+  const p2 = row.p2a || row.g2a
+    ? {
+        id: (row.p2a ?? row.g2a)!.id,
+        name: row.p2a?.full_name ?? row.g2a?.display_name ?? '',
+        partnerName: row.p2b?.full_name ?? row.g2b?.display_name ?? undefined,
+        divisionId,
+        seed: 0,
+      }
+    : null;
+
+  const winnerId = row.winner === 1
+    ? (row.p1a?.id ?? row.g1a?.id ?? undefined)
+    : row.winner === 2
+    ? (row.p2a?.id ?? row.g2a?.id ?? undefined)
+    : undefined;
+
+  const status: DirectorBracketMatch['status'] =
+    row.winner != null ? 'completed'
+    : row.court != null ? 'scheduled'
+    : 'pending';
+
+  return {
+    id: row.id,
+    tournamentId: row.tournament_id,
+    divisionId,
+    roundIndex,
+    roundName,
+    matchNumber: row.match_number,
+    participant1: p1,
+    participant2: p2,
+    winnerId,
+    score1: row.score_team1?.[0],
+    score2: row.score_team2?.[0],
+    court: row.court ?? undefined,
+    completedAt: row.completed_at ?? undefined,
+    status,
+  };
+}
+
 // ─── Row → DirectorBracket reconstruction ─────────────────────────────────────
 
 function rowsToDivisionBracket(
@@ -120,58 +183,9 @@ function rowsToDivisionBracket(
     const roundRows = rows.filter(r => r.round === label)
       .sort((a, b) => a.match_number - b.match_number);
 
-    const matches: DirectorBracketMatch[] = roundRows.map(row => {
-      // A slot is a real player (p1a) or a director-added guest (g1a), never
-      // both, so checking p1a first and falling back to g1a picks whichever
-      // one this particular match actually has.
-      const p1 = row.p1a || row.g1a
-        ? {
-            id: (row.p1a ?? row.g1a)!.id,
-            name: row.p1a?.full_name ?? row.g1a?.display_name ?? '',
-            partnerName: row.p1b?.full_name ?? row.g1b?.display_name ?? undefined,
-            divisionId,
-            seed: 0,
-          }
-        : null;
-
-      const p2 = row.p2a || row.g2a
-        ? {
-            id: (row.p2a ?? row.g2a)!.id,
-            name: row.p2a?.full_name ?? row.g2a?.display_name ?? '',
-            partnerName: row.p2b?.full_name ?? row.g2b?.display_name ?? undefined,
-            divisionId,
-            seed: 0,
-          }
-        : null;
-
-      const winnerId = row.winner === 1
-        ? (row.p1a?.id ?? row.g1a?.id ?? undefined)
-        : row.winner === 2
-        ? (row.p2a?.id ?? row.g2a?.id ?? undefined)
-        : undefined;
-
-      const status: DirectorBracketMatch['status'] =
-        row.winner != null ? 'completed'
-        : row.court != null ? 'scheduled'
-        : 'pending';
-
-      return {
-        id: row.id,
-        tournamentId: row.tournament_id,
-        divisionId,
-        roundIndex: ri,
-        roundName: roundDisplayName(label),
-        matchNumber: row.match_number,
-        participant1: p1,
-        participant2: p2,
-        winnerId,
-        score1: row.score_team1?.[0],
-        score2: row.score_team2?.[0],
-        court: row.court ?? undefined,
-        completedAt: row.completed_at ?? undefined,
-        status,
-      };
-    });
+    const matches: DirectorBracketMatch[] = roundRows.map(row =>
+      rowToMatch(row, divisionId, ri, roundDisplayName(label)),
+    );
 
     return {
       id: `round-${divisionId}-${label}`,
@@ -250,9 +264,9 @@ function rowsToDivisionBracket(
 
 // ─── Query helpers ────────────────────────────────────────────────────────────
 
-const MATCH_SELECT = `
+export const MATCH_SELECT = `
   id, tournament_id, division_id, match_number, round,
-  court, winner, completed_at, score_team1, score_team2,
+  court, pool_label, winner, completed_at, score_team1, score_team2,
   next_match_id, next_match_slot,
   p1a:profiles!bracket_matches_team1_player_a_fkey(id,full_name),
   p1b:profiles!bracket_matches_team1_player_b_fkey(id,full_name),
@@ -273,7 +287,8 @@ export async function fetchAllBrackets(
   const { data, error } = await supabase
     .from('bracket_matches')
     .select(MATCH_SELECT)
-    .eq('tournament_id', tournamentId);
+    .eq('tournament_id', tournamentId)
+    .is('pool_label', null);
 
   if (error || !data || data.length === 0) return [];
 
@@ -299,7 +314,8 @@ export async function fetchBracket(
     .from('bracket_matches')
     .select(MATCH_SELECT)
     .eq('tournament_id', tournamentId)
-    .eq('division_id', divisionId);
+    .eq('division_id', divisionId)
+    .is('pool_label', null);
 
   if (error || !data || data.length === 0) return null;
   return rowsToDivisionBracket(divisionId, divisionName, data as unknown as BracketMatchRow[]);
@@ -313,7 +329,8 @@ export async function hasBracket(
     .from('bracket_matches')
     .select('id', { count: 'exact', head: true })
     .eq('tournament_id', tournamentId)
-    .eq('division_id', divisionId);
+    .eq('division_id', divisionId)
+    .is('pool_label', null);
   return (count ?? 0) > 0;
 }
 
@@ -332,19 +349,11 @@ type ParticipantRow = DirectorBracketParticipant & {
   partnerGuestUUID?: string;
 };
 
-export async function createBracket(
-  tournamentId: string,
-  divisionId: string,
-  divisionName: string,
-  registrations: TournamentRegistration[],
-): Promise<DirectorBracket | null> {
-  // Delete any existing bracket for this division
-  await supabase
-    .from('bracket_matches')
-    .delete()
-    .eq('tournament_id', tournamentId)
-    .eq('division_id', divisionId);
-
+/**
+ * The division's playable teams: one registration row per real team, in
+ * registration order. Shared by the elimination bracket and pool play.
+ */
+export function activeTeamRegistrations(registrations: TournamentRegistration[]): TournamentRegistration[] {
   // A doubles/mixed team can exist as TWO registration rows — one per member,
   // each naming the other as partner — if whatever registered them (bulk
   // import, director tooling) called the register-a-team step once per
@@ -360,7 +369,7 @@ export async function createBracket(
   // earlier-registered of a mirrored pair; singles are unaffected since a
   // player alone has no partner half to collide with.
   const seenTeams = new Set<string>();
-  const sorted = [...registrations]
+  return [...registrations]
     .filter(r => r.status === 'registered' || r.status === 'checked_in')
     .sort((a, b) => new Date(a.registrationDate).getTime() - new Date(b.registrationDate).getTime())
     .filter(r => {
@@ -372,6 +381,24 @@ export async function createBracket(
       seenTeams.add(key);
       return true;
     });
+}
+
+export async function createBracket(
+  tournamentId: string,
+  divisionId: string,
+  divisionName: string,
+  registrations: TournamentRegistration[],
+): Promise<DirectorBracket | null> {
+  // Delete any existing bracket for this division. Pool-play matches are kept:
+  // they are a separate stage and may be what this bracket is built from.
+  await supabase
+    .from('bracket_matches')
+    .delete()
+    .eq('tournament_id', tournamentId)
+    .eq('division_id', divisionId)
+    .is('pool_label', null);
+
+  const sorted = activeTeamRegistrations(registrations);
 
   if (sorted.length === 0) return null;
 

@@ -25,6 +25,8 @@ import {
   type DirectorBracket,
 } from '@/lib/supabase/brackets';
 import { confirmBracketFormat } from '@/lib/tournamentFormats';
+import { createPools, fetchPoolProgress, playableTeams, poolsHaveScores, suggestPoolCount, DEFAULT_ADVANCE_PER_POOL } from '@/lib/supabase/pools';
+import { PoolSetupSheet } from '@/components/PoolSetupSheet';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -71,12 +73,19 @@ function DivisionBracketCard({
   registrations,
   onGenerate,
   onView,
+  poolMode = false,
+  poolProgress,
+  onSetupPools,
 }: {
   division: DivisionData;
   bracket: DirectorBracket | null;
   registrations: TournamentRegistration[];
   onGenerate: () => void;
   onView: () => void;
+  /** Tournament format is Pool → Bracket: this division starts with pools. */
+  poolMode?: boolean;
+  poolProgress?: { total: number; completed: number };
+  onSetupPools?: () => void;
 }) {
   const registeredCount = registrations.filter(
     r => r.status === 'registered' || r.status === 'checked_in',
@@ -101,10 +110,19 @@ function DivisionBracketCard({
             </View>
           </View>
         </View>
-        <StatusChip
-          label={bracketStatusLabel(bracket)}
-          variant={bracket ? bracketStatusVariant(bracket) : 'gray'}
-        />
+        {poolMode && !bracket && poolProgress ? (
+          <StatusChip
+            label={poolProgress.completed === poolProgress.total
+              ? 'Pools done'
+              : `Pools ${poolProgress.completed}/${poolProgress.total}`}
+            variant={poolProgress.completed === poolProgress.total ? 'green' : 'gold'}
+          />
+        ) : (
+          <StatusChip
+            label={bracketStatusLabel(bracket)}
+            variant={bracket ? bracketStatusVariant(bracket) : 'gray'}
+          />
+        )}
       </View>
 
       {/* Stats row */}
@@ -141,7 +159,29 @@ function DivisionBracketCard({
 
       {/* Actions */}
       <View style={dbc.actions}>
-        {bracket ? (
+        {poolMode && !bracket ? (
+          poolProgress ? (
+            <>
+              <TouchableOpacity style={dbc.viewBtn} activeOpacity={0.8} onPress={onView}>
+                <Ionicons name="grid-outline" size={15} color={L.bg} />
+                <Text style={dbc.viewBtnText}>View Pools</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={dbc.regenBtn} activeOpacity={0.8} onPress={onSetupPools}>
+                <Ionicons name="refresh-outline" size={15} color={L.navy} />
+                <Text style={dbc.regenBtnText}>Redo Pools</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={[dbc.generateBtn, !canGenerate && dbc.btnDisabled]}
+              activeOpacity={canGenerate ? 0.8 : 1}
+              onPress={canGenerate ? onSetupPools : undefined}
+            >
+              <Ionicons name="grid-outline" size={15} color={canGenerate ? L.bg : L.textSub} />
+              <Text style={[dbc.generateBtnText, !canGenerate && dbc.btnTextDisabled]}>Generate Pools</Text>
+            </TouchableOpacity>
+          )
+        ) : bracket ? (
           <>
             <TouchableOpacity style={dbc.viewBtn} activeOpacity={0.8} onPress={onView}>
               <Ionicons name="git-branch-outline" size={15} color={L.bg} />
@@ -248,6 +288,8 @@ function BracketsScreen() {
   const [brackets, setBrackets]         = useState<DirectorBracket[]>([]);
   const [registrations, setRegistrations] = useState<TournamentRegistration[]>([]);
   const [loading, setLoading]           = useState(true);
+  const [poolProgress, setPoolProgress] = useState<Record<string, { total: number; completed: number }>>({});
+  const [poolSetup, setPoolSetup]       = useState<{ divisionId: string; hasScores: boolean } | null>(null);
 
   const refresh = useCallback(async () => {
     const [t, divs, regs] = await Promise.all([
@@ -257,7 +299,8 @@ function BracketsScreen() {
     ]);
     const divNameMap: Record<string, string> = {};
     for (const d of divs ?? []) divNameMap[d.id] = d.name;
-    const bkts = await fetchAllBrackets(id, divNameMap);
+    const [bkts, pools] = await Promise.all([fetchAllBrackets(id, divNameMap), fetchPoolProgress(id)]);
+    setPoolProgress(pools);
     setTournament(t);
     setDivisions(divs ?? []);
     setBrackets(bkts);
@@ -306,6 +349,36 @@ function BracketsScreen() {
         createBracket(tournament!.id, divisionId, division?.name ?? '', divRegs)
           .then(() => refresh());
       }
+    }));
+  }
+
+  // Pool Play → Bracket: pools first (20260928170000). Teams go in by rating.
+  async function openPoolSetup(divisionId: string) {
+    const hasScores = poolProgress[divisionId]
+      ? await poolsHaveScores(id, divisionId)
+      : false;
+    setPoolSetup({ divisionId, hasScores });
+  }
+
+  async function handleCreatePools(poolCount: number, advancePerPool: number) {
+    if (!poolSetup || !tournament) return;
+    const divisionId = poolSetup.divisionId;
+    await new Promise<void>(resolve => requireAuth(user?.id, async () => {
+      const result = await createPools({
+        tournamentId: tournament.id,
+        divisionId,
+        registrations,
+        poolCount,
+        advancePerPool,
+      });
+      if (!result.ok) {
+        Alert.alert('Pools not created', result.error);
+      } else {
+        setPoolSetup(null);
+        await refresh();
+        handleView(divisionId);
+      }
+      resolve();
     }));
   }
 
@@ -396,11 +469,31 @@ function BracketsScreen() {
                 registrations={divRegs}
                 onGenerate={() => handleGenerate(div.id)}
                 onView={() => handleView(div.id)}
+                poolMode={tournament?.tournamentFormat === 'pool_bracket'}
+                poolProgress={poolProgress[div.id]}
+                onSetupPools={() => { void openPoolSetup(div.id); }}
               />
             );
           })
         )}
       </ScrollView>
+
+      {poolSetup && (() => {
+        const div = divisions.find(d => d.id === poolSetup.divisionId);
+        const teamCount = playableTeams(registrations.filter(r => r.divisionId === poolSetup.divisionId)).length;
+        return (
+          <PoolSetupSheet
+            visible
+            onClose={() => setPoolSetup(null)}
+            divisionName={div?.name ?? ''}
+            teamCount={teamCount}
+            defaultPoolCount={suggestPoolCount(teamCount, tournament?.poolCount)}
+            defaultAdvance={DEFAULT_ADVANCE_PER_POOL}
+            hasScores={poolSetup.hasScores}
+            onConfirm={handleCreatePools}
+          />
+        );
+      })()}
     </View>
   );
 }

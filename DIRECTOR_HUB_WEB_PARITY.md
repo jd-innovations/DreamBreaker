@@ -166,6 +166,37 @@ Branch: `feature/push-broadcast`. Read the commits for the full diffs.
   format to build. It isn't scoped yet. The per-tournament vs per-division
   format question is still open.
 
+## 8. Pool Play → Bracket (hybrid), step 1: pools
+
+- **Decisions (owner, 2026-09-28):**
+  - The format is set per tournament. Pool settings are per division.
+  - 2 teams advance per pool by default, and the director can change it.
+  - Pools are assigned automatically by rating.
+  - Moving to the bracket is confirmed by the director. That's step 2, not built
+    yet.
+- **DB** (`20260928170000_pool_play`, live):
+  - `bracket_matches.pool_label` ('A', 'B', ...). **`pool_label` marks pool
+    play, not `round`:** `roundLabel()` also uses 'pool' for elimination
+    rounds earlier than r64 in brackets over 128 entrants.
+  - `divisions.pool_count` and `divisions.advance_per_pool` (default 2).
+  - `division_pool_standings(division_id)` (SECURITY INVOKER) ranks by wins,
+    then head-to-head wins among teams with the same win total, then point
+    difference, then points scored.
+- **Mobile:**
+  - `lib/poolSchedule.ts` (pure logic): seeding by mean DUPR with unrated teams
+    last, snake pools, circle-method round robin, pool-count suggestion.
+  - `lib/supabase/pools.ts`: createPools, fetchDivisionPools and progress.
+    Pool matches interleave across pools by `match_number`.
+  - `components/PoolSetupSheet.tsx`.
+  - The Brackets screen has Generate / View / Redo Pools.
+  - The division screen has a Pools | Bracket toggle, standings tables and the
+    reused MatchCard, so courts, queue, score entry and realtime all work.
+  - Elimination readers and `createBracket`'s delete filter
+    `pool_label is null`, so pools and the bracket never touch each other.
+- **Web to-do:** web's pool seeding (`bracket_seeds`) is per tournament, by
+  player, and never creates matches. Replace it with this model, and show the
+  standings function's output.
+
 ---
 
 ## Before starting the web session

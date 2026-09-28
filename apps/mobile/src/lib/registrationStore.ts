@@ -53,6 +53,8 @@ export type TournamentRegistration = {
   partnerId?: string;
   partnerName?: string;
   partnerDupr?: string;
+  /** Registering player's DUPR (profiles.dupr), when they have one. Used to seed pools. */
+  playerDupr?: string;
   /** Set when `partnerId` is a `personal_guest_players.id`, not a profile. */
   partnerGuestId?: string;
   // ── Per-player team payment state (doubles/mixed) ───────────────────────────

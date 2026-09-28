@@ -27,6 +27,7 @@ import { assignCourt, fetchCourtQueue, fetchCourtsInUse, saveMatchScore, type Co
 import { supabase } from '@/lib/supabase';
 import { courtLabel } from '@/lib/tournamentCourts';
 import { CourtsSheet } from '@/components/CourtsSheet';
+import { fetchDivisionPools, type DivisionPools } from '@/lib/supabase/pools';
 import { useSupportContext } from '@/lib/support/supportContext';
 import type { TournamentRegistration } from '@/lib/registrationStore';
 import type { Tournament } from '@/lib/tournamentTypes';
@@ -757,6 +758,9 @@ function DivisionBracketScreen() {
   const [loadingUse,    setLoadingUse]    = useState(false);
   const [courtsOpen,    setCourtsOpen]    = useState(false);
   const [courtQueue,    setCourtQueue]    = useState<Map<string, number>>(new Map());
+  // Pool Play → Bracket: the division's pool stage (20260928170000).
+  const [pools,         setPools]         = useState<DivisionPools | null>(null);
+  const [stageView,     setStageView]     = useState<'pools' | 'bracket' | null>(null);
   const [matchTarget,   setMatchTarget]   = useState<DirectorBracketMatch | null>(null);
   const [menuOpen,      setMenuOpen]      = useState(false);
 
@@ -770,16 +774,20 @@ function DivisionBracketScreen() {
   });
 
   const refresh = useCallback(async () => {
-    const [t, bkt, regs, inUse, queue] = await Promise.all([
+    const [t, bkt, regs, inUse, queue, pl] = await Promise.all([
       fetchTournamentById(id),
       fetchBracket(id, divisionId),
       fetchTournamentRegistrations(id),
       // Tournament-wide: the court board and "Up next" span every division.
       fetchCourtsInUse(id),
       fetchCourtQueue(id),
+      fetchDivisionPools(id, divisionId),
     ]);
     setTournament(t);
     setBracket(bkt);
+    setPools(pl);
+    // First load only: open on pools until the bracket exists.
+    setStageView(prev => prev ?? (pl && !bkt ? 'pools' : 'bracket'));
     setRegistrations(regs);
     setCourtsInUse(inUse);
     setCourtQueue(queue);
@@ -824,7 +832,7 @@ function DivisionBracketScreen() {
     );
   }
 
-  if (!bracket) {
+  if (!bracket && !pools) {
     return (
       <View style={s.root}>
         <StatusBar style="dark" />
@@ -848,11 +856,13 @@ function DivisionBracketScreen() {
     );
   }
 
-  const roundTabs    = ['All', ...bracket.rounds.map(r => r.roundName)];
+  const bracketRounds = bracket?.rounds ?? [];
+  const roundTabs    = ['All', ...bracketRounds.map(r => r.roundName)];
   const visibleRounds =
     roundFilter === 'All'
-      ? bracket.rounds
-      : bracket.rounds.filter(r => r.roundName === roundFilter);
+      ? bracketRounds
+      : bracketRounds.filter(r => r.roundName === roundFilter);
+  const view = pools && (!bracket || stageView === 'pools') ? 'pools' : 'bracket';
 
   // Phase 10: bracket summary counts. Excludes only a round-0 double bye (an
   // empty slot from seeding, e.g. more bracket slots than entrants — it will
@@ -860,7 +870,7 @@ function DivisionBracketScreen() {
   // count: it is a real match awaiting its feeders, same rule as MatchCard's
   // isDoubleBye and the round-render filter above, so REMAINING matches what
   // is actually visible under "All" and under that round's own tab.
-  const allMatches  = bracket.rounds.flatMap(r => r.matches).filter(
+  const allMatches  = bracketRounds.flatMap(r => r.matches).filter(
     m => !(m.participant1 === null && m.participant2 === null && m.roundIndex === 0),
   );
   const totalMatches    = allMatches.length;
@@ -947,8 +957,8 @@ function DivisionBracketScreen() {
           <Ionicons name="chevron-back" size={24} color={L.navy} />
         </TouchableOpacity>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={s.title} numberOfLines={1}>{bracket.divisionName}</Text>
-          <Text style={s.sub}>Bracket Management</Text>
+          <Text style={s.title} numberOfLines={1}>{bracket?.divisionName || pools?.divisionName}</Text>
+          <Text style={s.sub}>{view === 'pools' ? 'Pool Play' : 'Bracket Management'}</Text>
         </View>
         <View style={s.headerRight}>
           {IS_INTERNAL_BUILD && (
@@ -962,6 +972,33 @@ function DivisionBracketScreen() {
         </View>
       </View>
 
+      {/* ── Stage toggle: pools, then the bracket built from them ── */}
+      {pools && (
+        <View style={s.stageRow}>
+          {(['pools', 'bracket'] as const).map(v => {
+            const active = view === v;
+            const disabled = v === 'bracket' && !bracket;
+            return (
+              <TouchableOpacity
+                key={v}
+                style={[s.stageBtn, active && s.stageBtnActive, disabled && { opacity: 0.45 }]}
+                onPress={() => setStageView(v)}
+                disabled={disabled}
+                activeOpacity={0.8}
+              >
+                <Text style={[s.stageText, active && s.stageTextActive]}>
+                  {v === 'pools'
+                    ? `Pools · ${pools.completedMatches}/${pools.totalMatches}`
+                    : bracket ? 'Bracket' : 'Bracket (after pools)'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
+      {view === 'bracket' && bracket && (
+        <>
       {/* ── Champion banner (Phase 5) ── */}
       {bracket.status === 'completed' && bracket.championName && (
         <View style={s.championBanner}>
@@ -1011,6 +1048,9 @@ function DivisionBracketScreen() {
         />
       </View>
 
+        </>
+      )}
+
       {/* ── Court board: every court in the tournament, live ── */}
       {(tournament?.courts?.length ?? 0) > 0 && (
         <View style={s.boardWrap}>
@@ -1036,6 +1076,63 @@ function DivisionBracketScreen() {
         </View>
       )}
 
+      {/* ── Pools view ── */}
+      {view === 'pools' && pools && (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+        >
+          {pools.completedMatches === pools.totalMatches && (
+            <View style={s.poolsDone}>
+              <Ionicons name="checkmark-circle" size={18} color={L.success} />
+              <Text style={s.poolsDoneText}>
+                All pool matches are scored. Building the bracket from these standings comes in the next update.
+              </Text>
+            </View>
+          )}
+          {pools.pools.map(pool => (
+            <View key={pool.label} style={s.poolBlock}>
+              <Text style={s.poolTitle}>POOL {pool.label}</Text>
+              <View style={s.standings}>
+                <View style={[s.standRow, s.standHead]}>
+                  <Text style={[s.standRank, s.standHeadText]}>#</Text>
+                  <Text style={[s.standName, s.standHeadText]}>TEAM</Text>
+                  <Text style={[s.standNum, s.standHeadText]}>W-L</Text>
+                  <Text style={[s.standNum, s.standHeadText]}>+/-</Text>
+                </View>
+                {pool.standings.map(st => {
+                  const advances = st.rank <= pools.advancePerPool;
+                  return (
+                    <View key={st.teamKey} style={[s.standRow, advances && s.standAdvance]}>
+                      <Text style={[s.standRank, advances && s.standAdvanceText]}>{st.rank}</Text>
+                      <Text style={[s.standName, advances && s.standAdvanceText]} numberOfLines={1}>{st.name}</Text>
+                      <Text style={s.standNum}>{st.wins}-{st.losses}</Text>
+                      <Text style={s.standNum}>{st.diff > 0 ? `+${st.diff}` : st.diff}</Text>
+                    </View>
+                  );
+                })}
+                <Text style={s.standFoot}>
+                  Top {pools.advancePerPool} advance · ties: head-to-head, then point difference, then points scored
+                </Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.poolMatches}>
+                {pool.matches.map(match => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    queuePos={courtQueue.get(match.id)}
+                    onAssignCourt={openCourtPicker}
+                    onEnterScore={setMatchTarget}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+
+      {view === 'bracket' && bracket && (
+        <>
       {/* ── Round filter tabs ── */}
       <ScrollView
         horizontal
@@ -1093,6 +1190,9 @@ function DivisionBracketScreen() {
         </ScrollView>
       </ScrollView>
 
+        </>
+      )}
+
       {/* ── Context menu ── */}
       <ContextMenu
         visible={menuOpen}
@@ -1143,6 +1243,41 @@ function DivisionBracketScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
+  stageRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 },
+  stageBtn: {
+    flex: 1, alignItems: 'center', paddingVertical: 9,
+    borderRadius: shape.pill, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg,
+  },
+  stageBtnActive: { backgroundColor: L.navy, borderColor: L.navy },
+  stageText: { color: L.navy, fontSize: text.caption.size, fontWeight: '800' },
+  stageTextActive: { color: L.bg },
+  poolsDone: {
+    flexDirection: 'row', gap: 8, alignItems: 'flex-start', margin: 12, marginBottom: 0,
+    padding: 12, borderRadius: shape.card, borderWidth: 1, borderColor: L.success, backgroundColor: L.bg,
+  },
+  poolsDoneText: { flex: 1, color: L.navy, fontSize: text.caption.size, fontWeight: '600', lineHeight: 18 },
+  poolBlock: { paddingTop: 14 },
+  poolTitle: {
+    color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800',
+    letterSpacing: text.cardLabel.letterSpacing, paddingHorizontal: 12, marginBottom: 6,
+  },
+  standings: {
+    marginHorizontal: 12, borderWidth: 1, borderColor: L.border, borderRadius: shape.card,
+    backgroundColor: L.bg, overflow: 'hidden',
+  },
+  standRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 9,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
+  },
+  standHead: { backgroundColor: L.page, paddingVertical: 6 },
+  standHeadText: { color: L.textSub, fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  standAdvance: { backgroundColor: L.goldBg },
+  standAdvanceText: { color: L.navy, fontWeight: '800' },
+  standRank: { width: 18, color: L.textSub, fontSize: text.caption.size, fontWeight: '700' },
+  standName: { flex: 1, color: L.navy, fontSize: text.caption.size, fontWeight: '600' },
+  standNum: { width: 40, textAlign: 'right', color: L.navy, fontSize: text.caption.size, fontWeight: '700' },
+  standFoot: { color: L.textSub, fontSize: 10, fontWeight: '500', paddingHorizontal: 12, paddingVertical: 7 },
+  poolMatches: { gap: 10, paddingHorizontal: 12, paddingTop: 10 },
   boardWrap: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 6 },
   boardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   boardTitle: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
