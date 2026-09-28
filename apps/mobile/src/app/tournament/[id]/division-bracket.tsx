@@ -1,7 +1,8 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   Modal, Pressable, Alert, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
+  Animated, AccessibilityInfo,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -167,6 +168,49 @@ const pr = StyleSheet.create({
 // How many queued matches get an "Up next" badge.
 const UP_NEXT_SHOWN = 5;
 
+// Queue banner on a match card. #1 (gets the next free court) is solid gold
+// and pulses so it reads from across a facility; #2-5 are a calm "ON DECK"
+// so the screen isn't a wall of blinking cards. Reduce Motion: no pulse.
+function UpNextBanner({ position }: { position: number }) {
+  const first = position === 1;
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!first) return;
+    let loop: Animated.CompositeAnimation | null = null;
+    let cancelled = false;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(reduce => {
+        if (cancelled || reduce) return;
+        loop = Animated.loop(
+          Animated.sequence([
+            Animated.timing(opacity, { toValue: 0.45, duration: 750, useNativeDriver: true }),
+            Animated.timing(opacity, { toValue: 1, duration: 750, useNativeDriver: true }),
+          ]),
+        );
+        loop.start();
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      loop?.stop();
+      opacity.setValue(1);
+    };
+  }, [first, opacity]);
+
+  return (
+    <Animated.View
+      style={[mc.upNextBadge, first ? mc.upNextFirst : mc.upNextDeck, first && { opacity }]}
+      accessibilityLabel={first ? 'Up next' : `On deck, number ${position}`}
+    >
+      <Ionicons name={first ? 'megaphone' : 'hourglass-outline'} size={first ? 13 : 11} color={L.navy} />
+      <Text style={[mc.upNextText, first && mc.upNextTextFirst]}>
+        {first ? 'UP NEXT' : `ON DECK #${position}`}
+      </Text>
+    </Animated.View>
+  );
+}
+
 function MatchCard({
   match,
   queuePos,
@@ -205,19 +249,14 @@ function MatchCard({
   const upNext = !onCourt && queuePos !== undefined && queuePos <= UP_NEXT_SHOWN ? queuePos : undefined;
 
   return (
-    <View style={[mc.card, onCourt && mc.cardOnCourt, upNext !== undefined && mc.cardUpNext]}>
+    <View style={[mc.card, onCourt && mc.cardOnCourt, upNext !== undefined && (upNext === 1 ? mc.cardUpFirst : mc.cardUpNext)]}>
       {/* Match header */}
       <View style={mc.header}>
         <Text style={mc.matchNum}>Match {match.matchNumber + 1}</Text>
         <StatusChip label={matchStatusLabel(match.status)} variant={matchStatusVariant(match.status)} />
       </View>
 
-      {upNext !== undefined && (
-        <View style={mc.upNextBadge}>
-          <Ionicons name="hourglass-outline" size={11} color={L.navy} />
-          <Text style={mc.upNextText}>{upNext === 1 ? 'UP NEXT' : `UP NEXT #${upNext}`}</Text>
-        </View>
-      )}
+      {upNext !== undefined && <UpNextBanner position={upNext} />}
 
       {/* Court badge */}
       {match.court !== undefined && (
@@ -336,16 +375,19 @@ const mc = StyleSheet.create({
   },
   courtText: { color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   cardOnCourt: { borderColor: L.gold, borderWidth: 2 },
-  cardUpNext: { borderColor: L.navy, borderStyle: 'dashed' },
+  cardUpNext: { borderColor: L.goldBorder, borderWidth: 1.5 },
+  cardUpFirst: { borderColor: L.navy, borderWidth: 2 },
   courtBadgeLive: { backgroundColor: L.gold, borderColor: L.gold },
   courtTextLive: { color: L.bg },
   upNextBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 10, paddingVertical: 5,
-    backgroundColor: L.page,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border,
   },
+  upNextFirst: { backgroundColor: L.gold, paddingVertical: 8, borderColor: L.gold },
+  upNextDeck: { backgroundColor: L.goldBg, borderColor: L.goldBorder },
   upNextText: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  upNextTextFirst: { fontSize: text.rowTitle.size, fontWeight: '900' },
   participants: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: L.border, marginHorizontal: 10 },
   awaiting: {
