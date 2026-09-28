@@ -115,6 +115,7 @@ function dbRowToTournament(row: Record<string, unknown>): Tournament {
     // back to the invented copy it used to show.
     amenities:            Array.isArray(row.amenities) ? (row.amenities as string[]) : [],
     courts:               Array.isArray(row.courts) ? (row.courts as string[]) : null,
+    autoAssignCourts:     row.auto_assign_courts == null ? true : Boolean(row.auto_assign_courts),
     directorId:           row.director_id != null ? String(row.director_id) : null,
   };
 }
@@ -190,7 +191,7 @@ export async function fetchTournamentsByIds(ids: string[]): Promise<Tournament[]
 export async function fetchTournamentById(id: string): Promise<Tournament | null> {
   const { data, error } = await supabase
     .from('tournaments')
-    .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,amenities,courts')
+    .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,amenities,courts,auto_assign_courts')
     .eq('id', id)
     .single();
 
@@ -413,6 +414,21 @@ export async function setTournamentCourts(
     return { ok: false, error: code ? COURTS_ERRORS[code] : 'Could not save courts. Please try again.' };
   }
   return { ok: true, courts: (data as string[] | null) ?? [] };
+}
+
+export async function setTournamentAutoAssignCourts(
+  tournamentId: string,
+  enabled: boolean,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await supabase.rpc('set_tournament_auto_assign_courts', {
+    p_tournament_id: tournamentId,
+    p_enabled: enabled,
+  });
+  if (error) {
+    const code = Object.keys(COURTS_ERRORS).find(k => error.message?.includes(k));
+    return { ok: false, error: code ? COURTS_ERRORS[code] : 'Could not change auto-assign. Please try again.' };
+  }
+  return { ok: true };
 }
 
 export type UpdateTournamentInput = {

@@ -751,6 +751,8 @@ function CommandCenterScreen() {
         tournamentId={id}
         courts={tournament.courts ?? []}
         onSaved={courts => setTournament(prev => (prev ? { ...prev, courts } : prev))}
+        autoAssign={tournament?.autoAssignCourts ?? true}
+        onAutoAssignChanged={autoAssignCourts => setTournament(prev => (prev ? { ...prev, autoAssignCourts } : prev))}
       />
     </View>
   );

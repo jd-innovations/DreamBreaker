@@ -152,6 +152,7 @@ export type Database = {
           match_number: number
           next_match_id: string | null
           next_match_slot: number | null
+          ready_at: string | null
           round: Database["public"]["Enums"]["round_label"]
           scheduled_at: string | null
           score_entered_at: string | null
@@ -180,6 +181,7 @@ export type Database = {
           match_number: number
           next_match_id?: string | null
           next_match_slot?: number | null
+          ready_at?: string | null
           round: Database["public"]["Enums"]["round_label"]
           scheduled_at?: string | null
           score_entered_at?: string | null
@@ -208,6 +210,7 @@ export type Database = {
           match_number?: number
           next_match_id?: string | null
           next_match_slot?: number | null
+          ready_at?: string | null
           round?: Database["public"]["Enums"]["round_label"]
           scheduled_at?: string | null
           score_entered_at?: string | null
@@ -6721,6 +6724,7 @@ export type Database = {
         Row: {
           amenities: string[]
           approved_at: string | null
+          auto_assign_courts: boolean
           approved_by: string | null
           bracket_type: Database["public"]["Enums"]["bracket_type"]
           cancellation_policy: string | null
@@ -6770,6 +6774,7 @@ export type Database = {
         Insert: {
           amenities?: string[]
           approved_at?: string | null
+          auto_assign_courts?: boolean
           approved_by?: string | null
           bracket_type?: Database["public"]["Enums"]["bracket_type"]
           cancellation_policy?: string | null
@@ -6819,6 +6824,7 @@ export type Database = {
         Update: {
           amenities?: string[]
           approved_at?: string | null
+          auto_assign_courts?: boolean
           approved_by?: string | null
           bracket_type?: Database["public"]["Enums"]["bracket_type"]
           cancellation_policy?: string | null
@@ -8656,6 +8662,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      court_queue: {
+        Args: { p_tournament_id: string }
+        Returns: { match_id: string; queue_position: number }[]
+      }
       create_coach_offer_purchase: {
         Args: { p_offer_id: string; p_participant_quantity?: number }
         Returns: {
@@ -10034,6 +10044,10 @@ export type Database = {
         }
       }
       set_my_handle: { Args: { p_handle: string }; Returns: Json }
+      set_tournament_auto_assign_courts: {
+        Args: { p_enabled: boolean; p_tournament_id: string }
+        Returns: boolean
+      }
       set_tournament_courts: {
         Args: { p_courts: string[]; p_tournament_id: string }
         Returns: string[]

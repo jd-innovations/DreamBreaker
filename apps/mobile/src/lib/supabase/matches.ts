@@ -36,6 +36,17 @@ export async function fetchCourtsInUse(tournamentId: string): Promise<CourtInUse
   }));
 }
 
+/**
+ * The tournament-wide court queue (court_queue(), 20260928150000): match id ->
+ * 1-based position, first ready first played. The same definition the
+ * database uses to hand out freed courts, so "Up next" can't disagree with it.
+ */
+export async function fetchCourtQueue(tournamentId: string): Promise<Map<string, number>> {
+  const { data, error } = await supabase.rpc('court_queue', { p_tournament_id: tournamentId });
+  if (error || !data) return new Map();
+  return new Map(data.map(r => [r.match_id, r.queue_position]));
+}
+
 /** Assigns a court by name, or clears it with null. Reports failure instead of throwing. */
 export async function assignCourt(
   matchId: string,

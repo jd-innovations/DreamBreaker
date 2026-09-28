@@ -63,5 +63,7 @@ export interface Tournament {
    * lib/tournamentCourts.ts and migration 20260928140000.
    */
   courts?: string[] | null;
+  /** Freed courts go to the next queued match automatically (20260928150000). Default on. */
+  autoAssignCourts?: boolean;
   directorId?: string | null;
 }

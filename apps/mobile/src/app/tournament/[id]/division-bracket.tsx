@@ -23,7 +23,8 @@ import {
   type DirectorBracket,
   type DirectorBracketMatch,
 } from '@/lib/supabase/brackets';
-import { assignCourt, fetchCourtsInUse, saveMatchScore, type CourtInUse } from '@/lib/supabase/matches';
+import { assignCourt, fetchCourtQueue, fetchCourtsInUse, saveMatchScore, type CourtInUse } from '@/lib/supabase/matches';
+import { supabase } from '@/lib/supabase';
 import { courtLabel } from '@/lib/tournamentCourts';
 import { CourtsSheet } from '@/components/CourtsSheet';
 import { useSupportContext } from '@/lib/support/supportContext';
@@ -160,12 +161,18 @@ const pr = StyleSheet.create({
 
 // ─── Match card ───────────────────────────────────────────────────────────────
 
+// How many queued matches get an "Up next" badge.
+const UP_NEXT_SHOWN = 5;
+
 function MatchCard({
   match,
+  queuePos,
   onAssignCourt,
   onEnterScore,
 }: {
   match: DirectorBracketMatch;
+  /** 1-based place in the tournament-wide court queue (court_queue()), if waiting. */
+  queuePos?: number;
   onAssignCourt: (m: DirectorBracketMatch) => void;
   onEnterScore:  (m: DirectorBracketMatch) => void;
 }) {
@@ -190,19 +197,32 @@ function MatchCard({
 
   if (isDoubleBye) return null;
 
+  // On court now (assigned, unfinished) vs. waiting near the front of the queue.
+  const onCourt = match.court !== undefined && !isCompleted;
+  const upNext = !onCourt && queuePos !== undefined && queuePos <= UP_NEXT_SHOWN ? queuePos : undefined;
+
   return (
-    <View style={mc.card}>
+    <View style={[mc.card, onCourt && mc.cardOnCourt, upNext !== undefined && mc.cardUpNext]}>
       {/* Match header */}
       <View style={mc.header}>
         <Text style={mc.matchNum}>Match {match.matchNumber + 1}</Text>
         <StatusChip label={matchStatusLabel(match.status)} variant={matchStatusVariant(match.status)} />
       </View>
 
+      {upNext !== undefined && (
+        <View style={mc.upNextBadge}>
+          <Ionicons name="hourglass-outline" size={11} color={L.navy} />
+          <Text style={mc.upNextText}>{upNext === 1 ? 'UP NEXT' : `UP NEXT #${upNext}`}</Text>
+        </View>
+      )}
+
       {/* Court badge */}
       {match.court !== undefined && (
-        <View style={mc.courtBadge}>
-          <Ionicons name="location-outline" size={11} color={L.gold} />
-          <Text style={mc.courtText}>{courtLabel(match.court)}</Text>
+        <View style={[mc.courtBadge, onCourt && mc.courtBadgeLive]}>
+          <Ionicons name={onCourt ? 'radio-button-on' : 'location-outline'} size={11} color={onCourt ? L.bg : L.gold} />
+          <Text style={[mc.courtText, onCourt && mc.courtTextLive]}>
+            {onCourt ? `ON ${courtLabel(match.court).toUpperCase()}` : courtLabel(match.court)}
+          </Text>
         </View>
       )}
 
@@ -312,6 +332,17 @@ const mc = StyleSheet.create({
     borderColor: L.goldBorder,
   },
   courtText: { color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  cardOnCourt: { borderColor: L.gold, borderWidth: 2 },
+  cardUpNext: { borderColor: L.navy, borderStyle: 'dashed' },
+  courtBadgeLive: { backgroundColor: L.gold, borderColor: L.gold },
+  courtTextLive: { color: L.bg },
+  upNextBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5,
+    backgroundColor: L.page,
+    borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border,
+  },
+  upNextText: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   participants: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: L.border, marginHorizontal: 10 },
   awaiting: {
@@ -724,6 +755,7 @@ function DivisionBracketScreen() {
   const [courtsInUse,   setCourtsInUse]   = useState<CourtInUse[]>([]);
   const [loadingUse,    setLoadingUse]    = useState(false);
   const [courtsOpen,    setCourtsOpen]    = useState(false);
+  const [courtQueue,    setCourtQueue]    = useState<Map<string, number>>(new Map());
   const [matchTarget,   setMatchTarget]   = useState<DirectorBracketMatch | null>(null);
   const [menuOpen,      setMenuOpen]      = useState(false);
 
@@ -737,16 +769,44 @@ function DivisionBracketScreen() {
   });
 
   const refresh = useCallback(async () => {
-    const [t, bkt, regs] = await Promise.all([
+    const [t, bkt, regs, inUse, queue] = await Promise.all([
       fetchTournamentById(id),
       fetchBracket(id, divisionId),
       fetchTournamentRegistrations(id),
+      // Tournament-wide: the court board and "Up next" span every division.
+      fetchCourtsInUse(id),
+      fetchCourtQueue(id),
     ]);
     setTournament(t);
     setBracket(bkt);
     setRegistrations(regs);
+    setCourtsInUse(inUse);
+    setCourtQueue(queue);
     setLoading(false);
   }, [id, divisionId]);
+
+  // Live: a score saved anywhere frees a court and the database hands it to
+  // the next match (20260928150000). bracket_matches is in the realtime
+  // publication, so re-read on any change to this tournament's matches,
+  // debounced because one score save is several row writes.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const channel = supabase
+      .channel(`bracket-courts:${id}:${Math.random().toString(36).slice(2)}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bracket_matches', filter: `tournament_id=eq.${id}` },
+        () => {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => { void refresh(); }, 400);
+        },
+      )
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(channel);
+    };
+  }, [id, refresh]);
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -950,6 +1010,31 @@ function DivisionBracketScreen() {
         />
       </View>
 
+      {/* ── Court board: every court in the tournament, live ── */}
+      {(tournament?.courts?.length ?? 0) > 0 && (
+        <View style={s.boardWrap}>
+          <View style={s.boardHeader}>
+            <Text style={s.boardTitle}>COURTS</Text>
+            <Text style={s.boardAuto}>
+              {tournament?.autoAssignCourts === false ? 'Auto-assign off' : 'Auto-assign on'}
+            </Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.boardRow}>
+            {(tournament?.courts ?? []).map(c => {
+              const on = courtsInUse.find(u => u.court === c);
+              return (
+                <View key={c} style={[s.boardChip, on && s.boardChipBusy]}>
+                  <Text style={[s.boardCourt, on && s.boardCourtBusy]} numberOfLines={1}>{courtLabel(c)}</Text>
+                  <Text style={[s.boardMatch, on && s.boardMatchBusy]} numberOfLines={1}>
+                    {on ? `${on.divisionName} ${on.roundName} M${on.matchNumber + 1}` : 'Free'}
+                  </Text>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
       {/* ── Round filter tabs ── */}
       <ScrollView
         horizontal
@@ -996,6 +1081,7 @@ function DivisionBracketScreen() {
                   <MatchCard
                     key={match.id}
                     match={match}
+                    queuePos={courtQueue.get(match.id)}
                     onAssignCourt={openCourtPicker}
                     onEnterScore={setMatchTarget}
                   />
@@ -1036,6 +1122,8 @@ function DivisionBracketScreen() {
         tournamentId={tournamentId}
         courts={tournament?.courts ?? []}
         onSaved={courts => setTournament(prev => (prev ? { ...prev, courts } : prev))}
+        autoAssign={tournament?.autoAssignCourts ?? true}
+        onAutoAssignChanged={autoAssignCourts => setTournament(prev => (prev ? { ...prev, autoAssignCourts } : prev))}
       />
 
       {/* ── Match result modal ── */}
@@ -1054,6 +1142,20 @@ function DivisionBracketScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
+  boardWrap: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 6 },
+  boardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  boardTitle: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  boardAuto: { color: L.textSub, fontSize: text.caption.size, fontWeight: '600' },
+  boardRow: { gap: 6 },
+  boardChip: {
+    minWidth: 92, maxWidth: 160, paddingHorizontal: 10, paddingVertical: 7,
+    borderRadius: shape.cta, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg,
+  },
+  boardChipBusy: { backgroundColor: L.gold, borderColor: L.gold },
+  boardCourt: { color: L.navy, fontSize: text.caption.size, fontWeight: '800' },
+  boardCourtBusy: { color: L.bg },
+  boardMatch: { color: L.success, fontSize: 11, fontWeight: '700', marginTop: 1 },
+  boardMatchBusy: { color: L.bg, fontWeight: '600' },
   root: { flex: 1, backgroundColor: L.page },
 
   header: {

@@ -15,6 +15,7 @@ Branch: `feature/push-broadcast`. Read the commits for the full diffs.
 | 3 | Walk-ins in paid divisions, paid on site | `41ba511` | `20260928130000_director_onsite_payment` |
 | 4 | Mixed Doubles naming in Create Division | `8ca1146` | none (one data fix run by hand, see below) |
 | 5 | Tournament court list and one live match per court | `7c10746` | `20260928140000_tournament_courts` |
+| 6 | Court auto-assign queue and live bracket | (this commit) | `20260928150000_court_auto_assign`, `20260928160000_court_queue_fairness` |
 
 ---
 
@@ -121,6 +122,32 @@ Branch: `feature/push-broadcast`. Read the commits for the full diffs.
 - **Not covered:** round-robin play events keep their own court numbering
   (`rrScheduleStore`). Two separate tournaments sharing one venue court on the
   same day aren't blocked; the rule is per tournament.
+
+## 6. Court auto-assign
+
+- **DB (all automatic):** the `trg_bracket_court_automation` trigger on
+  `bracket_matches` fills free courts whenever a match completes or becomes
+  ready. Web gets this for free: any score saved from web moves the queue.
+  - **Queue:** `court_queue(p_tournament_id)` returns `(match_id,
+    queue_position)`. Use it for "Up next"; don't re-derive the order.
+  - **Order:** `ready_at`, then the round relative to the division's own first
+    round, then match number, then division. Opening matches count as ready
+    from the start of the event day, so divisions interleave.
+  - **Skipped:** a match whose player (profile or guest) is already on another
+    court.
+  - **Switch:** `tournaments.auto_assign_courts`, default true. Change it with
+    `set_tournament_auto_assign_courts()`. Saving the court list through
+    `set_tournament_courts()` also fills free courts.
+- **Mobile UI** (`tournament/[id]/division-bracket.tsx`):
+  - a realtime subscription on `bracket_matches` filtered by `tournament_id`,
+    debounced by 400 ms;
+  - "ON COURT 7" gold highlight for unfinished matches with a court;
+  - "UP NEXT #n" for queue positions 1-5;
+  - a Courts board strip above the rounds;
+  - the Auto-assign switch in `CourtsSheet`.
+- **Not supported yet:** holding a waiting match off the courts. A cleared match
+  that is still first in line gets the next freed court. There are no player
+  "you're up" notifications yet.
 
 ---
 
