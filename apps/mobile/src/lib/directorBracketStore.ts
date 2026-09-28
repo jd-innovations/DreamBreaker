@@ -28,6 +28,8 @@ export type DirectorBracketMatch = {
   /** Court NAME as stored in bracket_matches.court ("7", "Stadium"); see lib/tournamentCourts. */
   court?: string;
   completedAt?: string;
+  /** Set when the score was corrected (20260928190000). Public: players see the "i". */
+  scoreEdit?: { at: string; prevScore1?: number; prevScore2?: number };
   status: 'pending' | 'scheduled' | 'in_progress' | 'completed';
 };
 

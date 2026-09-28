@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Pressable, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -189,6 +189,24 @@ function MatchCard({ match }: { match: DirectorBracketMatch }) {
       <View style={mc.header}>
         <Text style={mc.matchNum}>Match {match.matchNumber + 1}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {/* Score corrected (20260928190000): everyone sees when and what it was. */}
+          {match.scoreEdit && (
+            <Pressable
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Score was edited. Show details"
+              onPress={() => {
+                const e = match.scoreEdit!;
+                const when = new Date(e.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                const was = e.prevScore1 != null && e.prevScore2 != null
+                  ? ` Was ${e.prevScore1}–${e.prevScore2}, now ${match.score1}–${match.score2}.`
+                  : '';
+                Alert.alert('Score edited', `The director corrected this score on ${when}.${was}`);
+              }}
+            >
+              <Ionicons name="information-circle" size={16} color={L.gold} />
+            </Pressable>
+          )}
           {match.court !== undefined && (
             <View style={mc.courtBadge}>
               <Ionicons name="location-outline" size={10} color={L.gold} />

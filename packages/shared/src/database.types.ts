@@ -142,6 +142,62 @@ export type Database = {
           },
         ]
       }
+      bracket_match_score_edits: {
+        Row: {
+          cleared_match_ids: string[]
+          edited_at: string
+          edited_by: string
+          id: string
+          match_id: string
+          new_score_team1: number[]
+          new_score_team2: number[]
+          new_winner: number
+          old_score_team1: number[] | null
+          old_score_team2: number[] | null
+          old_winner: number | null
+          reason: string
+          tournament_id: string
+        }
+        Insert: {
+          cleared_match_ids?: string[]
+          edited_at?: string
+          edited_by: string
+          id?: string
+          match_id: string
+          new_score_team1: number[]
+          new_score_team2: number[]
+          new_winner: number
+          old_score_team1?: number[] | null
+          old_score_team2?: number[] | null
+          old_winner?: number | null
+          reason: string
+          tournament_id: string
+        }
+        Update: {
+          cleared_match_ids?: string[]
+          edited_at?: string
+          edited_by?: string
+          id?: string
+          match_id?: string
+          new_score_team1?: number[]
+          new_score_team2?: number[]
+          new_winner?: number
+          old_score_team1?: number[] | null
+          old_score_team2?: number[] | null
+          old_winner?: number | null
+          reason?: string
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bracket_match_score_edits_edited_by_fkey"
+            columns: ["edited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bracket_matches: {
         Row: {
           completed_at: string | null
@@ -158,6 +214,8 @@ export type Database = {
           scheduled_at: string | null
           score_entered_at: string | null
           score_entered_by: string | null
+          score_edited_at: string | null
+          score_edited_prev: Json | null
           score_team1: number[] | null
           score_team2: number[] | null
           started_at: string | null
@@ -188,6 +246,8 @@ export type Database = {
           scheduled_at?: string | null
           score_entered_at?: string | null
           score_entered_by?: string | null
+          score_edited_at?: string | null
+          score_edited_prev?: Json | null
           score_team1?: number[] | null
           score_team2?: number[] | null
           started_at?: string | null
@@ -218,6 +278,8 @@ export type Database = {
           scheduled_at?: string | null
           score_entered_at?: string | null
           score_entered_by?: string | null
+          score_edited_at?: string | null
+          score_edited_prev?: Json | null
           score_team1?: number[] | null
           score_team2?: number[] | null
           started_at?: string | null
@@ -8674,6 +8736,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      correct_match_score: {
+        Args: { p_match_id: string; p_reason: string; p_score1: number; p_score2: number }
+        Returns: Json
+      }
       court_queue: {
         Args: { p_tournament_id: string }
         Returns: { match_id: string; queue_position: number }[]
@@ -10073,6 +10139,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      preview_score_correction: {
+        Args: { p_match_id: string; p_score1: number; p_score2: number }
+        Returns: Json
       }
       set_my_handle: { Args: { p_handle: string }; Returns: Json }
       set_tournament_auto_assign_courts: {

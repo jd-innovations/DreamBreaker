@@ -136,3 +136,73 @@ export async function saveMatchScore(
 
   return null;
 }
+
+// ─── Score corrections (20260928190000) ───────────────────────────────────────
+// Director / admin only, all-or-nothing in the database. A winner change clears
+// any later results on that path that were already played.
+
+const CORRECTION_ERRORS: Record<string, string> = {
+  not_allowed:         'Only this tournament\u2019s director or an admin can edit scores.',
+  match_not_completed: 'This match has no result to correct yet.',
+  reason_required:     'Please give a reason for the correction.',
+  invalid_score:       'Win to 11, win by 2, no ties.',
+  match_not_found:     'This match no longer exists.',
+};
+
+export async function previewScoreCorrection(
+  matchId: string,
+  score1: number,
+  score2: number,
+): Promise<{ winnerChanged: boolean; clearedCount: number } | null> {
+  const { data, error } = await supabase.rpc('preview_score_correction', {
+    p_match_id: matchId, p_score1: score1, p_score2: score2,
+  });
+  const d = data as { ok?: boolean; winner_changed?: boolean; cleared_count?: number } | null;
+  if (error || !d?.ok) return null;
+  return { winnerChanged: !!d.winner_changed, clearedCount: d.cleared_count ?? 0 };
+}
+
+export async function correctMatchScore(
+  matchId: string,
+  score1: number,
+  score2: number,
+  reason: string,
+): Promise<{ ok: true; clearedCount: number } | { ok: false; error: string }> {
+  const { data, error } = await supabase.rpc('correct_match_score', {
+    p_match_id: matchId, p_score1: score1, p_score2: score2, p_reason: reason,
+  });
+  if (error) {
+    const code = Object.keys(CORRECTION_ERRORS).find(k => error.message?.includes(k));
+    return { ok: false, error: code ? CORRECTION_ERRORS[code] : 'Could not correct the score. Please try again.' };
+  }
+  const d = data as { cleared_count?: number } | null;
+  return { ok: true, clearedCount: d?.cleared_count ?? 0 };
+}
+
+export type ScoreEditDetail = {
+  editedAt: string;
+  reason: string;
+  editorName: string | null;
+  oldScore1?: number;
+  oldScore2?: number;
+};
+
+/** Latest correction with editor and reason. Readable only by the director / admins (RLS). */
+export async function fetchLatestScoreEdit(matchId: string): Promise<ScoreEditDetail | null> {
+  const { data } = await supabase
+    .from('bracket_match_score_edits')
+    .select('edited_at, reason, old_score_team1, old_score_team2, editor:profiles!bracket_match_score_edits_edited_by_fkey(full_name)')
+    .eq('match_id', matchId)
+    .order('edited_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  const editor = data.editor as { full_name?: string | null } | null;
+  return {
+    editedAt:   data.edited_at,
+    reason:     data.reason,
+    editorName: editor?.full_name ?? null,
+    oldScore1:  data.old_score_team1?.[0],
+    oldScore2:  data.old_score_team2?.[0],
+  };
+}

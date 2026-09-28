@@ -239,6 +239,30 @@ Branch: `feature/push-broadcast`. Read the commits for the full diffs.
 - **Web to-do:** the same control. Web's generate / assign views should
   respect it.
 
+## 11. Score corrections (item 9)
+
+- **DB** (`20260928190000_score_corrections`, live):
+  - `correct_match_score(match, s1, s2, reason)`: SECURITY DEFINER; the
+    tournament's approved director or an admin; reason required; same score
+    rules as the app. All or nothing: if the winner changes, the new winner
+    takes the next-match slot, and any later matches on that path that were
+    already played are cleared (score, winner, completion and court released,
+    their advancement undone). Then courts refill.
+  - `preview_score_correction` is read-only and reports `winner_changed` and
+    `cleared_count`.
+  - Public on the match: `score_edited_at`, `score_edited_prev`.
+  - `bracket_match_score_edits` is the audit (editor, reason, cleared ids).
+    Only directors and admins can read it; only the function writes it.
+- **Mobile:**
+  - The director bracket and pools views have "Edit score" on completed
+    matches: the score modal in edit mode, with a required reason and a
+    confirmation showing what will be cleared. A pool match edited after the
+    bracket was built shows a "rebuild" hint.
+  - The "i" on edited matches: everyone sees when and the old score; the
+    director also sees the editor and reason (director and player bracket
+    views).
+- **Web to-do:** the same edit flow and "i".
+
 ---
 
 ## Before starting the web session

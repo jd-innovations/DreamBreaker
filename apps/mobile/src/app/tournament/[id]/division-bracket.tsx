@@ -24,7 +24,10 @@ import {
   type DirectorBracket,
   type DirectorBracketMatch,
 } from '@/lib/supabase/brackets';
-import { assignCourt, fetchCourtQueue, fetchCourtsInUse, saveMatchScore, type CourtInUse } from '@/lib/supabase/matches';
+import {
+  assignCourt, correctMatchScore, fetchCourtQueue, fetchCourtsInUse, fetchLatestScoreEdit,
+  previewScoreCorrection, saveMatchScore, type CourtInUse,
+} from '@/lib/supabase/matches';
 import { supabase } from '@/lib/supabase';
 import { courtLabel } from '@/lib/tournamentCourts';
 import { CourtsSheet } from '@/components/CourtsSheet';
@@ -279,12 +282,18 @@ function MatchCard({
   queuePos,
   onAssignCourt,
   onEnterScore,
+  onEditScore,
+  onShowEdit,
 }: {
   match: DirectorBracketMatch;
   /** 1-based place in the tournament-wide court queue (court_queue()), if waiting. */
   queuePos?: number;
   onAssignCourt: (m: DirectorBracketMatch) => void;
   onEnterScore:  (m: DirectorBracketMatch) => void;
+  /** Correct a completed match's score (20260928190000). */
+  onEditScore?:  (m: DirectorBracketMatch) => void;
+  /** Show the "i" details of a corrected score. */
+  onShowEdit?:   (m: DirectorBracketMatch) => void;
 }) {
   const isCompleted = match.status === 'completed';
   const p1 = match.participant1;
@@ -316,7 +325,19 @@ function MatchCard({
       {/* Match header */}
       <View style={mc.header}>
         <Text style={mc.matchNum}>Match {match.matchNumber + 1}</Text>
-        <StatusChip label={matchStatusLabel(match.status)} variant={matchStatusVariant(match.status)} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {match.scoreEdit && (
+            <Pressable
+              onPress={() => onShowEdit?.(match)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Score was edited. Show details"
+            >
+              <Ionicons name="information-circle" size={18} color={L.gold} />
+            </Pressable>
+          )}
+          <StatusChip label={matchStatusLabel(match.status)} variant={matchStatusVariant(match.status)} />
+        </View>
       </View>
 
       {upNext !== undefined && <UpNextBanner position={upNext} />}
@@ -357,6 +378,16 @@ function MatchCard({
         <View style={mc.awaiting}>
           <Ionicons name="time-outline" size={12} color={L.textSub} />
           <Text style={mc.awaitingText}>Awaiting Previous Round</Text>
+        </View>
+      )}
+
+      {/* Correct a completed result (not a bye) */}
+      {isCompleted && p1 !== null && p2 !== null && hasScores && onEditScore && (
+        <View style={mc.actions}>
+          <TouchableOpacity style={mc.actionBtn} activeOpacity={0.8} onPress={() => onEditScore(match)}>
+            <Ionicons name="create-outline" size={12} color={L.navy} />
+            <Text style={mc.actionLabel} numberOfLines={1}>Edit score</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -647,14 +678,18 @@ function MatchResultModal({
   bottomInset,
   onSave,
   onClose,
+  editing = false,
 }: {
   match: DirectorBracketMatch;
   bottomInset: number;
-  onSave: (score1: number, score2: number) => void;
+  onSave: (score1: number, score2: number, reason?: string) => void;
   onClose: () => void;
+  /** Correcting a completed result: pre-filled, reason required. */
+  editing?: boolean;
 }) {
   const [s1, setS1] = useState(match.score1 !== undefined ? String(match.score1) : '');
   const [s2, setS2] = useState(match.score2 !== undefined ? String(match.score2) : '');
+  const [reason, setReason] = useState('');
   const p1 = match.participant1;
   const p2 = match.participant2;
 
@@ -672,6 +707,18 @@ function MatchResultModal({
       Alert.alert('Invalid Score', validationError);
       return;
     }
+    if (editing) {
+      if (reason.trim().length < 3) {
+        Alert.alert('Reason required', 'Say briefly why the score is being corrected.');
+        return;
+      }
+      if (n1 === match.score1 && n2 === match.score2) {
+        Alert.alert('No change', 'The score is the same as before.');
+        return;
+      }
+      onSave(n1, n2, reason.trim());
+      return;
+    }
     onSave(n1, n2);
   }
 
@@ -684,7 +731,7 @@ function MatchResultModal({
         <Pressable style={rm.backdrop} onPress={onClose}>
           <Pressable style={[rm.sheet, { paddingBottom: bottomInset + 24 }]} onPress={() => {}}>
             <View style={rm.handle} />
-            <Text style={rm.title}>Enter Match Result</Text>
+            <Text style={rm.title}>{editing ? 'Correct Match Result' : 'Enter Match Result'}</Text>
             <Text style={rm.sub}>
               {match.roundName}  ·  Match {match.matchNumber + 1}
               {match.court !== undefined ? `  ·  ${courtLabel(match.court)}` : ''}
@@ -739,8 +786,26 @@ function MatchResultModal({
               <Text style={rm.hintText}>Win to 11, win by 2  ·  e.g. 11–9, 12–10, 15–13</Text>
             </View>
 
+            {editing && (
+              <View style={rm.reasonWrap}>
+                <Text style={rm.reasonLabel}>Reason for the correction *</Text>
+                <TextInput
+                  style={rm.reasonInput}
+                  value={reason}
+                  onChangeText={setReason}
+                  placeholder="e.g. Scores entered for the wrong team"
+                  placeholderTextColor={L.textSub}
+                  maxLength={500}
+                  multiline
+                />
+                <Text style={rm.reasonNote}>
+                  Everyone sees that this score was edited and what it was. Only directors see the reason.
+                </Text>
+              </View>
+            )}
+
             <TouchableOpacity style={rm.saveBtn} activeOpacity={0.85} onPress={handleSave}>
-              <Text style={rm.saveBtnText}>Save Result</Text>
+              <Text style={rm.saveBtnText}>{editing ? 'Save Correction' : 'Save Result'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={rm.cancelBtn} onPress={onClose} activeOpacity={0.7}>
               <Text style={rm.cancelLabel}>Cancel</Text>
@@ -753,6 +818,13 @@ function MatchResultModal({
 }
 
 const rm = StyleSheet.create({
+  reasonWrap: { marginBottom: 14 },
+  reasonLabel: { color: L.navy, fontSize: text.caption.size, fontWeight: '800', marginBottom: 6 },
+  reasonInput: {
+    minHeight: 60, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
+    paddingHorizontal: 12, paddingVertical: 10, color: L.navy, fontSize: text.body.size, textAlignVertical: 'top',
+  },
+  reasonNote: { color: L.textSub, fontSize: 11, fontWeight: '500', marginTop: 6 },
   backdrop: { flex: 1, backgroundColor: 'rgba(10,18,40,0.50)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: L.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24,
@@ -880,6 +952,7 @@ function DivisionBracketScreen() {
   const [stageView,     setStageView]     = useState<'pools' | 'bracket' | null>(null);
   const [buildPlan,     setBuildPlan]     = useState<BracketPlan | null>(null);
   const [division,      setDivision]      = useState<DivisionData | null>(null);
+  const [editTarget,    setEditTarget]    = useState<DirectorBracketMatch | null>(null);
   const [matchTarget,   setMatchTarget]   = useState<DirectorBracketMatch | null>(null);
   const [menuOpen,      setMenuOpen]      = useState(false);
 
@@ -1046,6 +1119,58 @@ function DivisionBracketScreen() {
         );
       }
     }));
+  }
+
+  // Score correction (20260928190000): preview what it clears, confirm, apply.
+  function handleCorrectScore(score1: number, score2: number, reason?: string) {
+    const target = editTarget;
+    if (!target || !reason) return;
+    requireAuth(user?.id, async () => {
+      const preview = await previewScoreCorrection(target.id, score1, score2);
+      const lines: string[] = [];
+      if (preview?.winnerChanged) {
+        lines.push('This changes the winner.');
+        if (preview.clearedCount > 0) {
+          lines.push(`${preview.clearedCount} later ${preview.clearedCount === 1 ? 'result' : 'results'} in this bracket will be cleared and replayed.`);
+        } else {
+          lines.push('The new winner moves into the next match.');
+        }
+      }
+      if (pools && bracket && !!pools.pools.find(pl => pl.matches.some(m => m.id === target.id))) {
+        lines.push('This is a pool match and the bracket is already built. It won\u2019t be rebuilt automatically. Use "Rebuild bracket from pools" if qualifiers change.');
+      }
+      const apply = async () => {
+        const result = await correctMatchScore(target.id, score1, score2, reason);
+        if (!result.ok) {
+          Alert.alert('Score not corrected', result.error);
+          return;
+        }
+        setEditTarget(null);
+        await refresh();
+      };
+      if (lines.length === 0) {
+        await apply();
+      } else {
+        Alert.alert('Confirm correction', lines.join('\n\n'), [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Save correction', style: 'destructive', onPress: () => { void apply(); } },
+        ]);
+      }
+    });
+  }
+
+  // The "i": everyone sees when and what it was; the director also sees who and why.
+  async function showScoreEdit(m: DirectorBracketMatch) {
+    if (!m.scoreEdit) return;
+    const detail = await fetchLatestScoreEdit(m.id);
+    const when = new Date(m.scoreEdit.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const was = m.scoreEdit.prevScore1 != null && m.scoreEdit.prevScore2 != null
+      ? `Was ${m.scoreEdit.prevScore1}\u2013${m.scoreEdit.prevScore2}. Now ${m.score1}\u2013${m.score2}.`
+      : '';
+    const extra = detail
+      ? `\n\nBy ${detail.editorName ?? 'the director'}\nReason: ${detail.reason}`
+      : '';
+    Alert.alert('Score edited', `Edited ${when}. ${was}${extra}`);
   }
 
   // Pool Play → Bracket, step 2: seed pool qualifiers into the bracket.
@@ -1313,6 +1438,8 @@ function DivisionBracketScreen() {
                     queuePos={courtQueue.get(match.id)}
                     onAssignCourt={openCourtPicker}
                     onEnterScore={setMatchTarget}
+                    onEditScore={setEditTarget}
+                    onShowEdit={m => { void showScoreEdit(m); }}
                   />
                 ))}
               </ScrollView>
@@ -1372,6 +1499,8 @@ function DivisionBracketScreen() {
                     queuePos={courtQueue.get(match.id)}
                     onAssignCourt={openCourtPicker}
                     onEnterScore={setMatchTarget}
+                    onEditScore={setEditTarget}
+                    onShowEdit={m => { void showScoreEdit(m); }}
                   />
                 );
               })}
@@ -1436,6 +1565,17 @@ function DivisionBracketScreen() {
           bottomInset={insets.bottom}
           onSave={handleSaveScore}
           onClose={() => setMatchTarget(null)}
+        />
+      )}
+
+      {/* ── Score correction ── */}
+      {editTarget && (
+        <MatchResultModal
+          match={editTarget}
+          bottomInset={insets.bottom}
+          editing
+          onSave={handleCorrectScore}
+          onClose={() => setEditTarget(null)}
         />
       )}
     </View>

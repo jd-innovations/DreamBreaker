@@ -28,6 +28,8 @@ export type BracketMatchRow = {
   court: string | null;
   /** Pool letter for pool-play matches (20260928170000); null for elimination rounds. */
   pool_label: string | null;
+  score_edited_at: string | null;
+  score_edited_prev: { s1?: number | null; s2?: number | null } | null;
   winner: number | null;
   completed_at: string | null;
   score_team1: number[] | null;
@@ -163,6 +165,13 @@ export function rowToMatch(
     score2: row.score_team2?.[0],
     court: row.court ?? undefined,
     completedAt: row.completed_at ?? undefined,
+    scoreEdit: row.score_edited_at
+      ? {
+          at: row.score_edited_at,
+          prevScore1: row.score_edited_prev?.s1 ?? undefined,
+          prevScore2: row.score_edited_prev?.s2 ?? undefined,
+        }
+      : undefined,
     status,
   };
 }
@@ -267,6 +276,7 @@ function rowsToDivisionBracket(
 export const MATCH_SELECT = `
   id, tournament_id, division_id, match_number, round,
   court, pool_label, winner, completed_at, score_team1, score_team2,
+  score_edited_at, score_edited_prev,
   next_match_id, next_match_slot,
   p1a:profiles!bracket_matches_team1_player_a_fkey(id,full_name),
   p1b:profiles!bracket_matches_team1_player_b_fkey(id,full_name),
