@@ -635,19 +635,30 @@ export async function getBracketMatchCounts(tournamentId: string): Promise<{
 }> {
   const { data } = await supabase
     .from('bracket_matches')
-    .select('winner, team1_player_a, team2_player_a')
+    .select('winner, team1_player_a, team2_player_a, team1_guest_a, team2_guest_a')
     .eq('tournament_id', tournamentId);
 
   if (!data) return { total: 0, completed: 0, remaining: 0, completionPct: 0 };
 
-  // Only count real matches (at least one participant)
-  const real = data.filter(r => r.team1_player_a != null || r.team2_player_a != null);
+  // Only count real matches (at least one participant, profile or guest)
+  const real = data.filter(r =>
+    r.team1_player_a != null || r.team2_player_a != null || r.team1_guest_a != null || r.team2_guest_a != null);
   const total = real.length;
   const completed = real.filter(r => r.winner != null).length;
   const remaining = total - completed;
   const completionPct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return { total, completed, remaining, completionPct };
+}
+
+/** Whether any elimination bracket exists for this tournament (database, not device memory). */
+export async function hasAnyBracket(tournamentId: string): Promise<boolean> {
+  const { count } = await supabase
+    .from('bracket_matches')
+    .select('id', { count: 'exact', head: true })
+    .eq('tournament_id', tournamentId)
+    .is('pool_label', null);
+  return (count ?? 0) > 0;
 }
 
 export async function isTournamentCompleted(tournamentId: string): Promise<boolean> {

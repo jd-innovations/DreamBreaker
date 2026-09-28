@@ -28,6 +28,7 @@ import {
   buildPpaArizonaPreview,
   PPA_ARIZONA_PREVIEW_ID,
 } from '@/lib/replays/ppaArizonaWomensDoubles';
+import { useTournamentLive } from '@/hooks/useTournamentLive';
 
 // ─── Player identity ──────────────────────────────────────────────────────────
 
@@ -349,6 +350,9 @@ export default function PlayerResultsScreen() {
     if (t) setTournamentStatusKey(getTournamentStatus(t));
     setLoading(false);
   }, [id, isReplayPreview]);
+
+  // Live: any score entered anywhere updates this screen.
+  useTournamentLive(id, () => { void refresh(); });
 
   useFocusEffect(useCallback(() => {
     let active = true;

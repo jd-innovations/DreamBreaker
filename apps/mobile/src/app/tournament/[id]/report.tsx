@@ -17,6 +17,7 @@ import {
   exportRosterCsv,
   type TournamentReport,
 } from '@/lib/tournamentReport';
+import { useTournamentLive } from '@/hooks/useTournamentLive';
 
 // ─── Theme alias ──────────────────────────────────────────────────────────────
 
@@ -96,6 +97,9 @@ function TournamentReportScreen() {
     setReport(r);
     setLoading(false);
   }, [id]);
+
+  // Live: any score entered anywhere updates this screen.
+  useTournamentLive(id, () => { void refresh(); });
 
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 

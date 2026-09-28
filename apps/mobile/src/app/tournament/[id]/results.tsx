@@ -22,6 +22,7 @@ import {
   publishAllBrackets,
   type DirectorBracket,
 } from '@/lib/supabase/brackets';
+import { useTournamentLive } from '@/hooks/useTournamentLive';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -204,6 +205,9 @@ function ResultsScreen() {
     setMatchCounts(counts);
     setLoading(false);
   }, [id]);
+
+  // Live: any score entered anywhere updates this screen.
+  useTournamentLive(id, () => { void refresh(); });
 
   useFocusEffect(useCallback(() => {
     let active = true;

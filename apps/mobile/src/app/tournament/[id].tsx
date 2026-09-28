@@ -14,8 +14,7 @@ import { colors, spacing } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { getEventShell } from '@/lib/eventShellCache';   // F7 fix
-import { isTournamentCompleted, getAllBrackets } from '@/lib/directorBracketStore';
-import { isTournamentCompleted as fetchHasPublishedResults } from '@/lib/supabase/brackets';
+import { isTournamentCompleted as fetchHasPublishedResults, hasAnyBracket } from '@/lib/supabase/brackets';
 import { StatusChip, AddToCalendarButton, PressableCTA } from '@/components';
 import { InfoTooltip } from '@/components/InfoTooltip';
 import type { CalendarEventInput } from '@/lib/calendarEvents';
@@ -49,6 +48,7 @@ import { eventCoverSource, EVENT_COVER_FILL } from '@/lib/eventCover';
 import type { Tournament } from '@/lib/tournamentTypes';
 import type { DivisionData } from '@/data/divisions';
 import { formatLabel } from '@/lib/tournamentFormats';
+import { useTournamentLive } from '@/hooks/useTournamentLive';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const HERO_H = SH * 0.44;
@@ -433,6 +433,12 @@ export default function TournamentDetail() {
     }
   }, [tournament]);
 
+  // Live: brackets being built and results being published, from any device.
+  useTournamentLive(id, () => {
+    hasAnyBracket(id).then(setHasBrackets).catch(() => {});
+    fetchHasPublishedResults(id).then(setResultsAvailable).catch(() => {});
+  });
+
   useFocusEffect(
     useCallback(() => {
       let active = true;
@@ -450,7 +456,7 @@ export default function TournamentDetail() {
         setDivisions(divs);
         if (t) setTournamentStatusKey(getTournamentStatus(t));
         setDirectorUserId(t?.directorId ?? null);
-        setHasBrackets(getAllBrackets(id).length > 0);
+        hasAnyBracket(id).then(b => { if (active) setHasBrackets(b); }).catch(() => {});
         setResultsAvailable(false);
         fetchHasPublishedResults(id).then(r => { if (active) setResultsAvailable(r); }).catch(() => {});
         setFacility(null);
@@ -729,7 +735,7 @@ export default function TournamentDetail() {
           )}
 
           {/* VIEW RESULTS BANNER — only when tournament is completed */}
-          {isTournamentCompleted(tournament.id) && (
+          {resultsAvailable && (
             <TouchableOpacity
               style={s.resultsBanner}
               activeOpacity={0.8}

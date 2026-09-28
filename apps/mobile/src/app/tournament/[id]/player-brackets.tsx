@@ -25,6 +25,7 @@ import {
 } from '@/lib/tournamentStatus';
 import { useSession } from '@/hooks/useSession';
 import { courtLabel } from '@/lib/tournamentCourts';
+import { useTournamentLive } from '@/hooks/useTournamentLive';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -428,6 +429,9 @@ export default function PlayerBracketsScreen() {
     if (t) setTournamentStatusKey(getTournamentStatus(t));
     setLoading(false);
   }, [id]);
+
+  // Live: any score entered anywhere updates this screen.
+  useTournamentLive(id, () => { void refresh(); });
 
   useFocusEffect(useCallback(() => {
     let active = true;

@@ -17,17 +17,17 @@ import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
 import { fetchTournamentRegistrations } from '@/lib/supabase/registrations';
 import type { Tournament } from '@/lib/tournamentTypes';
 import type { DivisionData } from '@/data/divisions';
-import {
-  hasBracket,
-  getAllBrackets,
-  getBracketMatchCounts,
-} from '@/lib/directorBracketStore';
+// Brackets and match counts come from the database, not directorBracketStore
+// (device memory, which only knew brackets generated on this phone this session).
+import { fetchAllBrackets, getBracketMatchCounts } from '@/lib/supabase/brackets';
+import type { DirectorBracket } from '@/lib/directorBracketStore';
 import { getTournamentStatus, getTournamentStatusInfo } from '@/lib/tournamentStatus';
 import { exportRosterCsv } from '@/lib/tournamentReport';
 import { DirectorOnly } from '@/components/DirectorOnly';
 import { CourtsSheet } from '@/components/CourtsSheet';
 import { courtCountLabel } from '@/lib/tournamentCourts';
 import { formatLabel } from '@/lib/tournamentFormats';
+import { useTournamentLive } from '@/hooks/useTournamentLive';
 
 // ─── Theme alias ──────────────────────────────────────────────────────────────
 
@@ -238,8 +238,8 @@ function CommandCenterScreen() {
   const [metrics, setMetrics]           = React.useState(emptyMetrics);
   const [divMetrics, setDivMetrics]     = React.useState<DivisionMetrics[]>([]);
   const [cancelledCount, setCancelledCount] = React.useState(0);
-  const [allBrackets, setAllBrackets]   = React.useState(() => getAllBrackets(id));
-  const [matchCounts, setMatchCounts]   = React.useState(() => getBracketMatchCounts(id));
+  const [allBrackets, setAllBrackets]   = React.useState<DirectorBracket[]>([]);
+  const [matchCounts, setMatchCounts]   = React.useState({ total: 0, completed: 0, remaining: 0, completionPct: 0 });
   const [loading, setLoading]           = React.useState(true);
   // Separate from `loading`: that one gates the initial full-screen spinner
   // only (see the `if (loading || !tournament)` guard below) and never flips
@@ -286,13 +286,19 @@ function CommandCenterScreen() {
       };
     }));
     setCancelledCount(regs.filter((r: TournamentRegistration) => r.status === 'cancelled').length);
-    setAllBrackets(getAllBrackets(id));
-    setMatchCounts(getBracketMatchCounts(id));
+    const divNameMap: Record<string, string> = {};
+    for (const d of divs) divNameMap[d.id] = d.name;
+    const [brackets, counts] = await Promise.all([fetchAllBrackets(id, divNameMap), getBracketMatchCounts(id)]);
+    setAllBrackets(brackets);
+    setMatchCounts(counts);
     setRoster(regs);
     setLoading(false);
   }, [id]);
 
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+
+  // Live: scores, courts, check-ins and walk-ins from any device.
+  useTournamentLive(id, () => { void refresh(); }, { registrations: true });
 
   // Manual refresh: a director approving their own tournament from the web
   // admin console (the only place approval happens today -- there is no
@@ -359,7 +365,7 @@ function CommandCenterScreen() {
   const divisionsBalanced = divMetrics.every(d => divReadiness(d) !== 'attention');
   const bracketReady      =
     allDivisions.length > 0 &&
-    allDivisions.every(d => hasBracket(id, d.id));
+    allDivisions.every(d => allBrackets.some(b => b.divisionId === d.id));
   const resultsReady = allBrackets.length > 0 && allBrackets.every(b => b.status === 'completed');
 
   // Phase 11: extended status reflects tournament completion
