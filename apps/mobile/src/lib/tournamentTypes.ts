@@ -65,5 +65,9 @@ export interface Tournament {
   courts?: string[] | null;
   /** Freed courts go to the next queued match automatically (20260928150000). Default on. */
   autoAssignCourts?: boolean;
+  /** tournaments.tournament_format: single_elim | double_elim | round_robin | pool_bracket | mlp. See lib/tournamentFormats. */
+  tournamentFormat?: string;
+  /** tournaments.pool_count, meaningful for pool_bracket. */
+  poolCount?: number | null;
   directorId?: string | null;
 }

@@ -27,6 +27,7 @@ import { exportRosterCsv } from '@/lib/tournamentReport';
 import { DirectorOnly } from '@/components/DirectorOnly';
 import { CourtsSheet } from '@/components/CourtsSheet';
 import { courtCountLabel } from '@/lib/tournamentCourts';
+import { formatLabel } from '@/lib/tournamentFormats';
 
 // ─── Theme alias ──────────────────────────────────────────────────────────────
 
@@ -390,6 +391,7 @@ function CommandCenterScreen() {
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={s.headerTitle} numberOfLines={1}>{tournament.name}</Text>
           <Text style={s.headerSub}>{tournament.date}  •  {tournament.city}, {tournament.state}</Text>
+          <Text style={s.headerSub} numberOfLines={1}>{formatLabel(tournament.tournamentFormat)}</Text>
         </View>
         <StatusChip
           label={getTournamentStatusInfo(tournamentStatusKey).label}

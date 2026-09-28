@@ -116,6 +116,8 @@ function dbRowToTournament(row: Record<string, unknown>): Tournament {
     amenities:            Array.isArray(row.amenities) ? (row.amenities as string[]) : [],
     courts:               Array.isArray(row.courts) ? (row.courts as string[]) : null,
     autoAssignCourts:     row.auto_assign_courts == null ? true : Boolean(row.auto_assign_courts),
+    tournamentFormat:     row.tournament_format != null ? String(row.tournament_format) : 'single_elim',
+    poolCount:            row.pool_count != null ? Number(row.pool_count) : null,
     directorId:           row.director_id != null ? String(row.director_id) : null,
   };
 }
@@ -191,7 +193,7 @@ export async function fetchTournamentsByIds(ids: string[]): Promise<Tournament[]
 export async function fetchTournamentById(id: string): Promise<Tournament | null> {
   const { data, error } = await supabase
     .from('tournaments')
-    .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,amenities,courts,auto_assign_courts')
+    .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,amenities,courts,auto_assign_courts,tournament_format,pool_count')
     .eq('id', id)
     .single();
 
@@ -229,7 +231,7 @@ export async function fetchTournamentForEdit(
   const { data, error } = await withTimeout(
     supabase
       .from('tournaments')
-      .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,cover_img_url,amenities')
+      .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,cover_img_url,amenities,tournament_format,pool_count')
       .eq('id', id)
       .eq('director_id', directorId)
       .single(),
@@ -350,6 +352,10 @@ export type CreateTournamentInput = {
   amenities: string[];
   /** Court names; omitted or empty stores null. */
   courts?: string[];
+  /** tournaments.tournament_format (mirrors web). */
+  tournamentFormat: string;
+  /** Only stored for pool_bracket; null otherwise, as web does. */
+  poolCount: number | null;
 };
 
 // Always creates in 'draft' — matches the web director flow (draft -> submit
@@ -376,6 +382,8 @@ export async function createDraftTournament(input: CreateTournamentInput): Promi
       facility_id:            input.facilityId,
       amenities:              input.amenities,
       courts:                 input.courts && input.courts.length > 0 ? input.courts : null,
+      tournament_format:      input.tournamentFormat,
+      pool_count:             input.tournamentFormat === 'pool_bracket' ? input.poolCount : null,
       status:                 'draft',
       spots_filled:           0,
     })
@@ -445,6 +453,8 @@ export type UpdateTournamentInput = {
   drawSize: number;
   amenities: string[];
   facilityId: string | null;
+  tournamentFormat: string;
+  poolCount: number | null;
   /** Omit to leave the cover untouched; pass the new URL (or null to clear it). */
   coverImgUrl?: string | null;
   /**
@@ -474,6 +484,8 @@ export async function updateTournamentDetails(id: string, input: UpdateTournamen
       draw_size:               input.drawSize,
       amenities:               input.amenities,
       facility_id:             input.facilityId,
+      tournament_format:       input.tournamentFormat,
+      pool_count:              input.tournamentFormat === 'pool_bracket' ? input.poolCount : null,
       ...(input.coverImgUrl !== undefined ? { cover_img_url: input.coverImgUrl } : {}),
       // "tournaments: director update own" RLS requires WITH CHECK
       // (approved_at IS NULL AND approved_by IS NULL) on the row that results

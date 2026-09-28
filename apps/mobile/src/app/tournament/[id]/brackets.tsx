@@ -24,6 +24,7 @@ import {
   hasBracket,
   type DirectorBracket,
 } from '@/lib/supabase/brackets';
+import { confirmBracketFormat } from '@/lib/tournamentFormats';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -280,7 +281,7 @@ function BracketsScreen() {
   }
 
   function handleGenerate(divisionId: string) {
-    requireAuth(user?.id, () => {
+    requireAuth(user?.id, () => confirmBracketFormat(tournament?.tournamentFormat, () => {
       const existing = brackets.find(b => b.divisionId === divisionId);
       const division = divisions.find(d => d.id === divisionId);
       const divRegs  = registrations.filter(r => r.divisionId === divisionId);
@@ -305,7 +306,7 @@ function BracketsScreen() {
         createBracket(tournament!.id, divisionId, division?.name ?? '', divRegs)
           .then(() => refresh());
       }
-    });
+    }));
   }
 
   function handleView(divisionId: string) {

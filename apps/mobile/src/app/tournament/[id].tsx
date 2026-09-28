@@ -48,6 +48,7 @@ import { shareEntity } from '@/lib/share';
 import { eventCoverSource, EVENT_COVER_FILL } from '@/lib/eventCover';
 import type { Tournament } from '@/lib/tournamentTypes';
 import type { DivisionData } from '@/data/divisions';
+import { formatLabel } from '@/lib/tournamentFormats';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const HERO_H = SH * 0.44;
@@ -671,6 +672,14 @@ export default function TournamentDetail() {
                 icon="speedometer-outline"
               />
             )}
+            {/* Structure, labelled as web labels it. */}
+            <StatusChip
+              label={tournament.tournamentFormat === 'pool_bracket' && tournament.poolCount
+                ? `${formatLabel(tournament.tournamentFormat)} · ${tournament.poolCount} pools`
+                : formatLabel(tournament.tournamentFormat)}
+              variant="navy"
+              icon="git-branch-outline"
+            />
           </View>
 
           {/* ABOUT THIS EVENT

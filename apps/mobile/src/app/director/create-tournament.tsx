@@ -20,6 +20,8 @@ import { DEFAULT_EVENT_COVER } from '@/lib/eventCover';
 import AmenityPicker from '@/components/AmenityPicker';
 import { FacilityPicker, type FacilityPickerValue } from '@/components/FacilityPicker';
 import { CourtListEditor } from '@/components/CourtListEditor';
+import { TournamentFormatPicker } from '@/components/TournamentFormatPicker';
+import { DEFAULT_POOL_COUNT, TOURNAMENT_FORMAT_LABELS, type TournamentFormatKey } from '@/lib/tournamentFormats';
 import { useSupportContext } from '@/lib/support/supportContext';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -394,6 +396,9 @@ export default function CreateTournamentScreen() {
   // Courts reserved at the venue, by real name. Optional here; also settable
   // later from the Command Center (and on the day, from the court picker).
   const [courts,       setCourts]       = useState<string[]>([]);
+  // Tournament structure, mirroring web's create dialog (same keys/default).
+  const [tournamentFormat, setTournamentFormat] = useState<TournamentFormatKey>('single_elim');
+  const [poolCount,        setPoolCount]        = useState(DEFAULT_POOL_COUNT);
   const [activeDateField, setActiveDateField] = useState<
     'date' | 'registrationOpenDate' | 'registrationCloseDate' | null
   >(null);
@@ -521,6 +526,8 @@ export default function CreateTournamentScreen() {
       drawSize:             parseInt(form.drawSize, 10),
       facilityId,
       courts,
+      tournamentFormat,
+      poolCount: tournamentFormat === 'pool_bracket' ? poolCount : null,
     });
 
     if (!t) {
@@ -722,6 +729,15 @@ export default function CreateTournamentScreen() {
                 hint="Maximum number of registered players"
                 error={errors.drawSize}
               />
+              <View style={{ marginTop: 6 }}>
+                <Text style={f.label}>Tournament Format *</Text>
+                <TournamentFormatPicker
+                  value={tournamentFormat}
+                  onChange={setTournamentFormat}
+                  poolCount={poolCount}
+                  onPoolCountChange={setPoolCount}
+                />
+              </View>
             </View>
           )}
 
@@ -786,6 +802,12 @@ export default function CreateTournamentScreen() {
                 <ReviewRow label="Entry Fee"    value={fmt(form.entryFee)} />
                 <ReviewRow label="Hold Deposit" value={fmt(form.holdFee)}  />
                 <ReviewRow label="Draw Size"    value={`${form.drawSize} players`} />
+                <ReviewRow
+                  label="Format"
+                  value={tournamentFormat === 'pool_bracket'
+                    ? `${TOURNAMENT_FORMAT_LABELS[tournamentFormat]} · ${poolCount} pools`
+                    : TOURNAMENT_FORMAT_LABELS[tournamentFormat]}
+                />
               </View>
 
               <View style={s.reviewNote}>

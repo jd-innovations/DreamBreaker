@@ -31,6 +31,7 @@ import { useSupportContext } from '@/lib/support/supportContext';
 import type { TournamentRegistration } from '@/lib/registrationStore';
 import type { Tournament } from '@/lib/tournamentTypes';
 import { DirectorOnly } from '@/components/DirectorOnly';
+import { confirmBracketFormat } from '@/lib/tournamentFormats';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -924,11 +925,11 @@ function DivisionBracketScreen() {
         {
           text: 'Regenerate',
           style: 'destructive',
-          onPress: () => {
+          onPress: () => confirmBracketFormat(tournament?.tournamentFormat, () => {
             const divRegs = registrations.filter(r => r.divisionId === divisionId);
             createBracket(tournamentId, divisionId, bracket?.divisionName ?? '', divRegs)
               .then(() => refresh());
-          },
+          }),
         },
       ],
     ));

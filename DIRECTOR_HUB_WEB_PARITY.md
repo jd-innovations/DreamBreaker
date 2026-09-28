@@ -149,6 +149,23 @@ Branch: `feature/push-broadcast`. Read the commits for the full diffs.
   that is still first in line gets the next freed court. There are no player
   "you're up" notifications yet.
 
+## 7. Tournament format (mobile now mirrors web)
+
+- **What mobile added:** the web create-dialog "Tournament Structure" picker
+  (`single_elim | double_elim | round_robin | pool_bracket | mlp`, plus
+  `pool_count` for pool_bracket) on Create and Edit Tournament.
+  - Same keys and labels as web: `apps/mobile/src/lib/tournamentFormats.ts`.
+  - The format shows as a chip on the tournament page and in the Command
+    Center header.
+- **Web gap, the opposite way round:** web's `generateMatches` quietly builds
+  single-elimination pairs for `double_elim`, `pool_bracket` and `mlp`. Mobile
+  now asks for confirmation first (`confirmBracketFormat`, "X isn't supported
+  yet. Generate Single Elimination?"). Web should show the same notice rather
+  than falling back silently.
+- **Next:** a real Pool → Bracket (hybrid) engine was chosen as the first
+  format to build. It isn't scoped yet. The per-tournament vs per-division
+  format question is still open.
+
 ---
 
 ## Before starting the web session

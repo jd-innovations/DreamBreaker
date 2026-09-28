@@ -19,6 +19,8 @@ import type { Tournament } from '@/lib/tournamentTypes';
 import { ErrorState } from '@/components/states/ScreenState';
 import AmenityPicker from '@/components/AmenityPicker';
 import { FacilityPicker, type FacilityPickerValue } from '@/components/FacilityPicker';
+import { TournamentFormatPicker } from '@/components/TournamentFormatPicker';
+import { DEFAULT_POOL_COUNT, normalizeFormat, type TournamentFormatKey } from '@/lib/tournamentFormats';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -245,6 +247,8 @@ function EditTournamentScreen() {
   >(null);
   const [dateDraft, setDateDraft] = useState(new Date());
   const [amenities, setAmenities] = useState<string[]>([]);
+  const [tournamentFormat, setTournamentFormat] = useState<TournamentFormatKey>('single_elim');
+  const [poolCount, setPoolCount] = useState(DEFAULT_POOL_COUNT);
   const [facilityId, setFacilityId] = useState<string | null>(null);
   const [pickerValue, setPickerValue] = useState<FacilityPickerValue | null>(null);
 
@@ -326,6 +330,8 @@ function EditTournamentScreen() {
       setTournament(t);
       setForm(tournamentToForm(t));
       setAmenities(t.amenities ?? []);
+      setTournamentFormat(normalizeFormat(t.tournamentFormat));
+      setPoolCount(t.poolCount ?? DEFAULT_POOL_COUNT);
       setFacilityId(t.facilityId ?? null);
       setPickerValue(
         t.facilityId
@@ -431,6 +437,8 @@ function EditTournamentScreen() {
         entryFeeCents:        Math.round(parseFloat(form.entryFee) * 100),
         holdFeeCents:         Math.round(parseFloat(form.holdFee)  * 100),
         drawSize:             parseInt(form.drawSize, 10),
+        tournamentFormat,
+        poolCount:            tournamentFormat === 'pool_bracket' ? poolCount : null,
         revertToPendingApproval: !isDraft,
       };
 
@@ -632,6 +640,15 @@ function EditTournamentScreen() {
             label="Draw Size *" value={form.drawSize} onChange={v => set('drawSize', v)}
             keyboardType="numeric" error={errors.drawSize}
           />
+          <View style={f.wrap}>
+            <Text style={f.label}>Tournament Format *</Text>
+            <TournamentFormatPicker
+              value={tournamentFormat}
+              onChange={setTournamentFormat}
+              poolCount={poolCount}
+              onPoolCountChange={setPoolCount}
+            />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
