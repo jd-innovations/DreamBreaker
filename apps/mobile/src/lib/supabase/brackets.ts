@@ -651,6 +651,28 @@ export async function getBracketMatchCounts(tournamentId: string): Promise<{
   return { total, completed, remaining, completionPct };
 }
 
+/**
+ * Divisions that have an elimination bracket, per tournament: one query for any
+ * number of tournaments (Director Hub list, Workspace "Bracket Ready").
+ * Database truth, not directorBracketStore's device memory.
+ */
+export async function fetchBracketDivisions(tournamentIds: string[]): Promise<Map<string, Set<string>>> {
+  const out = new Map<string, Set<string>>();
+  if (tournamentIds.length === 0) return out;
+  const { data } = await supabase
+    .from('bracket_matches')
+    .select('tournament_id, division_id')
+    .in('tournament_id', tournamentIds)
+    .is('pool_label', null);
+  for (const r of data ?? []) {
+    if (!r.division_id) continue;
+    const set = out.get(r.tournament_id) ?? new Set<string>();
+    set.add(r.division_id);
+    out.set(r.tournament_id, set);
+  }
+  return out;
+}
+
 /** Whether any elimination bracket exists for this tournament (database, not device memory). */
 export async function hasAnyBracket(tournamentId: string): Promise<boolean> {
   const { count } = await supabase

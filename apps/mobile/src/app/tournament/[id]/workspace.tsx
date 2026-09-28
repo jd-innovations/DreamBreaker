@@ -13,7 +13,6 @@ import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components';
 import { useSession } from '@/hooks/useSession';
 import { requireAuth } from '@/lib/authGuard';
-import { hasBracket } from '@/lib/directorBracketStore';
 import {
   statusLabel,
   statusVariant,
@@ -42,6 +41,7 @@ import type { TournamentRegistration } from '@/lib/registrationStore';
 import type { Tournament } from '@/lib/tournamentTypes';
 import type { DivisionData } from '@/data/divisions';
 import { DirectorOnly } from '@/components/DirectorOnly';
+import { fetchBracketDivisions } from '@/lib/supabase/brackets';
 
 function toDirector(r: TournamentRegistration): DirectorRegistration {
   return {
@@ -710,6 +710,8 @@ function DirectorWorkspaceScreen() {
   const [metrics, setMetrics]               = useState<TournamentMetrics>({ total:0,registered:0,checkedIn:0,waitlisted:0,noShow:0,cancelled:0,revenueCents:0,outstandingCents:0 });
   const [divMetrics, setDivMetrics]         = useState<DivisionMetrics[]>([]);
   const [loading, setLoading]               = useState(true);
+  // Divisions with an elimination bracket (database, not device memory).
+  const [bracketDivs, setBracketDivs]       = useState<Set<string>>(new Set());
   const [search, setSearch]                 = useState('');
 
   const refresh = useCallback(async () => {
@@ -718,6 +720,7 @@ function DirectorWorkspaceScreen() {
       fetchDivisionsForTournament(id),
       fetchTournamentRegistrations(id),
     ]);
+    fetchBracketDivisions([id]).then(m => setBracketDivs(m.get(id) ?? new Set())).catch(() => {});
     setTournament(t);
     const active    = allRegs.filter(r => r.status !== 'cancelled');
     const cancelled = allRegs.filter(r => r.status === 'cancelled');
@@ -946,7 +949,7 @@ function DirectorWorkspaceScreen() {
               <DivisionCapacityCard
                 key={dm2.divisionId}
                 metrics={dm2}
-                bracketReady={hasBracket(id, dm2.divisionId)}
+                bracketReady={bracketDivs.has(dm2.divisionId)}
                 onPress={() => {
                   setDivisionFilter(dm2.divisionId);
                   setTab('all');

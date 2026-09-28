@@ -11,7 +11,6 @@ import { colors } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components';
 import { type Tournament } from '@/lib/tournamentTypes';
-import { getAllBrackets } from '@/lib/directorBracketStore';
 import { type TournamentMetrics } from '@/lib/directorRegistrationAdapter';
 import { useProfile } from '@/hooks/useProfile';
 import { fetchDirectorTournaments, fetchDirectorTournamentMetrics } from '@/lib/supabase/tournaments';
@@ -20,6 +19,7 @@ import {
   getTournamentStatusInfo,
 } from '@/lib/tournamentStatus';
 import { useSupportContext } from '@/lib/support/supportContext';
+import { fetchBracketDivisions } from '@/lib/supabase/brackets';
 
 // ─── Theme alias ──────────────────────────────────────────────────────────────
 
@@ -463,8 +463,9 @@ export default function DirectorDashboard() {
   // registrations per tournament in a Promise.all fan-out (2N requests for N
   // tournaments, re-run on every focus). Now one aggregate query
   // (get_director_tournament_metrics, migration 20260907120000) does the same
-  // metric math server-side. bracketCount stays a local lookup
-  // (getAllBrackets) — that was never a network request.
+  // metric math server-side. bracketCount comes from one bracket_matches query
+  // for all listed tournaments (it used to be directorBracketStore, device
+  // memory, which was empty on any other phone or after a restart).
   const loadSnapshots = useCallback(async () => {
     if (!user?.id) return;
     const tournaments = await fetchDirectorTournaments(user.id);
@@ -473,14 +474,17 @@ export default function DirectorDashboard() {
     const filtered = statusFilter === 'all'
       ? tournaments
       : tournaments.filter(t => t.rawStatus === statusFilter);
-    const metricsById = await fetchDirectorTournamentMetrics(filtered.map(t => t.id));
+    const [metricsById, bracketDivs] = await Promise.all([
+      fetchDirectorTournamentMetrics(filtered.map(t => t.id)),
+      fetchBracketDivisions(filtered.map(t => t.id)),
+    ]);
     const snaps = filtered.map(t => {
       const row = metricsById.get(t.id);
       const metrics: TournamentMetrics = row ?? {
         total: 0, registered: 0, checkedIn: 0, waitlisted: 0,
         noShow: 0, cancelled: 0, revenueCents: 0, outstandingCents: 0,
       };
-      return { tournament: t, metrics, bracketCount: getAllBrackets(t.id).length, divCount: row?.divCount ?? 0 };
+      return { tournament: t, metrics, bracketCount: bracketDivs.get(t.id)?.size ?? 0, divCount: row?.divCount ?? 0 };
     });
     setSnapshots(snaps);
     setLoading(false);
