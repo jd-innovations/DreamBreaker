@@ -831,8 +831,9 @@ function DirectorWorkspaceScreen() {
         </View>
       )}
 
-      {/* ── Player search (not on Divisions, which lists divisions) ── */}
+      {/* ── Player search + add (not on Divisions, which lists divisions) ── */}
       {!isDivisionsTab && (
+        <View style={s.searchBar}>
         <View style={s.searchRow}>
           <Ionicons name="search-outline" size={15} color={L.textSub} style={{ marginRight: 8 }} />
           <TextInput
@@ -851,6 +852,19 @@ function DirectorWorkspaceScreen() {
               <Ionicons name="close-circle" size={16} color={L.textSub} />
             </Pressable>
           )}
+        </View>
+        {/* Walk-ins and no-show replacements. Works after registration
+            closes, through the event date (20260928120000). */}
+        <TouchableOpacity
+          style={s.addPlayerBtn}
+          activeOpacity={0.85}
+          onPress={() => router.push(`/tournament/${id}/add-registration` as never)}
+          accessibilityRole="button"
+          accessibilityLabel="Add player"
+        >
+          <Ionicons name="person-add-outline" size={16} color={L.bg} />
+          <Text style={s.addPlayerText}>Add</Text>
+        </TouchableOpacity>
         </View>
       )}
 
@@ -1016,9 +1030,18 @@ const s = StyleSheet.create({
   filterClear: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   filterClearText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
-  searchRow: {
-    flexDirection: 'row', alignItems: 'center',
+  searchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
     marginHorizontal: 12, marginBottom: 2,
+  },
+  addPlayerBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: L.navy, borderRadius: shape.panel,
+    paddingHorizontal: 12, paddingVertical: 10,
+  },
+  addPlayerText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
+  searchRow: {
+    flex: 1, flexDirection: 'row', alignItems: 'center',
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
     borderRadius: shape.panel, paddingHorizontal: 12, paddingVertical: 9,
   },
