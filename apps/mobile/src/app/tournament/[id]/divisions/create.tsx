@@ -49,6 +49,31 @@ type FormErrors = Partial<Record<keyof FormState, string>>;
 const EVENT_TYPES = ['Singles', 'Doubles', 'Mixed Doubles'];
 const GENDERS     = ["Men's", "Women's", 'Mixed', 'Open'];
 
+// Event type and gender were picked independently and the name was
+// `${gender} ${eventType}`, which produced "Men's Mixed Doubles" and "Mixed
+// Mixed Doubles". The two picks now constrain each other:
+//   * Mixed Doubles is always gender Mixed, named just "Mixed Doubles";
+//   * Doubles + Mixed IS Mixed Doubles (saved as format mixed_doubles);
+//   * Singles has no Mixed.
+function gendersFor(eventType: string): string[] {
+  if (eventType === 'Mixed Doubles') return ['Mixed'];
+  if (eventType === 'Singles') return ["Men's", "Women's", 'Open'];
+  return GENDERS;
+}
+
+function normalizePicks(eventType: string, gender: string): { eventType: string; gender: string } {
+  if (eventType === 'Doubles' && gender === 'Mixed') return { eventType: 'Mixed Doubles', gender: 'Mixed' };
+  if (eventType === 'Mixed Doubles') return { eventType, gender: 'Mixed' };
+  if (eventType && gender && !gendersFor(eventType).includes(gender)) return { eventType, gender: '' };
+  return { eventType, gender };
+}
+
+function composeName(eventType: string, gender: string): string {
+  if (eventType === 'Mixed Doubles') return 'Mixed Doubles';
+  if (!eventType || !gender) return '';
+  return `${gender} ${eventType}`;
+}
+
 // ─── Components ───────────────────────────────────────────────────────────────
 
 function Field({
@@ -81,30 +106,36 @@ function Field({
 }
 
 function ChipSelector({
-  label, options, selected, onSelect, error,
+  label, options, selected, onSelect, error, disabledOptions,
 }: {
   label: string;
   options: string[];
   selected: string;
   onSelect: (v: string) => void;
   error?: string;
+  disabledOptions?: string[];
 }) {
   return (
     <View style={cs.wrap}>
       <Text style={cs.label}>{label}</Text>
       <View style={cs.row}>
-        {options.map(opt => (
+        {options.map(opt => {
+          const disabled = !!disabledOptions?.includes(opt);
+          return (
           <TouchableOpacity
             key={opt}
-            style={[cs.chip, selected === opt && cs.chipActive]}
+            style={[cs.chip, selected === opt && cs.chipActive, disabled && cs.chipDisabled]}
             onPress={() => onSelect(opt)}
             activeOpacity={0.75}
+            disabled={disabled}
+            accessibilityState={{ disabled, selected: selected === opt }}
           >
             <Text style={[cs.chipText, selected === opt && cs.chipTextActive]}>
               {opt}
             </Text>
           </TouchableOpacity>
-        ))}
+          );
+        })}
       </View>
       {!!error && <Text style={cs.error}>{error}</Text>}
     </View>
@@ -184,6 +215,8 @@ function CreateDivisionScreen() {
     entryFee:  '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
+  // True once the director types their own name; auto-naming then stops.
+  const [nameTouched, setNameTouched] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -195,23 +228,28 @@ function CreateDivisionScreen() {
     }
   }
 
-  // Auto-compose name when eventType + gender both set and name is still empty
-  function selectEventType(v: string) {
-    const updated = { ...form, eventType: v };
-    if (!updated.name.trim() && updated.gender) {
-      updated.name = `${updated.gender} ${v}`;
-    }
+  // Picks constrain each other (normalizePicks); the name follows them until
+  // the director types their own.
+  function applyPicks(eventType: string, gender: string) {
+    const picks = normalizePicks(eventType, gender);
+    const updated = { ...form, ...picks };
+    if (!nameTouched) updated.name = composeName(picks.eventType, picks.gender);
     setForm(updated);
     if (submitted) setErrors(validate(updated));
   }
 
+  function selectEventType(v: string) {
+    applyPicks(v, form.gender);
+  }
+
   function selectGender(v: string) {
-    const updated = { ...form, gender: v };
-    if (!updated.name.trim() && updated.eventType) {
-      updated.name = `${v} ${updated.eventType}`;
-    }
-    setForm(updated);
-    if (submitted) setErrors(validate(updated));
+    applyPicks(form.eventType, v);
+  }
+
+  function editName(v: string) {
+    // Clearing the field hands naming back to the picks.
+    setNameTouched(v.trim().length > 0);
+    set('name', v);
   }
 
   async function submit() {
@@ -296,12 +334,13 @@ function CreateDivisionScreen() {
               selected={form.gender}
               onSelect={selectGender}
               error={errors.gender}
+              disabledOptions={form.eventType ? GENDERS.filter(g => !gendersFor(form.eventType).includes(g)) : undefined}
             />
 
             <Field
               label="Division Name"
               value={form.name}
-              onChangeText={v => set('name', v)}
+              onChangeText={editName}
               placeholder="e.g. Men's Doubles"
               error={errors.name}
             />
@@ -427,6 +466,7 @@ const cs = StyleSheet.create({
     backgroundColor: L.page, borderWidth: 1, borderColor: L.border,
   },
   chipActive: { backgroundColor: L.navy, borderColor: L.navy },
+  chipDisabled: { opacity: 0.35 },
   chipText: { color: L.textSub, fontSize: text.controlLabel.size, fontWeight: '700' },
   chipTextActive: { color: L.bg },
   error: { color: L.danger, fontSize: text.caption.size, fontWeight: '500' },
