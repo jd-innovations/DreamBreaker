@@ -972,6 +972,20 @@ export default function CommunityEventScreen() {
           </TouchableOpacity>
         )}
 
+        {/* Scores - Quick Games. The organizer records each game; joined
+            players can read them. Results count toward My Stats. */}
+        {rawPlayEvent?.event_type === 'open_play' && (IS_ORGANIZER || userStatus === 'joined') && (
+          <TouchableOpacity
+            style={s.bracketBanner}
+            activeOpacity={0.8}
+            onPress={() => router.push(`/quick-game/${event.id}/scores` as never)}
+          >
+            <Ionicons name="stats-chart-outline" size={16} color={t.accent} />
+            <Text style={s.bracketBannerText}>{IS_ORGANIZER ? 'Record Scores' : 'Scores'}</Text>
+            <Ionicons name="chevron-forward" size={14} color={t.textSecondary} />
+          </TouchableOpacity>
+        )}
+
         {/* Stat pills + fill bar */}
         <View style={s.statPills}>
           <View style={s.statPill}>
