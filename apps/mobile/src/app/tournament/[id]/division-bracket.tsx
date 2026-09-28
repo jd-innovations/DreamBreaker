@@ -2,7 +2,7 @@ import React, { useCallback, useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   Modal, Pressable, Alert, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
-  Animated, AccessibilityInfo,
+  Animated, AccessibilityInfo, Easing,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -203,11 +203,72 @@ function UpNextBanner({ position }: { position: number }) {
       style={[mc.upNextBadge, first ? mc.upNextFirst : mc.upNextDeck, first && { opacity }]}
       accessibilityLabel={first ? 'Up next' : `On deck, number ${position}`}
     >
-      <Ionicons name={first ? 'megaphone' : 'hourglass-outline'} size={first ? 13 : 11} color={first ? L.navy : colors.danger} />
-      <Text style={[mc.upNextText, first ? mc.upNextTextFirst : mc.onDeckText]}>
-        {first ? 'UP NEXT' : `ON DECK #${position}`}
-      </Text>
+      {position === 2 ? (
+        <OnDeckTicker label={`ON DECK #${position}`} />
+      ) : (
+        <>
+          <Ionicons name={first ? 'megaphone' : 'hourglass-outline'} size={first ? 13 : 11} color={first ? L.navy : colors.danger} />
+          <Text style={[mc.upNextText, first ? mc.upNextTextFirst : mc.onDeckText]}>
+            {first ? 'UP NEXT' : `ON DECK #${position}`}
+          </Text>
+        </>
+      )}
     </Animated.View>
+  );
+}
+
+// ON DECK #2 as a ticker scrolling inside its own banner (owner's request):
+// three copies of one segment slide left by exactly one segment width and
+// loop, so it reads as continuous. Clipped by the banner. Reduce Motion: static.
+function OnDeckTicker({ label }: { label: string }) {
+  const [segmentWidth, setSegmentWidth] = useState(0);
+  const x = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!segmentWidth) return;
+    let loop: Animated.CompositeAnimation | null = null;
+    let cancelled = false;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(reduce => {
+        if (cancelled || reduce) return;
+        x.setValue(0);
+        loop = Animated.loop(
+          Animated.timing(x, {
+            toValue: -segmentWidth,
+            duration: 4000,
+            easing: Easing.linear,
+            useNativeDriver: true,
+          }),
+        );
+        loop.start();
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      loop?.stop();
+    };
+  }, [segmentWidth, x]);
+
+  const segment = (key: string, measure?: boolean) => (
+    <View
+      key={key}
+      style={mc.tickerSegment}
+      onLayout={measure ? e => setSegmentWidth(e.nativeEvent.layout.width) : undefined}
+    >
+      <Ionicons name="hourglass-outline" size={11} color={colors.danger} />
+      <Text style={[mc.upNextText, mc.onDeckText]} numberOfLines={1}>{label}</Text>
+      <Text style={[mc.upNextText, mc.onDeckText]}>{'  \u2022  '}</Text>
+    </View>
+  );
+
+  return (
+    <View style={mc.tickerClip}>
+      <Animated.View style={[mc.tickerTrack, { transform: [{ translateX: x }] }]}>
+        {segment('a', true)}
+        {segment('b')}
+        {segment('c')}
+      </Animated.View>
+    </View>
   );
 }
 
@@ -389,6 +450,9 @@ const mc = StyleSheet.create({
   upNextText: { color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
   upNextTextFirst: { fontSize: text.rowTitle.size, fontWeight: '900' },
   onDeckText: { color: colors.danger },
+  tickerClip: { flex: 1, overflow: 'hidden' },
+  tickerTrack: { flexDirection: 'row', alignSelf: 'flex-start' },
+  tickerSegment: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0 },
   participants: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: L.border },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: L.border, marginHorizontal: 10 },
   awaiting: {
