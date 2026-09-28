@@ -29,42 +29,18 @@ function formatTemp(value: number | null | undefined): string {
   return value != null ? `${value}\u00B0` : '--';
 }
 
-function primaryWeatherTemp(w: AvailableEventWeather): number | null {
-  if (w.temp != null) return w.temp;
-  if (w.high != null && w.low != null) return Math.round((w.high + w.low) / 2);
-  return w.high ?? w.low ?? null;
-}
-
-function feelsLikeTemp(w: AvailableEventWeather): number | null {
-  const temp = primaryWeatherTemp(w);
-  if (temp == null) return null;
-
-  if (temp >= 80 && w.humidity != null) {
-    const t = temp;
-    const h = w.humidity;
-    return Math.round(
-      -42.379 +
-      2.04901523 * t +
-      10.14333127 * h -
-      0.22475541 * t * h -
-      0.00683783 * t * t -
-      0.05481717 * h * h +
-      0.00122874 * t * t * h +
-      0.00085282 * t * h * h -
-      0.00000199 * t * t * h * h
-    );
-  }
-
-  if (temp <= 50 && w.wind != null && w.wind > 3) {
-    return Math.round(
-      35.74 +
-      0.6215 * temp -
-      35.75 * Math.pow(w.wind, 0.16) +
-      0.4275 * temp * Math.pow(w.wind, 0.16)
-    );
-  }
-
-  return temp;
+// Which hour the headline temperature describes: "Now" when it is the current
+// hour today, otherwise the forecast hour ("6 PM"). Null means the edge
+// function found no hourly forecast, and the card shows the day's high instead
+// — never a computed stand-in (the old high/low average read 76 on an 87/65 day).
+function forecastHourLabel(w: AvailableEventWeather): string | null {
+  if (!w.forecastHour) return null;
+  const hour = Number(w.forecastHour.slice(0, 2));
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  if (w.date === today && hour === now.getHours()) return 'Now';
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h12} ${hour < 12 ? 'AM' : 'PM'}`;
 }
 
 function WeatherWidget({ w, style }: { w: EventWeatherResult | 'loading' | null; style?: StyleProp<ViewStyle> }) {
@@ -172,8 +148,9 @@ export function EventWeatherCard({ w, locationLabel, style }: {
     return <WeatherWidget w={w} style={style} />;
   }
 
-  const temp = primaryWeatherTemp(w);
-  const feels = feelsLikeTemp(w);
+  const hourLabel = forecastHourLabel(w);
+  const headline = w.temp != null ? Math.round(w.temp) : w.high;
+  const feels = w.feelsLike != null ? Math.round(w.feelsLike) : null;
 
   return (
     <View style={[dw.card, style]}>
@@ -183,9 +160,13 @@ export function EventWeatherCard({ w, locationLabel, style }: {
         </View>
 
         <View style={dw.primary}>
-          <Text style={dw.currentTemp}>{formatTemp(temp)}</Text>
+          <Text style={dw.currentTemp}>{formatTemp(headline)}</Text>
           <Text style={dw.condition}>{w.condition}</Text>
-          {feels != null && <Text style={dw.feels}>Feels {formatTemp(feels)}</Text>}
+          <Text style={dw.feels}>
+            {w.temp != null
+              ? [hourLabel === 'Now' ? 'Now' : hourLabel ? `At ${hourLabel}` : null, feels != null ? `Feels ${formatTemp(feels)}` : null].filter(Boolean).join(' · ')
+              : 'Daytime high'}
+          </Text>
         </View>
 
         <View style={dw.details}>
@@ -215,7 +196,7 @@ export function EventWeatherCard({ w, locationLabel, style }: {
         {w.wind != null && (
           <View style={dw.metricPill}>
             <Ionicons name="compass-outline" size={11} color={colors.gold} />
-            <Text style={dw.metricPillText}>{w.wind} mph wind</Text>
+            <Text style={dw.metricPillText}>{w.windDirection ? `${w.windDirection} ` : ''}{w.wind} mph wind</Text>
           </View>
         )}
       </View>

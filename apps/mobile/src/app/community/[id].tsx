@@ -424,7 +424,7 @@ export default function CommunityEventScreen() {
         const lng = eventData.facility?.longitude != null ? Number(eventData.facility.longitude) : null;
         if (lat != null && lng != null && eventData.event_date) {
           setWeather('loading');
-          fetchEventWeather(lat, lng, eventData.event_date)
+          fetchEventWeather(lat, lng, eventData.event_date, eventData.start_time)
             .then(res => { if (!cancelled) setWeather(res); })
             .catch(() => { if (!cancelled) setWeather({ available: false, reason: 'upstream_error' }); });
         } else {

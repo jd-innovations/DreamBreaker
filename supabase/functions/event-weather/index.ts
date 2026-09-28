@@ -8,6 +8,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // in the past) come back as { available: false, reason: "out_of_range" }.
 
 const GOOGLE_WEATHER_API_KEY = Deno.env.get("GOOGLE_WEATHER_API_KEY") ?? "";
+// Google pages daily forecasts 5 at a time by default; pageSize must match
+// or days 6-10 silently never arrive.
 const FORECAST_DAYS = 10;
 
 const CORS: HeadersInit = {
@@ -18,6 +20,8 @@ const CORS: HeadersInit = {
 };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// Event start time, local to the venue — "HH:MM" or Postgres "HH:MM:SS".
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 
 // Google's weatherCondition.type → { label, Ionicons name, favorable }.
 // Covers the full WeatherConditionType enum (see Google Weather API docs);
@@ -114,6 +118,7 @@ async function currentConditions(lat: number, lng: number): Promise<Response> {
     weatherCondition?: { type?: string };
     precipitation?: { probability?: { percent?: number } };
     wind?: { direction?: { cardinal?: string }; speed?: { value?: number } };
+    isDaytime?: boolean;
   } | null;
 
   if (!json) {
@@ -128,7 +133,7 @@ async function currentConditions(lat: number, lng: number): Promise<Response> {
     humidity: json.relativeHumidity ?? null,
     uvIndex: json.uvIndex ?? null,
     condition: label,
-    icon,
+    icon: nightIcon(icon, json.isDaytime),
     precipChance: json.precipitation?.probability?.percent ?? null,
     windSpeed: round1(json.wind?.speed?.value),
     windDirection: cardinalAbbrev(json.wind?.direction?.cardinal),
@@ -194,6 +199,65 @@ async function dailyForecast(lat: number, lng: number): Promise<Response> {
   return new Response(JSON.stringify({ available: true, days }), { status: 200, headers: CORS });
 }
 
+// The sun icons are daytime-only; at night show the moon equivalents.
+function nightIcon(icon: string, isDaytime: boolean | undefined): string {
+  if (isDaytime !== false) return icon;
+  if (icon === "sunny-outline") return "moon-outline";
+  if (icon === "partly-sunny-outline") return "cloudy-night-outline";
+  return icon;
+}
+
+type ForecastHour = {
+  displayDateTime?: { year: number; month: number; day: number; hours?: number };
+  isDaytime?: boolean;
+  weatherCondition?: { type?: string };
+  temperature?: { degrees?: number };
+  feelsLikeTemperature?: { degrees?: number };
+  relativeHumidity?: number;
+  precipitation?: { probability?: { percent?: number } };
+  wind?: { direction?: { cardinal?: string }; speed?: { value?: number } };
+};
+
+// Google's hourly forecast starts at the current hour and pages 24 hours at a
+// time (240 max). Walk pages until the wanted hour turns up or the date is
+// passed. hour == null means "the first hour on this date", which is only
+// meaningful for today (= now); any other date without a time returns null.
+async function findForecastHour(lat: number, lng: number, date: string, hour: number | null): Promise<ForecastHour | null> {
+  let pageToken = "";
+  for (let page = 0; page < FORECAST_DAYS; page++) {
+    const url =
+      `https://weather.googleapis.com/v1/forecast/hours:lookup` +
+      `?key=${GOOGLE_WEATHER_API_KEY}` +
+      `&location.latitude=${lat}&location.longitude=${lng}` +
+      `&hours=240&pageSize=24&unitsSystem=IMPERIAL` +
+      (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : "");
+
+    let res: Response;
+    try {
+      res = await fetch(url);
+    } catch {
+      return null;
+    }
+    if (!res.ok) return null;
+    const json = await res.json().catch(() => null) as { forecastHours?: ForecastHour[]; nextPageToken?: string } | null;
+    const hours = json?.forecastHours ?? [];
+
+    if (hour == null) {
+      const first = hours[0];
+      return first && displayDateToIso(first.displayDateTime) === date ? first : null;
+    }
+
+    for (const h of hours) {
+      const hDate = displayDateToIso(h.displayDateTime);
+      if (hDate === date && h.displayDateTime?.hours === hour) return h;
+      if (hDate != null && hDate > date) return null;
+    }
+    if (!json?.nextPageToken) return null;
+    pageToken = json.nextPageToken;
+  }
+  return null;
+}
+
 function displayDateToIso(d: { year: number; month: number; day: number } | undefined): string | null {
   if (!d) return null;
   const mm = String(d.month).padStart(2, "0");
@@ -210,7 +274,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ available: false, reason: "not_configured" }), { status: 500, headers: CORS });
   }
 
-  let body: { lat?: unknown; lng?: unknown; date?: unknown; mode?: unknown };
+  let body: { lat?: unknown; lng?: unknown; date?: unknown; time?: unknown; mode?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -220,6 +284,7 @@ Deno.serve(async (req: Request) => {
   const lat = Number(body.lat);
   const lng = Number(body.lng);
   const date = typeof body.date === "string" ? body.date : "";
+  const time = typeof body.time === "string" && TIME_RE.test(body.time) ? body.time : null;
 
   if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
     return new Response(JSON.stringify({ available: false, reason: "bad_request" }), { status: 400, headers: CORS });
@@ -241,16 +306,16 @@ Deno.serve(async (req: Request) => {
     `https://weather.googleapis.com/v1/forecast/days:lookup` +
     `?key=${GOOGLE_WEATHER_API_KEY}` +
     `&location.latitude=${lat}&location.longitude=${lng}` +
-    `&days=${FORECAST_DAYS}&unitsSystem=IMPERIAL`;
+    `&days=${FORECAST_DAYS}&pageSize=${FORECAST_DAYS}&unitsSystem=IMPERIAL`;
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(googleUrl);
-  } catch {
-    return new Response(JSON.stringify({ available: false, reason: "upstream_error" }), { status: 502, headers: CORS });
-  }
+  // The day gives high/low; the hour (event start, or now for a time-less
+  // today) gives the headline. Both calls run together.
+  const [upstream, hourData] = await Promise.all([
+    fetch(googleUrl).catch(() => null),
+    findForecastHour(lat, lng, date, time ? Number(time.slice(0, 2)) : null),
+  ]);
 
-  if (!upstream.ok) {
+  if (!upstream || !upstream.ok) {
     return new Response(JSON.stringify({ available: false, reason: "upstream_error" }), { status: 502, headers: CORS });
   }
 
@@ -262,7 +327,7 @@ Deno.serve(async (req: Request) => {
       daytimeForecast?: {
         weatherCondition?: { type?: string };
         relativeHumidity?: number;
-        wind?: { speed?: { value?: number } };
+        wind?: { direction?: { cardinal?: string }; speed?: { value?: number } };
         precipitation?: { probability?: { percent?: number } };
       };
     }>;
@@ -276,20 +341,33 @@ Deno.serve(async (req: Request) => {
 
   const high = day.maxTemperature?.degrees;
   const low = day.minTemperature?.degrees;
-  const { label, icon, favorable } = conditionFor(day.daytimeForecast?.weatherCondition?.type);
+  const daytime = day.daytimeForecast;
+
+  // temp/feelsLike exist only when an actual forecast hour was found. There is
+  // deliberately no fallback: averaging the day's high and low produced a
+  // number (76 on an 87/65 day) that matched no hour of that day.
+  const conditionSource = hourData ? hourData.weatherCondition?.type : daytime?.weatherCondition?.type;
+  const { label, icon, favorable } = conditionFor(conditionSource);
+  const windSpeed = hourData ? hourData.wind?.speed?.value : daytime?.wind?.speed?.value;
 
   const result = {
     available: true,
     date,
-    temp: high != null && low != null ? Math.round((high + low) / 2) : (high ?? low ?? null),
+    // "HH:00" of the forecast hour the headline describes; null = day-level only.
+    forecastHour: hourData?.displayDateTime?.hours != null
+      ? `${String(hourData.displayDateTime.hours).padStart(2, "0")}:00`
+      : null,
+    temp: hourData ? round1(hourData.temperature?.degrees) : null,
+    feelsLike: hourData ? round1(hourData.feelsLikeTemperature?.degrees) : null,
     high: high != null ? Math.round(high) : null,
     low: low != null ? Math.round(low) : null,
     condition: label,
-    icon,
+    icon: hourData ? nightIcon(icon, hourData.isDaytime) : icon,
     favorable,
-    humidity: day.daytimeForecast?.relativeHumidity ?? null,
-    wind: day.daytimeForecast?.wind?.speed?.value != null ? Math.round(day.daytimeForecast.wind.speed.value) : null,
-    precipChance: day.daytimeForecast?.precipitation?.probability?.percent ?? null,
+    humidity: (hourData ? hourData.relativeHumidity : daytime?.relativeHumidity) ?? null,
+    wind: windSpeed != null ? Math.round(windSpeed) : null,
+    windDirection: cardinalAbbrev(hourData ? hourData.wind?.direction?.cardinal : daytime?.wind?.direction?.cardinal),
+    precipChance: (hourData ? hourData.precipitation?.probability?.percent : daytime?.precipitation?.probability?.percent) ?? null,
   };
 
   return new Response(JSON.stringify(result), { status: 200, headers: CORS });

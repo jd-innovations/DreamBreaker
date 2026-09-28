@@ -3,7 +3,10 @@ import { supabase } from '@/lib/supabase';
 export type EventWeather = {
   available: true;
   date: string;
+  /** "HH:00" of the forecast hour temp/feelsLike describe; null = day-level only (temp is then null too). */
+  forecastHour: string | null;
   temp: number | null;
+  feelsLike: number | null;
   high: number | null;
   low: number | null;
   condition: string;
@@ -11,6 +14,7 @@ export type EventWeather = {
   favorable: boolean;
   humidity: number | null;
   wind: number | null;
+  windDirection: string | null;
   precipChance: number | null;
 };
 
@@ -25,9 +29,11 @@ export type EventWeatherResult = EventWeather | EventWeatherUnavailable;
 // function (keeps GOOGLE_WEATHER_API_KEY server-side). Google's Weather API
 // only covers ~10 days out — dates outside that range resolve to
 // { available: false, reason: 'out_of_range' } rather than throwing.
-export async function fetchEventWeather(lat: number, lng: number, date: string): Promise<EventWeatherResult> {
+// With a start time ("HH:MM[:SS]", venue-local) the headline is that hour's
+// forecast; without one it is right now for today, and high/low only otherwise.
+export async function fetchEventWeather(lat: number, lng: number, date: string, time?: string | null): Promise<EventWeatherResult> {
   const { data, error } = await supabase.functions.invoke('event-weather', {
-    body: { lat, lng, date },
+    body: time ? { lat, lng, date, time } : { lat, lng, date },
   });
 
   if (error || !data) {
