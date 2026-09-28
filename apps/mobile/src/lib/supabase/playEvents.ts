@@ -431,6 +431,15 @@ export async function fetchJoinedPlayEvents(userId: string): Promise<PlayEventWi
   return events.map(e => ({ ...e, _participantCount: counts[e.id] ?? 0 }));
 }
 
+// Still ahead of the player: open, full or live, dated today or later. The
+// Events tab's Upcoming and Joined lists share this so a past game can't read
+// OPEN in one while the other has moved on. Status alone is not enough —
+// nothing flips an event to 'completed' when its date passes. Date-level on
+// purpose, matching fetchMyPastEvents' `event_date < today` boundary.
+export function isUpcomingPlayEvent(e: Pick<PlayEvent, 'status' | 'event_date'>): boolean {
+  return ['open', 'full', 'in_progress'].includes(e.status) && e.event_date >= localDateString();
+}
+
 // ─── fetchMyPastEvents ────────────────────────────────────────────────────────
 // Past events: hosting past + joined past. Deduplicates by id.
 

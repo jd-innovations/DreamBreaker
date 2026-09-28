@@ -30,6 +30,7 @@ import { fetchUnreadPlayEventIds } from '@/lib/conversationService';
 import {
   fetchUpcomingPlayEvents,
   fetchJoinedPlayEvents,
+  isUpcomingPlayEvent,
   fetchMyPastEvents,
   playEventToGameCard,
   localDateString,
@@ -651,7 +652,7 @@ function JoinedContent({ events, unreadEventIds }: { events: SBGameCard[]; unrea
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 }}>
         <Ionicons name="people-outline" size={52} color={L.textMuted} />
-        <Text style={{ color: L.text, fontSize: text.titleSm.size, fontWeight: '800' }}>You haven't joined any events yet</Text>
+        <Text style={{ color: L.text, fontSize: text.titleSm.size, fontWeight: '800' }}>No upcoming events joined</Text>
         <Text style={{ color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 22 }}>
           Browse and join a Quick Game, Round Robin, or Mini Tournament.
         </Text>
@@ -1260,10 +1261,7 @@ export default function GamesScreen() {
       // neither Upcoming nor Joined, on the tab named Events.
       Promise.all([
         fetchUpcomingPlayEvents(user.id),
-        fetchJoinedPlayEvents(user.id).then(rows => rows.filter(e =>
-          ['open', 'full', 'in_progress'].includes(e.status) &&
-          e.event_date >= localDateString()
-        )),
+        fetchJoinedPlayEvents(user.id).then(rows => rows.filter(isUpcomingPlayEvent)),
         // Failing soft: a registrations error must not empty the play events
         // that were loading fine before this was added.
         fetchPlayerRegistrations(user.id).catch(() => []),
@@ -1296,9 +1294,11 @@ export default function GamesScreen() {
         // data already on screen.
         .finally(() => setUpcomingLoading(false));
 
-      // Joined tab: all events where user is participant
+      // Joined tab: events the user is in that are still ahead. Past ones live
+      // on the Past tab (fetchMyPastEvents), relabelled PAST — listing them
+      // here too showed July games as OPEN.
       fetchJoinedPlayEvents(user.id)
-        .then(rows => setJoined(rows.map(e => playEventToGameCard(e, 'Joined'))))
+        .then(rows => setJoined(rows.filter(isUpcomingPlayEvent).map(e => playEventToGameCard(e, 'Joined'))))
         .catch(() => {});
 
       loadPastEvents(user.id, pastRangeRef.current, localCompleted);
