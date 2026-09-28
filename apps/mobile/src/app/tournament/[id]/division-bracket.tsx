@@ -27,7 +27,8 @@ import { assignCourt, fetchCourtQueue, fetchCourtsInUse, saveMatchScore, type Co
 import { supabase } from '@/lib/supabase';
 import { courtLabel } from '@/lib/tournamentCourts';
 import { CourtsSheet } from '@/components/CourtsSheet';
-import { fetchDivisionPools, type DivisionPools } from '@/lib/supabase/pools';
+import { buildBracketFromPools, fetchDivisionPools, planBracketFromPools, type BracketPlan, type DivisionPools } from '@/lib/supabase/pools';
+import { BuildBracketSheet } from '@/components/BuildBracketSheet';
 import { useSupportContext } from '@/lib/support/supportContext';
 import type { TournamentRegistration } from '@/lib/registrationStore';
 import type { Tournament } from '@/lib/tournamentTypes';
@@ -761,6 +762,7 @@ function DivisionBracketScreen() {
   // Pool Play → Bracket: the division's pool stage (20260928170000).
   const [pools,         setPools]         = useState<DivisionPools | null>(null);
   const [stageView,     setStageView]     = useState<'pools' | 'bracket' | null>(null);
+  const [buildPlan,     setBuildPlan]     = useState<BracketPlan | null>(null);
   const [matchTarget,   setMatchTarget]   = useState<DirectorBracketMatch | null>(null);
   const [menuOpen,      setMenuOpen]      = useState(false);
 
@@ -926,7 +928,39 @@ function DivisionBracketScreen() {
     }));
   }
 
+  // Pool Play → Bracket, step 2: seed pool qualifiers into the bracket.
+  function openBuildFromPools() {
+    if (!pools) return;
+    const divRegs = registrations.filter(r => r.divisionId === divisionId);
+    setBuildPlan(planBracketFromPools(pools, divRegs));
+  }
+
+  function confirmBuildFromPools(): Promise<void> {
+    return new Promise(resolve => requireAuth(user?.id, async () => {
+      if (!buildPlan) { resolve(); return; }
+      const result = await buildBracketFromPools({
+        tournamentId,
+        divisionId,
+        divisionName: bracket?.divisionName || pools?.divisionName || '',
+        plan: buildPlan,
+        registrations: registrations.filter(r => r.divisionId === divisionId),
+      });
+      if (!result.ok) {
+        Alert.alert('Bracket not built', result.error);
+      } else {
+        setBuildPlan(null);
+        await refresh();
+        setStageView('bracket');
+      }
+      resolve();
+    }));
+  }
+
   function handleRegenerate() {
+    if (pools) {
+      openBuildFromPools();
+      return;
+    }
     requireAuth(user?.id, () => Alert.alert(
       'Regenerate Bracket',
       'This will delete the current bracket and all match results. This cannot be undone.',
@@ -1082,11 +1116,27 @@ function DivisionBracketScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
         >
-          {pools.completedMatches === pools.totalMatches && (
+          {pools.completedMatches === pools.totalMatches ? (
             <View style={s.poolsDone}>
               <Ionicons name="checkmark-circle" size={18} color={L.success} />
-              <Text style={s.poolsDoneText}>
-                All pool matches are scored. Building the bracket from these standings comes in the next update.
+              <View style={{ flex: 1, gap: 10 }}>
+                <Text style={s.poolsDoneText}>
+                  {bracket
+                    ? 'Pools are complete and the bracket is built from them.'
+                    : `All pool matches are scored. The top ${pools.advancePerPool} of each pool go on to the bracket.`}
+                </Text>
+                <TouchableOpacity style={s.buildBtn} onPress={openBuildFromPools} activeOpacity={0.85}>
+                  <Ionicons name="git-branch-outline" size={15} color={L.bg} />
+                  <Text style={s.buildBtnText}>{bracket ? 'Rebuild bracket from pools' : 'Build bracket'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={s.poolsPending}>
+              <Text style={s.poolsPendingText}>
+                {pools.totalMatches - pools.completedMatches} pool{' '}
+                {pools.totalMatches - pools.completedMatches === 1 ? 'match' : 'matches'} left. Build bracket unlocks
+                when every pool match is scored.
               </Text>
             </View>
           )}
@@ -1193,6 +1243,17 @@ function DivisionBracketScreen() {
         </>
       )}
 
+      {/* ── Build bracket from pools ── */}
+      {buildPlan && (
+        <BuildBracketSheet
+          visible
+          onClose={() => setBuildPlan(null)}
+          plan={buildPlan}
+          rebuilding={!!bracket}
+          onConfirm={confirmBuildFromPools}
+        />
+      )}
+
       {/* ── Context menu ── */}
       <ContextMenu
         visible={menuOpen}
@@ -1255,7 +1316,17 @@ const s = StyleSheet.create({
     flexDirection: 'row', gap: 8, alignItems: 'flex-start', margin: 12, marginBottom: 0,
     padding: 12, borderRadius: shape.card, borderWidth: 1, borderColor: L.success, backgroundColor: L.bg,
   },
-  poolsDoneText: { flex: 1, color: L.navy, fontSize: text.caption.size, fontWeight: '600', lineHeight: 18 },
+  poolsDoneText: { color: L.navy, fontSize: text.caption.size, fontWeight: '600', lineHeight: 18 },
+  buildBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, alignSelf: 'flex-start',
+    backgroundColor: L.navy, borderRadius: shape.cta, paddingHorizontal: 14, paddingVertical: 9,
+  },
+  buildBtnText: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
+  poolsPending: {
+    margin: 12, marginBottom: 0, padding: 10, borderRadius: shape.card,
+    borderWidth: 1, borderColor: L.border, backgroundColor: L.bg,
+  },
+  poolsPendingText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '600', lineHeight: 18 },
   poolBlock: { paddingTop: 14 },
   poolTitle: {
     color: L.navy, fontSize: text.cardLabel.size, fontWeight: '800',

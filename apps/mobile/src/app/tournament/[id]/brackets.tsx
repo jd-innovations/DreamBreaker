@@ -190,7 +190,9 @@ function DivisionBracketCard({
             <TouchableOpacity
               style={dbc.regenBtn}
               activeOpacity={0.8}
-              onPress={onGenerate}
+              // A bracket built from pools is rebuilt from pools, on the
+              // division screen (Pools tab), never re-seeded by registration.
+              onPress={poolMode && poolProgress ? onView : onGenerate}
             >
               <Ionicons name="refresh-outline" size={15} color={L.navy} />
               <Text style={dbc.regenBtnText}>Regenerate</Text>

@@ -2,12 +2,16 @@ import { supabase } from '@/lib/supabase';
 import type { TournamentRegistration } from '@/lib/registrationStore';
 import {
   activeTeamRegistrations,
+  createBracket,
   MATCH_SELECT,
   rowToMatch,
   type BracketMatchRow,
   type DirectorBracketMatch,
 } from '@/lib/supabase/brackets';
-import { POOL_LETTERS, DEFAULT_ADVANCE_PER_POOL, seedTeams, snakePools, roundRobinRounds } from '@/lib/poolSchedule';
+import {
+  POOL_LETTERS, DEFAULT_ADVANCE_PER_POOL, seedTeams, snakePools, roundRobinRounds,
+  seedQualifiers, placeSeeds, cutoffTies, type QualifiedSeed,
+} from '@/lib/poolSchedule';
 
 // Pool Play → Bracket, step 1: pools (migration 20260928170000).
 //
@@ -108,6 +112,7 @@ export type PoolStanding = {
   pointsFor: number;
   pointsAgainst: number;
   diff: number;
+  h2hWins: number;
   rank: number;
 };
 
@@ -169,6 +174,7 @@ export async function fetchDivisionPools(tournamentId: string, divisionId: strin
         pointsFor:     s.points_for,
         pointsAgainst: s.points_against,
         diff:          s.point_diff,
+        h2hWins:       s.h2h_wins,
         rank:          s.pool_rank,
       }))
       .sort((a, b) => a.rank - b.rank),
@@ -224,4 +230,77 @@ export async function fetchPoolProgress(
     out[r.division_id] = entry;
   }
   return out;
+}
+
+// ─── Step 2: build the bracket from pool standings ───────────────────────────
+
+/** The same identity division_pool_standings() uses for team_key. */
+function registrationTeamKey(r: TournamentRegistration): string {
+  return [r.playerGuestId ?? r.playerId, r.partnerGuestId ?? r.partnerId].filter(Boolean).join('|');
+}
+
+export type BracketPlan = {
+  seeds: QualifiedSeed<PoolStanding>[];
+  /** First-round slots in bracket order; null = bye. */
+  slots: (TournamentRegistration | null)[];
+  byes: number;
+  /** Pools where the cut between qualifier and non-qualifier was an exact tie. */
+  cutoffTiePools: string[];
+  /** Qualifiers whose registration couldn't be found (e.g. cancelled since). */
+  unmatched: string[];
+};
+
+/**
+ * Seeds the pool qualifiers (tier, then pool record; owner's choice) into
+ * standard bracket positions, top seeds taking any byes, with no first-round
+ * meeting between teams from the same pool. Pure planning; nothing is written.
+ */
+export function planBracketFromPools(
+  pools: DivisionPools,
+  divisionRegistrations: TournamentRegistration[],
+): BracketPlan {
+  const seeds = seedQualifiers(pools.pools, pools.advancePerPool);
+  let size = 4;
+  while (size < seeds.length) size *= 2;
+  const placed = placeSeeds(seeds, size);
+
+  const byKey = new Map(activeTeamRegistrations(divisionRegistrations).map(r => [registrationTeamKey(r), r]));
+  const unmatched: string[] = [];
+  const slots = placed.map(q => {
+    if (!q) return null;
+    const reg = byKey.get(q.teamKey);
+    if (!reg) unmatched.push(q.name);
+    return reg ?? null;
+  });
+
+  return {
+    seeds,
+    slots,
+    byes: size - seeds.length,
+    cutoffTiePools: cutoffTies(pools.pools, pools.advancePerPool),
+    unmatched,
+  };
+}
+
+export async function buildBracketFromPools(input: {
+  tournamentId: string;
+  divisionId: string;
+  divisionName: string;
+  plan: BracketPlan;
+  registrations: TournamentRegistration[];
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (input.plan.unmatched.length > 0) {
+    return {
+      ok: false,
+      error: `Can't find the registration for: ${input.plan.unmatched.join(', ')}. Check they're still registered.`,
+    };
+  }
+  const bracket = await createBracket(
+    input.tournamentId,
+    input.divisionId,
+    input.divisionName,
+    input.registrations,
+    { slots: input.plan.slots },
+  );
+  return bracket ? { ok: true } : { ok: false, error: 'Could not build the bracket. Please try again.' };
 }

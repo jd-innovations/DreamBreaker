@@ -197,6 +197,27 @@ Branch: `feature/push-broadcast`. Read the commits for the full diffs.
   player, and never creates matches. Replace it with this model, and show the
   standings function's output.
 
+## 9. Pool Play → Bracket, step 2: building the bracket (no DB change)
+
+- **Seeding** (`lib/poolSchedule.ts`, unit-tested):
+  - Tier first: every pool winner, then every runner-up. Within a tier, by pool
+    record: wins, then point difference, then points scored (owner's choice).
+  - Standard positions via `bracketPositions` (1v8, 4v5, 2v7, 3v6). Byes go to
+    the top seeds.
+  - `placeSeeds` swaps within a tier so no first-round match pairs two teams
+    from the same pool.
+  - `cutoffTies` flags exact ties at the qualification cut.
+- **Engine:** `createBracket(..., { slots })` takes exact first-round slots.
+  Plain single elimination is unchanged.
+- **Mobile:**
+  - The Pools view unlocks **Build bracket** once every pool match is scored.
+  - `BuildBracketSheet` previews the seeds (e.g. "1 · Smith/Jones · A1"),
+    byes, tie warnings, and a rebuild warning.
+  - In a pools division, Regenerate means rebuild **from pools**. Redo Pools
+    is hidden once a bracket exists.
+- **Web to-do:** the same build flow and preview. Reuse the seeding rules
+  (port `poolSchedule.ts`).
+
 ---
 
 ## Before starting the web session

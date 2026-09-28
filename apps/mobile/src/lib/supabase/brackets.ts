@@ -388,6 +388,14 @@ export async function createBracket(
   divisionId: string,
   divisionName: string,
   registrations: TournamentRegistration[],
+  options?: {
+    /**
+     * Seeded placement (Pool Play → Bracket): the exact first-round slots,
+     * length = a power of two >= 4, null = bye. When omitted, the bracket is
+     * built exactly as before (registration order, byes last).
+     */
+    slots?: (TournamentRegistration | null)[];
+  },
 ): Promise<DirectorBracket | null> {
   // Delete any existing bracket for this division. Pool-play matches are kept:
   // they are a separate stage and may be what this bracket is built from.
@@ -398,11 +406,13 @@ export async function createBracket(
     .eq('division_id', divisionId)
     .is('pool_label', null);
 
-  const sorted = activeTeamRegistrations(registrations);
+  const sorted = options?.slots
+    ? (options.slots.filter(Boolean) as TournamentRegistration[])
+    : activeTeamRegistrations(registrations);
 
   if (sorted.length === 0) return null;
 
-  const participants: ParticipantRow[] = sorted.map((r, i) => ({
+  const toParticipant = (r: TournamentRegistration, i: number): ParticipantRow => ({
     id:              r.playerId,
     // r.playerId falls back to the guest id when there is no profile (see
     // TournamentRegistration), so it is never used directly as a profiles FK
@@ -415,9 +425,10 @@ export async function createBracket(
     partnerName: r.partnerName,
     divisionId:  r.divisionId,
     seed:        i + 1,
-  }));
+  });
+  const participants: ParticipantRow[] = sorted.map(toParticipant);
 
-  const bracketSize = smallestPow2(participants.length);
+  const bracketSize = options?.slots ? options.slots.length : smallestPow2(participants.length);
   const totalRounds = Math.log2(bracketSize);
 
   // Pre-assign UUIDs to every match
@@ -434,10 +445,13 @@ export async function createBracket(
   // bracketSize >= participants.length by construction, but Math.max(0, …)
   // costs nothing and means this can never again throw RangeError: Invalid
   // array length if that invariant is ever broken by a future edit.
-  const slots: (ParticipantRow | null)[] = [
-    ...participants,
-    ...Array<null>(Math.max(0, bracketSize - participants.length)).fill(null),
-  ];
+  // Seeded placement keeps the caller's exact slots (byes where it put them).
+  const slots: (ParticipantRow | null)[] = options?.slots
+    ? options.slots.map((r, i) => (r ? toParticipant(r, i) : null))
+    : [
+        ...participants,
+        ...Array<null>(Math.max(0, bracketSize - participants.length)).fill(null),
+      ];
 
   // Track which player UUIDs appear in each match slot (resolved through BYE cascades)
   //
