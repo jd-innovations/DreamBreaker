@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
-import type { DivisionData } from '@/data/divisions';
-export type { DivisionData };
+import type { DivisionData, DivisionPlayStatus } from '@/data/divisions';
+export type { DivisionData, DivisionPlayStatus };
 
 function dbRowToDivision(row: Record<string, unknown>): DivisionData {
   const skillMin = row.skill_min != null ? Number(row.skill_min) : null;
@@ -38,13 +38,33 @@ function dbRowToDivision(row: Record<string, unknown>): DivisionData {
     skillMax:            skillMax ?? undefined,
     entryFeeCents:       row.entry_fee_cents != null ? Number(row.entry_fee_cents) : undefined,
     createdAt:           String(row.created_at ?? ''),
+    playStatus:          (row.play_status === 'live' || row.play_status === 'paused' ? row.play_status : 'not_started') as DivisionPlayStatus,
   };
+}
+
+/**
+ * Starts, pauses or resumes a division (20260928180000). Going live fills free
+ * courts and puts the division's waiting matches at the back of the line; the
+ * database trigger does that. Pausing never takes anyone off a court.
+ */
+export async function setDivisionPlayStatus(
+  divisionId: string,
+  status: DivisionPlayStatus,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data, error } = await supabase
+    .from('divisions')
+    .update({ play_status: status })
+    .eq('id', divisionId)
+    .select('id');
+  if (error) return { ok: false, error: 'Could not change the division status. Please try again.' };
+  if (!data || data.length === 0) return { ok: false, error: 'You are not able to change this division.' };
+  return { ok: true };
 }
 
 export async function fetchDivisionsForTournament(tournamentId: string): Promise<DivisionData[]> {
   const { data, error } = await supabase
     .from('divisions')
-    .select('id,tournament_id,name,format,skill_min,skill_max,draw_size,entry_fee_cents,spots_filled,created_at,gender_category')
+    .select('id,tournament_id,name,format,skill_min,skill_max,draw_size,entry_fee_cents,spots_filled,created_at,gender_category,play_status')
     .eq('tournament_id', tournamentId)
     .order('created_at', { ascending: true });
 
@@ -90,7 +110,7 @@ export async function createDivision(input: {
       draw_size: input.capacity,
       entry_fee_cents: input.entryFeeCents ?? null,
     })
-    .select('id,tournament_id,name,format,skill_min,skill_max,draw_size,entry_fee_cents,spots_filled,created_at,gender_category')
+    .select('id,tournament_id,name,format,skill_min,skill_max,draw_size,entry_fee_cents,spots_filled,created_at,gender_category,play_status')
     .single();
 
   if (error || !data) throw new Error(error?.message ?? 'Failed to create division');

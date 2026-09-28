@@ -35,6 +35,8 @@ import type { TournamentRegistration } from '@/lib/registrationStore';
 import type { Tournament } from '@/lib/tournamentTypes';
 import { DirectorOnly } from '@/components/DirectorOnly';
 import { confirmBracketFormat } from '@/lib/tournamentFormats';
+import { DivisionPlayChip, DivisionPlayControl, playState } from '@/components/DivisionPlayControl';
+import { fetchDivisionsForTournament, type DivisionData } from '@/lib/supabase/divisions';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -499,7 +501,7 @@ const mc = StyleSheet.create({
 // unfinished, and frees itself when that match's score is saved.
 
 function CourtModal({
-  match, courts, inUse, loadingUse, onSelect, onClear, onManage, onClose,
+  match, courts, inUse, loadingUse, onSelect, onClear, onManage, onClose, divisionLive = true,
 }: {
   match: DirectorBracketMatch;
   courts: string[];
@@ -509,6 +511,8 @@ function CourtModal({
   onClear: () => void;
   onManage: () => void;
   onClose: () => void;
+  /** Hand-assigning is always allowed; this only adds a note when the division isn't live. */
+  divisionLive?: boolean;
 }) {
   const busy = new Map(inUse.filter(u => u.matchId !== match.id).map(u => [u.court, u]));
   const current = match.court;
@@ -521,6 +525,11 @@ function CourtModal({
           <View style={cm.handle} />
           <Text style={cm.title}>Assign Court</Text>
           <Text style={cm.sub}>Match {match.matchNumber + 1} — {match.roundName}</Text>
+          {!divisionLive && (
+            <Text style={cm.note}>
+              This division isn&apos;t live, so it won&apos;t get courts automatically. You can still assign one by hand.
+            </Text>
+          )}
 
           {courts.length === 0 ? (
             <View style={cm.empty}>
@@ -870,6 +879,7 @@ function DivisionBracketScreen() {
   const [pools,         setPools]         = useState<DivisionPools | null>(null);
   const [stageView,     setStageView]     = useState<'pools' | 'bracket' | null>(null);
   const [buildPlan,     setBuildPlan]     = useState<BracketPlan | null>(null);
+  const [division,      setDivision]      = useState<DivisionData | null>(null);
   const [matchTarget,   setMatchTarget]   = useState<DirectorBracketMatch | null>(null);
   const [menuOpen,      setMenuOpen]      = useState(false);
 
@@ -892,6 +902,9 @@ function DivisionBracketScreen() {
       fetchCourtQueue(id),
       fetchDivisionPools(id, divisionId),
     ]);
+    fetchDivisionsForTournament(id)
+      .then(divs => setDivision(divs.find(d => d.id === divisionId) ?? null))
+      .catch(() => {});
     setTournament(t);
     setBracket(bkt);
     setPools(pl);
@@ -1112,6 +1125,26 @@ function DivisionBracketScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* ── Division play status: only live divisions get courts ── */}
+      {division && (
+        <View style={s.playBar}>
+          <DivisionPlayChip state={playState(division.playStatus, bracket?.status === 'completed')} />
+          <Text style={s.playHint} numberOfLines={2}>
+            {division.playStatus === 'live'
+              ? 'Getting courts automatically.'
+              : division.playStatus === 'paused'
+                ? 'Paused: matches on court finish, no new courts.'
+                : 'Not started: no courts until you start it.'}
+          </Text>
+          <DivisionPlayControl
+            divisionId={division.id}
+            state={playState(division.playStatus, bracket?.status === 'completed')}
+            onChanged={status => { setDivision(prev => (prev ? { ...prev, playStatus: status } : prev)); void refresh(); }}
+            compact
+          />
+        </View>
+      )}
 
       {/* ── Stage toggle: pools, then the bracket built from them ── */}
       {pools && (
@@ -1381,6 +1414,7 @@ function DivisionBracketScreen() {
           onClear={() => applyCourt(null)}
           onManage={() => setCourtsOpen(true)}
           onClose={() => setCourtTarget(null)}
+          divisionLive={division?.playStatus === 'live'}
         />
       )}
 
@@ -1411,6 +1445,12 @@ function DivisionBracketScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
+  playBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 12, paddingVertical: 8,
+    backgroundColor: L.bg, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
+  },
+  playHint: { flex: 1, color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
   stageRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 },
   stageBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 9,

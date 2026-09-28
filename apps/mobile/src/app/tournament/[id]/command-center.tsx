@@ -28,6 +28,7 @@ import { CourtsSheet } from '@/components/CourtsSheet';
 import { courtCountLabel } from '@/lib/tournamentCourts';
 import { formatLabel } from '@/lib/tournamentFormats';
 import { useTournamentLive } from '@/hooks/useTournamentLive';
+import { DivisionPlayChip, DivisionPlayControl, playState } from '@/components/DivisionPlayControl';
 
 // ─── Theme alias ──────────────────────────────────────────────────────────────
 
@@ -706,6 +707,25 @@ function CommandCenterScreen() {
           </View>
         )}
 
+        {/* ── Divisions in play: only live divisions get courts ── */}
+        {allDivisions.length > 0 && (
+          <View style={s.section}>
+            <SectionHeader title="Divisions in play" icon="radio-outline" />
+            <View style={s.card}>
+              {allDivisions.map((d, i) => {
+                const state = playState(d.playStatus, allBrackets.some(b => b.divisionId === d.id && b.status === 'completed'));
+                return (
+                  <View key={d.id} style={[s.playRow, i < allDivisions.length - 1 && s.playRowBorder]}>
+                    <Text style={s.playName} numberOfLines={1}>{d.name}</Text>
+                    <DivisionPlayChip state={state} />
+                    <DivisionPlayControl divisionId={d.id} state={state} onChanged={() => { void refresh(); }} compact />
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         {/* ── SECTION 8 — QUICK ACTIONS ── */}
         <View style={s.section}>
           <SectionHeader title="Quick Actions" icon="flash-outline" />
@@ -889,6 +909,9 @@ const s = StyleSheet.create({
   headerActionText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
   section: { marginBottom: 20 },
+  playRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
+  playRowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border },
+  playName: { flex: 1, color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
 
   card: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,

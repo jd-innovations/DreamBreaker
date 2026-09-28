@@ -27,6 +27,7 @@ import {
 import { confirmBracketFormat } from '@/lib/tournamentFormats';
 import { createPools, fetchPoolProgress, playableTeams, poolsHaveScores, suggestPoolCount, DEFAULT_ADVANCE_PER_POOL } from '@/lib/supabase/pools';
 import { PoolSetupSheet } from '@/components/PoolSetupSheet';
+import { DivisionPlayChip, DivisionPlayControl, playState } from '@/components/DivisionPlayControl';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -76,6 +77,7 @@ function DivisionBracketCard({
   poolMode = false,
   poolProgress,
   onSetupPools,
+  onPlayChanged,
 }: {
   division: DivisionData;
   bracket: DirectorBracket | null;
@@ -86,6 +88,7 @@ function DivisionBracketCard({
   poolMode?: boolean;
   poolProgress?: { total: number; completed: number };
   onSetupPools?: () => void;
+  onPlayChanged?: () => void;
 }) {
   const registeredCount = registrations.filter(
     r => r.status === 'registered' || r.status === 'checked_in',
@@ -123,6 +126,17 @@ function DivisionBracketCard({
             variant={bracket ? bracketStatusVariant(bracket) : 'gray'}
           />
         )}
+      </View>
+
+      {/* Play status: only live divisions get courts (20260928180000) */}
+      <View style={dbc.playRow}>
+        <DivisionPlayChip state={playState(division.playStatus, bracket?.status === 'completed')} />
+        <DivisionPlayControl
+          divisionId={division.id}
+          state={playState(division.playStatus, bracket?.status === 'completed')}
+          onChanged={() => onPlayChanged?.()}
+          compact
+        />
       </View>
 
       {/* Stats row */}
@@ -220,6 +234,10 @@ function DivisionBracketCard({
 }
 
 const dbc = StyleSheet.create({
+  playRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 12,
+  },
   card: {
     backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
     borderRadius: shape.card, padding: 16, marginBottom: 12,
@@ -474,6 +492,7 @@ function BracketsScreen() {
                 poolMode={tournament?.tournamentFormat === 'pool_bracket'}
                 poolProgress={poolProgress[div.id]}
                 onSetupPools={() => { void openPoolSetup(div.id); }}
+                onPlayChanged={() => { void refresh(); }}
               />
             );
           })

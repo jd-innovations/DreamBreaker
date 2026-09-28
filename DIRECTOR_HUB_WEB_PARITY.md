@@ -218,6 +218,27 @@ Branch: `feature/push-broadcast`. Read the commits for the full diffs.
 - **Web to-do:** the same build flow and preview. Reuse the seeding rules
   (port `poolSchedule.ts`).
 
+## 10. Division play status (only live divisions get courts)
+
+- **DB** (`20260928180000_division_play_status`, live):
+  - `divisions.play_status` = `not_started` (the default) | `live` | `paused`.
+  - `court_queue` includes only live divisions.
+  - `trg_division_play_status_changed`: when a division goes live (from
+    not_started or paused), its waiting matches get `ready_at =
+    clock_timestamp()` (back of the line), then free courts fill.
+  - Pausing never takes a match off a court.
+  - "Complete" is derived: the division's final is scored.
+  - Directors set the status with a plain update (the existing
+    "director manage own" policy).
+- **Mobile:**
+  - `components/DivisionPlayControl.tsx` (chip, plus Start / Pause / Resume
+    with a pause confirmation), shown on Brackets cards, a status bar on the
+    division bracket screen, and Command Center "Divisions in play".
+  - The court picker notes when a division isn't live. Hand-assigning is still
+    allowed.
+- **Web to-do:** the same control. Web's generate / assign views should
+  respect it.
+
 ---
 
 ## Before starting the web session

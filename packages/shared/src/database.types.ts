@@ -1535,6 +1535,7 @@ export type Database = {
           id: string
           name: string
           pool_count: number | null
+          play_status: string
           skill_max: number | null
           skill_min: number | null
           spots_filled: number
@@ -1550,6 +1551,7 @@ export type Database = {
           id?: string
           name: string
           pool_count?: number | null
+          play_status?: string
           skill_max?: number | null
           skill_min?: number | null
           spots_filled?: number
@@ -1565,6 +1567,7 @@ export type Database = {
           id?: string
           name?: string
           pool_count?: number | null
+          play_status?: string
           skill_max?: number | null
           skill_min?: number | null
           spots_filled?: number

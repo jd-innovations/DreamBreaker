@@ -17,7 +17,11 @@ export type DivisionData = {
   entryFeeCents?: number;
   depositAmountCents?: number;
   createdAt?: string;
+  /** divisions.play_status (20260928180000). Only 'live' divisions get courts. */
+  playStatus?: DivisionPlayStatus;
 };
+
+export type DivisionPlayStatus = 'not_started' | 'live' | 'paused';
 
 export type CreateDivisionInput = {
   tournamentId: string;
