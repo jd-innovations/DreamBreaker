@@ -18,7 +18,7 @@ import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { supabase } from '@/lib/supabase';
 import { platformAlert } from '@/lib/platformAlert';
-import { eventCoverSource, isDefaultEventCover, DEFAULT_EVENT_COVER_ASPECT } from '@/lib/eventCover';
+import { eventCoverSource } from '@/lib/eventCover';
 import { AppIcon, PickleballIcon, JoinCelebration, Avatar, ManageEventSheet, AddToCalendarButton, PressableCTA, type AppIconName } from '@/components';
 import { appLinks } from '@/lib/appLinks';
 import { withLink, type CalendarEventInput } from '@/lib/calendarEvents';
@@ -1649,29 +1649,11 @@ export default function CommunityEventScreen() {
       >
         {/* ── HERO (preserved) ── */}
         <View style={s.hero}>
-          {isDefaultEventCover(event.heroPhoto) ? (
-            // The bundled default is a wide landscape; filling this near-square
-            // hero with resizeMode="cover" blew it up ~1.4x and cropped the
-            // beach and benches off both sides. Show it at its natural aspect,
-            // full width and pinned to the top, fading into navy below —
-            // that band already sits under the darkest part of the overlay.
-            // Organizer uploads (any shape) keep the plain cover fill.
-            <Animated.View style={[StyleSheet.absoluteFill, s.heroDefaultFill, { transform: [{ scale: heroScale }] }]}>
-              <View style={s.heroDefaultImageWrap}>
-                <Image source={event.heroPhoto} style={StyleSheet.absoluteFill} resizeMode="cover" />
-                <LinearGradient
-                  colors={['rgba(10,18,40,0)', colors.navy]}
-                  style={s.heroDefaultFade}
-                />
-              </View>
-            </Animated.View>
-          ) : (
-            <Animated.Image
-              source={event.heroPhoto}
-              style={[StyleSheet.absoluteFill, { transform: [{ scale: heroScale }] }]}
-              resizeMode="cover"
-            />
-          )}
+          <Animated.Image
+            source={event.heroPhoto}
+            style={[StyleSheet.absoluteFill, { transform: [{ scale: heroScale }] }]}
+            resizeMode="cover"
+          />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
           <LinearGradient
             colors={['rgba(0,0,0,0.22)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.70)']}
@@ -2212,9 +2194,6 @@ const sStyles = (t: ThemeRoles) => StyleSheet.create({
   // overflow hidden clips the scroll-zoom: the image scales up to 2x on pull,
   // and without this it would paint over the tab bar below.
   hero: { height: HERO_HEIGHT, position: 'relative', overflow: 'hidden' },
-  heroDefaultFill: { backgroundColor: colors.navy },
-  heroDefaultImageWrap: { width: '100%', aspectRatio: DEFAULT_EVENT_COVER_ASPECT },
-  heroDefaultFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '35%' },
   topControls: {
     position: 'absolute', left: spacing.screenH, right: spacing.screenH,
     flexDirection: 'row', justifyContent: 'space-between', zIndex: 10,

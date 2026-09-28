@@ -36,11 +36,3 @@ export const DEFAULT_EVENT_COVER: ImageSourcePropType = DEFAULT_EVENT_COVER_ASSE
 export function eventCoverSource(coverUrl?: string | null): ImageSourcePropType {
   return coverUrl && coverUrl.length > 0 ? { uri: coverUrl } : DEFAULT_EVENT_COVER;
 }
-
-/** Natural width/height of default-court-cover.jpg (1336x800). Update with the asset. */
-export const DEFAULT_EVENT_COVER_ASPECT = 1336 / 800;
-
-/** True when a source from eventCoverSource() is the bundled default, not an organizer upload. */
-export function isDefaultEventCover(source: ImageSourcePropType): boolean {
-  return source === DEFAULT_EVENT_COVER;
-}
