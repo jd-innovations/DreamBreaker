@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 // Forecast proxy for the community-event "Weather on Event Day" widget.
 // Keeps GOOGLE_WEATHER_API_KEY server-side; the client only sends lat/lng/date.
+// With { mode: "current" } it instead returns right-now conditions (home screen).
 // Google's Weather API only forecasts ~10 days out, so dates beyond that (or
 // in the past) come back as { available: false, reason: "out_of_range" }.
 
@@ -69,6 +70,65 @@ function conditionFor(type: string | undefined): { label: string; icon: string; 
   return { label: "Unsettled", icon: "cloudy-outline", favorable: false };
 }
 
+// Google's wind.direction.cardinal enum (e.g. SOUTH_SOUTHWEST) → "SSW".
+const CARDINAL_WORDS: Record<string, string> = {
+  NORTH: "N", SOUTH: "S", EAST: "E", WEST: "W",
+  NORTHEAST: "NE", NORTHWEST: "NW", SOUTHEAST: "SE", SOUTHWEST: "SW",
+};
+
+function cardinalAbbrev(cardinal: string | undefined): string | null {
+  if (!cardinal) return null;
+  const parts = cardinal.split("_").map(w => CARDINAL_WORDS[w]);
+  return parts.every(Boolean) ? parts.join("") : null;
+}
+
+function round1(value: number | undefined): number | null {
+  return value != null && Number.isFinite(value) ? Math.round(value * 10) / 10 : null;
+}
+
+// mode: "current" — right-now conditions for the home-screen weather strip.
+// Same key, same lat/lng validation; no date involved.
+async function currentConditions(lat: number, lng: number): Promise<Response> {
+  const googleUrl =
+    `https://weather.googleapis.com/v1/currentConditions:lookup` +
+    `?key=${GOOGLE_WEATHER_API_KEY}` +
+    `&location.latitude=${lat}&location.longitude=${lng}` +
+    `&unitsSystem=IMPERIAL`;
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(googleUrl);
+  } catch {
+    return new Response(JSON.stringify({ available: false, reason: "upstream_error" }), { status: 502, headers: CORS });
+  }
+  if (!upstream.ok) {
+    return new Response(JSON.stringify({ available: false, reason: "upstream_error" }), { status: 502, headers: CORS });
+  }
+
+  const json = await upstream.json().catch(() => null) as {
+    temperature?: { degrees?: number };
+    weatherCondition?: { type?: string };
+    precipitation?: { probability?: { percent?: number } };
+    wind?: { direction?: { cardinal?: string }; speed?: { value?: number } };
+  } | null;
+
+  if (!json) {
+    return new Response(JSON.stringify({ available: false, reason: "upstream_error" }), { status: 502, headers: CORS });
+  }
+
+  const { label, icon } = conditionFor(json.weatherCondition?.type);
+  const result = {
+    available: true,
+    temp: round1(json.temperature?.degrees),
+    condition: label,
+    icon,
+    precipChance: json.precipitation?.probability?.percent ?? null,
+    windSpeed: round1(json.wind?.speed?.value),
+    windDirection: cardinalAbbrev(json.wind?.direction?.cardinal),
+  };
+  return new Response(JSON.stringify(result), { status: 200, headers: CORS });
+}
+
 function displayDateToIso(d: { year: number; month: number; day: number } | undefined): string | null {
   if (!d) return null;
   const mm = String(d.month).padStart(2, "0");
@@ -85,7 +145,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ available: false, reason: "not_configured" }), { status: 500, headers: CORS });
   }
 
-  let body: { lat?: unknown; lng?: unknown; date?: unknown };
+  let body: { lat?: unknown; lng?: unknown; date?: unknown; mode?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -101,6 +161,9 @@ Deno.serve(async (req: Request) => {
   }
   if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
     return new Response(JSON.stringify({ available: false, reason: "bad_request" }), { status: 400, headers: CORS });
+  }
+  if (body.mode === "current") {
+    return await currentConditions(lat, lng);
   }
   if (!DATE_RE.test(date)) {
     return new Response(JSON.stringify({ available: false, reason: "bad_request" }), { status: 400, headers: CORS });

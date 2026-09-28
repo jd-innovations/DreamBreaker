@@ -35,3 +35,28 @@ export async function fetchEventWeather(lat: number, lng: number, date: string):
   }
   return data as EventWeatherResult;
 }
+
+export type CurrentWeather = {
+  available: true;
+  temp: number | null;
+  condition: string;
+  icon: string;
+  precipChance: number | null;
+  windSpeed: number | null;
+  windDirection: string | null;
+};
+
+export type CurrentWeatherResult = CurrentWeather | EventWeatherUnavailable;
+
+// Right-now conditions for the home-screen weather strip — same edge
+// function, mode: 'current'.
+export async function fetchCurrentWeather(lat: number, lng: number): Promise<CurrentWeatherResult> {
+  const { data, error } = await supabase.functions.invoke('event-weather', {
+    body: { lat, lng, mode: 'current' },
+  });
+
+  if (error || !data) {
+    return { available: false, reason: 'upstream_error' };
+  }
+  return data as CurrentWeatherResult;
+}

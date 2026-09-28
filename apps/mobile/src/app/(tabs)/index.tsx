@@ -5,7 +5,7 @@ import {
   type ImageSourcePropType,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 // PERF-TRACE (Phase 0, temporary — see PERFORMANCE_REGRESSION_AUDIT.md)
 import { traceHomeFocus, traceHomeLoadingFlip } from '@/lib/devPerfTrace';
@@ -31,6 +31,7 @@ import { claimGuestParticipants, fetchJoinedPlayEvents, fetchOpenPlayEvents, gam
 import { onPlayEventsUpdated } from '@/lib/playEventsEvents';   // F3 fix
 import { setEventShell } from '@/lib/eventShellCache';   // F7 fix
 import { fetchTournaments } from '@/lib/supabase/tournaments';
+import { fetchCurrentWeather, type CurrentWeatherResult } from '@/lib/supabase/weather';
 import { isTournamentExpired, type Tournament } from '@/lib/tournamentTypes';
 import { TournamentTrendingCard, tournamentToTrending } from '@/components/TournamentTrendingCard';
 
@@ -549,6 +550,66 @@ const cl = StyleSheet.create({
   joinedText: { color: colors.success },
 });
 
+// ─── Home weather line ────────────────────────────────────────────────────────
+// Replaces the profile-setup strip in the greeting banner once setup is done.
+
+const WEATHER_FRESHNESS_MS = 10 * 60 * 1000;
+
+function HomeWeatherLine({ weather, hasLocation }: {
+  weather: CurrentWeatherResult | 'loading' | null;
+  hasLocation: boolean;
+}) {
+  if (!hasLocation) {
+    return (
+      <TouchableOpacity
+        style={sg.weatherRow}
+        activeOpacity={0.75}
+        onPress={() => router.push('/location-settings' as never)}
+      >
+        <Ionicons name="location-outline" size={16} color={L.gold} />
+        <Text style={sg.weatherMuted}>Set your location for local weather</Text>
+      </TouchableOpacity>
+    );
+  }
+  if (weather == null || weather === 'loading') {
+    return (
+      <View style={sg.weatherRow}>
+        <ActivityIndicator size="small" color="rgba(255,255,255,0.5)" />
+      </View>
+    );
+  }
+  if (!weather.available) {
+    return (
+      <View style={sg.weatherRow}>
+        <Ionicons name="cloud-offline-outline" size={16} color="rgba(255,255,255,0.5)" />
+        <Text style={sg.weatherMuted}>Weather unavailable</Text>
+      </View>
+    );
+  }
+  return (
+    <View style={sg.weatherRow} accessibilityLabel={`${weather.condition}, ${weather.temp ?? '--'} degrees`}>
+      <View style={sg.weatherItem}>
+        <Ionicons name={weather.icon as never} size={18} color="rgba(255,255,255,0.7)" />
+        <Text style={sg.weatherText}>{weather.temp != null ? `${weather.temp.toFixed(1)}°` : '--'}</Text>
+      </View>
+      {weather.precipChance != null && (
+        <View style={sg.weatherItem}>
+          <Ionicons name="rainy-outline" size={16} color="rgba(255,255,255,0.7)" />
+          <Text style={sg.weatherText}>{`${weather.precipChance.toFixed(1)}%`}</Text>
+        </View>
+      )}
+      {weather.windSpeed != null && (
+        <View style={sg.weatherItem}>
+          <MaterialCommunityIcons name="weather-windy" size={16} color="rgba(255,255,255,0.7)" />
+          <Text style={sg.weatherText} numberOfLines={1}>
+            {`${weather.windDirection ? `${weather.windDirection} ` : ''}${weather.windSpeed.toFixed(1)} mph`}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
@@ -586,6 +647,39 @@ export default function HomeScreen() {
     hasPushToken,
   });
   const pendingCount = setupTasks.filter(t => !t.done).length;
+  const setupComplete = pendingCount === 0;
+
+  // A completed profile swaps the "tasks remaining" strip for a current-
+  // conditions weather line at the player's saved location. No saved location
+  // means no weather — never a guessed one.
+  const weatherLat = profile?.location_lat ?? null;
+  const weatherLng = profile?.location_lng ?? null;
+  const [weather, setWeather] = useState<CurrentWeatherResult | 'loading' | null>(null);
+  const lastWeatherFetchRef = useRef<{ at: number; key: string | null }>({ at: 0, key: null });
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      if (!setupComplete || weatherLat == null || weatherLng == null) {
+        setWeather(null);
+        lastWeatherFetchRef.current = { at: 0, key: null };
+        return () => { cancelled = true; };
+      }
+      const key = `${weatherLat},${weatherLng}`;
+      const fresh = lastWeatherFetchRef.current.key === key
+        && Date.now() - lastWeatherFetchRef.current.at < WEATHER_FRESHNESS_MS;
+      if (fresh) return () => { cancelled = true; };
+
+      setWeather(prev => (prev && prev !== 'loading' && prev.available ? prev : 'loading'));
+      fetchCurrentWeather(weatherLat, weatherLng)
+        .then(result => {
+          if (cancelled) return;
+          setWeather(result);
+          if (result.available) lastWeatherFetchRef.current = { at: Date.now(), key };
+        })
+        .catch(() => { if (!cancelled) setWeather({ available: false, reason: 'upstream_error' }); });
+      return () => { cancelled = true; };
+    }, [setupComplete, weatherLat, weatherLng]),
+  );
 
   const toggleSkillLabel = (label: string) => {
     setSelectedSkillLabels(prev =>
@@ -890,7 +984,16 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Bottom: profile setup strip */}
+          {/* Bottom: profile setup strip — weather once every task is done */}
+          {setupComplete ? (
+            <View style={sg.setupStrip}>
+              <HomeWeatherLine
+                weather={weather}
+                hasLocation={weatherLat != null && weatherLng != null}
+              />
+              <Ionicons name="ellipsis-horizontal" size={18} color="rgba(255,255,255,0.5)" />
+            </View>
+          ) : (
           <View style={sg.setupStrip}>
             <View style={sg.setupLeft}>
               <Text style={sg.setupLabel}>PROFILE SETUP</Text>
@@ -908,6 +1011,7 @@ export default function HomeScreen() {
               />
             </View>
           </View>
+          )}
 
           {/* Gold sweep across the card on arrival. Last child so it layers over
               the greeting and setup strip; the banner's own overflow: hidden and
@@ -1328,6 +1432,10 @@ const sg = StyleSheet.create({
   dot: { width: 12, height: 12, borderRadius: 6 },
   dotGold: { backgroundColor: L.gold },
   dotGray: { backgroundColor: 'rgba(255,255,255,0.25)' },
+  weatherRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 34 },
+  weatherItem: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 },
+  weatherText: { color: 'rgba(255,255,255,0.85)', fontSize: text.rowTitle.size, fontWeight: '600' },
+  weatherMuted: { color: 'rgba(255,255,255,0.6)', fontSize: text.caption.size, fontWeight: '600' },
 
   // ── Expanded checklist ──
   checklist: {
