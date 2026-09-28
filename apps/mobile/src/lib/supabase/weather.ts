@@ -39,6 +39,9 @@ export async function fetchEventWeather(lat: number, lng: number, date: string):
 export type CurrentWeather = {
   available: true;
   temp: number | null;
+  feelsLike: number | null;
+  humidity: number | null;
+  uvIndex: number | null;
   condition: string;
   icon: string;
   precipChance: number | null;
@@ -59,4 +62,29 @@ export async function fetchCurrentWeather(lat: number, lng: number): Promise<Cur
     return { available: false, reason: 'upstream_error' };
   }
   return data as CurrentWeatherResult;
+}
+
+export type ForecastDay = {
+  date: string;
+  high: number | null;
+  low: number | null;
+  condition: string;
+  icon: string;
+  precipChance: number | null;
+  windSpeed: number | null;
+  windDirection: string | null;
+};
+
+export type WeatherForecastResult = { available: true; days: ForecastDay[] } | EventWeatherUnavailable;
+
+// The next 5 days for the home-screen weather sheet — mode: 'forecast'.
+export async function fetchWeatherForecast(lat: number, lng: number): Promise<WeatherForecastResult> {
+  const { data, error } = await supabase.functions.invoke('event-weather', {
+    body: { lat, lng, mode: 'forecast' },
+  });
+
+  if (error || !data) {
+    return { available: false, reason: 'upstream_error' };
+  }
+  return data as WeatherForecastResult;
 }

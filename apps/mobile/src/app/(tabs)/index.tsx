@@ -16,6 +16,7 @@ import { colors, quickActionTints } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import { AppHeader, APP_HEADER_HEIGHT, AppIcon, GlassQuickAction, ProfileCompletionRing, FindGamesFilterModal, FIND_GAMES_DISTANCE_STEPS, FIND_GAMES_SKILL_RANGES, ShimmerOverlay, PressableCTA, type AppIconName } from '@/components';
 import { DraggableQuickActions } from '@/components/DraggableQuickActions';
+import { WeatherForecastSheet } from '@/components/WeatherForecastSheet';
 import { useSession } from '@/hooks/useSession';
 import { useProfile } from '@/hooks/useProfile';
 import { useUnreadCounts } from '@/hooks/useUnreadCounts';
@@ -655,6 +656,7 @@ export default function HomeScreen() {
   const weatherLat = profile?.location_lat ?? null;
   const weatherLng = profile?.location_lng ?? null;
   const [weather, setWeather] = useState<CurrentWeatherResult | 'loading' | null>(null);
+  const [weatherSheetVisible, setWeatherSheetVisible] = useState(false);
   const lastWeatherFetchRef = useRef<{ at: number; key: string | null }>({ at: 0, key: null });
   useFocusEffect(
     useCallback(() => {
@@ -939,6 +941,16 @@ export default function HomeScreen() {
   return (
     <View style={s.root}>
       <StatusBar style="dark" />
+      {weatherLat != null && weatherLng != null && (
+        <WeatherForecastSheet
+          visible={weatherSheetVisible}
+          onClose={() => setWeatherSheetVisible(false)}
+          lat={weatherLat}
+          lng={weatherLng}
+          locationLabel={profile?.location_city ?? null}
+          current={weather && weather !== 'loading' && weather.available ? weather : null}
+        />
+      )}
 
       {/* ── HEADER (shared) ── */}
       <AppHeader hideProfile showShare />
@@ -954,7 +966,13 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={sg.banner}
           activeOpacity={0.92}
-          onPress={() => setSetupExpanded(v => !v)}
+          onPress={() => {
+            // A finished checklist has nothing left to show; the banner opens
+            // the full weather instead (or asks for a location to base it on).
+            if (!setupComplete) setSetupExpanded(v => !v);
+            else if (weatherLat != null && weatherLng != null) setWeatherSheetVisible(true);
+            else router.push('/location-settings' as never);
+          }}
         >
           {/* Top: greeting + avatar */}
           <View style={sg.greetRow}>
@@ -1023,7 +1041,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* Expanded checklist (sits below banner) */}
-        {setupExpanded && (
+        {setupExpanded && !setupComplete && (
           <View style={sg.checklist}>
             {setupTasks.map((task, idx) => (
               <TouchableOpacity

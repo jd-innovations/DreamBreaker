@@ -2,7 +2,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 // Forecast proxy for the community-event "Weather on Event Day" widget.
 // Keeps GOOGLE_WEATHER_API_KEY server-side; the client only sends lat/lng/date.
-// With { mode: "current" } it instead returns right-now conditions (home screen).
+// With { mode: "current" } it instead returns right-now conditions, and with
+// { mode: "forecast" } the next 5 days (both for the home-screen weather).
 // Google's Weather API only forecasts ~10 days out, so dates beyond that (or
 // in the past) come back as { available: false, reason: "out_of_range" }.
 
@@ -107,6 +108,9 @@ async function currentConditions(lat: number, lng: number): Promise<Response> {
 
   const json = await upstream.json().catch(() => null) as {
     temperature?: { degrees?: number };
+    feelsLikeTemperature?: { degrees?: number };
+    relativeHumidity?: number;
+    uvIndex?: number;
     weatherCondition?: { type?: string };
     precipitation?: { probability?: { percent?: number } };
     wind?: { direction?: { cardinal?: string }; speed?: { value?: number } };
@@ -120,6 +124,9 @@ async function currentConditions(lat: number, lng: number): Promise<Response> {
   const result = {
     available: true,
     temp: round1(json.temperature?.degrees),
+    feelsLike: round1(json.feelsLikeTemperature?.degrees),
+    humidity: json.relativeHumidity ?? null,
+    uvIndex: json.uvIndex ?? null,
     condition: label,
     icon,
     precipChance: json.precipitation?.probability?.percent ?? null,
@@ -127,6 +134,64 @@ async function currentConditions(lat: number, lng: number): Promise<Response> {
     windDirection: cardinalAbbrev(json.wind?.direction?.cardinal),
   };
   return new Response(JSON.stringify(result), { status: 200, headers: CORS });
+}
+
+// mode: "forecast" — the next FORECAST_SHEET_DAYS days for the home-screen
+// weather sheet. Same upstream call as the event lookup, but returns the list.
+const FORECAST_SHEET_DAYS = 5;
+
+async function dailyForecast(lat: number, lng: number): Promise<Response> {
+  const googleUrl =
+    `https://weather.googleapis.com/v1/forecast/days:lookup` +
+    `?key=${GOOGLE_WEATHER_API_KEY}` +
+    `&location.latitude=${lat}&location.longitude=${lng}` +
+    `&days=${FORECAST_SHEET_DAYS}&unitsSystem=IMPERIAL`;
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(googleUrl);
+  } catch {
+    return new Response(JSON.stringify({ available: false, reason: "upstream_error" }), { status: 502, headers: CORS });
+  }
+  if (!upstream.ok) {
+    return new Response(JSON.stringify({ available: false, reason: "upstream_error" }), { status: 502, headers: CORS });
+  }
+
+  const json = await upstream.json().catch(() => null) as {
+    forecastDays?: Array<{
+      displayDate?: { year: number; month: number; day: number };
+      maxTemperature?: { degrees?: number };
+      minTemperature?: { degrees?: number };
+      daytimeForecast?: {
+        weatherCondition?: { type?: string };
+        precipitation?: { probability?: { percent?: number } };
+        wind?: { direction?: { cardinal?: string }; speed?: { value?: number } };
+      };
+    }>;
+  } | null;
+
+  const days = (json?.forecastDays ?? []).slice(0, FORECAST_SHEET_DAYS).flatMap(d => {
+    const date = displayDateToIso(d.displayDate);
+    if (!date) return [];
+    const { label, icon } = conditionFor(d.daytimeForecast?.weatherCondition?.type);
+    const high = d.maxTemperature?.degrees;
+    const low = d.minTemperature?.degrees;
+    return [{
+      date,
+      high: high != null ? Math.round(high) : null,
+      low: low != null ? Math.round(low) : null,
+      condition: label,
+      icon,
+      precipChance: d.daytimeForecast?.precipitation?.probability?.percent ?? null,
+      windSpeed: round1(d.daytimeForecast?.wind?.speed?.value),
+      windDirection: cardinalAbbrev(d.daytimeForecast?.wind?.direction?.cardinal),
+    }];
+  });
+
+  if (days.length === 0) {
+    return new Response(JSON.stringify({ available: false, reason: "upstream_error" }), { status: 502, headers: CORS });
+  }
+  return new Response(JSON.stringify({ available: true, days }), { status: 200, headers: CORS });
 }
 
 function displayDateToIso(d: { year: number; month: number; day: number } | undefined): string | null {
@@ -164,6 +229,9 @@ Deno.serve(async (req: Request) => {
   }
   if (body.mode === "current") {
     return await currentConditions(lat, lng);
+  }
+  if (body.mode === "forecast") {
+    return await dailyForecast(lat, lng);
   }
   if (!DATE_RE.test(date)) {
     return new Response(JSON.stringify({ available: false, reason: "bad_request" }), { status: 400, headers: CORS });
