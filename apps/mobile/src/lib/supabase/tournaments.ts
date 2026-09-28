@@ -193,7 +193,7 @@ export async function fetchTournamentsByIds(ids: string[]): Promise<Tournament[]
 export async function fetchTournamentById(id: string): Promise<Tournament | null> {
   const { data, error } = await supabase
     .from('tournaments')
-    .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,amenities,courts,auto_assign_courts,tournament_format,pool_count')
+    .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,cover_img_url,amenities,courts,auto_assign_courts,tournament_format,pool_count')
     .eq('id', id)
     .single();
 
