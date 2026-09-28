@@ -114,6 +114,7 @@ function dbRowToTournament(row: Record<string, unknown>): Tournament {
     // until a director picks some; the strip hides itself rather than falling
     // back to the invented copy it used to show.
     amenities:            Array.isArray(row.amenities) ? (row.amenities as string[]) : [],
+    courts:               Array.isArray(row.courts) ? (row.courts as string[]) : null,
     directorId:           row.director_id != null ? String(row.director_id) : null,
   };
 }
@@ -189,7 +190,7 @@ export async function fetchTournamentsByIds(ids: string[]): Promise<Tournament[]
 export async function fetchTournamentById(id: string): Promise<Tournament | null> {
   const { data, error } = await supabase
     .from('tournaments')
-    .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,amenities')
+    .select('id,name,description,venue_name,venue_address,zip_code,city,state,event_date,start_time,entry_fee_cents,hold_fee_cents,prize_pool_cents,draw_size,spots_filled,skill_min,skill_max,formats,status,director_id,registration_opens_at,registration_closes_at,featured,facility_id,amenities,courts')
     .eq('id', id)
     .single();
 
@@ -346,6 +347,8 @@ export type CreateTournamentInput = {
   drawSize: number;
   facilityId: string | null;
   amenities: string[];
+  /** Court names; omitted or empty stores null. */
+  courts?: string[];
 };
 
 // Always creates in 'draft' — matches the web director flow (draft -> submit
@@ -371,6 +374,7 @@ export async function createDraftTournament(input: CreateTournamentInput): Promi
       draw_size:              input.drawSize,
       facility_id:            input.facilityId,
       amenities:              input.amenities,
+      courts:                 input.courts && input.courts.length > 0 ? input.courts : null,
       status:                 'draft',
       spots_filled:           0,
     })
@@ -382,6 +386,33 @@ export async function createDraftTournament(input: CreateTournamentInput): Promi
     return null;
   }
   return dbRowToTournament(data as Record<string, unknown>);
+}
+
+// Court list changes go through set_tournament_courts() (20260928140000), not
+// updateTournamentDetails: they must work while in_progress, which the
+// director update policy refuses, and must not send an approved tournament
+// back to pending_approval the way a details edit does.
+const COURTS_ERRORS: Record<string, string> = {
+  not_tournament_director: 'Only this tournament’s director can change its courts.',
+  director_not_approved:   'Your director account is not approved yet.',
+  tournament_closed:       'This tournament is finished, so its courts can’t change.',
+  too_many_courts:         'A tournament can have at most 64 courts.',
+  court_name_too_long:     'Court names can be at most 24 characters.',
+};
+
+export async function setTournamentCourts(
+  tournamentId: string,
+  courts: string[],
+): Promise<{ ok: true; courts: string[] } | { ok: false; error: string }> {
+  const { data, error } = await supabase.rpc('set_tournament_courts', {
+    p_tournament_id: tournamentId,
+    p_courts: courts,
+  });
+  if (error) {
+    const code = Object.keys(COURTS_ERRORS).find(k => error.message?.includes(k));
+    return { ok: false, error: code ? COURTS_ERRORS[code] : 'Could not save courts. Please try again.' };
+  }
+  return { ok: true, courts: (data as string[] | null) ?? [] };
 }
 
 export type UpdateTournamentInput = {

@@ -25,6 +25,8 @@ import {
 import { getTournamentStatus, getTournamentStatusInfo } from '@/lib/tournamentStatus';
 import { exportRosterCsv } from '@/lib/tournamentReport';
 import { DirectorOnly } from '@/components/DirectorOnly';
+import { CourtsSheet } from '@/components/CourtsSheet';
+import { courtCountLabel } from '@/lib/tournamentCourts';
 
 // ─── Theme alias ──────────────────────────────────────────────────────────────
 
@@ -248,6 +250,7 @@ function CommandCenterScreen() {
   const [roster, setRoster]             = React.useState<TournamentRegistration[]>([]);
   const [exporting, setExporting]       = React.useState(false);
   const [submittingApproval, setSubmittingApproval] = React.useState(false);
+  const [courtsOpen, setCourtsOpen] = React.useState(false);
 
   const refresh = useCallback(async () => {
     const [t, divs, regs] = await Promise.all([
@@ -716,6 +719,11 @@ function CommandCenterScreen() {
               onPress={() => router.push(`/tournament/${id}/add-registration` as never)}
             />
             <QuickAction
+              icon="grid-outline"
+              label={courtCountLabel(tournament.courts) ? `Courts (${tournament.courts?.length})` : 'Set Courts'}
+              onPress={() => setCourtsOpen(true)}
+            />
+            <QuickAction
               icon="git-branch-outline"
               label="View Brackets"
               onPress={() => router.push(`/tournament/${id}/brackets` as never)}
@@ -736,6 +744,14 @@ function CommandCenterScreen() {
         </View>
 
       </ScrollView>
+
+      <CourtsSheet
+        visible={courtsOpen}
+        onClose={() => setCourtsOpen(false)}
+        tournamentId={id}
+        courts={tournament.courts ?? []}
+        onSaved={courts => setTournament(prev => (prev ? { ...prev, courts } : prev))}
+      />
     </View>
   );
 }

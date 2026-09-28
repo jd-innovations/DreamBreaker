@@ -23,7 +23,9 @@ import {
   type DirectorBracket,
   type DirectorBracketMatch,
 } from '@/lib/supabase/brackets';
-import { assignCourt, saveMatchScore } from '@/lib/supabase/matches';
+import { assignCourt, fetchCourtsInUse, saveMatchScore, type CourtInUse } from '@/lib/supabase/matches';
+import { courtLabel } from '@/lib/tournamentCourts';
+import { CourtsSheet } from '@/components/CourtsSheet';
 import { useSupportContext } from '@/lib/support/supportContext';
 import type { TournamentRegistration } from '@/lib/registrationStore';
 import type { Tournament } from '@/lib/tournamentTypes';
@@ -180,7 +182,8 @@ function MatchCard({
   const isDoubleBye = p1 === null && p2 === null && match.roundIndex === 0;
   const isBye1 = p1 !== null && p2 === null && isCompleted;
   const isBye2 = p2 !== null && p1 === null && isCompleted;
-  const canAssign  = !isCompleted && (p1 !== null || p2 !== null);
+  // A court is only held by a match that can start: both sides known.
+  const canAssign  = !isCompleted && p1 !== null && p2 !== null;
   const canScore   = !isCompleted && p1 !== null && p2 !== null;
   const isAwaiting = !isCompleted && (p1 === null || p2 === null) && !isDoubleBye;
   const hasScores  = match.score1 !== undefined && match.score2 !== undefined;
@@ -196,10 +199,10 @@ function MatchCard({
       </View>
 
       {/* Court badge */}
-      {match.courtNumber !== undefined && (
+      {match.court !== undefined && (
         <View style={mc.courtBadge}>
           <Ionicons name="location-outline" size={11} color={L.gold} />
-          <Text style={mc.courtText}>Court {match.courtNumber}</Text>
+          <Text style={mc.courtText}>{courtLabel(match.court)}</Text>
         </View>
       )}
 
@@ -253,7 +256,7 @@ function MatchCard({
               adjustsFontSizeToFit
               minimumFontScale={0.85}
             >
-              {match.courtNumber !== undefined ? `Court ${match.courtNumber}` : 'Assign Court'}
+              {match.court !== undefined ? courtLabel(match.court) : 'Assign Court'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -350,12 +353,26 @@ const mc = StyleSheet.create({
 });
 
 // ─── Court assignment modal ───────────────────────────────────────────────────
-
-const COURTS = [1, 2, 3, 4, 5, 6];
+// Lists the tournament's own courts (tournaments.courts, by real name) with
+// live status across EVERY division: a court is in use while a match on it is
+// unfinished, and frees itself when that match's score is saved.
 
 function CourtModal({
-  match, onSelect, onClose,
-}: { match: DirectorBracketMatch; onSelect: (c: number) => void; onClose: () => void }) {
+  match, courts, inUse, loadingUse, onSelect, onClear, onManage, onClose,
+}: {
+  match: DirectorBracketMatch;
+  courts: string[];
+  inUse: CourtInUse[];
+  loadingUse: boolean;
+  onSelect: (court: string) => void;
+  onClear: () => void;
+  onManage: () => void;
+  onClose: () => void;
+}) {
+  const busy = new Map(inUse.filter(u => u.matchId !== match.id).map(u => [u.court, u]));
+  const current = match.court;
+  const currentNotListed = current !== undefined && !courts.includes(current);
+
   return (
     <Modal visible animationType="fade" transparent onRequestClose={onClose}>
       <Pressable style={cm.backdrop} onPress={onClose}>
@@ -363,20 +380,73 @@ function CourtModal({
           <View style={cm.handle} />
           <Text style={cm.title}>Assign Court</Text>
           <Text style={cm.sub}>Match {match.matchNumber + 1} — {match.roundName}</Text>
-          <View style={cm.grid}>
-            {COURTS.map(c => (
-              <TouchableOpacity
-                key={c}
-                style={[cm.courtBtn, match.courtNumber === c && cm.courtBtnSelected]}
-                activeOpacity={0.8}
-                onPress={() => onSelect(c)}
-              >
-                <Ionicons name="location" size={20} color={match.courtNumber === c ? L.bg : L.navy} />
-                <Text style={[cm.courtLabel, match.courtNumber === c && cm.courtLabelSelected]}>
-                  Court {c}
-                </Text>
+
+          {courts.length === 0 ? (
+            <View style={cm.empty}>
+              <Text style={cm.emptyText}>
+                This tournament has no courts set yet. Add the courts reserved at the venue, e.g. 7-12.
+              </Text>
+              <TouchableOpacity style={cm.primaryBtn} onPress={onManage} activeOpacity={0.85}>
+                <Text style={cm.primaryLabel}>Set up courts</Text>
               </TouchableOpacity>
-            ))}
+            </View>
+          ) : (
+            <>
+              {loadingUse && <ActivityIndicator color={L.gold} style={{ marginBottom: 10 }} />}
+              <ScrollView style={{ maxHeight: 360 }} contentContainerStyle={cm.grid}>
+                {courts.map(c => {
+                  const mine = current === c;
+                  const taken = busy.get(c);
+                  const disabled = !!taken || mine || loadingUse;
+                  return (
+                    <TouchableOpacity
+                      key={c}
+                      style={[cm.courtBtn, mine && cm.courtBtnSelected, taken && cm.courtBtnBusy]}
+                      activeOpacity={0.8}
+                      disabled={disabled}
+                      onPress={() => onSelect(c)}
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled, selected: mine }}
+                      accessibilityLabel={
+                        taken ? `${courtLabel(c)}, in use` : mine ? `${courtLabel(c)}, this match` : `${courtLabel(c)}, available`
+                      }
+                    >
+                      <Text style={[cm.courtLabel, mine && cm.courtLabelSelected, taken && cm.courtLabelBusy]} numberOfLines={1}>
+                        {courtLabel(c)}
+                      </Text>
+                      <Text
+                        style={[cm.courtStatus, mine && cm.courtLabelSelected, taken && cm.courtStatusBusy]}
+                        numberOfLines={2}
+                      >
+                        {mine
+                          ? 'This match'
+                          : taken
+                            ? `In use · ${taken.divisionName} ${taken.roundName} M${taken.matchNumber + 1}`
+                            : 'Available'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              {currentNotListed && (
+                <Text style={cm.note}>
+                  This match is on {courtLabel(current)}, which is no longer in the tournament&apos;s courts.
+                </Text>
+              )}
+            </>
+          )}
+
+          <View style={cm.footerRow}>
+            {current !== undefined && (
+              <TouchableOpacity style={cm.footerBtn} onPress={onClear} activeOpacity={0.7}>
+                <Text style={cm.footerLabel}>Clear court</Text>
+              </TouchableOpacity>
+            )}
+            {courts.length > 0 && (
+              <TouchableOpacity style={cm.footerBtn} onPress={onManage} activeOpacity={0.7}>
+                <Text style={cm.footerLabel}>Manage courts</Text>
+              </TouchableOpacity>
+            )}
           </View>
           <TouchableOpacity style={cm.cancelBtn} onPress={onClose} activeOpacity={0.7}>
             <Text style={cm.cancelLabel}>Cancel</Text>
@@ -402,8 +472,20 @@ const cm = StyleSheet.create({
     backgroundColor: L.page, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta,
   },
   courtBtnSelected: { backgroundColor: L.navy, borderColor: L.navy },
+  courtBtnBusy: { backgroundColor: L.bg, borderStyle: 'dashed' },
   courtLabel: { color: L.navy, fontSize: text.controlLabel.size, fontWeight: '700' },
   courtLabelSelected: { color: L.bg },
+  courtLabelBusy: { color: L.textSub },
+  courtStatus: { color: L.success, fontSize: 10, fontWeight: '700', textAlign: 'center', paddingHorizontal: 4 },
+  courtStatusBusy: { color: L.textSub, fontWeight: '600' },
+  empty: { gap: 12, marginBottom: 12 },
+  emptyText: { color: L.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19 },
+  primaryBtn: { backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 13, alignItems: 'center' },
+  primaryLabel: { color: L.bg, fontSize: text.action.size, fontWeight: '800' },
+  note: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginBottom: 10 },
+  footerRow: { flexDirection: 'row', justifyContent: 'center', gap: 24, marginBottom: 12 },
+  footerBtn: { paddingVertical: 6 },
+  footerLabel: { color: L.navy, fontSize: text.action.size, fontWeight: '800', textDecorationLine: 'underline' },
   cancelBtn: { alignItems: 'center', paddingVertical: 14, borderWidth: 1, borderColor: L.border, borderRadius: shape.cta },
   cancelLabel: { color: L.textSub, fontSize: text.action.size, fontWeight: '800' },
 });
@@ -455,7 +537,7 @@ function MatchResultModal({
             <Text style={rm.title}>Enter Match Result</Text>
             <Text style={rm.sub}>
               {match.roundName}  ·  Match {match.matchNumber + 1}
-              {match.courtNumber !== undefined ? `  ·  Court ${match.courtNumber}` : ''}
+              {match.court !== undefined ? `  ·  ${courtLabel(match.court)}` : ''}
             </Text>
 
             {/* Score row */}
@@ -639,6 +721,9 @@ function DivisionBracketScreen() {
   const [loading,       setLoading]       = useState(true);
   const [roundFilter,   setRoundFilter]   = useState<string>('All');
   const [courtTarget,   setCourtTarget]   = useState<DirectorBracketMatch | null>(null);
+  const [courtsInUse,   setCourtsInUse]   = useState<CourtInUse[]>([]);
+  const [loadingUse,    setLoadingUse]    = useState(false);
+  const [courtsOpen,    setCourtsOpen]    = useState(false);
   const [matchTarget,   setMatchTarget]   = useState<DirectorBracketMatch | null>(null);
   const [menuOpen,      setMenuOpen]      = useState(false);
 
@@ -723,12 +808,28 @@ function DivisionBracketScreen() {
 
   const tournamentId = tournament?.id ?? id;
 
-  function handleCourtSelect(court: number) {
+  // Live court usage is re-read every time the picker opens, so another
+  // division's director (or a score just saved) is reflected.
+  function openCourtPicker(m: DirectorBracketMatch) {
+    setCourtTarget(m);
+    setLoadingUse(true);
+    fetchCourtsInUse(tournamentId)
+      .then(setCourtsInUse)
+      .finally(() => setLoadingUse(false));
+  }
+
+  function applyCourt(court: string | null) {
     if (!courtTarget) return;
-    requireAuth(user?.id, () => {
-      assignCourt(courtTarget.id, court)
-        .then(() => refresh())
-        .then(() => setCourtTarget(null));
+    requireAuth(user?.id, async () => {
+      const result = await assignCourt(courtTarget.id, court);
+      if (!result.ok) {
+        Alert.alert('Court not assigned', result.error);
+        // Someone else may have just taken it: show the current picture.
+        setCourtsInUse(await fetchCourtsInUse(tournamentId));
+        return;
+      }
+      await refresh();
+      setCourtTarget(null);
     });
   }
 
@@ -895,7 +996,7 @@ function DivisionBracketScreen() {
                   <MatchCard
                     key={match.id}
                     match={match}
-                    onAssignCourt={setCourtTarget}
+                    onAssignCourt={openCourtPicker}
                     onEnterScore={setMatchTarget}
                   />
                 );
@@ -915,13 +1016,27 @@ function DivisionBracketScreen() {
       />
 
       {/* ── Court modal ── */}
-      {courtTarget && (
+      {courtTarget && !courtsOpen && (
         <CourtModal
           match={courtTarget}
-          onSelect={handleCourtSelect}
+          courts={tournament?.courts ?? []}
+          inUse={courtsInUse}
+          loadingUse={loadingUse}
+          onSelect={c => applyCourt(c)}
+          onClear={() => applyCourt(null)}
+          onManage={() => setCourtsOpen(true)}
           onClose={() => setCourtTarget(null)}
         />
       )}
+
+      {/* ── Courts (set / change the tournament's list, day-of too) ── */}
+      <CourtsSheet
+        visible={courtsOpen}
+        onClose={() => setCourtsOpen(false)}
+        tournamentId={tournamentId}
+        courts={tournament?.courts ?? []}
+        onSaved={courts => setTournament(prev => (prev ? { ...prev, courts } : prev))}
+      />
 
       {/* ── Match result modal ── */}
       {matchTarget && (

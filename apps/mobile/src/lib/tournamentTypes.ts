@@ -57,5 +57,11 @@ export interface Tournament {
   coverImgUrl?: string | null;
   /** Up to 3 amenity keys chosen by the director; resolved via AMENITY_CATALOG. */
   amenities?: string[];
+  /**
+   * Courts reserved for this tournament by real name ("7", "12", "Stadium"),
+   * in display order. Null/empty until the director sets them. See
+   * lib/tournamentCourts.ts and migration 20260928140000.
+   */
+  courts?: string[] | null;
   directorId?: string | null;
 }

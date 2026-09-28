@@ -6727,6 +6727,7 @@ export type Database = {
           checkin_closes_at: string | null
           checkin_opens_at: string | null
           city: string
+          courts: string[] | null
           cover_img_url: string | null
           created_at: string
           description: string | null
@@ -6775,6 +6776,7 @@ export type Database = {
           checkin_closes_at?: string | null
           checkin_opens_at?: string | null
           city: string
+          courts?: string[] | null
           cover_img_url?: string | null
           created_at?: string
           description?: string | null
@@ -6823,6 +6825,7 @@ export type Database = {
           checkin_closes_at?: string | null
           checkin_opens_at?: string | null
           city?: string
+          courts?: string[] | null
           cover_img_url?: string | null
           created_at?: string
           description?: string | null
@@ -10031,6 +10034,10 @@ export type Database = {
         }
       }
       set_my_handle: { Args: { p_handle: string }; Returns: Json }
+      set_tournament_courts: {
+        Args: { p_courts: string[]; p_tournament_id: string }
+        Returns: string[]
+      }
       settle_coach_payout_batch: {
         Args: { p_batch_id: string; p_failure?: string; p_transfer_id: string }
         Returns: undefined

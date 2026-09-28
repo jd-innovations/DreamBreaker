@@ -1,13 +1,66 @@
 import { supabase } from '@/lib/supabase';
-import { validateScores } from '@/lib/supabase/brackets';
+import { validateScores, roundDisplayName } from '@/lib/supabase/brackets';
 
 // ─── Court assignment ─────────────────────────────────────────────────────────
 
-export async function assignCourt(matchId: string, courtNumber: number): Promise<void> {
-  await supabase
+// Courts are named ("7", "Stadium"), from tournaments.courts. A court is IN USE
+// while a match on it is unfinished (completed_at null); saving the score
+// frees it, and the match keeps its court as a record. The partial unique
+// index bracket_matches_one_live_match_per_court (20260928140000) enforces
+// one unfinished match per court per tournament, across every division.
+
+export type CourtInUse = {
+  court: string;
+  matchId: string;
+  divisionId: string | null;
+  divisionName: string;
+  roundName: string;
+  matchNumber: number;
+};
+
+export async function fetchCourtsInUse(tournamentId: string): Promise<CourtInUse[]> {
+  const { data, error } = await supabase
     .from('bracket_matches')
-    .update({ court: String(courtNumber), updated_at: new Date().toISOString() })
-    .eq('id', matchId);
+    .select('id, court, division_id, round, match_number, divisions(name)')
+    .eq('tournament_id', tournamentId)
+    .not('court', 'is', null)
+    .is('completed_at', null);
+  if (error || !data) return [];
+  return data.map(r => ({
+    court:        r.court as string,
+    matchId:      r.id,
+    divisionId:   r.division_id,
+    divisionName: (r.divisions as { name?: string } | null)?.name ?? 'Another division',
+    roundName:    roundDisplayName(String(r.round)),
+    matchNumber:  r.match_number,
+  }));
+}
+
+/** Assigns a court by name, or clears it with null. Reports failure instead of throwing. */
+export async function assignCourt(
+  matchId: string,
+  court: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data, error } = await supabase
+    .from('bracket_matches')
+    .update({ court, updated_at: new Date().toISOString() })
+    .eq('id', matchId)
+    .select('id');
+
+  if (error) {
+    // 23505 = the one-live-match-per-court index: someone else just took it.
+    return {
+      ok: false,
+      error: error.code === '23505'
+        ? 'That court was just assigned to another match. Pick a different court.'
+        : 'Could not update the court. Please try again.',
+    };
+  }
+  // RLS filters a disallowed update to zero rows rather than erroring.
+  if (!data || data.length === 0) {
+    return { ok: false, error: 'You are not able to change this match.' };
+  }
+  return { ok: true };
 }
 
 // ─── Score entry + winner advancement ────────────────────────────────────────

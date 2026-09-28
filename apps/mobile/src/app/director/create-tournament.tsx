@@ -19,6 +19,7 @@ import { CoverImagePicker } from '@/components/media/CoverImagePicker';
 import { DEFAULT_EVENT_COVER } from '@/lib/eventCover';
 import AmenityPicker from '@/components/AmenityPicker';
 import { FacilityPicker, type FacilityPickerValue } from '@/components/FacilityPicker';
+import { CourtListEditor } from '@/components/CourtListEditor';
 import { useSupportContext } from '@/lib/support/supportContext';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -390,6 +391,9 @@ export default function CreateTournamentScreen() {
   // Multi-step form with its own sticky bottom action bar -- minimized per §7's create-* rule.
   useSupportContext({ feature: 'event_creation', visibility: 'minimized', metadata: { is_director: true } });
   const [pickerValue,  setPickerValue]  = useState<FacilityPickerValue | null>(null);
+  // Courts reserved at the venue, by real name. Optional here; also settable
+  // later from the Command Center (and on the day, from the court picker).
+  const [courts,       setCourts]       = useState<string[]>([]);
   const [activeDateField, setActiveDateField] = useState<
     'date' | 'registrationOpenDate' | 'registrationCloseDate' | null
   >(null);
@@ -516,6 +520,7 @@ export default function CreateTournamentScreen() {
       holdFeeCents:         Math.round(parseFloat(form.holdFee)  * 100),
       drawSize:             parseInt(form.drawSize, 10),
       facilityId,
+      courts,
     });
 
     if (!t) {
@@ -627,6 +632,15 @@ export default function CreateTournamentScreen() {
                 placeholder="e.g. FL"
                 error={errors.state}
               />
+
+              <View style={{ marginTop: 6, marginBottom: 14 }}>
+                <Text style={f.label}>Courts <Text style={{ color: L.textSub, fontWeight: '400' }}>(optional)</Text></Text>
+                <CourtListEditor
+                  value={courts}
+                  onChange={setCourts}
+                  venueCourtCount={pickerValue?.mode === 'facility' ? pickerValue.courtCount : null}
+                />
+              </View>
 
               <View style={{ marginTop: 6 }}>
                 <AmenityPicker value={amenities} onChange={setAmenities} />

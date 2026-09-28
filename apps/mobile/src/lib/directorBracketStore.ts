@@ -25,7 +25,8 @@ export type DirectorBracketMatch = {
   winnerId?: string;
   score1?: number;
   score2?: number;
-  courtNumber?: number;
+  /** Court NAME as stored in bracket_matches.court ("7", "Stadium"); see lib/tournamentCourts. */
+  court?: string;
   completedAt?: string;
   status: 'pending' | 'scheduled' | 'in_progress' | 'completed';
 };
@@ -257,14 +258,14 @@ export function assignCourt(
   tournamentId: string,
   divisionId: string,
   matchId: string,
-  courtNumber: number,
+  court: string,
 ): void {
   const bracket = getBracket(tournamentId, divisionId);
   if (!bracket) return;
   for (const round of bracket.rounds) {
     for (const match of round.matches) {
       if (match.id !== matchId) continue;
-      match.courtNumber = courtNumber;
+      match.court = court;
       if (match.status === 'pending') match.status = 'scheduled';
       return;
     }

@@ -24,6 +24,7 @@ import {
   type TournamentStatusKey,
 } from '@/lib/tournamentStatus';
 import { useSession } from '@/hooks/useSession';
+import { courtLabel } from '@/lib/tournamentCourts';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -187,10 +188,10 @@ function MatchCard({ match }: { match: DirectorBracketMatch }) {
       <View style={mc.header}>
         <Text style={mc.matchNum}>Match {match.matchNumber + 1}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          {match.courtNumber !== undefined && (
+          {match.court !== undefined && (
             <View style={mc.courtBadge}>
               <Ionicons name="location-outline" size={10} color={L.gold} />
-              <Text style={mc.courtText}>Court {match.courtNumber}</Text>
+              <Text style={mc.courtText}>{courtLabel(match.court)}</Text>
             </View>
           )}
           <StatusChip

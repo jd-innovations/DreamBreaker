@@ -18,7 +18,11 @@ import { PickleballIcon } from './PickleballIcon';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type FacilityPickerValue =
-  | { mode: 'facility'; facilityId: string; name: string; city: string; state: string; address: string }
+  | {
+      mode: 'facility'; facilityId: string; name: string; city: string; state: string; address: string;
+      /** facilities.court_count when known and > 0; shown like web ("8 courts"). */
+      courtCount?: number;
+    }
   | { mode: 'manual'; text: string };
 
 interface Props {
@@ -77,7 +81,9 @@ function FacilityRow({
           </Text>
         </Text>
       </View>
-      <Text style={fr.courts}>{facility.court_count}c</Text>
+      {(facility.court_count ?? 0) > 0 && (
+        <Text style={fr.courts}>{facility.court_count} {facility.court_count === 1 ? 'court' : 'courts'}</Text>
+      )}
     </TouchableOpacity>
   );
 }
@@ -298,6 +304,7 @@ export function FacilityPicker({ value, onChange, lat, lng, radiusMiles = 20 }: 
       city:        f.city,
       state:       f.state,
       address:     f.address,
+      courtCount:  f.court_count && f.court_count > 0 ? f.court_count : undefined,
     });
   }
 
@@ -313,7 +320,10 @@ export function FacilityPicker({ value, onChange, lat, lng, radiusMiles = 20 }: 
           <Ionicons name="location" size={16} color={L.gold} />
           <View style={{ flex: 1 }}>
             <Text style={p.chipName} numberOfLines={1}>{value.name}</Text>
-            <Text style={p.chipSub}>{value.city}, {value.state}</Text>
+            <Text style={p.chipSub}>
+              {value.city}, {value.state}
+              {value.courtCount ? ` · ${value.courtCount} ${value.courtCount === 1 ? 'court' : 'courts'}` : ''}
+            </Text>
           </View>
           <Ionicons name="chevron-down" size={14} color={L.textSub} />
         </TouchableOpacity>

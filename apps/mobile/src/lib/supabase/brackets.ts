@@ -87,7 +87,7 @@ function roundLabel(roundIndex: number, totalRounds: number): RoundLabel {
 }
 
 // Display name from DB round_label
-function roundDisplayName(label: string): string {
+export function roundDisplayName(label: string): string {
   switch (label) {
     case 'final':  return 'Final';
     case 'sf':     return 'Semifinals';
@@ -167,7 +167,7 @@ function rowsToDivisionBracket(
         winnerId,
         score1: row.score_team1?.[0],
         score2: row.score_team2?.[0],
-        courtNumber: row.court != null ? parseInt(row.court, 10) : undefined,
+        court: row.court ?? undefined,
         completedAt: row.completed_at ?? undefined,
         status,
       };

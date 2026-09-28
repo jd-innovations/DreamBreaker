@@ -976,6 +976,9 @@ export default function TournamentDetail() {
               private: { label: 'Private',    bg: '#FEE2E2', color: '#DC2626' },
             }[access ?? 'public'];
             const cityState = [tournament.city, tournament.state].filter(Boolean).join(', ');
+            const courtsShown = tournament.courts?.length
+              ? tournament.courts.length
+              : facility && (facility.court_count ?? 0) > 0 ? facility.court_count ?? 0 : 0;
             return (
               <View style={s.locationWrap} onLayout={e => { locationY.current = e.nativeEvent.layout.y; }}>
                 <LocationCard
@@ -997,12 +1000,19 @@ export default function TournamentDetail() {
                   // so they ride in the card's meta slot rather than being lost
                   // in the swap from the old compact row. Absent entirely when
                   // the tournament has no facility record to describe.
-                  meta={facility ? (
+                  // Courts: the director's reserved list for THIS event when
+                  // set (tournaments.courts), else the venue's own count when
+                  // it is real (> 0). Hidden rather than showing "0 Courts".
+                  meta={facility || courtsShown > 0 ? (
                     <View style={fc.meta}>
-                      <View style={[fc.accessBadge, { backgroundColor: BADGE.bg }]}>
-                        <Text style={[fc.accessText, { color: BADGE.color }]}>{BADGE.label}</Text>
-                      </View>
-                      <Text style={fc.courts}>{facility.court_count} {facility.court_count === 1 ? 'Court' : 'Courts'}</Text>
+                      {facility && (
+                        <View style={[fc.accessBadge, { backgroundColor: BADGE.bg }]}>
+                          <Text style={[fc.accessText, { color: BADGE.color }]}>{BADGE.label}</Text>
+                        </View>
+                      )}
+                      {courtsShown > 0 && (
+                        <Text style={fc.courts}>{courtsShown} {courtsShown === 1 ? 'Court' : 'Courts'}</Text>
+                      )}
                     </View>
                   ) : undefined}
                   onViewFacility={facility ? () => router.push(`/facility/${facility.id}` as never) : undefined}
