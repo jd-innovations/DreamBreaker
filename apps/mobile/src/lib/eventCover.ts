@@ -36,3 +36,23 @@ export const DEFAULT_EVENT_COVER: ImageSourcePropType = DEFAULT_EVENT_COVER_ASSE
 export function eventCoverSource(coverUrl?: string | null): ImageSourcePropType {
   return coverUrl && coverUrl.length > 0 ? { uri: coverUrl } : DEFAULT_EVENT_COVER;
 }
+
+/**
+ * Style for a cover that fills its parent (absolute, edge to edge). Use this,
+ * not bare `StyleSheet.absoluteFill`, for any `<Image>` whose source may be
+ * DEFAULT_EVENT_COVER.
+ *
+ * React Native's Image gives a bundled require() source its intrinsic pixel
+ * size as a default width/height (Image.ios.js: `style = [{width, height},
+ * styles.base, props.style]`). absoluteFill only pins the edges, so that size
+ * wins: the 1536x1024 default rendered at 1536x1024pt from its top-left
+ * corner, a giant light pole, and resizeMode="cover" never applied. Remote
+ * { uri } covers carry no intrinsic size, which is why uploads always looked
+ * right. The explicit 100% width/height overrides the asset size.
+ */
+export const EVENT_COVER_FILL = {
+  position: 'absolute' as const,
+  top: 0, left: 0, right: 0, bottom: 0,
+  width: '100%' as const,
+  height: '100%' as const,
+};

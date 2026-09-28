@@ -18,7 +18,7 @@ import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { supabase } from '@/lib/supabase';
 import { platformAlert } from '@/lib/platformAlert';
-import { eventCoverSource } from '@/lib/eventCover';
+import { eventCoverSource, EVENT_COVER_FILL } from '@/lib/eventCover';
 import { AppIcon, PickleballIcon, JoinCelebration, Avatar, ManageEventSheet, AddToCalendarButton, PressableCTA, type AppIconName } from '@/components';
 import { appLinks } from '@/lib/appLinks';
 import { withLink, type CalendarEventInput } from '@/lib/calendarEvents';
@@ -1651,7 +1651,7 @@ export default function CommunityEventScreen() {
         <View style={s.hero}>
           <Animated.Image
             source={event.heroPhoto}
-            style={[StyleSheet.absoluteFill, { transform: [{ scale: heroScale }] }]}
+            style={[EVENT_COVER_FILL, { transform: [{ scale: heroScale }] }]}
             resizeMode="cover"
           />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />

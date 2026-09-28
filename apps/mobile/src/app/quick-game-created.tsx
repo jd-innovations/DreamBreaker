@@ -30,7 +30,7 @@ import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilitie
 import { shareEntity } from '@/lib/share';
 import { FacilityCard } from '@/components/FacilityCard';
 import { VenueMapCard } from '@/components/VenueMapCard';
-import { eventCoverSource } from '@/lib/eventCover';
+import { eventCoverSource, EVENT_COVER_FILL } from '@/lib/eventCover';
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
 
@@ -610,7 +610,7 @@ export default function QuickGameCreatedScreen() {
         <View style={s.hero}>
           <Image
             source={eventCoverSource(g.imageUri)}
-            style={StyleSheet.absoluteFill}
+            style={EVENT_COVER_FILL}
             resizeMode="cover"
           />
           <LinearGradient

@@ -45,7 +45,7 @@ import { getOrCreateConversation } from '@/lib/conversationService';
 import { useSupportContext } from '@/lib/support/supportContext';
 import { appLinks } from '@/lib/appLinks';
 import { shareEntity } from '@/lib/share';
-import { eventCoverSource } from '@/lib/eventCover';
+import { eventCoverSource, EVENT_COVER_FILL } from '@/lib/eventCover';
 import type { Tournament } from '@/lib/tournamentTypes';
 import type { DivisionData } from '@/data/divisions';
 
@@ -612,7 +612,7 @@ export default function TournamentDetail() {
         <View style={[s.hero, { height: HERO_H }]}>
           <Animated.Image
             source={eventCoverSource(tournament.coverImgUrl)}
-            style={[StyleSheet.absoluteFill, { transform: [{ scale: heroScale }] }]}
+            style={[EVENT_COVER_FILL, { transform: [{ scale: heroScale }] }]}
             resizeMode="cover"
           />
           <LinearGradient

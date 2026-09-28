@@ -33,7 +33,7 @@ import {
 import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilities';
 import { shareEntity } from '@/lib/share';
 import { FacilityCard } from '@/components/FacilityCard';
-import { eventCoverSource } from '@/lib/eventCover';
+import { eventCoverSource, EVENT_COVER_FILL } from '@/lib/eventCover';
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
 
@@ -602,7 +602,7 @@ export default function MiniTournamentCreatedScreen() {
       <View style={s.hero}>
         <Image
           source={eventCoverSource(g.imageUri)}
-          style={StyleSheet.absoluteFill}
+          style={EVENT_COVER_FILL}
           resizeMode="cover"
         />
         <LinearGradient

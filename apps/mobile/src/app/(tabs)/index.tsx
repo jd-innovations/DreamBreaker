@@ -27,7 +27,7 @@ import { useQuickActionsOrder } from '@/hooks/useQuickActionsOrder';
 import { QUICK_ACTIONS } from '@/constants/quickActions';
 import { getProfileCompletion } from '@/lib/profileCompletion';
 import { getProfileSetupTasks, hasRegisteredPushToken } from '@/lib/profileSetup';
-import { eventCoverSource } from '@/lib/eventCover';
+import { eventCoverSource, EVENT_COVER_FILL } from '@/lib/eventCover';
 import { claimGuestParticipants, fetchJoinedPlayEvents, fetchOpenPlayEvents, gameTypePillStyle, skillLabel, type PlayEventWithCount, type PlayEventType } from '@/lib/supabase/playEvents';
 import { onPlayEventsUpdated } from '@/lib/playEventsEvents';   // F3 fix
 import { setEventShell } from '@/lib/eventShellCache';   // F7 fix
@@ -318,7 +318,7 @@ function FeaturedCard({ item }: { item: typeof FEATURED[0] }) {
       activeOpacity={0.92}
       onPress={() => router.push(`/tournament/${item.id}` as never)}
     >
-      <Image source={eventCoverSource(item.photo)} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <Image source={eventCoverSource(item.photo)} style={EVENT_COVER_FILL} resizeMode="cover" />
       <LinearGradient
         colors={['rgba(0,0,0,0.08)', 'rgba(0,0,0,0.72)']}
         style={StyleSheet.absoluteFill}
