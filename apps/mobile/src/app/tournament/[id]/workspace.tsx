@@ -61,10 +61,20 @@ function toDirector(r: TournamentRegistration): DirectorRegistration {
     status:              r.status,
     amountPaid:          r.amountPaid,
     balanceDue:          r.balanceDue,
+    onsiteTender:        r.onsiteTender,
+    onsiteAmountCents:   r.onsiteAmountCents,
     canUndoCheckIn:      r.status === 'checked_in',
     canRestoreNoShow:    r.status === 'no_show',
     canRestoreCancelled: r.status === 'cancelled',
   };
+}
+
+// "Cash $50" / "Other $50" / "Comped" for a fee settled at the desk.
+function onsiteLabel(r: DirectorRegistration): string | null {
+  if (!r.onsiteTender) return null;
+  if (r.onsiteTender === 'comp') return 'Comped';
+  const how = r.onsiteTender === 'cash' ? 'Cash' : 'Other';
+  return `${how} ${fmt(r.onsiteAmountCents ?? 0)} on site`;
 }
 
 // Player search: case-insensitive substring on the player's name and, for
@@ -88,6 +98,7 @@ function calcMetrics(all: TournamentRegistration[]): TournamentMetrics {
     cancelled:        all.filter(r => r.status === 'cancelled').length,
     revenueCents:     active.reduce((s, r) => s + r.amountPaid, 0),
     outstandingCents: active.filter(r => r.status !== 'no_show').reduce((s, r) => s + r.balanceDue, 0),
+    onsiteCents:      active.reduce((s, r) => s + (r.onsiteAmountCents ?? 0), 0),
   };
 }
 
@@ -213,7 +224,7 @@ function RegRow({ reg, onPress }: { reg: DirectorRegistration; onPress: () => vo
       <View style={rr.right}>
         <Text style={rr.div}>{reg.divisionName}  {reg.divisionLevel}</Text>
         <StatusChip label={statusLabel(reg.status)} variant={statusVariant(reg.status)} />
-        <Text style={rr.paid}>Paid {fmt(reg.amountPaid)}</Text>
+        <Text style={rr.paid}>{onsiteLabel(reg) ?? `Paid ${fmt(reg.amountPaid)}`}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -421,8 +432,12 @@ function DetailModal({
           {/* ── Fees ── */}
           <View style={dm.feesRow}>
             <View style={dm.feeCell}>
-              <Text style={dm.feeCellLabel}>Amount Paid</Text>
-              <Text style={dm.feeCellValue}>{fmt(reg.amountPaid)}</Text>
+              <Text style={dm.feeCellLabel}>{reg.onsiteTender ? 'Paid On Site' : 'Amount Paid'}</Text>
+              <Text style={dm.feeCellValue}>
+                {reg.onsiteTender === 'comp' ? 'Comped'
+                  : reg.onsiteTender ? `${fmt(reg.onsiteAmountCents ?? 0)} ${reg.onsiteTender === 'cash' ? 'cash' : 'other'}`
+                  : fmt(reg.amountPaid)}
+              </Text>
             </View>
             <View style={dm.feeDiv} />
             <View style={dm.feeCell}>
@@ -573,6 +588,9 @@ function DetailModal({
                     Alert.alert('Registration cancelled', `$${(result.refundedCents / 100).toFixed(2)} has been refunded to the player's original payment method.`);
                   } else if (result.refundStatus === 'failed') {
                     Alert.alert('Registration cancelled', 'The refund could not be processed automatically and needs manual follow-up.');
+                  } else if (reg.onsiteTender && reg.onsiteTender !== 'comp') {
+                    // Collected at the desk, so nothing to refund in-app.
+                    Alert.alert('Registration cancelled', `${reg.playerName} paid ${fmt(reg.onsiteAmountCents ?? 0)} on site. Refund them at the desk if needed.`);
                   }
                 },
                 `Cancel ${reg.playerName}'s registration? This cannot be undone.`,
@@ -815,6 +833,16 @@ function DirectorWorkspaceScreen() {
         </View>
       )}
 
+      {/* ── Collected on site (recorded only; not in Revenue) ── */}
+      {(metrics.onsiteCents ?? 0) > 0 && (
+        <View style={s.onsiteBar}>
+          <Ionicons name="cash-outline" size={14} color={L.success} />
+          <Text style={s.outstandingText}>
+            {fmt(metrics.onsiteCents ?? 0)} collected on site
+          </Text>
+        </View>
+      )}
+
       {/* ── Active division filter banner ── */}
       {divisionFilter !== null && (
         <View style={s.filterBanner}>
@@ -1019,6 +1047,12 @@ const s = StyleSheet.create({
     borderRadius: shape.panel, paddingHorizontal: 12, paddingVertical: 8,
   },
   outstandingText: { color: L.text, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
+  onsiteBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginHorizontal: 12, marginBottom: 8,
+    backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
+    borderRadius: shape.panel, paddingHorizontal: 12, paddingVertical: 8,
+  },
 
   filterBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 6,

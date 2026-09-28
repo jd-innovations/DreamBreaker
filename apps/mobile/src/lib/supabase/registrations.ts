@@ -33,6 +33,8 @@ export type RegistrationRow = {
   status: string;
   hold_fee_paid_cents: number;
   entry_fee_paid_cents: number;
+  onsite_tender: string | null;
+  onsite_amount_cents: number | null;
   needs_partner: boolean;
   created_at: string;
   tournaments: {
@@ -115,10 +117,16 @@ function rowToRegistration(row: RegistrationRow): TournamentRegistration {
     status:           dbStatusToAppStatus(row.status),
     amountPaid:       row.entry_fee_paid_cents,
     // Division fee overrides the tournament's, matching what the server charges.
-    balanceDue:       balanceDueCents(
-                        effectiveEntryFeeCents(div?.entry_fee_cents, t?.entry_fee_cents),
-                        row.entry_fee_paid_cents,
-                      ),
+    // A fee the director recorded as settled on site (cash/other/comp) is not
+    // owed, even though no Stripe money exists for it.
+    balanceDue:       row.onsite_tender
+                        ? 0
+                        : balanceDueCents(
+                            effectiveEntryFeeCents(div?.entry_fee_cents, t?.entry_fee_cents),
+                            row.entry_fee_paid_cents,
+                          ),
+    onsiteTender:     isOnsiteTender(row.onsite_tender) ? row.onsite_tender : undefined,
+    onsiteAmountCents: row.onsite_amount_cents ?? undefined,
     partnerRequired:  row.needs_partner,
     partnerStatus:    (row.partner_id || row.guest_partner_id) ? 'selected' : row.needs_partner ? 'choose_later' : 'none',
     partnerId:        row.partner_id ?? row.guest_partner_id ?? undefined,
@@ -173,9 +181,13 @@ function rowToHeldSpot(row: RegistrationRow): HeldSpot {
   };
 }
 
+function isOnsiteTender(v: string | null): v is 'cash' | 'other' | 'comp' {
+  return v === 'cash' || v === 'other' || v === 'comp';
+}
+
 const REG_SELECT = `
   id, tournament_id, division_id, player_id, partner_id, guest_player_id, guest_partner_id,
-  status, hold_fee_paid_cents, entry_fee_paid_cents, needs_partner, created_at,
+  status, hold_fee_paid_cents, entry_fee_paid_cents, onsite_tender, onsite_amount_cents, needs_partner, created_at,
   registration_group_id,
   tournaments(name, venue_name, city, state, event_date, entry_fee_cents, hold_fee_cents),
   divisions(name, skill_min, skill_max, entry_fee_cents),

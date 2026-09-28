@@ -16,13 +16,14 @@ import { DirectorOnly } from '@/components/DirectorOnly';
 import { supabase } from '@/lib/supabase';
 import {
   directorAddRegistration, fetchDirectorDivisions, searchRegistrableProfiles,
-  fetchDivisionRoster,
-  type DirectorDivision, type RegistrableProfile, type RosterEntry, type Participant,
+  fetchDivisionRoster, ONSITE_TENDER_LABELS,
+  type DirectorDivision, type RegistrableProfile, type RosterEntry, type Participant, type OnsiteTender,
 } from '@/lib/supabase/directorRegistrations';
 
-// Director manual registration screen. Free divisions only — the RPC refuses a
-// priced division, and this screen refuses to let you pick one rather than
-// letting the server say no after you have filled in a whole team.
+// Director manual registration screen — walk-ins, day-of replacements, comps.
+// Priced divisions require the director to record how the fee was settled at
+// the desk (Cash / Other / Comped). The app never takes that money; it is
+// recorded so the player does not show a balance due (20260928130000).
 //
 // Director-only, via the shared DirectorOnly guard like the rest of the
 // director surfaces. The guard also checks is_approved_director(), which the
@@ -37,6 +38,12 @@ const L = {
 };
 
 type Slot = 'player' | 'partner';
+
+const TENDERS: OnsiteTender[] = ['cash', 'other', 'comp'];
+
+function fmtFee(cents: number): string {
+  return `$${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)}`;
+}
 
 // A slot being filled: either searching for an existing profile, or typing a guest.
 type SlotDraft = {
@@ -93,6 +100,7 @@ function AddRegistrationScreen() {
 
   const [playerSlot, setPlayerSlot] = useState<SlotDraft>(emptySlot);
   const [partnerSlot, setPartnerSlot] = useState<SlotDraft>(emptySlot);
+  const [tender, setTender] = useState<OnsiteTender | null>(null);
 
   const division = divisions.find(d => d.id === divisionId) ?? null;
 
@@ -112,7 +120,7 @@ function AddRegistrationScreen() {
       const divs = await fetchDirectorDivisions(tournamentId);
       setDivisions(divs);
       // Preselect the first division manual registration can actually use.
-      setDivisionId(prev => prev ?? divs.find(d => d.manualEligible)?.id ?? null);
+      setDivisionId(prev => prev ?? divs[0]?.id ?? null);
     } finally {
       setLoading(false);
     }
@@ -142,6 +150,7 @@ function AddRegistrationScreen() {
   function resetForm() {
     setPlayerSlot(emptySlot);
     setPartnerSlot(emptySlot);
+    setTender(null);
   }
 
   async function handleSubmit() {
@@ -163,6 +172,11 @@ function AddRegistrationScreen() {
       partner = p;
     }
 
+    if (division.requiresOnsitePayment && !tender) {
+      Alert.alert('Payment Required', `${division.name} has a ${fmtFee(division.entryFeeCents)} entry fee. Choose how it was paid: Cash, Other or Comped.`);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const result = await directorAddRegistration({
@@ -170,6 +184,7 @@ function AddRegistrationScreen() {
         divisionId: division.id,
         player,
         partner,
+        onsiteTender: division.requiresOnsitePayment ? tender ?? undefined : undefined,
       });
 
       if (!result.ok) {
@@ -177,14 +192,20 @@ function AddRegistrationScreen() {
         return;
       }
 
-      resetForm();
       await Promise.all([refreshRoster(), load()]);
+      // Read before resetForm() clears it.
+      const paidNote = division.requiresOnsitePayment && tender
+        ? tender === 'comp'
+          ? ' Entry comped.'
+          : ` ${fmtFee(division.entryFeeCents)}${partner ? ' each' : ''} recorded as paid on site (${ONSITE_TENDER_LABELS[tender]}).`
+        : '';
       Alert.alert(
         'Added',
-        partner
+        (partner
           ? `${slotLabel(playerSlot)} and ${slotLabel(partnerSlot)} are registered for ${division.name}.`
-          : `${slotLabel(playerSlot)} is registered for ${division.name}.`,
+          : `${slotLabel(playerSlot)} is registered for ${division.name}.`) + paidNote,
       );
+      resetForm();
     } finally {
       setSubmitting(false);
     }
@@ -199,7 +220,6 @@ function AddRegistrationScreen() {
     );
   }
 
-  const eligible = divisions.filter(d => d.manualEligible);
 
   return (
     <KeyboardAvoidingView
@@ -227,13 +247,12 @@ function AddRegistrationScreen() {
         {/* ── Division ─────────────────────────────────────────────────── */}
         <View style={s.card}>
           <Text style={s.sectionTitle}>Division</Text>
-          {eligible.length === 0 ? (
+          {divisions.length === 0 ? (
             <Text style={s.emptyText}>
-              No free divisions in this tournament. Manual registration is only available for
-              divisions with no entry fee.
+              This tournament has no divisions yet.
             </Text>
           ) : (
-            eligible.map(d => {
+            divisions.map(d => {
               const active = d.id === divisionId;
               return (
                 <TouchableOpacity
@@ -251,6 +270,7 @@ function AddRegistrationScreen() {
                     <Text style={s.choiceLabel}>{d.name}</Text>
                     <Text style={s.choiceMeta}>
                       {d.requiresPartner ? 'Doubles' : 'Singles'} · {d.spotsFilled}/{d.drawSize} spots
+                      {' · '}{d.requiresOnsitePayment ? `${fmtFee(d.entryFeeCents)} entry` : 'Free'}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -258,16 +278,35 @@ function AddRegistrationScreen() {
             })
           )}
 
-          {divisions.some(d => !d.manualEligible) && (
-            <View style={s.noticeRow}>
-              <Ionicons name="information-circle-outline" size={15} color={L.textSub} />
-              <Text style={s.noticeText}>
-                {divisions.filter(d => !d.manualEligible).map(d => d.name).join(', ')} charge an
-                entry fee and can&apos;t be added manually yet.
-              </Text>
-            </View>
-          )}
         </View>
+
+        {/* ── On-site payment (priced divisions only) ─────────────────── */}
+        {division?.requiresOnsitePayment && (
+          <View style={s.card}>
+            <Text style={s.sectionTitle}>Payment collected on site</Text>
+            <Text style={s.choiceMeta}>
+              {fmtFee(division.entryFeeCents)} entry{division.requiresPartner ? ' per player' : ''}.
+              The app records it; it doesn&apos;t charge or refund anything.
+            </Text>
+            <View style={s.tenderRow}>
+              {TENDERS.map(t => {
+                const active = tender === t;
+                return (
+                  <TouchableOpacity
+                    key={t}
+                    style={[s.tenderChip, active && s.tenderChipActive]}
+                    activeOpacity={0.8}
+                    onPress={() => setTender(t)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[s.tenderText, active && s.tenderTextActive]}>{ONSITE_TENDER_LABELS[t]}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {division && (
           <>
@@ -465,6 +504,14 @@ const s = StyleSheet.create({
   choiceMeta: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
 
   noticeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: spacing.sm },
+  tenderRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  tenderChip: {
+    flex: 1, alignItems: 'center', paddingVertical: 10,
+    borderRadius: shape.pill, borderWidth: 1, borderColor: L.border, backgroundColor: L.bg,
+  },
+  tenderChipActive: { backgroundColor: L.navy, borderColor: L.navy },
+  tenderText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
+  tenderTextActive: { color: L.white },
   noticeText: { flex: 1, color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 17, marginTop: 6 },
 
   segment: { flexDirection: 'row', backgroundColor: L.page, borderRadius: shape.cta, padding: 3, marginBottom: spacing.sm },

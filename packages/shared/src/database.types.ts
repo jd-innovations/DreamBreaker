@@ -5801,6 +5801,10 @@ export type Database = {
           hold_fee_paid_cents: number
           id: string
           needs_partner: boolean
+          onsite_amount_cents: number | null
+          onsite_recorded_at: string | null
+          onsite_recorded_by: string | null
+          onsite_tender: string | null
           partner_id: string | null
           player_id: string | null
           registration_group_id: string | null
@@ -5830,6 +5834,10 @@ export type Database = {
           hold_fee_paid_cents?: number
           id?: string
           needs_partner?: boolean
+          onsite_amount_cents?: number | null
+          onsite_recorded_at?: string | null
+          onsite_recorded_by?: string | null
+          onsite_tender?: string | null
           partner_id?: string | null
           player_id?: string | null
           registration_group_id?: string | null
@@ -5859,6 +5867,10 @@ export type Database = {
           hold_fee_paid_cents?: number
           id?: string
           needs_partner?: boolean
+          onsite_amount_cents?: number | null
+          onsite_recorded_at?: string | null
+          onsite_recorded_by?: string | null
+          onsite_tender?: string | null
           partner_id?: string | null
           player_id?: string | null
           registration_group_id?: string | null
@@ -8796,6 +8808,7 @@ export type Database = {
         Args: {
           p_division_id: string
           p_guest?: Json
+          p_onsite_tender?: string
           p_partner_guest?: Json
           p_partner_id?: string
           p_player_id?: string
@@ -8817,6 +8830,10 @@ export type Database = {
           hold_fee_paid_cents: number
           id: string
           needs_partner: boolean
+          onsite_amount_cents: number | null
+          onsite_recorded_at: string | null
+          onsite_recorded_by: string | null
+          onsite_tender: string | null
           partner_id: string | null
           player_id: string | null
           registration_group_id: string | null

@@ -41,6 +41,13 @@ export type TournamentRegistration = {
   status: RegistrationStatus;
   amountPaid: number;
   balanceDue: number;
+  /**
+   * Day-of fee the director recorded as settled at the desk (cash / other /
+   * comp). Recorded only, never charged or refunded in-app; when set,
+   * balanceDue is 0. Separate from amountPaid, which is Stripe money.
+   */
+  onsiteTender?: 'cash' | 'other' | 'comp';
+  onsiteAmountCents?: number;
   partnerRequired: boolean;
   partnerStatus: PartnerStatus;
   partnerId?: string;

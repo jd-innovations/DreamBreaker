@@ -37,6 +37,9 @@ export type DirectorRegistration = {
   status: RegistrationStatus;
   amountPaid: number;
   balanceDue: number;
+  /** Fee recorded as settled at the desk; never Stripe money (20260928130000). */
+  onsiteTender?: 'cash' | 'other' | 'comp';
+  onsiteAmountCents?: number;
   // ── Undo flags ────────────────────────────────────────────────────────────
   canUndoCheckIn: boolean;
   canRestoreNoShow: boolean;
@@ -52,6 +55,8 @@ export type TournamentMetrics = {
   cancelled: number;
   revenueCents: number;
   outstandingCents: number;
+  /** Entry fees recorded as collected on site (cash/other). Not in revenueCents. */
+  onsiteCents?: number;
 };
 
 export type DivisionMetrics = {
@@ -84,6 +89,8 @@ function toDirector(r: TournamentRegistration): DirectorRegistration {
     status:              r.status,
     amountPaid:          r.amountPaid,
     balanceDue:          r.balanceDue,
+    onsiteTender:        r.onsiteTender,
+    onsiteAmountCents:   r.onsiteAmountCents,
     canUndoCheckIn:      r.status === 'checked_in',
     canRestoreNoShow:    r.status === 'no_show',
     canRestoreCancelled: r.status === 'cancelled',

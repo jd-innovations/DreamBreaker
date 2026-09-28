@@ -10,9 +10,11 @@ import type { Tables } from '@shared/database.types';
 // director INSERT has been dropped. The RPC is now the only way a director-added
 // registration can be created, and this module is its only caller.
 //
-// Free divisions only, this phase. Paid manual registration, cash accounting,
-// and comped entries are out of scope; the RPC refuses a priced division rather
-// than registering someone at $0.
+// Priced divisions (migration 20260928130000): the director records how the
+// fee was settled ON SITE — cash, other (Venmo, Zelle...) or comped. That is
+// recorded, never processed: it lives in registrations.onsite_*, not in the
+// Stripe-owned entry_fee_paid_cents, so no refund or payout path can touch it.
+// The amount is derived server-side from the division fee, never sent.
 
 export type Registration = Tables<'registrations'>;
 
@@ -37,6 +39,17 @@ export type DirectorAddInput = {
   player: Participant;
   /** Required for doubles/mixed divisions, rejected for singles. */
   partner?: Participant;
+  /** Required for a priced division; ignored server-side for a free one. */
+  onsiteTender?: OnsiteTender;
+};
+
+/** How a day-of entry fee was settled at the desk. Mirrors the DB CHECK. */
+export type OnsiteTender = 'cash' | 'other' | 'comp';
+
+export const ONSITE_TENDER_LABELS: Record<OnsiteTender, string> = {
+  cash:  'Cash',
+  other: 'Other',
+  comp:  'Comped',
 };
 
 export type DirectorAddResult =
@@ -52,7 +65,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   not_tournament_director:   'Only this tournament’s director can add registrations.',
   director_not_approved:     'Your director account is not approved yet.',
   division_not_in_tournament:'That division does not belong to this tournament.',
-  division_requires_payment: 'This division charges an entry fee. Manual registration is only available for free divisions.',
+  division_requires_payment: 'This division charges an entry fee. Choose how it was paid on site: Cash, Other or Comped.',
+  invalid_onsite_tender:     'Choose how the entry fee was paid: Cash, Other or Comped.',
   invalid_participant:       'Choose either an existing player or enter a guest — not both.',
   invalid_partner:           'Choose either an existing partner or enter a guest partner — not both.',
   partner_required:          'This is a doubles division. Add a partner to complete the team.',
@@ -84,6 +98,7 @@ export async function directorAddRegistration(input: DirectorAddInput): Promise<
     p_guest:         player.kind === 'guest'   ? guestPayload(player.guest) : undefined,
     p_partner_id:    partner?.kind === 'profile' ? partner.profileId : undefined,
     p_partner_guest: partner?.kind === 'guest'   ? guestPayload(partner.guest) : undefined,
+    p_onsite_tender: input.onsiteTender,
   });
 
   if (error) {
@@ -108,8 +123,8 @@ export type DirectorDivision = {
   entryFeeCents: number;
   drawSize: number;
   spotsFilled: number;
-  /** False when the division charges — manual registration is refused server-side. */
-  manualEligible: boolean;
+  /** True when the division charges: adding a player requires an on-site tender. */
+  requiresOnsitePayment: boolean;
   requiresPartner: boolean;
 };
 
@@ -140,7 +155,7 @@ export async function fetchDirectorDivisions(tournamentId: string): Promise<Dire
       entryFeeCents: effectiveFee,
       drawSize:      d.draw_size,
       spotsFilled:   d.spots_filled,
-      manualEligible: effectiveFee === 0,
+      requiresOnsitePayment: effectiveFee > 0,
       // Mirrors the RPC's own rule, which reads format rather than the name.
       requiresPartner: d.format === 'doubles' || d.format === 'mixed_doubles',
     };
