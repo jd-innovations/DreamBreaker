@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Modal, Pressable, Alert, ActivityIndicator,
+  Modal, Pressable, Alert, ActivityIndicator, TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -65,6 +65,16 @@ function toDirector(r: TournamentRegistration): DirectorRegistration {
     canRestoreNoShow:    r.status === 'no_show',
     canRestoreCancelled: r.status === 'cancelled',
   };
+}
+
+// Player search: case-insensitive substring on the player's name and, for
+// doubles, the partner's — so a player registered as someone's partner is
+// found too. Client-side over the already-loaded list (no paging here).
+function matchesSearch(r: DirectorRegistration, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return r.playerName.toLowerCase().includes(q)
+    || (r.partnerName ?? '').toLowerCase().includes(q);
 }
 
 function calcMetrics(all: TournamentRegistration[]): TournamentMetrics {
@@ -682,6 +692,7 @@ function DirectorWorkspaceScreen() {
   const [metrics, setMetrics]               = useState<TournamentMetrics>({ total:0,registered:0,checkedIn:0,waitlisted:0,noShow:0,cancelled:0,revenueCents:0,outstandingCents:0 });
   const [divMetrics, setDivMetrics]         = useState<DivisionMetrics[]>([]);
   const [loading, setLoading]               = useState(true);
+  const [search, setSearch]                 = useState('');
 
   const refresh = useCallback(async () => {
     const [t, divs, allRegs] = await Promise.all([
@@ -731,10 +742,14 @@ function DirectorWorkspaceScreen() {
     ? cancelledRegs.filter(r => r.divisionId === divisionFilter)
     : cancelledRegs;
 
-  const filtered =
+  const byTab =
     tab === 'cancelled'              ? baseCancelledRegs :
     tab === 'all' || isDivisionsTab  ? baseRegs          :
     baseRegs.filter(r => r.status === tab);
+  // Search narrows the list only; tab counts stay whole-tournament totals.
+  const filtered = byTab.filter(r => matchesSearch(r, search));
+  const searching = search.trim().length > 0;
+  const hasAnyRegs = regs.length > 0 || cancelledRegs.length > 0;
 
   const activeDivMetrics = divMetrics.find(d => d.divisionId === divisionFilter);
   const filterLabel = activeDivMetrics
@@ -816,6 +831,29 @@ function DirectorWorkspaceScreen() {
         </View>
       )}
 
+      {/* ── Player search (not on Divisions, which lists divisions) ── */}
+      {!isDivisionsTab && (
+        <View style={s.searchRow}>
+          <Ionicons name="search-outline" size={15} color={L.textSub} style={{ marginRight: 8 }} />
+          <TextInput
+            style={s.searchInput}
+            placeholder="Search players"
+            placeholderTextColor={L.textSub}
+            value={search}
+            onChangeText={setSearch}
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+            accessibilityLabel="Search players"
+          />
+          {searching && (
+            <Pressable onPress={() => setSearch('')} hitSlop={8} accessibilityLabel="Clear search">
+              <Ionicons name="close-circle" size={16} color={L.textSub} />
+            </Pressable>
+          )}
+        </View>
+      )}
+
       {/* ── Filter tabs ── */}
       <ScrollView
         horizontal
@@ -880,17 +918,30 @@ function DirectorWorkspaceScreen() {
           <View style={s.empty}>
             <Ionicons name="people-outline" size={48} color={L.textSub} />
             <Text style={s.emptyTitle}>
-              {regs.length === 0 ? 'No registrations yet' : 'No players in this category'}
+              {!hasAnyRegs
+                ? 'No registrations yet'
+                : searching
+                  ? `No players match \u201C${search.trim()}\u201D`
+                  : 'No players in this category'}
             </Text>
             <Text style={s.emptySub}>
-              {regs.length === 0
+              {!hasAnyRegs
                 ? 'Players will appear here once they register.'
-                : 'Switch to another tab to see players.'}
+                : searching
+                  ? 'Check the spelling, or try another tab.'
+                  : 'Switch to another tab to see players.'}
             </Text>
+            {searching && hasAnyRegs && (
+              <TouchableOpacity onPress={() => setSearch('')} activeOpacity={0.7}>
+                <Text style={s.clearSearchText}>Clear search</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           <ScrollView
             showsVerticalScrollIndicator={false}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
           >
             {filtered.map(reg => (
@@ -964,6 +1015,15 @@ const s = StyleSheet.create({
   filterBannerText: { flex: 1, color: L.navy, fontSize: text.action.size, fontWeight: '800' },
   filterClear: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   filterClearText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+
+  searchRow: {
+    flexDirection: 'row', alignItems: 'center',
+    marginHorizontal: 12, marginBottom: 2,
+    backgroundColor: L.bg, borderWidth: 1, borderColor: L.border,
+    borderRadius: shape.panel, paddingHorizontal: 12, paddingVertical: 9,
+  },
+  searchInput: { flex: 1, color: L.text, fontSize: text.body.size, padding: 0 },
+  clearSearchText: { color: L.navy, fontSize: text.action.size, fontWeight: '800', textDecorationLine: 'underline' },
 
   // Same bug, same fix as the bracket screen's round pills (see
   // division-bracket.tsx): maxHeight is a fixed pixel cap while the text
