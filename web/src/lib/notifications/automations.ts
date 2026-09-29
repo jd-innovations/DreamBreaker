@@ -140,6 +140,14 @@ const SAMPLE: Record<string, string> = {
   venue_name: "Suncoast Courts",
   checkin_time: "8:00 AM",
   reason: "The venue could not be confirmed.",
+  // Quick Game scores / flags (migration 20260928220000).
+  headline: "Scores are in",
+  event_name: "Tuesday Open Play",
+  event_id: "abc123",
+  record: "3-2",
+  games: "5 games",
+  flagger_name: "Jordan P.",
+  game_number: "3",
 };
 
 export function renderPreview(template: string): string {
