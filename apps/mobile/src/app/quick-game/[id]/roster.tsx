@@ -21,6 +21,8 @@ import {
   fetchPlayParticipants,
   addPlayParticipant,
   removePlayParticipant,
+  isRecordedGamesBlock,
+  RECORDED_GAMES_BLOCK_MESSAGE,
   fetchPlayEventWithOrganizer,
   type PlayParticipant,
   type OrganizerProfile,
@@ -565,8 +567,8 @@ export default function QuickGameRosterScreen() {
               try {
                 await removePlayParticipant(player.id);
                 setPlayers(prev => prev.filter(p => p.id !== player.id));
-              } catch {
-                Alert.alert('Error', 'Could not remove player. Please try again.');
+              } catch (e) {
+                Alert.alert('Could not remove player', isRecordedGamesBlock(e) ? RECORDED_GAMES_BLOCK_MESSAGE : 'Please try again.');
               }
             } else {
               localRemovePlayer(gameId, player.id);

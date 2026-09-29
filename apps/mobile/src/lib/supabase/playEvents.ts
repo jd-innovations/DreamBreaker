@@ -736,6 +736,17 @@ export async function addPlayParticipant(input: AddParticipantInput): Promise<Pl
 // ─── removePlayParticipant ────────────────────────────────────────────────────
 // No status field in schema — row is deleted.
 
+// Raised by fn_play_participants_protect_recorded_games: in a Quick Game, a
+// player who is in a scored game can't leave or be removed, because the FK
+// cascade would delete that game for every player.
+export function isRecordedGamesBlock(e: unknown): boolean {
+  return !!e && typeof e === 'object' && 'message' in e
+    && String((e as { message: unknown }).message).includes('participant_has_recorded_games');
+}
+
+export const RECORDED_GAMES_BLOCK_MESSAGE =
+  'This player is in games that have already been scored. The organizer needs to delete those games first.';
+
 export async function removePlayParticipant(participantId: string): Promise<void> {
   const { error } = await supabase
     .from('play_participants')

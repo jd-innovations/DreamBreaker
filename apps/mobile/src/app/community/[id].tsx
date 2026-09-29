@@ -33,7 +33,7 @@ import {
 } from '@/lib/conversationService';
 import {
   fetchPlayEventWithOrganizer, fetchPlayParticipants, fetchMyPlayParticipant, claimGuestParticipants, addPlayParticipant,
-  removePlayParticipant, cancelPlayEvent,
+  removePlayParticipant, cancelPlayEvent, isRecordedGamesBlock, RECORDED_GAMES_BLOCK_MESSAGE,
   joinEventErrorMessage, skillLabel,
   type PlayEventWithOrganizer,
 } from '@/lib/supabase/playEvents';
@@ -781,8 +781,8 @@ export default function CommunityEventScreen() {
       setMyParticipantId(null);
       notifyPlayEventsUpdated();   // F3 fix — Home's community list must not stay stale on return
       await refetchAfterJoin();
-    } catch {
-      platformAlert('Could not leave', 'Please try again.');
+    } catch (e) {
+      platformAlert('Could not leave', isRecordedGamesBlock(e) ? RECORDED_GAMES_BLOCK_MESSAGE : 'Please try again.');
     } finally {
       setLeaving(false);
     }

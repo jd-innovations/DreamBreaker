@@ -21,6 +21,7 @@ import { SecondaryButton } from '@/components/SecondaryButton';
 import {
   fetchPlayEventWithOrganizer, fetchPlayParticipants, fetchPublicPlayParticipantCount, cancelPlayEvent, completePlayEvent,
   removePlayParticipant, addPlayParticipant, joinEventErrorMessage, updatePlayEvent,
+  isRecordedGamesBlock, RECORDED_GAMES_BLOCK_MESSAGE,
   updatePlayEventStatus,
   type PlayEvent, type OrganizerProfile, type PlayParticipant,
 } from '@/lib/supabase/playEvents';
@@ -465,8 +466,8 @@ export default function QuickGameCreatedScreen() {
               ]);
               setParticipants(rows);
               setRosterCount(count);
-            } catch {
-              Alert.alert('Error', 'Could not leave the game. Please try again.');
+            } catch (e) {
+              Alert.alert('Could not leave the game', isRecordedGamesBlock(e) ? RECORDED_GAMES_BLOCK_MESSAGE : 'Please try again.');
             }
           },
         },
