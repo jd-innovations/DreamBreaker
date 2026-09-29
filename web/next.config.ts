@@ -7,9 +7,10 @@ import { OPTIMIZABLE_IMAGE_HOSTS } from "./src/lib/image-hosts";
 // Next 16.3 stopped inferring the root from a lockfile outside the git repo;
 // before that, a stray C:\Users\dhjes\package-lock.json made local builds work
 // by accident. Tracing uses the same root, as Next requires. Local builds
-// only: Vercel sets the root itself (its build already resolved @shared), and
-// setting it here too broke next/font/google there ("queries have exactly one
-// entry", deployment dpl_HXA7nKeohhWMJphr4U5sQjM7V2fz).
+// only: Vercel applies its own config and resolved @shared before this was
+// added. (One Vercel build failed on next/font/google, dpl_HXA7nKeohhWMJphr4U5sQjM7V2fz,
+// but the next build with this set on Vercel too succeeded, so that was most
+// likely a transient font fetch, not this setting.)
 const repoRoot = path.join(__dirname, "..");
 const localRoot: Partial<NextConfig> = process.env.VERCEL
   ? {}
