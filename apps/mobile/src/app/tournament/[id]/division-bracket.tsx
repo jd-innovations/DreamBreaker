@@ -25,7 +25,7 @@ import {
   type DirectorBracketMatch,
 } from '@/lib/supabase/brackets';
 import {
-  assignCourt, correctMatchScore, fetchCourtQueue, fetchCourtsInUse, fetchLatestScoreEdit,
+  addThirdPlaceMatch, assignCourt, correctMatchScore, fetchCourtQueue, fetchCourtsInUse, fetchLatestScoreEdit,
   previewScoreCorrection, saveMatchScore, type CourtInUse,
 } from '@/lib/supabase/matches';
 import { supabase } from '@/lib/supabase';
@@ -867,12 +867,14 @@ const rm = StyleSheet.create({
 // ─── Context menu (Phase 12) ──────────────────────────────────────────────────
 
 function ContextMenu({
-  visible, tournamentId, divisionId, onRegenerate, onClose,
+  visible, tournamentId, divisionId, onRegenerate, onAddThirdPlace, onClose,
 }: {
   visible: boolean;
   tournamentId: string;
   divisionId: string;
   onRegenerate: () => void;
+  /** Set only when the bracket has semifinals and no 3rd-place match yet. */
+  onAddThirdPlace?: () => void;
   onClose: () => void;
 }) {
   if (!visible) return null;
@@ -887,6 +889,9 @@ function ContextMenu({
       { label: 'Export Bracket',     icon: 'download-outline' as const,     onPress: () => { onClose(); comingSoon('Export Bracket'); } },
     ] : []),
     { label: 'View Results',       icon: 'trophy-outline' as const,       onPress: () => { onClose(); router.push(`/tournament/${tournamentId}/results` as never); } },
+    ...(onAddThirdPlace ? [
+      { label: 'Add 3rd-Place Match', icon: 'medal-outline' as const,     onPress: () => { onClose(); onAddThirdPlace(); } },
+    ] : []),
     { label: 'Regenerate Bracket', icon: 'refresh-outline' as const,      onPress: () => { onClose(); onRegenerate(); }, danger: true },
     { label: 'Return to Brackets', icon: 'arrow-back-outline' as const,   onPress: () => { onClose(); router.back(); } },
     { label: 'Command Center',     icon: 'grid-outline' as const,         onPress: () => { onClose(); router.push(`/tournament/${tournamentId}/command-center` as never); } },
@@ -1231,6 +1236,30 @@ function DivisionBracketScreen() {
     }));
   }
 
+  // Brackets built before 3rd-place matches existed can get one without a
+  // rebuild (add_third_place_match keeps every score).
+  const canAddThirdPlace = !!bracket
+    && bracket.rounds.some(r => r.roundName === 'Semifinals' && r.matches.length === 2)
+    && !bracket.rounds.some(r => r.roundName === '3rd Place');
+
+  function handleAddThirdPlace() {
+    Alert.alert(
+      'Add a 3rd-place match?',
+      'The two semifinal losers play for 3rd. Semifinals already played send their loser straight away. No scores change.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Add match',
+          onPress: () => requireAuth(user?.id, async () => {
+            const result = await addThirdPlaceMatch(tournamentId, divisionId);
+            if (!result.ok) { Alert.alert('Not added', result.error); return; }
+            await refresh();
+          }),
+        },
+      ],
+    );
+  }
+
   function handleRegenerate() {
     if (pools) {
       openBuildFromPools();
@@ -1566,6 +1595,7 @@ function DivisionBracketScreen() {
         tournamentId={tournamentId}
         divisionId={divisionId}
         onRegenerate={handleRegenerate}
+        onAddThirdPlace={canAddThirdPlace ? handleAddThirdPlace : undefined}
         onClose={() => setMenuOpen(false)}
       />
 

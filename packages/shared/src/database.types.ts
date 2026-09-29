@@ -208,6 +208,8 @@ export type Database = {
           match_number: number
           next_match_id: string | null
           next_match_slot: number | null
+          loser_next_match_id: string | null
+          loser_next_match_slot: number | null
           pool_label: string | null
           ready_at: string | null
           round: Database["public"]["Enums"]["round_label"]
@@ -240,6 +242,8 @@ export type Database = {
           match_number: number
           next_match_id?: string | null
           next_match_slot?: number | null
+          loser_next_match_id?: string | null
+          loser_next_match_slot?: number | null
           pool_label?: string | null
           ready_at?: string | null
           round: Database["public"]["Enums"]["round_label"]
@@ -272,6 +276,8 @@ export type Database = {
           match_number?: number
           next_match_id?: string | null
           next_match_slot?: number | null
+          loser_next_match_id?: string | null
+          loser_next_match_slot?: number | null
           pool_label?: string | null
           ready_at?: string | null
           round?: Database["public"]["Enums"]["round_label"]
@@ -8746,6 +8752,10 @@ export type Database = {
       }
       // Hand-added for 20260928240000_record_match_score (kept beside its
       // sibling correct_match_score rather than in generated order).
+      add_third_place_match: {
+        Args: { p_division_id: string; p_tournament_id: string }
+        Returns: string
+      }
       record_match_score: {
         Args: { p_match_id: string; p_score1: number; p_score2: number }
         Returns: Json

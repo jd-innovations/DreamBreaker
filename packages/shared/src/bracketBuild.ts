@@ -36,6 +36,9 @@ export type BracketMatchInsert = {
   completed_at: string | null;
   next_match_id: string | null;
   next_match_slot: 1 | 2 | null;
+  /** Semifinals only: where the loser goes (the 3rd-place match). */
+  loser_next_match_id: string | null;
+  loser_next_match_slot: 1 | 2 | null;
   court: null;
   created_at: string;
   updated_at: string;
@@ -135,6 +138,12 @@ export function buildBracketMatchRows(input: {
   slots: (BracketTeam | null)[];
   newId: () => string;
   now: string;
+  /**
+   * Add a 3rd-place (bronze) match between the semifinal losers. Default true.
+   * Only built when both semifinals will have two real teams: with byes, one
+   * semifinal can be a walkover, leaving nobody to lose it.
+   */
+  thirdPlace?: boolean;
 }): BracketMatchInsert[] {
   const { tournamentId, divisionId, slots, newId, now } = input;
   const bracketSize = slots.length;
@@ -193,6 +202,14 @@ export function buildBracketMatchRows(input: {
     }
   }
 
+  // Semifinals are the second-to-last round; each needs two real entrants
+  // below it for a loser to exist.
+  const sfRound = totalRounds - 2;
+  const bronzeId = (input.thirdPlace ?? true) && sfRound >= 0
+    && states[sfRound].every(s => s.realCount >= 2)
+    ? newId()
+    : null;
+
   const rows: BracketMatchInsert[] = [];
   for (let ri = 0; ri < totalRounds; ri++) {
     const label = bracketRoundLabel(ri, totalRounds);
@@ -217,11 +234,33 @@ export function buildBracketMatchRows(input: {
         completed_at: s.byeCompleted && s.winner != null ? now : null,
         next_match_id: next,
         next_match_slot: next ? (mi % 2 === 0 ? 1 : 2) : null,
+        loser_next_match_id: bronzeId && ri === sfRound ? bronzeId : null,
+        loser_next_match_slot: bronzeId && ri === sfRound ? (mi % 2 === 0 ? 1 : 2) : null,
         court: null,
         created_at: now,
         updated_at: now,
       });
     }
+  }
+  if (bronzeId) {
+    rows.push({
+      id: bronzeId,
+      tournament_id: tournamentId,
+      division_id: divisionId,
+      round: 'bronze',
+      match_number: 0,
+      team1_player_a: null, team1_player_b: null, team1_guest_a: null, team1_guest_b: null,
+      team2_player_a: null, team2_player_b: null, team2_guest_a: null, team2_guest_b: null,
+      winner: null,
+      completed_at: null,
+      next_match_id: null,
+      next_match_slot: null,
+      loser_next_match_id: null,
+      loser_next_match_slot: null,
+      court: null,
+      created_at: now,
+      updated_at: now,
+    });
   }
   return rows;
 }

@@ -734,6 +734,19 @@ export default function TournamentDetail() {
             </TouchableOpacity>
           )}
 
+          {/* LEADERBOARD BANNER: live standings by division, once play has a bracket */}
+          {hasBrackets && (
+            <TouchableOpacity
+              style={s.bracketsBanner}
+              activeOpacity={0.8}
+              onPress={() => router.push(`/tournament/${tournament.id}/leaderboard` as never)}
+            >
+              <Ionicons name="podium-outline" size={15} color={L.navy} />
+              <Text style={s.bracketsBannerText}>Leaderboard</Text>
+              <Ionicons name="chevron-forward" size={14} color={L.textSub} />
+            </TouchableOpacity>
+          )}
+
           {/* VIEW RESULTS BANNER — only when tournament is completed */}
           {resultsAvailable && (
             <TouchableOpacity

@@ -65,7 +65,7 @@ describe('activeTeamEntries', () => {
 
 describe('buildBracketMatchRows', () => {
   it('builds every match and links each to the next', () => {
-    const rows = build([team('a'), team('b'), team('c'), team('d')]);
+    const rows = build([team('a'), team('b'), team('c'), team('d')]).filter(r => r.round !== 'bronze');
     expect(rows).toHaveLength(3);
     const final = rows.find(r => r.round === 'final')!;
     const semis = rows.filter(r => r.round === 'sf');
@@ -100,6 +100,32 @@ describe('buildBracketMatchRows', () => {
     expect(first.team1_guest_a).toBe('g1');
     expect(first.team1_player_b).toBe('p2');
     expect(first.team1_player_a).toBeNull();
+  });
+
+  it('adds a 3rd-place match fed by both semifinal losers', () => {
+    const rows = build([team('a'), team('b'), team('c'), team('d')]);
+    const bronze = rows.find(r => r.round === 'bronze')!;
+    expect(bronze).toBeDefined();
+    const semis = rows.filter(r => r.round === 'sf');
+    expect(semis.map(r => [r.loser_next_match_id, r.loser_next_match_slot])).toEqual([[bronze.id, 1], [bronze.id, 2]]);
+    expect(bronze.next_match_id).toBeNull();
+    expect(bronze.team1_player_a).toBeNull();
+  });
+
+  it('skips the 3rd-place match when a semifinal is a walkover', () => {
+    // 3 teams: a gets a bye through its semifinal, so only one real loser exists.
+    const rows = build([team('a'), null, team('c'), team('d')]);
+    expect(rows.some(r => r.round === 'bronze')).toBe(false);
+    expect(rows.every(r => r.loser_next_match_id === null)).toBe(true);
+  });
+
+  it('builds no 3rd-place match when asked not to', () => {
+    let n = 0;
+    const rows = buildBracketMatchRows({
+      tournamentId: 't', divisionId: 'd', slots: [team('a'), team('b'), team('c'), team('d')],
+      now: '2026-09-28T00:00:00Z', newId: () => `m${++n}`, thirdPlace: false,
+    });
+    expect(rows.some(r => r.round === 'bronze')).toBe(false);
   });
 
   it('rejects slot counts that are not a power of two', () => {

@@ -83,6 +83,28 @@ export async function assignCourt(
   return { ok: true };
 }
 
+// ─── 3rd-place match (20260928270000) ─────────────────────────────────────────
+
+const THIRD_PLACE_ERRORS: Record<string, string> = {
+  not_allowed:        'Only this tournament’s director or an admin can change the bracket.',
+  already_exists:     'This bracket already has a 3rd-place match.',
+  no_semifinals:      'This bracket has no semifinals yet.',
+  semifinal_walkover: 'A semifinal was a walkover, so there is no second team to play for 3rd.',
+};
+
+/** Adds a 3rd-place match to an existing bracket, keeping every score. */
+export async function addThirdPlaceMatch(
+  tournamentId: string,
+  divisionId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await supabase.rpc('add_third_place_match', {
+    p_tournament_id: tournamentId, p_division_id: divisionId,
+  });
+  if (!error) return { ok: true };
+  const code = Object.keys(THIRD_PLACE_ERRORS).find(k => error.message?.includes(k));
+  return { ok: false, error: code ? THIRD_PLACE_ERRORS[code] : 'Could not add the 3rd-place match. Please try again.' };
+}
+
 // ─── Score entry + winner advancement ────────────────────────────────────────
 
 export async function saveMatchScore(

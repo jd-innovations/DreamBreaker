@@ -760,6 +760,7 @@ function CommandCenterScreen() {
               onPress={() => router.push(`/tournament/${id}/brackets` as never)}
             />
             <QuickAction icon="trophy-outline"     label="View Results"     onPress={() => router.push(`/tournament/${id}/results` as never)} />
+            <QuickAction icon="podium-outline"     label="Leaderboard"      onPress={() => router.push(`/tournament/${id}/leaderboard` as never)} />
             <QuickAction icon="document-text-outline" label="Tournament Report" onPress={() => router.push(`/tournament/${id}/report` as never)} />
             <QuickAction
               icon={exporting ? 'hourglass-outline' : 'download-outline'}

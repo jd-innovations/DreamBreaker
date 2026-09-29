@@ -79,7 +79,7 @@ export function roundName(round: string, poolLabel: string | null): string {
     case "r16": return "Round of 16";
     case "r32": return "Round of 32";
     case "r64": return "Round of 64";
-    case "bronze": return "Bronze";
+    case "bronze": return "3rd Place";
     default: return "Early round";
   }
 }

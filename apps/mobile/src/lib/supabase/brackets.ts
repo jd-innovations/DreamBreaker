@@ -69,6 +69,7 @@ export const validateScores = validateSingleGameScore;
 export function roundDisplayName(label: string): string {
   switch (label) {
     case 'final':  return 'Final';
+    case 'bronze': return '3rd Place';
     case 'sf':     return 'Semifinals';
     case 'qf':     return 'Quarterfinals';
     case 'r16':    return 'Round of 16';
@@ -158,9 +159,12 @@ function rowsToDivisionBracket(
   divisionName: string,
   rows: BracketMatchRow[],
 ): DirectorBracket {
-  // Sort labels by bracket position
+  // Sort labels by bracket position. The 3rd-place match is shown after the
+  // Final (its own column and tab), not between the semifinals and the Final
+  // where the database's play order puts it.
   const labelSet = [...new Set(rows.map(r => r.round))];
-  const sortedLabels = labelSet.sort((a, b) => ROUND_ORDER[a] - ROUND_ORDER[b]);
+  const displayOrder = (l: string) => (l === 'bronze' ? 99 : ROUND_ORDER[l]);
+  const sortedLabels = labelSet.sort((a, b) => displayOrder(a) - displayOrder(b));
   const totalRounds = sortedLabels.length;
 
   const rounds: DirectorBracketRound[] = sortedLabels.map((label, ri) => {
@@ -191,9 +195,13 @@ function rowsToDivisionBracket(
   }
 
   // Derive bracket-level status
-  const finalRound = rounds[totalRounds - 1];
+  const finalIdx = sortedLabels.indexOf('final' as RoundLabel);
+  const finalRound = finalIdx >= 0 ? rounds[finalIdx] : rounds[totalRounds - 1];
   const finalMatch = finalRound?.matches[0];
-  const isCompleted = finalMatch?.status === 'completed';
+  const bronzeIdx = sortedLabels.indexOf('bronze' as RoundLabel);
+  const bronzeMatch = bronzeIdx >= 0 ? rounds[bronzeIdx].matches[0] : undefined;
+  // Complete when the Final is played, and the 3rd-place match too if there is one.
+  const isCompleted = finalMatch?.status === 'completed' && (!bronzeMatch || bronzeMatch.status === 'completed');
   const anyStarted = rows.some(r => r.winner != null);
 
   const status: DirectorBracket['status'] = isCompleted
@@ -209,7 +217,7 @@ function rowsToDivisionBracket(
   let completedAt: string | undefined;
 
   if (isCompleted && finalMatch) {
-    const finalRow = rows.find(r => r.round === sortedLabels[totalRounds - 1] && r.match_number === 0);
+    const finalRow = rows.find(r => r.round === (finalIdx >= 0 ? 'final' : sortedLabels[totalRounds - 1]) && r.match_number === 0);
     if (finalRow) {
       const winnerProfile = finalRow.winner === 1 ? finalRow.p1a : finalRow.p2a;
       const winnerGuest   = finalRow.winner === 1 ? finalRow.g1a : finalRow.g2a;
@@ -518,12 +526,13 @@ export async function hasAnyBracket(tournamentId: string): Promise<boolean> {
 }
 
 export async function isTournamentCompleted(tournamentId: string): Promise<boolean> {
-  // Tournament is completed when every division has a completed final match
+  // Tournament is completed when every division's final (and 3rd-place match,
+  // where there is one) has a winner.
   const { data } = await supabase
     .from('bracket_matches')
     .select('division_id, round, winner')
     .eq('tournament_id', tournamentId)
-    .eq('round', 'final');
+    .in('round', ['final', 'bronze']);
 
   if (!data || data.length === 0) return false;
 
