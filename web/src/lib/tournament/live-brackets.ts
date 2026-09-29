@@ -6,6 +6,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import type { LeaderboardMatch } from "@shared/leaderboard";
+import { bracketPositions } from "@shared/bracketBuild";
 import { parsePrevScore } from "@/lib/tournament/score-corrections";
 
 type Person = { id: string; full_name: string | null } | null;
@@ -16,6 +17,9 @@ export interface LiveBracketMatch extends LeaderboardMatch {
   editedAt: string | null;
   /** The score before the latest correction, public like editedAt. */
   prevScore: { s1: number; s2: number } | null;
+  /** Bracket seed of each side (from its first-round slot); null in pools or when unknown. */
+  seed1: number | null;
+  seed2: number | null;
 }
 
 export interface LiveDivision {
@@ -23,6 +27,7 @@ export interface LiveDivision {
   name: string;
   /** Pool play: how many teams per pool go through to the bracket. */
   advancePerPool: number;
+  playStatus: "not_started" | "live" | "paused";
   matches: LiveBracketMatch[];
 }
 
@@ -38,7 +43,7 @@ const SELECT = `
 export async function fetchLiveBrackets(tournamentId: string): Promise<LiveDivision[]> {
   const supabase = createClient();
   const [dRes, mRes, gRes] = await Promise.all([
-    supabase.from("divisions").select("id, name, advance_per_pool").eq("tournament_id", tournamentId).order("created_at", { ascending: true }),
+    supabase.from("divisions").select("id, name, advance_per_pool, play_status").eq("tournament_id", tournamentId).order("created_at", { ascending: true }),
     supabase.from("bracket_matches").select(SELECT).eq("tournament_id", tournamentId),
     supabase.rpc("tournament_guest_names", { p_tournament_id: tournamentId }),
   ]);
@@ -81,13 +86,75 @@ export async function fetchLiveBrackets(tournamentId: string): Promise<LiveDivis
       court: r.court,
       editedAt: r.score_edited_at,
       prevScore: parsePrevScore(r.score_edited_prev),
+      seed1: null,
+      seed2: null,
     });
     byDivision.set(r.division_id, list);
   }
 
   return (dRes.data ?? [])
     .filter((d) => byDivision.has(d.id))
-    .map((d) => ({ id: d.id, name: d.name, advancePerPool: d.advance_per_pool ?? 2, matches: byDivision.get(d.id)! }));
+    .map((d) => ({
+      id: d.id,
+      name: d.name,
+      advancePerPool: d.advance_per_pool ?? 2,
+      playStatus: (d.play_status === "live" || d.play_status === "paused" ? d.play_status : "not_started") as LiveDivision["playStatus"],
+      matches: withSeeds(byDivision.get(d.id)!),
+    }));
+}
+
+const ELIM_ORDER = ["pool", "r64", "r32", "r16", "qf", "sf", "final"];
+
+/**
+ * Seeds from the bracket's first round: the shared builder places slot i at
+ * standard position bracketPositions(size)[i] (1v8, 4v5, ...), so a team's
+ * seed is its first-round slot's position. Carried to later rounds by team.
+ */
+export function withSeeds(matches: LiveBracketMatch[]): LiveBracketMatch[] {
+  const elim = matches.filter((m) => !m.poolLabel && m.round !== "bronze");
+  const first = ELIM_ORDER.find((r) => elim.some((m) => m.round === r));
+  if (!first) return matches;
+  const opening = elim.filter((m) => m.round === first).sort((a, b) => a.matchNumber - b.matchNumber);
+  const positions = bracketPositions(opening.length * 2);
+  // Only trust positions when the bracket was built with standard placement:
+  // with N teams, exactly the slots for seeds 1..N are filled (byes on the top
+  // seeds). Older or hand-built brackets don't match, and get no seeds rather
+  // than wrong ones.
+  const filled = opening.flatMap((m) => [m.team1.length > 0, m.team2.length > 0]);
+  const teamCount = filled.filter(Boolean).length;
+  if (filled.some((f, i) => f !== positions[i] <= teamCount)) return matches;
+  const seedByTeam = new Map<string, number>();
+  opening.forEach((m, k) => {
+    if (m.team1.length) seedByTeam.set(m.team1.join("|"), positions[k * 2]);
+    if (m.team2.length) seedByTeam.set(m.team2.join("|"), positions[k * 2 + 1]);
+  });
+  return matches.map((m) => m.poolLabel ? m : {
+    ...m,
+    seed1: m.team1.length ? seedByTeam.get(m.team1.join("|")) ?? null : null,
+    seed2: m.team2.length ? seedByTeam.get(m.team2.join("|")) ?? null : null,
+  });
+}
+
+export interface BracketContext {
+  courts: string[];
+  autoAssign: boolean;
+  /** match id -> 1-based court queue position; empty for signed-out visitors. */
+  queue: Map<string, number>;
+}
+
+/** Courts and the court queue, for the courts strip and UP NEXT / ON DECK. */
+export async function fetchBracketContext(tournamentId: string): Promise<BracketContext> {
+  const supabase = createClient();
+  const [tRes, qRes] = await Promise.all([
+    supabase.from("tournaments").select("courts, auto_assign_courts").eq("id", tournamentId).maybeSingle(),
+    supabase.rpc("court_queue", { p_tournament_id: tournamentId }),
+  ]);
+  return {
+    courts: tRes.data?.courts ?? [],
+    autoAssign: tRes.data?.auto_assign_courts ?? true,
+    // Additive: the queue is only readable when signed in.
+    queue: new Map((qRes.error ? [] : qRes.data ?? []).map((q) => [q.match_id, q.queue_position])),
+  };
 }
 
 const THIRD_PLACE_ERRORS: Record<string, string> = {
