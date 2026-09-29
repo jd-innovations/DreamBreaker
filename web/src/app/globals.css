@@ -162,6 +162,12 @@
   .scrollbar-hide::-webkit-scrollbar { display: none; }
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
+  /* Thin, theme-coloured scrollbar for horizontal strips (courts, round tabs, bracket rounds). */
+  .scrollbar-thin { scrollbar-width: thin; scrollbar-color: hsl(var(--border)) transparent; }
+  .scrollbar-thin::-webkit-scrollbar { height: 6px; width: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 9999px; }
+
   .animate-pulse-glow { animation: pulse-glow 2.4s ease-in-out infinite; }
   .animate-marquee    { animation: marquee 30s linear infinite; }
 }

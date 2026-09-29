@@ -125,7 +125,7 @@ export function LiveBrackets({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-1.5 overflow-x-auto pb-1 flex-1 min-w-0">
+        <div className="flex gap-1.5 scrollbar-thin overflow-x-auto pb-1 flex-1 min-w-0">
           {divisions.map((d) => (
             <button
               key={d.id}
@@ -315,7 +315,7 @@ function CourtsStrip({
         <p className="font-mono text-[10px] tracking-widest text-muted-foreground">COURTS</p>
         <p className="font-mono text-[10px] tracking-widest text-muted-foreground">AUTO-ASSIGN {autoAssign ? "ON" : "OFF"}</p>
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 scrollbar-thin overflow-x-auto pb-1">
         {all.map((c) => {
           const on = onCourt.get(c);
           return (
@@ -374,7 +374,7 @@ function BracketView({
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
+      <div className="flex gap-1.5 scrollbar-thin overflow-x-auto pb-1">
         {["all", ...rounds].map((r) => (
           <button
             key={r}
@@ -386,7 +386,7 @@ function BracketView({
         ))}
       </div>
       {active === "all" ? (
-        <div className="overflow-x-auto pb-2 -mx-1 px-1">
+        <div className="scrollbar-thin overflow-x-auto pb-2 -mx-1 px-1">
           <div className="flex gap-4 min-w-max">
             {rounds.map((round) => (
               <div key={round} className="w-64 flex-shrink-0">

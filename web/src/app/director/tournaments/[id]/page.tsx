@@ -599,7 +599,7 @@ export default function DirectorTournamentPage() {
           </span>
         </div>
         <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-10">
-          <div className="max-w-5xl mx-auto">
+          <div className="w-full">
             <button onClick={() => router.push("/director")} className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-foreground mb-3 transition-colors">
               <ArrowLeft size={13} weight="bold" /> BACK TO DASHBOARD
             </button>
@@ -639,7 +639,8 @@ export default function DirectorTournamentPage() {
       )}
 
       {/* ── Main content ── */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Full width on every tab (owner, 2026-09-29); padding matches the header. */}
+      <div className="w-full px-6 lg:px-10 py-8">
 
         {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
