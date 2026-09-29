@@ -1,8 +1,17 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 import { OPTIMIZABLE_IMAGE_HOSTS } from "./src/lib/image-hosts";
 
+// The repo root, so Turbopack can resolve @shared/* (../packages/shared/src).
+// Next 16.3 stopped inferring the root from a lockfile outside the git repo;
+// before that, a stray C:\Users\dhjes\package-lock.json made local builds work
+// by accident. Tracing uses the same root, as Next requires.
+const repoRoot = path.join(__dirname, "..");
+
 const nextConfig: NextConfig = {
+  turbopack: { root: repoRoot },
+  outputFileTracingRoot: repoRoot,
   images: {
     // Generated from OPTIMIZABLE_IMAGE_HOSTS rather than listed by hand here.
     // That list is also what SafeImage (components/shared/safe-image.tsx)
