@@ -8,6 +8,7 @@ import type {
 } from '@/lib/directorBracketStore';
 import type { Database } from '@shared/database.types';
 import { validateSingleGameScore } from '@/lib/bracketScoring';
+import { activeTeamEntries, bracketSizeFor, buildBracketMatchRows, type BracketTeam } from '@shared/bracketBuild';
 
 // Re-export types consumed by screens
 export type { DirectorBracket, DirectorBracketMatch, DirectorBracketParticipant, DirectorBracketRound };
@@ -61,34 +62,8 @@ function generateUUID(): string {
 // Score validation — identical rules to directorBracketStore
 export const validateScores = validateSingleGameScore;
 
-function smallestPow2(n: number): number {
-  // No cap here on purpose — the old `Math.min(p, 32)` made this the crash
-  // site for any division over 32 entrants. When n > 32, p keeps doubling
-  // past it (correct), but the cap then forced bracketSize back down below
-  // n, and createBracket's `Array<null>(bracketSize - participants.length)`
-  // received a NEGATIVE length, which throws RangeError: Invalid array
-  // length — an uncaught crash, not a validation error. Found 2026-09-24 on
-  // RATE LAS VEGAS OPEN - DEMO: 4 of 5 divisions (44-88 entrants) exceeded 32.
-  //
-  // round_label's own enum (pool, r64, r32, r16, qf, sf, bronze, final) has
-  // no ceiling either — 'pool' is the deliberate catch-all for any round
-  // earlier than r64, so nothing here needed a cap in the first place.
-  let p = 4;
-  while (p < n) p *= 2;
-  return p;
-}
-
-// Map roundIndex (0 = earliest, N-1 = final) to DB round_label enum
-function roundLabel(roundIndex: number, totalRounds: number): RoundLabel {
-  const fromEnd = totalRounds - 1 - roundIndex;
-  if (fromEnd === 0) return 'final';
-  if (fromEnd === 1) return 'sf';
-  if (fromEnd === 2) return 'qf';
-  if (fromEnd === 3) return 'r16';
-  if (fromEnd === 4) return 'r32';
-  if (fromEnd === 5) return 'r64';
-  return 'pool';
-}
+// Bracket sizing, round labels and the bye rules now live in
+// packages/shared/src/bracketBuild.ts (shared with web).
 
 // Display name from DB round_label
 export function roundDisplayName(label: string): string {
@@ -249,7 +224,7 @@ function rowsToDivisionBracket(
     completedAt = completedDates.sort().at(-1) ?? undefined;
   }
 
-  const bracketSize = smallestPow2(Math.max(participants.length, 4));
+  const bracketSize = bracketSizeFor(Math.max(participants.length, 4));
 
   return {
     id: `bracket-${divisionId}`,
@@ -378,19 +353,15 @@ export function activeTeamRegistrations(registrations: TournamentRegistration[])
   // is on which side, so dedup on it rather than on the row. Keeps the
   // earlier-registered of a mirrored pair; singles are unaffected since a
   // player alone has no partner half to collide with.
-  const seenTeams = new Set<string>();
-  return [...registrations]
-    .filter(r => r.status === 'registered' || r.status === 'checked_in')
-    .sort((a, b) => new Date(a.registrationDate).getTime() - new Date(b.registrationDate).getTime())
-    .filter(r => {
-      const self = r.playerGuestId ?? r.playerId;
-      const partner = r.partnerGuestId ?? r.partnerId;
-      if (!partner) return true; // singles: no team pair to collide on
-      const key = [self, partner].sort().join('|');
-      if (seenTeams.has(key)) return false;
-      seenTeams.add(key);
-      return true;
-    });
+  //
+  // The rule itself now lives in packages/shared (activeTeamEntries) so web
+  // counts teams the same way.
+  return activeTeamEntries(registrations, r => ({
+    self: r.playerGuestId ?? r.playerId,
+    partner: r.partnerGuestId ?? r.partnerId ?? null,
+    status: r.status,
+    registeredAt: r.registrationDate,
+  }));
 }
 
 export async function createBracket(
@@ -438,176 +409,29 @@ export async function createBracket(
   });
   const participants: ParticipantRow[] = sorted.map(toParticipant);
 
-  const bracketSize = options?.slots ? options.slots.length : smallestPow2(participants.length);
-  const totalRounds = Math.log2(bracketSize);
-
-  // Pre-assign UUIDs to every match
-  const matchIds: Record<number, Record<number, string>> = {}; // [roundIndex][matchNumber] -> uuid
-  for (let ri = 0; ri < totalRounds; ri++) {
-    matchIds[ri] = {};
-    const matchCount = bracketSize / Math.pow(2, ri + 1);
-    for (let mi = 0; mi < matchCount; mi++) {
-      matchIds[ri][mi] = generateUUID();
-    }
-  }
-
-  // Slots for first round (participants + BYEs). smallestPow2 guarantees
-  // bracketSize >= participants.length by construction, but Math.max(0, …)
-  // costs nothing and means this can never again throw RangeError: Invalid
-  // array length if that invariant is ever broken by a future edit.
-  // Seeded placement keeps the caller's exact slots (byes where it put them).
+  // Slots for first round (participants + BYEs), then every row, built by the
+  // shared builder (packages/shared/src/bracketBuild.ts) so web builds brackets
+  // exactly the same way, byes and cascade rules included. Seeded placement
+  // keeps the caller's exact slots (byes where it put them).
   const slots: (ParticipantRow | null)[] = options?.slots
     ? options.slots.map((r, i) => (r ? toParticipant(r, i) : null))
     : [
         ...participants,
-        ...Array<null>(Math.max(0, bracketSize - participants.length)).fill(null),
+        ...Array<null>(Math.max(0, bracketSizeFor(participants.length) - participants.length)).fill(null),
       ];
 
-  // Track which player UUIDs appear in each match slot (resolved through BYE cascades)
-  //
-  // realCount: how many real entrants exist ANYWHERE in this match's subtree,
-  // computed structurally from round-0 seeding — independent of whether
-  // anything has actually been played, since at generation time nothing has.
-  // This is the piece the auto-cascade below needs and did not have: a null
-  // slot is either PERMANENTLY empty (its feeder's realCount is 0 — a true
-  // bye) or MERELY UNDECIDED (its feeder's realCount is >= 1, and the real
-  // entrant occupying it just hasn't been determined by an actual match yet).
-  // Both look identical as "null" without this count.
-  type MatchState = {
-    id: string;
-    p1: ParticipantRow | null;
-    p2: ParticipantRow | null;
-    winner: 1 | 2 | null;
-    byeCompleted: boolean;
-    realCount: number;
-  };
-
-  const matchStates: Record<number, Record<number, MatchState>> = {};
-  for (let ri = 0; ri < totalRounds; ri++) {
-    matchStates[ri] = {};
-    const matchCount = bracketSize / Math.pow(2, ri + 1);
-    for (let mi = 0; mi < matchCount; mi++) {
-      matchStates[ri][mi] = {
-        id: matchIds[ri][mi],
-        p1: null,
-        p2: null,
-        winner: null,
-        byeCompleted: false,
-        realCount: 0,
-      };
-    }
-  }
-
-  // Fill first round
-  const firstRoundCount = bracketSize / 2;
-  for (let mi = 0; mi < firstRoundCount; mi++) {
-    matchStates[0][mi].p1 = slots[mi * 2] ?? null;
-    matchStates[0][mi].p2 = slots[mi * 2 + 1] ?? null;
-  }
-
-  // Advance winner helper
-  function advance(ri: number, mi: number, winner: ParticipantRow, winnerSlot: 1 | 2) {
-    matchStates[ri][mi].winner = winnerSlot;
-    matchStates[ri][mi].byeCompleted = true;
-    const nextRi = ri + 1;
-    if (nextRi >= totalRounds) return;
-    const nextMi = Math.floor(mi / 2);
-    const nextState = matchStates[nextRi][nextMi];
-    if (mi % 2 === 0) { nextState.p1 = winner; }
-    else              { nextState.p2 = winner; }
-  }
-
-  // Auto-advance BYEs in first round. A round-0 slot is either a real
-  // participant or a true empty seed — there is no third "TBD" option this
-  // early, so realCount here is exactly 0 or 1 per slot.
-  for (let mi = 0; mi < firstRoundCount; mi++) {
-    const s = matchStates[0][mi];
-    s.realCount = (s.p1 ? 1 : 0) + (s.p2 ? 1 : 0);
-    if (s.p1 && !s.p2) { advance(0, mi, s.p1, 1); }
-    else if (!s.p1 && s.p2) { advance(0, mi, s.p2, 2); }
-    else if (!s.p1 && !s.p2) { s.byeCompleted = true; }
-    // Both real: a genuine match, left pending — correctly NOT auto-decided.
-  }
-
-  // Propagate through subsequent rounds, strictly in round order (round r
-  // depends only on round r-1, already fully resolved by the time we get
-  // here — no fixed-point loop needed).
-  //
-  // THE BUG THIS REPLACES: the old version auto-advanced a match's lone
-  // filled slot whenever the OTHER slot was simply null, with no way to tell
-  // "null because permanently empty" from "null because the real match that
-  // would decide it hasn't been played yet". A single real bye in round 0
-  // would cascade unopposed through every later round — including the final
-  // — because each round it reached still looked "one side filled, other
-  // null" even though that other side's subtree had real, unplayed entrants
-  // in it. That is how a division with zero matches played still ended up
-  // with a declared champion. Found 2026-09-24 on Women's Doubles, RATE LAS
-  // VEGAS OPEN - DEMO.
-  //
-  // The fix: gate every auto-advance on the OTHER side's realCount being
-  // exactly 0 — a real bye, not a real match waiting to happen. A side whose
-  // feeder has realCount >= 1 stays null until an actual score is entered,
-  // which is what makes it render as "Awaiting Previous Round" rather than a
-  // free pass.
-  for (let ri = 1; ri < totalRounds; ri++) {
-    const matchCount = bracketSize / Math.pow(2, ri + 1);
-    for (let mi = 0; mi < matchCount; mi++) {
-      const leftReal  = matchStates[ri - 1][mi * 2].realCount;
-      const rightReal = matchStates[ri - 1][mi * 2 + 1].realCount;
-      const s = matchStates[ri][mi];
-      s.realCount = leftReal + rightReal;
-
-      if (leftReal === 0 && rightReal === 0) {
-        s.byeCompleted = true; // whole subtree is empty — permanently, not just unplayed
-      } else if (rightReal === 0 && s.p1 && !s.p2) {
-        advance(ri, mi, s.p1, 1); // p2's side can never produce an opponent
-      } else if (leftReal === 0 && !s.p1 && s.p2) {
-        advance(ri, mi, s.p2, 2); // p1's side can never produce an opponent
-      }
-      // Otherwise both sides have a real entrant somewhere in them: a genuine
-      // match is required before this slot can resolve, so it is left
-      // pending even if one side already shows a name from its own bye chain.
-    }
-  }
-
-  const now = new Date().toISOString();
-
-  // Build insert rows
-  const insertRows = [];
-  for (let ri = 0; ri < totalRounds; ri++) {
-    const label = roundLabel(ri, totalRounds);
-    const matchCount = bracketSize / Math.pow(2, ri + 1);
-    for (let mi = 0; mi < matchCount; mi++) {
-      const s = matchStates[ri][mi];
-      const nextRi = ri + 1;
-      const nextMi = Math.floor(mi / 2);
-      const nextMatchId = nextRi < totalRounds ? matchIds[nextRi][nextMi] : null;
-      const nextMatchSlot = (mi % 2 === 0) ? 1 : 2;
-
-      insertRows.push({
-        id:              s.id,
-        tournament_id:   tournamentId,
-        division_id:     divisionId,
-        round:           label,
-        match_number:    mi,
-        team1_player_a:  s.p1?.playerUUID ?? null,
-        team1_player_b:  s.p1?.partnerUUID ?? null,
-        team1_guest_a:   s.p1?.playerGuestUUID ?? null,
-        team1_guest_b:   s.p1?.partnerGuestUUID ?? null,
-        team2_player_a:  s.p2?.playerUUID ?? null,
-        team2_player_b:  s.p2?.partnerUUID ?? null,
-        team2_guest_a:   s.p2?.playerGuestUUID ?? null,
-        team2_guest_b:   s.p2?.partnerGuestUUID ?? null,
-        winner:          s.byeCompleted ? s.winner : null,
-        completed_at:    s.byeCompleted && s.winner != null ? now : null,
-        next_match_id:   nextMatchId,
-        next_match_slot: nextMatchId ? nextMatchSlot : null,
-        court:           null,
-        created_at:      now,
-        updated_at:      now,
-      });
-    }
-  }
+  const insertRows = buildBracketMatchRows({
+    tournamentId,
+    divisionId,
+    slots: slots.map((p): BracketTeam | null => p && {
+      playerId:       p.playerUUID ?? null,
+      partnerId:      p.partnerUUID ?? null,
+      playerGuestId:  p.playerGuestUUID ?? null,
+      partnerGuestId: p.partnerGuestUUID ?? null,
+    }),
+    newId: generateUUID,
+    now: new Date().toISOString(),
+  });
 
   const { error: insertError } = await supabase
     .from('bracket_matches')

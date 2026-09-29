@@ -84,58 +84,27 @@ export async function saveMatchScore(
   const validationError = validateScores(score1, score2);
   if (validationError) return validationError;
 
-  // Fetch match to get player IDs and advancement links. team*_guest_* carry
-  // a director-added guest's identity (personal_guest_players.id) — a slot is
-  // either a real player or a guest, never both, and both must be advanced
-  // together or a guest's win loses their name on the next round.
-  const { data: match, error: fetchError } = await supabase
-    .from('bracket_matches')
-    .select(
-      // A single string literal, not `+`-concatenated: supabase-js infers the
-      // return type by parsing this as a literal at compile time, and a
-      // concatenated expression falls back to an untyped GenericStringError.
-      'id, team1_player_a, team1_player_b, team1_guest_a, team1_guest_b, team2_player_a, team2_player_b, team2_guest_a, team2_guest_b, next_match_id, next_match_slot',
-    )
-    .eq('id', matchId)
-    .single();
+  // One server call records the score and advances the winner (guest slots
+  // included) in a single transaction: record_match_score, migration
+  // 20260928240000. It replaced two client writes, where a failed second write
+  // left a winner who never advanced. Web Day Of uses the same function.
+  const { error } = await (supabase as unknown as {
+    rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message?: string } | null }>;
+  }).rpc('record_match_score', { p_match_id: matchId, p_score1: score1, p_score2: score2 });
 
-  if (fetchError || !match) return 'Match not found.';
-
-  const winnerTeam = score1 > score2 ? 1 : 2;
-  const now = new Date().toISOString();
-
-  const { error: updateError } = await supabase
-    .from('bracket_matches')
-    .update({
-      score_team1:  [score1],
-      score_team2:  [score2],
-      winner:       winnerTeam,
-      completed_at: now,
-      updated_at:   now,
-    })
-    .eq('id', matchId);
-
-  if (updateError) return 'Failed to save score.';
-
-  // Advance winner to next match slot
-  if (match.next_match_id && match.next_match_slot) {
-    const winnerA = winnerTeam === 1 ? match.team1_player_a : match.team2_player_a;
-    const winnerB = winnerTeam === 1 ? match.team1_player_b : match.team2_player_b;
-    const winnerGuestA = winnerTeam === 1 ? match.team1_guest_a : match.team2_guest_a;
-    const winnerGuestB = winnerTeam === 1 ? match.team1_guest_b : match.team2_guest_b;
-
-    const slotUpdate = match.next_match_slot === 1
-      ? { team1_player_a: winnerA, team1_player_b: winnerB, team1_guest_a: winnerGuestA, team1_guest_b: winnerGuestB }
-      : { team2_player_a: winnerA, team2_player_b: winnerB, team2_guest_a: winnerGuestA, team2_guest_b: winnerGuestB };
-
-    await supabase
-      .from('bracket_matches')
-      .update({ ...slotUpdate, updated_at: now })
-      .eq('id', match.next_match_id);
-  }
-
-  return null;
+  if (!error) return null;
+  const code = Object.keys(RECORD_ERRORS).find(k => error.message?.includes(k));
+  return code ? RECORD_ERRORS[code] : 'Failed to save score.';
 }
+
+const RECORD_ERRORS: Record<string, string> = {
+  not_allowed:          'Only this tournament’s director or an admin can enter scores.',
+  already_scored:       'This match already has a score. Use Edit score to change it.',
+  teams_not_set:        'Both teams need to be known before a score can be entered.',
+  invalid_score:        'Win to 11, win by 2, no ties.',
+  tournament_cancelled: 'This tournament was cancelled.',
+  match_not_found:      'Match not found.',
+};
 
 // ─── Score corrections (20260928190000) ───────────────────────────────────────
 // Director / admin only, all-or-nothing in the database. A winner change clears

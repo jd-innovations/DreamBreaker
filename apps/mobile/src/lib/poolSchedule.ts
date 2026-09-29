@@ -1,6 +1,8 @@
 // Pool play scheduling: pure functions, no I/O (unit-testable without the
 // app's module aliases). Used by lib/supabase/pools.ts.
 import type { TournamentRegistration } from './registrationStore';
+// Relative, not @shared/: this module stays usable without the app's aliases.
+import { bracketPositions } from '../../../../packages/shared/src/bracketBuild';
 
 export const POOL_LETTERS = 'ABCDEFGHIJKLMNOP';
 export const DEFAULT_ADVANCE_PER_POOL = 2;
@@ -93,19 +95,8 @@ export type QualifiedSeed<T extends SeedableStanding = SeedableStanding> = T & {
   seed: number;
 };
 
-/**
- * Standard bracket slot order for a power-of-two size, as seed numbers:
- * 4 -> [1,4,2,3], 8 -> [1,8,4,5,2,7,3,6]. Adjacent pairs are first-round
- * matches; the top two seeds can only meet in the final.
- */
-export function bracketPositions(size: number): number[] {
-  let order = [1, 2];
-  while (order.length < size) {
-    const m = order.length * 2;
-    order = order.flatMap(s => [s, m + 1 - s]);
-  }
-  return order;
-}
+// Standard seed placement now lives in packages/shared (shared with web).
+export { bracketPositions };
 
 /**
  * Qualifiers in seed order, by tier then pool record (owner's choice

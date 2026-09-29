@@ -8744,6 +8744,12 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: { match_id: string; queue_position: number }[]
       }
+      // Hand-added for 20260928240000_record_match_score (kept beside its
+      // sibling correct_match_score rather than in generated order).
+      record_match_score: {
+        Args: { p_match_id: string; p_score1: number; p_score2: number }
+        Returns: Json
+      }
       create_coach_offer_purchase: {
         Args: { p_offer_id: string; p_participant_quantity?: number }
         Returns: {

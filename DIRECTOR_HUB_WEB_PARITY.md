@@ -68,7 +68,7 @@ the backlog items below (hold, no-show, activity log).
 | 19 | Live sync across devices | ❌ | ✅ | Both | W1 |
 | 20 | Big-screen court board / venue TV | ❌ | ❌ | Web-only | later |
 | | **Players & spectators** | | | | |
-| 21 | Public brackets / results, live | ✅ static | ✅ live | Both, live | W1 |
+| 21 | Public brackets / results, live | ❌ none (BracketTree is director-only) | ✅ live | Both, live | W1b |
 | 22 | "You're up on Court X" push | ❌ | ❌ | Mobile (push) | later |
 | 23 | Pool standings view | ❌ | ✅ | Both | W3 |
 | | **Backlog** | | | | |
@@ -76,8 +76,12 @@ the backlog items below (hold, no-show, activity log).
 | 25 | No-show / withdrawn skips future matches | ❌ | ❌ | Both | later |
 | 26 | Full tournament activity log | ❌ | score edits only | Both (read on web) | later |
 
-- **W1** Web Day Of on live data: rows 2, 5, 13, 14, 17, 19, 21.
-- **W2** Director controls: rows 3, 9, 15, 16, 18.
+- **W1** Web Day Of on live data: rows 2, 5, 13, 14, 16, 17, 19. Row 16 moved up from W2
+  because `court_queue` only includes live divisions. Also in W1: bracket, seeding and
+  court rules shared in `packages/shared`, and one atomic `record_match_score` used by
+  both apps (mobile's two-write save retired).
+- **W1b** Public web tournament page with live brackets: row 21.
+- **W2** Director controls: rows 3, 9, 15, 18.
 - **W3** Pool play on web: rows 6, 23.
 
 ---

@@ -7,7 +7,7 @@ import {
   Trophy, PencilSimple, CheckCircle, Clock, Warning, Trash,
   Plus, Star, Image, Globe, UploadSimple, X, FloppyDisk,
   DotsSixVertical, Lock, LockOpen, ArrowsClockwise,
-  SoccerBall, Gauge, CheckFat,
+  Gauge,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
@@ -21,6 +21,8 @@ import { STATUS_BADGE_CLASS } from "@/lib/status";
 // uploads -- see lib/image-hosts.ts. No alias needed since SafeImage is a
 // distinct name from the Phosphor `Image` icon this file already imports.
 import { SafeImage } from "@/components/shared/safe-image";
+import { DayOfBoard } from "@/components/director/day-of-board";
+import { buildDivisionBracket } from "@/lib/tournament/day-of";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -75,6 +77,9 @@ interface Sponsor {
 interface Registration {
   id: string;
   player_id: string;
+  partner_id: string | null;
+  guest_player_id: string | null;
+  guest_partner_id: string | null;
   status: string;
   division_id: string | null;
   created_at: string;
@@ -89,23 +94,6 @@ interface BracketSeed {
   name: string;
   dupr: number | null;
   skill_level: string | null;
-}
-
-interface GeneratedMatch {
-  round: number;
-  match_index: number;
-  seed_a: number;
-  seed_b: number;
-  name_a: string;
-  name_b: string;
-}
-
-interface CourtMatch {
-  player_a: string;
-  player_b: string;
-  round: string;
-  match_id?: string;
-  is_bye?: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -152,47 +140,6 @@ function serpentinePool(seedIndex: number, poolCount: number): string {
   const cycle = poolCount * 2 - 2;
   const pos = seedIndex % cycle;
   return POOL_LETTERS[pos < poolCount ? pos : cycle - pos];
-}
-
-// Standard single-elim bracket seeding pairs for N players
-function buildElimPairs(seeds: BracketSeed[]): GeneratedMatch[] {
-  const n = seeds.length;
-  if (n < 2) return [];
-  let size = 1;
-  while (size < n) size *= 2;
-  const pairs: GeneratedMatch[] = [];
-  for (let i = 0; i < size / 2; i++) {
-    const aIdx = i;
-    const bIdx = size - 1 - i;
-    const seedA = seeds[aIdx];
-    const seedB = seeds[bIdx];
-    if (seedA && seedB) {
-      pairs.push({ round: 1, match_index: i, seed_a: aIdx + 1, seed_b: bIdx + 1, name_a: seedA.name, name_b: seedB.name });
-    } else if (seedA) {
-      // Top seed gets a bye — still include so they appear in Day Of queue
-      pairs.push({ round: 1, match_index: i, seed_a: aIdx + 1, seed_b: 0, name_a: seedA.name, name_b: "BYE" });
-    }
-  }
-  return pairs;
-}
-
-// Round robin: everyone vs everyone
-function buildRoundRobinSchedule(seeds: BracketSeed[]): GeneratedMatch[] {
-  const matches: GeneratedMatch[] = [];
-  let idx = 0;
-  for (let i = 0; i < seeds.length; i++) {
-    for (let j = i + 1; j < seeds.length; j++) {
-      matches.push({
-        round: 1,
-        match_index: idx++,
-        seed_a: i + 1,
-        seed_b: j + 1,
-        name_a: seeds[i].name,
-        name_b: seeds[j].name,
-      });
-    }
-  }
-  return matches;
 }
 
 // ── Bracket Seed Row (draggable) ──────────────────────────────────────────────
@@ -290,67 +237,6 @@ function PoolColumn({
   );
 }
 
-// ── Score Entry Modal ─────────────────────────────────────────────────────────
-
-function ScoreModal({
-  match, courtNum, onClose, onSave,
-}: {
-  match: CourtMatch; courtNum: number;
-  onClose: () => void;
-  onSave: (scoreA: number, scoreB: number) => void;
-}) {
-  const [scoreA, setScoreA] = useState("");
-  const [scoreB, setScoreB] = useState("");
-  return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-6 shadow-2xl">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-display text-xl tracking-wide">ENTER SCORE</h3>
-          <button onClick={onClose} className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary">
-            <X size={13} weight="bold" />
-          </button>
-        </div>
-        <div className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">COURT {courtNum} · {match.round.toUpperCase()}</div>
-        <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center mb-6">
-          <div className="text-center">
-            <div className="text-xs text-muted-foreground mb-1 truncate">{match.player_a}</div>
-            <input
-              type="number" min={0} max={99} value={scoreA}
-              onChange={(e) => setScoreA(e.target.value)}
-              className="w-full h-14 rounded-xl bg-secondary border border-border text-center text-2xl font-display outline-none focus:ring-2 focus:ring-ring"
-              placeholder="0"
-            />
-          </div>
-          <div className="text-muted-foreground font-mono text-sm">VS</div>
-          <div className="text-center">
-            <div className="text-xs text-muted-foreground mb-1 truncate">{match.player_b}</div>
-            <input
-              type="number" min={0} max={99} value={scoreB}
-              onChange={(e) => setScoreB(e.target.value)}
-              className="w-full h-14 rounded-xl bg-secondary border border-border text-center text-2xl font-display outline-none focus:ring-2 focus:ring-ring"
-              placeholder="0"
-            />
-          </div>
-        </div>
-        <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 h-11 rounded-full border border-border hover:bg-secondary font-display tracking-wider text-sm">CANCEL</button>
-          <button
-            onClick={() => {
-              const a = parseInt(scoreA, 10);
-              const b = parseInt(scoreB, 10);
-              if (isNaN(a) || isNaN(b)) { toast.error("Enter both scores."); return; }
-              onSave(a, b);
-            }}
-            className="flex-1 h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-wider text-sm flex items-center justify-center gap-2"
-          >
-            <CheckFat size={14} weight="fill" /> CONFIRM
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DirectorTournamentPage() {
@@ -384,20 +270,13 @@ export default function DirectorTournamentPage() {
   const [seeds, setSeeds] = useState<BracketSeed[]>([]);
   const [bracketLocked, setBracketLocked] = useState(false);
   const [savingSeeds, setSavingSeeds] = useState(false);
-  const [generatedMatches, setGeneratedMatches] = useState<GeneratedMatch[]>([]);
+  const [building, setBuilding] = useState(false);
+  // Elimination matches saved per division (bracket_matches, pool_label null).
+  const [savedBrackets, setSavedBrackets] = useState<Record<string, { matches: number; scored: number }>>({});
   const [dragSeedIdx, setDragSeedIdx] = useState<number | null>(null);
   const [dragOverSeedIdx, setDragOverSeedIdx] = useState<number | null>(null);
   const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
   const [dragOverPool, setDragOverPool] = useState<string | null>(null);
-
-  // Day-of command center state
-  const [courts, setCourts] = useState(4);
-  const [courtAssignments, setCourtAssignments] = useState<Record<number, CourtMatch | null>>({});
-  const [matchQueue, setMatchQueue] = useState<CourtMatch[]>([]);
-  const [draggingMatchIdx, setDraggingMatchIdx] = useState<number | null>(null);
-  const [dragOverCourt, setDragOverCourt] = useState<number | null>(null);
-  const [scoreModal, setScoreModal] = useState<{ match: CourtMatch; court: number } | null>(null);
-  const [completedMatches, setCompletedMatches] = useState<Set<string>>(new Set());
 
   const detailsFormRef = useRef<HTMLFormElement>(null);
 
@@ -437,7 +316,7 @@ export default function DirectorTournamentPage() {
 
       const { data: regs } = await supabase
         .from("registrations")
-        .select("id,player_id,status,division_id,created_at,profiles!player_id(full_name,dupr,skill_level)")
+        .select("id,player_id,partner_id,guest_player_id,guest_partner_id,status,division_id,created_at,profiles!player_id(full_name,dupr,skill_level)")
         .eq("tournament_id", id)
         .order("created_at", { ascending: true });
       setRegistrations((regs ?? []) as unknown as Registration[]);
@@ -471,7 +350,26 @@ export default function DirectorTournamentPage() {
     }
   }, [id, router]);
 
-  useEffect(() => { load(); }, [load]);
+  const loadSavedBrackets = useCallback(async () => {
+    const { data } = await createClient()
+      .from("bracket_matches")
+      .select("division_id, score_team1")
+      .eq("tournament_id", id)
+      .is("pool_label", null);
+    const next: Record<string, { matches: number; scored: number }> = {};
+    for (const r of data ?? []) {
+      if (!r.division_id) continue;
+      const cur = next[r.division_id] ?? { matches: 0, scored: 0 };
+      cur.matches += 1;
+      if (r.score_team1) cur.scored += 1;
+      next[r.division_id] = cur;
+    }
+    setSavedBrackets(next);
+  }, [id]);
+
+  // Database fetches (an external system); state is set after they resolve.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { load(); loadSavedBrackets(); }, [load, loadSavedBrackets]);
 
   // Auto-seed from registrations sorted by DUPR
   const autoSeed = useCallback(() => {
@@ -494,7 +392,6 @@ export default function DirectorTournamentPage() {
     }));
     setSeeds(newSeeds);
     setBracketLocked(false);
-    setGeneratedMatches([]);
     toast.success("Auto-seeded by DUPR rating.");
   }, [registrations, tournament]);
 
@@ -535,28 +432,40 @@ export default function DirectorTournamentPage() {
     setDragOverPool(null);
   };
 
-  // Generate matches preview
-  const generateMatches = useCallback(() => {
-    if (seeds.length < 2) { toast.error("Need at least 2 seeded players."); return; }
-    const fmt = tournament?.tournament_format ?? "single_elim";
-    let matches: GeneratedMatch[] = [];
-    if (fmt === "round_robin") {
-      matches = buildRoundRobinSchedule(seeds);
-    } else {
-      matches = buildElimPairs(seeds);
+  // Build and save single-elimination brackets for every division
+  // (bracket_matches), using the seed list where set, then registration
+  // order. The same builder as mobile (packages/shared/src/bracketBuild.ts),
+  // so Day Of, the queue and courts run on it from either device.
+  const generateMatches = useCallback(async () => {
+    if (!tournament) return;
+    const fmt = tournament.tournament_format ?? "single_elim";
+    if (fmt === "pool_bracket") {
+      toast.info("Pool Play → Bracket is set up from the mobile app for now (pools, then the bracket from standings).");
+      return;
     }
-    setGeneratedMatches(matches);
-    // Populate day-of match queue
-    setMatchQueue(matches.map((m) => ({
-      player_a: m.name_a,
-      player_b: m.name_b,
-      round: fmt === "round_robin" ? "Round Robin" : `Round ${m.round}`,
-      is_bye: m.name_b === "BYE",
-    })));
-    const real = matches.filter((m) => m.name_b !== "BYE").length;
-    const byes = matches.length - real;
-    toast.success(`${real} match${real !== 1 ? "es" : ""}${byes > 0 ? ` + ${byes} bye${byes > 1 ? "s" : ""}` : ""} generated.`);
-  }, [seeds, tournament]);
+    if (fmt !== "single_elim" && !window.confirm(`${STRUCTURE_LABELS[fmt] ?? fmt} isn't supported yet. Build Single Elimination brackets instead?`)) return;
+
+    const targets = divisions.filter((d) => registrations.some((r) => r.division_id === d.id));
+    if (targets.length === 0) { toast.error("No division has registered players yet."); return; }
+    const scored = targets.filter((d) => (savedBrackets[d.id]?.scored ?? 0) > 0);
+    if (scored.length > 0 && !window.confirm(
+      `Rebuilding replaces recorded scores in ${scored.map((d) => `${d.name} (${savedBrackets[d.id].scored})`).join(", ")}. Continue?`,
+    )) return;
+
+    setBuilding(true);
+    const seedByPlayer = new Map(seeds.map((s) => [s.player_id, s.seed_number]));
+    const built: string[] = [];
+    const skipped: string[] = [];
+    for (const d of targets) {
+      const result = await buildDivisionBracket({ tournamentId: id, divisionId: d.id, registrations, seedByPlayer });
+      if (result.ok) built.push(`${d.name} (${result.teams})`);
+      else skipped.push(`${d.name}: ${result.error}`);
+    }
+    setBuilding(false);
+    await loadSavedBrackets();
+    if (built.length) toast.success(`Brackets saved: ${built.join(", ")}.`);
+    if (skipped.length) toast.error(skipped.join(" "));
+  }, [tournament, divisions, registrations, savedBrackets, seeds, id, loadSavedBrackets]);
 
   // Save + lock seeds to DB
   const lockBracket = useCallback(async () => {
@@ -586,36 +495,6 @@ export default function DirectorTournamentPage() {
     setBracketLocked(false);
     toast.success("Bracket unlocked for editing.");
   }, [id]);
-
-  // Day-of: drag match from queue to court
-  const handleMatchDragStart = (idx: number) => setDraggingMatchIdx(idx);
-  const handleMatchDragEnd = () => { setDraggingMatchIdx(null); setDragOverCourt(null); };
-  const handleCourtDragOver = (e: React.DragEvent, court: number) => { e.preventDefault(); setDragOverCourt(court); };
-  const handleCourtDrop = (courtNum: number) => {
-    if (draggingMatchIdx === null) return;
-    const match = matchQueue[draggingMatchIdx];
-    if (!match) return;
-    setCourtAssignments((prev) => ({ ...prev, [courtNum]: match }));
-    setMatchQueue((prev) => prev.filter((_, i) => i !== draggingMatchIdx));
-    setDraggingMatchIdx(null);
-    setDragOverCourt(null);
-    toast.success(`Match assigned to Court ${courtNum}.`);
-  };
-  const clearCourt = (courtNum: number) => {
-    const match = courtAssignments[courtNum];
-    if (match) setMatchQueue((prev) => [match, ...prev]);
-    setCourtAssignments((prev) => ({ ...prev, [courtNum]: null }));
-  };
-  const completeMatch = (courtNum: number, scoreA: number, scoreB: number) => {
-    const match = courtAssignments[courtNum];
-    if (!match) return;
-    const winner = scoreA > scoreB ? match.player_a : match.player_b;
-    const key = `${match.player_a}-${match.player_b}`;
-    setCompletedMatches((prev) => new Set(prev).add(key));
-    setCourtAssignments((prev) => ({ ...prev, [courtNum]: null }));
-    setScoreModal(null);
-    toast.success(`Match complete — ${winner} wins ${scoreA}–${scoreB}.`);
-  };
 
   const saveBanner = async () => {
     if (!tournament) return;
@@ -1044,10 +923,10 @@ export default function DirectorTournamentPage() {
               </button>
               <button
                 onClick={generateMatches}
-                disabled={seeds.length < 2 || bracketLocked}
+                disabled={building || registrations.length < 2}
                 className="flex items-center gap-2 h-10 px-5 rounded-full border border-border hover:bg-secondary font-display tracking-wider text-sm transition-colors disabled:opacity-40"
               >
-                <Gauge size={14} weight="fill" /> GENERATE MATCHES
+                <Gauge size={14} weight="fill" /> {building ? "BUILDING…" : "GENERATE MATCHES"}
               </button>
               {!bracketLocked ? (
                 <button
@@ -1066,6 +945,25 @@ export default function DirectorTournamentPage() {
                 </button>
               )}
             </div>
+
+            {divisions.length > 0 && (
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-2">SAVED BRACKETS · USED ON THE DAY (WEB AND MOBILE)</p>
+                <div className="space-y-1.5">
+                  {divisions.map((d) => {
+                    const b = savedBrackets[d.id];
+                    return (
+                      <div key={d.id} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="truncate">{d.name}</span>
+                        <span className={`font-mono text-[10px] tracking-widest ${b ? "text-primary" : "text-muted-foreground"}`}>
+                          {b ? `SAVED · ${b.matches} MATCHES${b.scored ? ` · ${b.scored} SCORED` : ""}` : "NOT BUILT"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {seeds.length === 0 && registrations.filter((r) => r.status === "registered").length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border p-12 text-center">
@@ -1147,155 +1045,9 @@ export default function DirectorTournamentPage() {
           </div>
         )}
 
-        {/* ── Day Of tab (Command Center) ── */}
+        {/* ── Day Of tab (Command Center): live data, shared with mobile ── */}
         {activeTab === "dayof" && (
-          <div className="space-y-6">
-            {/* Court count selector */}
-            <div className="flex items-center gap-4 flex-wrap">
-              <span className="font-mono text-[10px] tracking-widest text-muted-foreground">COURTS</span>
-              <div className="flex gap-2">
-                {[2, 3, 4, 6, 8].map((n) => (
-                  <button key={n} onClick={() => setCourts(n)}
-                    className={`h-9 w-9 rounded-xl border font-mono text-sm transition-all ${courts === n ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:border-primary/50"}`}>
-                    {n}
-                  </button>
-                ))}
-              </div>
-              <span className="font-mono text-[10px] text-muted-foreground">
-                {Object.values(courtAssignments).filter(Boolean).length} ACTIVE · {completedMatches.size} DONE
-              </span>
-            </div>
-
-            {matchQueue.length === 0 && Object.values(courtAssignments).every((v) => !v) && (
-              <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-                <SoccerBall size={32} className="text-muted-foreground mx-auto mb-3" />
-                <p className="font-display text-xl tracking-wide mb-1">NO MATCHES QUEUED</p>
-                <p className="text-sm text-muted-foreground">Generate matches in the Bracket tab first, then return here on tournament day.</p>
-                <button onClick={() => setActiveTab("bracket")} className="mt-4 h-10 px-6 rounded-full border border-border hover:bg-secondary font-display tracking-wider text-sm transition-colors">
-                  GO TO BRACKET
-                </button>
-              </div>
-            )}
-
-            {(matchQueue.length > 0 || Object.values(courtAssignments).some(Boolean)) && (
-              <>
-                {/* Courts grid */}
-                <div>
-                  <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">
-                    COURTS — DRAG A MATCH FROM THE QUEUE TO ASSIGN
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {Array.from({ length: courts }, (_, i) => i + 1).map((courtNum) => {
-                      const match = courtAssignments[courtNum];
-                      const isOver = dragOverCourt === courtNum;
-                      return (
-                        <div
-                          key={courtNum}
-                          onDragOver={(e) => handleCourtDragOver(e, courtNum)}
-                          onDrop={() => handleCourtDrop(courtNum)}
-                          onDragLeave={() => setDragOverCourt(null)}
-                          className={`rounded-2xl border-2 p-3 min-h-[120px] flex flex-col transition-all ${
-                            isOver ? "border-primary bg-primary/5 scale-[1.02]" :
-                            match ? "border-primary/30 bg-card" : "border-dashed border-border bg-card/50"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-mono text-[10px] tracking-widest text-muted-foreground">COURT {courtNum}</span>
-                            {match && (
-                              <button onClick={() => clearCourt(courtNum)} className="h-5 w-5 rounded-full hover:bg-destructive/10 hover:text-destructive flex items-center justify-center transition-colors">
-                                <X size={10} weight="bold" />
-                              </button>
-                            )}
-                          </div>
-                          {match ? (
-                            <div className="flex-1 flex flex-col justify-between">
-                              <div>
-                                <div className="text-xs font-mono text-muted-foreground mb-2">{match.round}</div>
-                                <div className="space-y-1">
-                                  <div className="text-sm font-semibold truncate">{match.player_a}</div>
-                                  <div className="font-mono text-[10px] text-muted-foreground text-center">VS</div>
-                                  <div className="text-sm font-semibold truncate">{match.player_b}</div>
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => setScoreModal({ match, court: courtNum })}
-                                className="mt-3 w-full h-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-mono text-[10px] tracking-widest transition-colors flex items-center justify-center gap-1.5"
-                              >
-                                <CheckFat size={11} weight="fill" /> SCORE
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex-1 flex items-center justify-center text-muted-foreground/40">
-                              <span className="text-xs font-mono">EMPTY</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Match queue */}
-                {matchQueue.length > 0 && (
-                  <div>
-                    <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-3">
-                      MATCH QUEUE · {matchQueue.filter((m) => !m.is_bye).length} MATCHES{matchQueue.filter((m) => m.is_bye).length > 0 ? ` · ${matchQueue.filter((m) => m.is_bye).length} BYES` : ""} — DRAG TO COURT
-                    </p>
-                    <div className="space-y-2">
-                      {matchQueue.map((match, idx) => match.is_bye ? (
-                        <div key={idx} className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-secondary/30 px-4 py-3">
-                          <span className="font-mono text-[9px] tracking-widest text-muted-foreground px-2 py-0.5 rounded-full bg-secondary border border-border flex-shrink-0">BYE</span>
-                          <span className="text-sm font-semibold flex-1 truncate">{match.player_a}</span>
-                          <button
-                            onClick={() => {
-                              setMatchQueue((prev) => prev.filter((_, i) => i !== idx));
-                              setCompletedMatches((prev) => new Set(prev).add(match.player_a));
-                              toast.success(`${match.player_a} advances (bye).`);
-                            }}
-                            className="flex-shrink-0 h-7 px-3 rounded-full border border-primary/40 bg-primary/10 text-primary font-mono text-[9px] tracking-widest hover:bg-primary/20 transition-colors"
-                          >
-                            ADVANCE →
-                          </button>
-                        </div>
-                      ) : (
-                        <div
-                          key={idx}
-                          draggable
-                          onDragStart={() => handleMatchDragStart(idx)}
-                          onDragEnd={handleMatchDragEnd}
-                          className={`flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 cursor-grab active:cursor-grabbing transition-all ${draggingMatchIdx === idx ? "opacity-40 scale-95" : "hover:border-primary/40"}`}
-                        >
-                          <DotsSixVertical size={14} className="text-muted-foreground flex-shrink-0" />
-                          <span className="font-mono text-[10px] text-muted-foreground flex-shrink-0">{match.round}</span>
-                          <div className="flex-1 min-w-0 flex items-center gap-2">
-                            <span className="text-sm font-semibold truncate flex-1">{match.player_a}</span>
-                            <span className="font-mono text-[10px] text-muted-foreground flex-shrink-0">VS</span>
-                            <span className="text-sm font-semibold truncate flex-1 text-right">{match.player_b}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Completed matches */}
-                {completedMatches.size > 0 && (
-                  <div className="rounded-2xl border border-border bg-card p-4">
-                    <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-2">
-                      COMPLETED · {completedMatches.size}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {Array.from(completedMatches).map((key) => (
-                        <span key={key} className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-mono text-primary flex items-center gap-1.5">
-                          <CheckFat size={10} weight="fill" /> {key.split("-")[0]}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          <DayOfBoard tournamentId={id} onGoToBracket={() => setActiveTab("bracket")} />
         )}
 
         {/* ── Roster tab ── */}
@@ -1412,15 +1164,6 @@ export default function DirectorTournamentPage() {
         )}
       </div>
 
-      {/* Score entry modal */}
-      {scoreModal && (
-        <ScoreModal
-          match={scoreModal.match}
-          courtNum={scoreModal.court}
-          onClose={() => setScoreModal(null)}
-          onSave={(a, b) => completeMatch(scoreModal.court, a, b)}
-        />
-      )}
     </PageShell>
   );
 }
