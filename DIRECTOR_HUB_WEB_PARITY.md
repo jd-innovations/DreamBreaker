@@ -80,7 +80,39 @@ the backlog items below (hold, no-show, activity log).
   because `court_queue` only includes live divisions. Also in W1: bracket, seeding and
   court rules shared in `packages/shared`, and one atomic `record_match_score` used by
   both apps (mobile's two-write save retired).
-- **W1b** Public web tournament page with live brackets: row 21.
+- **W1b** Public web tournament page with live brackets: row 21. **Done 2026-09-28**
+  (0c90072): `web/src/components/tournament/live-brackets.tsx`, public Brackets +
+  Leaderboard tabs, director LIVE BRACKETS tab, `tournament_guest_names` for guest names.
+
+### W2 scope (agreed 2026-09-28, not started)
+
+All database functions below are live; W2 is web client work unless noted.
+
+1. **Score corrections + ⓘ history** (row 18). `preview_score_correction` then
+   `correct_match_score(match, s1, s2, reason)`; director/admin only; reason required;
+   shows what gets cleared (now including a played 3rd-place match). Audit rows in
+   `bracket_match_score_edits` (director/admin readable). Add "Edit score" to completed
+   matches in the director LIVE BRACKETS view and the Day Of completed list; the ⓘ shows
+   when, old score, editor, reason (public sees only when + old score, as on mobile).
+   Mobile reference: `division-bracket.tsx` score modal edit mode, `lib/supabase/matches.ts`.
+2. **Auto-assign switch** (row 15). `set_tournament_auto_assign_courts(p_tournament_id,
+   p_enabled)`; Day Of currently only displays "AUTO-ASSIGN ON/OFF". Mobile: `CourtsSheet`.
+3. **Walk-ins after close, incl. paid on site** (row 9).
+   `director_add_tournament_registration(p_tournament_id, p_division_id, p_player_id |
+   p_guest, p_partner_id | p_partner_guest, p_onsite_tender)`; tender cash | other | comp
+   required for a priced division; amount derived server-side. Web has no Add Player
+   today. Client rules in section 3 above. Mobile: `tournament/[id]/add-registration.tsx`.
+4. **Add 3rd-place match** to an existing bracket: `add_third_place_match(p_tournament_id,
+   p_division_id)` (errors: already_exists, no_semifinals, semifinal_walkover). Offer it in
+   the director LIVE BRACKETS view when a division has semifinals and no bronze.
+5. **Division naming** (row 3): web uses fixed presets in `web/src/app/director/page.tsx`
+   (FORMAT_OPTIONS), so the "Men's Mixed Doubles" bug likely can't happen. Verify and close.
+6. **Invented content on the public page** (`tournaments/[id]/tournament-detail-client.tsx`,
+   AGENTS.md "no fake data"): the Schedule tab is a hard-coded day for every tournament;
+   the Overview description fallback claims "Pro Circuit", pool play and live scoring;
+   check Prize and FAQ too. Replace with real fields (event_date, start_time,
+   checkin_opens_at/closes_at, prize_pool_cents, rules) or hide the section when empty.
+   Owner decision needed on what to hide vs derive.
 - **W2** Director controls: rows 3, 9, 15, 18.
 - **W3** Pool play on web: rows 6, 23.
 
