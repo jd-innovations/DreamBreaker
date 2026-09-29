@@ -253,15 +253,36 @@ export async function buildDivisionBracket(input: {
     .sort((a, b) => seedOf(a.r) - seedOf(b.r) || a.i - b.i)
     .map(({ r }) => r);
 
+  const saved = await saveEliminationBracket(
+    input.tournamentId,
+    input.divisionId,
+    seededSlots(ordered).map((r) => r && registrationTeam(r)),
+  );
+  return saved.ok ? { ok: true, teams: teams.length } : saved;
+}
+
+export function registrationTeam(r: BracketRegistration): BracketTeam {
+  return {
+    playerId: r.guest_player_id ? null : r.player_id,
+    partnerId: r.guest_partner_id ? null : r.partner_id,
+    playerGuestId: r.guest_player_id,
+    partnerGuestId: r.guest_partner_id,
+  };
+}
+
+/**
+ * Saves a single-elimination bracket from exact first-round slots (null = bye).
+ * Replaces the division's elimination matches; pool matches are kept.
+ */
+export async function saveEliminationBracket(
+  tournamentId: string,
+  divisionId: string,
+  slots: (BracketTeam | null)[],
+): Promise<Result> {
   const rows = buildBracketMatchRows({
-    tournamentId: input.tournamentId,
-    divisionId: input.divisionId,
-    slots: seededSlots(ordered).map((r): BracketTeam | null => r && {
-      playerId: r.guest_player_id ? null : r.player_id,
-      partnerId: r.guest_partner_id ? null : r.partner_id,
-      playerGuestId: r.guest_player_id,
-      partnerGuestId: r.guest_partner_id,
-    }),
+    tournamentId,
+    divisionId,
+    slots,
     newId: () => crypto.randomUUID(),
     now: new Date().toISOString(),
   });
@@ -270,14 +291,14 @@ export async function buildDivisionBracket(input: {
   const del = await supabase
     .from("bracket_matches")
     .delete()
-    .eq("tournament_id", input.tournamentId)
-    .eq("division_id", input.divisionId)
+    .eq("tournament_id", tournamentId)
+    .eq("division_id", divisionId)
     .is("pool_label", null);
   if (del.error) return { ok: false, error: "Could not replace the existing bracket." };
 
   const ins = await supabase.from("bracket_matches").insert(rows);
   if (ins.error) return { ok: false, error: "Could not save the bracket. Please try again." };
-  return { ok: true, teams: teams.length };
+  return { ok: true };
 }
 
 // ─── Live updates ────────────────────────────────────────────────────────────

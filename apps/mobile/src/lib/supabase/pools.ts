@@ -10,9 +10,10 @@ import {
   type DirectorBracketMatch,
 } from '@/lib/supabase/brackets';
 import {
-  POOL_LETTERS, DEFAULT_ADVANCE_PER_POOL, seedTeams, snakePools, roundRobinRounds,
+  POOL_LETTERS, DEFAULT_ADVANCE_PER_POOL, seedTeams, snakePools,
   seedQualifiers, placeSeeds, cutoffTies, type QualifiedSeed,
 } from '@/lib/poolSchedule';
+import { buildPoolMatchRows } from '@shared/poolSchedule';
 
 // Pool Play → Bracket, step 1: pools (migration 20260928170000).
 //
@@ -47,39 +48,18 @@ export async function createPools(input: {
     return { ok: false, error: `Advance per pool must be between 1 and ${smallest} (the smallest pool's size).` };
   }
 
-  // Interleave the schedule: round 1 of every pool, then round 2 of every
-  // pool, and so on. match_number follows that order, so the court queue's
-  // tie-break (match number) rotates across pools.
-  const perPool = pools.map(p => roundRobinRounds(p.length));
-  const maxRounds = Math.max(...perPool.map(r => r.length));
-  const now = new Date().toISOString();
-  const rows: Record<string, unknown>[] = [];
-  let seq = 0;
-  for (let r = 0; r < maxRounds; r++) {
-    pools.forEach((pool, pi) => {
-      for (const [i, j] of perPool[pi][r] ?? []) {
-        const t1 = pool[i];
-        const t2 = pool[j];
-        rows.push({
-          tournament_id:   input.tournamentId,
-          division_id:     input.divisionId,
-          round:           'pool',
-          pool_label:      POOL_LETTERS[pi],
-          match_number:    seq++,
-          team1_player_a:  t1.playerGuestId ? null : t1.playerId,
-          team1_player_b:  t1.partnerGuestId ? null : t1.partnerId ?? null,
-          team1_guest_a:   t1.playerGuestId ?? null,
-          team1_guest_b:   t1.partnerGuestId ?? null,
-          team2_player_a:  t2.playerGuestId ? null : t2.playerId,
-          team2_player_b:  t2.partnerGuestId ? null : t2.partnerId ?? null,
-          team2_guest_a:   t2.playerGuestId ?? null,
-          team2_guest_b:   t2.partnerGuestId ?? null,
-          created_at:      now,
-          updated_at:      now,
-        });
-      }
-    });
-  }
+  // Interleaved round robin (packages/shared/src/poolSchedule.ts, shared with web).
+  const rows = buildPoolMatchRows({
+    tournamentId: input.tournamentId,
+    divisionId: input.divisionId,
+    pools: pools.map(pool => pool.map(t => ({
+      playerId: t.playerId,
+      partnerId: t.partnerId ?? null,
+      playerGuestId: t.playerGuestId ?? null,
+      partnerGuestId: t.partnerGuestId ?? null,
+    }))),
+    now: new Date().toISOString(),
+  });
 
   // Replace any previous pools for this division (elimination rows untouched).
   const { error: delError } = await supabase

@@ -15,6 +15,7 @@ import {
   addThirdPlaceMatch, fetchLiveBrackets, subscribeLiveBrackets, type LiveBracketMatch, type LiveDivision,
 } from "@/lib/tournament/live-brackets";
 import { EditScoreDialog, ScoreEditInfo } from "@/components/tournament/score-edit";
+import { PoolStandingsTable, usePoolStandings } from "@/components/tournament/pool-standings";
 import { roundName } from "@/lib/tournament/day-of";
 
 const DISPLAY_ORDER: Record<string, number> = { pool: 0, r64: 1, r32: 2, r16: 3, qf: 4, sf: 5, final: 7, bronze: 8 };
@@ -129,7 +130,7 @@ export function LiveBrackets({
       )}
 
       {division && (view === "bracket"
-        ? <BracketView matches={division.matches} currentUserId={currentUserId} director={director} onEdit={setEditing} />
+        ? <BracketView division={division} currentUserId={currentUserId} director={director} onEdit={setEditing} />
         : <LeaderboardView rows={board} currentUserId={currentUserId} />)}
 
       {editing && (
@@ -146,7 +147,9 @@ export function LiveBrackets({
 
 type CardActions = { currentUserId: string | null; director: boolean; onEdit: (m: LiveBracketMatch) => void };
 
-function BracketView({ matches, ...actions }: { matches: LiveBracketMatch[] } & CardActions) {
+function BracketView({ division, ...actions }: { division: LiveDivision } & CardActions) {
+  const matches = division.matches;
+  const { pools: standings } = usePoolStandings(division.id, matches);
   const pools = new Map<string, LiveBracketMatch[]>();
   for (const m of matches) if (m.poolLabel) pools.set(m.poolLabel, [...(pools.get(m.poolLabel) ?? []), m]);
   const elim = matches.filter((m) => !m.poolLabel);
@@ -161,6 +164,12 @@ function BracketView({ matches, ...actions }: { matches: LiveBracketMatch[] } & 
             {[...pools.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([label, list]) => (
               <div key={label} className="rounded-2xl border border-border bg-card p-3 space-y-2">
                 <p className="font-mono text-[10px] tracking-widest text-primary">POOL {label}</p>
+                {(() => {
+                  const pool = standings?.find((p) => p.label === label);
+                  return pool && pool.standings.length > 0
+                    ? <PoolStandingsTable pool={pool} advancePerPool={division.advancePerPool} currentUserId={actions.currentUserId} />
+                    : null;
+                })()}
                 {list.sort((a, b) => a.matchNumber - b.matchNumber).map((m) => <MatchCard key={m.id} m={m} {...actions} compact />)}
               </div>
             ))}

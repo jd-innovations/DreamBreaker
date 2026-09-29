@@ -50,7 +50,7 @@ the backlog items below (hold, no-show, activity log).
 | 3 | Divisions, "Mixed Doubles" naming rule | ✅ fixed presets | ✅ | Both | done (W2) |
 | 4 | Seeding review / drag-reorder | ✅ `bracket_seeds` | ❌ | Web-first | — |
 | 5 | Build single-elim bracket, saved to `bracket_matches` | ⚠️ in-browser pairs only | ✅ | Both, saved | W1 |
-| 6 | Pool play: pools, standings, build bracket | ⚠️ pool letters only | ✅ | Both | W3 |
+| 6 | Pool play: pools, standings, build bracket | ✅ | ✅ | Both | done (W3) |
 | 7 | Sponsors, public page, analytics, messages | ✅ | partial | Web-first | — |
 | | **Registration & check-in** | | | | |
 | 8 | Registrations list + search | ✅ | ✅ | Both | done |
@@ -70,7 +70,7 @@ the backlog items below (hold, no-show, activity log).
 | | **Players & spectators** | | | | |
 | 21 | Public brackets / results, live | ❌ none (BracketTree is director-only) | ✅ live | Both, live | W1b |
 | 22 | "You're up on Court X" push | ❌ | ❌ | Mobile (push) | later |
-| 23 | Pool standings view | ❌ | ✅ | Both | W3 |
+| 23 | Pool standings view | ✅ public + director | ✅ | Both | done (W3) |
 | | **Backlog** | | | | |
 | 24 | Hold a match off the courts | ❌ | ❌ | Both | later |
 | 25 | No-show / withdrawn skips future matches | ❌ | ❌ | Both | later |
@@ -133,7 +133,18 @@ All database functions below are live; W2 is web client work unless noted.
    checkin_opens_at/closes_at, prize_pool_cents, rules) or hide the section when empty.
    Owner decision needed on what to hide vs derive.
 - **W2** Director controls: rows 3, 9, 15, 18.
-- **W3** Pool play on web: rows 6, 23.
+- **W3** Pool play on web: rows 6, 23. **Done 2026-09-29.**
+  - Rules moved to `packages/shared/src/poolSchedule.ts` (placement, interleaved round robin,
+    seeding, same-pool split, cut ties), unit-tested; mobile `lib/poolSchedule.ts` and
+    `createPools` now use it.
+  - Web: `lib/tournament/pools.ts`, `components/director/pool-play-panel.tsx` (Bracket tab for
+    Pool Play → Bracket: Generate / Redo Pools, standings, Build / Rebuild bracket with seed
+    preview), `components/tournament/pool-standings.tsx` (standings above each pool in the
+    public Brackets tab and director LIVE BRACKETS).
+  - The old per-player drag-and-drop pool columns (`bracket_seeds.pool_letter`) were removed
+    with the owner's OK; AUTO-SEED / GENERATE / LOCK are hidden for pool tournaments.
+  - `20260928290000_pool_standings_public`: `division_pool_standings` granted to anon.
+  - Moving a team between pools by hand is not supported on either app (owner, 2026-09-29).
 
 ---
 
@@ -311,13 +322,11 @@ All database functions below are live; W2 is web client work unless noted.
     reused MatchCard, so courts, queue, score entry and realtime all work.
   - Elimination readers and `createBracket`'s delete filter
     `pool_label is null`, so pools and the bracket never touch each other.
-- **Web to-do:** web's pool seeding (`bracket_seeds`) is per tournament, by
-  player, and never creates matches. Replace it with this model, and show the
-  standings function's output.
+- **Web:** done in W3 (see the phase notes above).
 
 ## 9. Pool Play → Bracket, step 2: building the bracket (no DB change)
 
-- **Seeding** (`lib/poolSchedule.ts`, unit-tested):
+- **Seeding** (`packages/shared/src/poolSchedule.ts`, unit-tested since W3):
   - Tier first: every pool winner, then every runner-up. Within a tier, by pool
     record: wins, then point difference, then points scored (owner's choice).
   - Standard positions via `bracketPositions` (1v8, 4v5, 2v7, 3v6). Byes go to
@@ -333,8 +342,7 @@ All database functions below are live; W2 is web client work unless noted.
     byes, tie warnings, and a rebuild warning.
   - In a pools division, Regenerate means rebuild **from pools**. Redo Pools
     is hidden once a bracket exists.
-- **Web to-do:** the same build flow and preview. Reuse the seeding rules
-  (port `poolSchedule.ts`).
+- **Web:** done in W3; the seeding rules are shared (`packages/shared/src/poolSchedule.ts`).
 
 ## 10. Division play status (only live divisions get courts)
 

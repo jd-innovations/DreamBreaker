@@ -25,6 +25,7 @@ import { DayOfBoard } from "@/components/director/day-of-board";
 import { LiveBrackets } from "@/components/tournament/live-brackets";
 import { buildDivisionBracket } from "@/lib/tournament/day-of";
 import { AddRegistrationDialog } from "@/components/director/add-registration-dialog";
+import { PoolPlayPanel } from "@/components/director/pool-play-panel";
 import { onsiteLabel } from "@/lib/tournament/director-registrations";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -89,7 +90,7 @@ interface Registration {
   onsite_tender: string | null;
   onsite_amount_cents: number | null;
   profiles: { full_name: string | null; dupr: number | null; skill_level: string | null } | null;
-  partner: { full_name: string | null } | null;
+  partner: { full_name: string | null; dupr: number | null } | null;
 }
 
 const ROSTER_STATUS: Record<string, { label: string; cls: string }> = {
@@ -197,58 +198,6 @@ function SeedRow({
   );
 }
 
-// ── Pool Column ───────────────────────────────────────────────────────────────
-
-function PoolColumn({
-  letter, seeds, locked, draggingPlayerId, dragOverPool,
-  onDragOver, onDrop, onSeedDragStart, onSeedDragEnd,
-}: {
-  letter: string; seeds: BracketSeed[]; locked: boolean;
-  draggingPlayerId: string | null; dragOverPool: string | null;
-  onDragOver: (e: React.DragEvent, pool: string) => void;
-  onDrop: (pool: string) => void;
-  onSeedDragStart: (playerId: string) => void;
-  onSeedDragEnd: () => void;
-}) {
-  const isOver = dragOverPool === letter;
-  return (
-    <div
-      onDragOver={(e) => onDragOver(e, letter)}
-      onDrop={() => onDrop(letter)}
-      className={`flex-1 min-w-0 rounded-2xl border-2 p-3 transition-all ${isOver ? "border-primary bg-primary/5" : "border-border bg-card"}`}
-    >
-      <div className={`font-mono text-[10px] tracking-[0.3em] font-bold mb-3 px-1 ${POOL_COLORS[letter]?.split(" ")[2] ?? "text-muted-foreground"}`}>
-        POOL {letter}
-      </div>
-      <div className="space-y-2">
-        {seeds.length === 0 && (
-          <div className="h-12 rounded-xl border-2 border-dashed border-border flex items-center justify-center">
-            <span className="text-xs text-muted-foreground">Drop here</span>
-          </div>
-        )}
-        {seeds.map((s) => (
-          <div
-            key={s.player_id}
-            draggable={!locked}
-            onDragStart={() => onSeedDragStart(s.player_id)}
-            onDragEnd={onSeedDragEnd}
-            className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 transition-all
-              ${draggingPlayerId === s.player_id ? "opacity-40" : ""}
-              ${locked ? "cursor-default" : "cursor-grab active:cursor-grabbing"}
-              border-border bg-secondary/40`}
-          >
-            {!locked && <DotsSixVertical size={12} className="text-muted-foreground flex-shrink-0" />}
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold truncate">{s.name}</div>
-              <div className="text-[10px] text-muted-foreground">{s.dupr ? `DUPR ${s.dupr}` : s.skill_level?.replace("-", " – ") ?? "—"}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DirectorTournamentPage() {
@@ -291,8 +240,6 @@ export default function DirectorTournamentPage() {
   const [savedBrackets, setSavedBrackets] = useState<Record<string, { matches: number; scored: number }>>({});
   const [dragSeedIdx, setDragSeedIdx] = useState<number | null>(null);
   const [dragOverSeedIdx, setDragOverSeedIdx] = useState<number | null>(null);
-  const [draggingPlayerId, setDraggingPlayerId] = useState<string | null>(null);
-  const [dragOverPool, setDragOverPool] = useState<string | null>(null);
 
   const detailsFormRef = useRef<HTMLFormElement>(null);
 
@@ -333,7 +280,7 @@ export default function DirectorTournamentPage() {
       const [{ data: regs }, { data: guests }] = await Promise.all([
         supabase
           .from("registrations")
-          .select("id,player_id,partner_id,guest_player_id,guest_partner_id,status,division_id,created_at,onsite_tender,onsite_amount_cents,profiles!player_id(full_name,dupr,skill_level),partner:profiles!partner_id(full_name)")
+          .select("id,player_id,partner_id,guest_player_id,guest_partner_id,status,division_id,created_at,onsite_tender,onsite_amount_cents,profiles!player_id(full_name,dupr,skill_level),partner:profiles!partner_id(full_name,dupr)")
           .eq("tournament_id", id)
           .order("created_at", { ascending: true }),
         supabase.rpc("tournament_guest_names", { p_tournament_id: id }),
@@ -441,17 +388,6 @@ export default function DirectorTournamentPage() {
     );
   }, []);
 
-  // Pool drag-and-drop
-  const handlePoolDragStart = (playerId: string) => setDraggingPlayerId(playerId);
-  const handlePoolDragEnd = () => { setDraggingPlayerId(null); setDragOverPool(null); };
-  const handlePoolDragOver = (e: React.DragEvent, pool: string) => { e.preventDefault(); setDragOverPool(pool); };
-  const handlePoolDrop = (pool: string) => {
-    if (!draggingPlayerId) return;
-    setSeeds((prev) => prev.map((s) => s.player_id === draggingPlayerId ? { ...s, pool_letter: pool } : s));
-    setDraggingPlayerId(null);
-    setDragOverPool(null);
-  };
-
   // Build and save single-elimination brackets for every division
   // (bracket_matches), using the seed list where set, then registration
   // order. The same builder as mobile (packages/shared/src/bracketBuild.ts),
@@ -460,7 +396,7 @@ export default function DirectorTournamentPage() {
     if (!tournament) return;
     const fmt = tournament.tournament_format ?? "single_elim";
     if (fmt === "pool_bracket") {
-      toast.info("Pool Play → Bracket is set up from the mobile app for now (pools, then the bracket from standings).");
+      toast.info("Pool Play → Bracket: generate pools per division below, then build the bracket from the standings.");
       return;
     }
     if (fmt !== "single_elim" && !window.confirm(`${STRUCTURE_LABELS[fmt] ?? fmt} isn't supported yet. Build Single Elimination brackets instead?`)) return;
@@ -945,7 +881,8 @@ export default function DirectorTournamentPage() {
               )}
             </div>
 
-            {/* Action buttons */}
+            {/* Action buttons (single elimination; pool play uses the pool panel) */}
+            {tournament.tournament_format !== "pool_bracket" && (<>
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={autoSeed}
@@ -998,54 +935,24 @@ export default function DirectorTournamentPage() {
               </div>
             )}
 
-            {seeds.length === 0 && registrations.filter((r) => r.status === "registered").length === 0 ? (
+            </>)}
+
+            {tournament.tournament_format === "pool_bracket" ? (
+              <PoolPlayPanel
+                tournamentId={id}
+                divisions={divisions.map((d) => ({ id: d.id, name: d.name }))}
+                registrations={registrations.map((r) => ({
+                  ...r,
+                  playerDupr: r.profiles?.dupr ?? null,
+                  partnerDupr: r.partner?.dupr ?? null,
+                }))}
+                preferredPoolCount={tournament.pool_count}
+              />
+            ) : seeds.length === 0 && registrations.filter((r) => r.status === "registered").length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border p-12 text-center">
                 <Trophy size={32} className="text-muted-foreground mx-auto mb-3" />
                 <p className="font-display text-xl tracking-wide mb-1">NO REGISTERED PLAYERS</p>
                 <p className="text-sm text-muted-foreground">Players must register before you can seed the bracket.</p>
-              </div>
-            ) : tournament.tournament_format === "pool_bracket" ? (
-              /* Pool Play layout */
-              <div className="space-y-4">
-                <p className="font-mono text-[10px] tracking-widest text-muted-foreground">
-                  DRAG PLAYERS BETWEEN POOLS · SERPENTINE AUTO-SEEDED
-                </p>
-                <div className="flex gap-3 overflow-x-auto pb-2">
-                  {POOL_LETTERS.slice(0, poolCount).map((letter) => (
-                    <PoolColumn
-                      key={letter}
-                      letter={letter}
-                      seeds={seeds.filter((s) => s.pool_letter === letter)}
-                      locked={bracketLocked}
-                      draggingPlayerId={draggingPlayerId}
-                      dragOverPool={dragOverPool}
-                      onDragOver={handlePoolDragOver}
-                      onDrop={handlePoolDrop}
-                      onSeedDragStart={handlePoolDragStart}
-                      onSeedDragEnd={handlePoolDragEnd}
-                    />
-                  ))}
-                </div>
-                {/* Unassigned players */}
-                {seeds.filter((s) => !s.pool_letter).length > 0 && (
-                  <div className="rounded-2xl border border-dashed border-amber-500/40 bg-amber-500/5 p-4">
-                    <p className="font-mono text-[10px] tracking-widest text-amber-400 mb-3">UNASSIGNED — DRAG TO A POOL</p>
-                    <div className="flex flex-wrap gap-2">
-                      {seeds.filter((s) => !s.pool_letter).map((s) => (
-                        <div
-                          key={s.player_id}
-                          draggable={!bracketLocked}
-                          onDragStart={() => handlePoolDragStart(s.player_id)}
-                          onDragEnd={handlePoolDragEnd}
-                          className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 cursor-grab active:cursor-grabbing"
-                        >
-                          <DotsSixVertical size={12} className="text-muted-foreground" />
-                          <span className="text-xs font-semibold">{s.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             ) : seeds.length > 0 ? (
               /* Visual bracket tree */

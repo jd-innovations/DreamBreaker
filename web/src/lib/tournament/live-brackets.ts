@@ -21,6 +21,8 @@ export interface LiveBracketMatch extends LeaderboardMatch {
 export interface LiveDivision {
   id: string;
   name: string;
+  /** Pool play: how many teams per pool go through to the bracket. */
+  advancePerPool: number;
   matches: LiveBracketMatch[];
 }
 
@@ -36,7 +38,7 @@ const SELECT = `
 export async function fetchLiveBrackets(tournamentId: string): Promise<LiveDivision[]> {
   const supabase = createClient();
   const [dRes, mRes, gRes] = await Promise.all([
-    supabase.from("divisions").select("id, name").eq("tournament_id", tournamentId).order("created_at", { ascending: true }),
+    supabase.from("divisions").select("id, name, advance_per_pool").eq("tournament_id", tournamentId).order("created_at", { ascending: true }),
     supabase.from("bracket_matches").select(SELECT).eq("tournament_id", tournamentId),
     supabase.rpc("tournament_guest_names", { p_tournament_id: tournamentId }),
   ]);
@@ -85,7 +87,7 @@ export async function fetchLiveBrackets(tournamentId: string): Promise<LiveDivis
 
   return (dRes.data ?? [])
     .filter((d) => byDivision.has(d.id))
-    .map((d) => ({ id: d.id, name: d.name, matches: byDivision.get(d.id)! }));
+    .map((d) => ({ id: d.id, name: d.name, advancePerPool: d.advance_per_pool ?? 2, matches: byDivision.get(d.id)! }));
 }
 
 const THIRD_PLACE_ERRORS: Record<string, string> = {
