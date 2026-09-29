@@ -23,6 +23,7 @@ import { assignCourt, recordScore, roundName, setDivisionPlayStatus } from "@/li
 import { EditScoreDialog, ScoreEditInfo } from "@/components/tournament/score-edit";
 import { ScoreEntryDialog } from "@/components/tournament/score-entry-dialog";
 import { PoolStandingsTable, usePoolStandings } from "@/components/tournament/pool-standings";
+import { LiveBracketTree, treeLayout } from "@/components/tournament/live-bracket-tree";
 
 const DISPLAY_ORDER: Record<string, number> = { pool: 0, r64: 1, r32: 2, r16: 3, qf: 4, sf: 5, final: 7, bronze: 8 };
 const UP_NEXT_SHOWN = 5;
@@ -49,6 +50,8 @@ export function LiveBrackets({
   const [editing, setEditing] = useState<LiveBracketMatch | null>(null);
   const [scoring, setScoring] = useState<LiveBracketMatch | null>(null);
   const [courtFor, setCourtFor] = useState<LiveBracketMatch | null>(null);
+  // The tree's compact card opens the full card here (by id, so it stays live).
+  const [openId, setOpenId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -113,14 +116,16 @@ export function LiveBrackets({
     && elim.filter((m) => m.round === "sf").length === 2
     && !elim.some((m) => m.round === "bronze");
 
+  // Opening an action from the full card closes it, so dialogs don't stack.
   const cardProps = {
     currentUserId,
     director,
     queue: ctx.queue,
-    onEdit: setEditing,
-    onScore: setScoring,
-    onCourt: setCourtFor,
+    onEdit: (m: LiveBracketMatch) => { setOpenId(null); setEditing(m); },
+    onScore: (m: LiveBracketMatch) => { setOpenId(null); setScoring(m); },
+    onCourt: (m: LiveBracketMatch) => { setOpenId(null); setCourtFor(m); },
   };
+  const opened = openId ? division?.matches.find((m) => m.id === openId) ?? null : null;
 
   return (
     <div className="space-y-4">
@@ -193,8 +198,24 @@ export function LiveBrackets({
 
           {shownStage === "pools"
             ? <PoolsView division={division} {...cardProps} />
-            : <BracketView elim={elim} roundTab={roundTab} setRoundTab={setRoundTab} {...cardProps} />}
+            : <BracketView elim={elim} roundTab={roundTab} setRoundTab={setRoundTab} onOpen={(m) => setOpenId(m.id)} {...cardProps} />}
         </>
+      )}
+
+      {opened && division && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setOpenId(null)}>
+          <div className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-mono text-[10px] tracking-widest text-muted-foreground">
+                {division.name.toUpperCase()} · {roundName(opened.round, opened.poolLabel).toUpperCase()}
+              </p>
+              <button onClick={() => setOpenId(null)} aria-label="Close" className="h-8 w-8 rounded-full border border-border bg-card flex items-center justify-center hover:bg-secondary">
+                <X size={14} weight="bold" />
+              </button>
+            </div>
+            <MatchCard m={opened} opening={false} {...cardProps} />
+          </div>
+        </div>
       )}
 
       {editing && (
@@ -362,8 +383,9 @@ type CardActions = {
 };
 
 function BracketView({
-  elim, roundTab, setRoundTab, ...actions
-}: { elim: LiveBracketMatch[]; roundTab: string; setRoundTab: (r: string) => void } & CardActions) {
+  elim, roundTab, setRoundTab, onOpen, ...actions
+}: { elim: LiveBracketMatch[]; roundTab: string; setRoundTab: (r: string) => void; onOpen: (m: LiveBracketMatch) => void } & CardActions) {
+  const layout = treeLayout(elim);
   const rounds = [...new Set(elim.map((m) => m.round))].sort((a, b) => (DISPLAY_ORDER[a] ?? 9) - (DISPLAY_ORDER[b] ?? 9));
   const first = rounds.find((r) => r !== "bronze");
   // A first-round slot empty on both sides is a permanent bye: never shown (as on mobile).
@@ -385,8 +407,14 @@ function BracketView({
           </button>
         ))}
       </div>
+      {active === "all" && layout && (
+        // Wide screens: the bracket tree with connector lines. Phones keep columns.
+        <div className="hidden md:block">
+          <LiveBracketTree layout={layout} queue={actions.queue} currentUserId={actions.currentUserId} onOpen={onOpen} />
+        </div>
+      )}
       {active === "all" ? (
-        <div className="scrollbar-thin overflow-x-auto pb-2 -mx-1 px-1">
+        <div className={`scrollbar-thin overflow-x-auto pb-2 -mx-1 px-1 ${layout ? "md:hidden" : ""}`}>
           <div className="flex gap-4 min-w-max">
             {rounds.map((round) => (
               <div key={round} className="w-64 flex-shrink-0">

@@ -31,7 +31,7 @@ const opening = (k: number, t1: string | null, t2: string | null): LiveBracketMa
   id: `m${k}`, divisionId: "d", round: "qf", poolLabel: null, matchNumber: k,
   team1: t1 ? [t1] : [], team2: t2 ? [t2] : [], team1Name: t1, team2Name: t2,
   score1: null, score2: null, winner: null, completed: false, completedAt: null, court: null,
-  editedAt: null, prevScore: null, seed1: null, seed2: null,
+  editedAt: null, prevScore: null, seed1: null, seed2: null, games1: [], games2: [],
 });
 
 describe("bracket seeds", () => {

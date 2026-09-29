@@ -20,6 +20,9 @@ export interface LiveBracketMatch extends LeaderboardMatch {
   /** Bracket seed of each side (from its first-round slot); null in pools or when unknown. */
   seed1: number | null;
   seed2: number | null;
+  /** Every game's score, in order (one game today; more if multi-game scores are stored). */
+  games1: number[];
+  games2: number[];
 }
 
 export interface LiveDivision {
@@ -88,6 +91,8 @@ export async function fetchLiveBrackets(tournamentId: string): Promise<LiveDivis
       prevScore: parsePrevScore(r.score_edited_prev),
       seed1: null,
       seed2: null,
+      games1: r.score_team1 ?? [],
+      games2: r.score_team2 ?? [],
     });
     byDivision.set(r.division_id, list);
   }
