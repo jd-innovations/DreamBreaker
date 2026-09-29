@@ -142,6 +142,39 @@ export async function deleteQuickGame(matchId: string): Promise<void> {
   if (error) throw error;
 }
 
+// ─── Score flags (migration 20260928220000) ───────────────────────────────────
+// A registered player in a finished game can flag it. While any flag is open
+// the game is out of PAR for everyone. It clears when the flagger withdraws or
+// the organizer corrects that game's score; the organizer can't dismiss it.
+
+export type QuickGameFlag = {
+  id: string;
+  match_id: string;
+  flagged_by: string;
+  status: 'open' | 'withdrawn' | 'resolved';
+  created_at: string;
+};
+
+export async function fetchOpenQuickGameFlags(eventId: string): Promise<QuickGameFlag[]> {
+  const { data, error } = await (supabase as any)
+    .from('play_match_score_flags')
+    .select('id, match_id, flagged_by, status, created_at')
+    .eq('event_id', eventId)
+    .eq('status', 'open');
+  if (error) throw error;
+  return (data ?? []) as QuickGameFlag[];
+}
+
+export async function flagQuickGameScore(matchId: string): Promise<void> {
+  const { error } = await (supabase as any).rpc('flag_quick_game_score', { p_match_id: matchId });
+  if (error) throw error;
+}
+
+export async function withdrawQuickGameFlag(matchId: string): Promise<void> {
+  const { error } = await (supabase as any).rpc('withdraw_quick_game_flag', { p_match_id: matchId });
+  if (error) throw error;
+}
+
 // Reverses the Quick Game's PAR changes and returns it to open (or full) so
 // its scores can be edited. Finishing again re-rates it.
 export async function reopenQuickGame(eventId: string): Promise<void> {

@@ -17,7 +17,8 @@ import { formatParChange } from '@/lib/supabase/par';
 import {
   fetchQuickGamePlayers, fetchQuickGameMatches, recordQuickGame, updateQuickGame, deleteQuickGame,
   fetchMyQuickGameParChanges, reopenQuickGame, isQuickGameFinishedError,
-  type QuickGameEntry, type QuickGameMatch, type QuickGamePlayer,
+  fetchOpenQuickGameFlags, flagQuickGameScore, withdrawQuickGameFlag,
+  type QuickGameEntry, type QuickGameFlag, type QuickGameMatch, type QuickGamePlayer,
 } from '@/lib/supabase/quickGameScores';
 
 // Quick Game scores. The organizer records each game; everyone else reads.
@@ -57,6 +58,7 @@ export default function QuickGameScoresScreen() {
   const [editing, setEditing] = useState<Editing>(null);
   const [saving, setSaving] = useState(false);
   const [myPar, setMyPar] = useState<Map<string, number>>(new Map());
+  const [flags, setFlags] = useState<QuickGameFlag[]>([]);
 
   const isOrganizer = !!user && !!event && user.id === event.organizer_id;
   const finished = event?.status === 'completed';
@@ -64,21 +66,29 @@ export default function QuickGameScoresScreen() {
   const canEdit = isOrganizer && !finished && !cancelled;
   const rosterIds = useMemo(() => players.map(p => p.id), [players]);
   const nameById = useMemo(() => new Map(players.map(p => [p.id, p.name])), [players]);
+  // A flagger is always a registered player on this roster, so the roster has their name.
+  const nameByUser = useMemo(
+    () => new Map(players.filter(p => p.claimedBy).map(p => [p.claimedBy as string, p.name])),
+    [players],
+  );
 
   const load = useCallback(async () => {
     if (!id) return;
     setLoadError(null);
     try {
-      const [ev, roster, games, par] = await Promise.all([
+      const [ev, roster, games, par, openFlags] = await Promise.all([
         fetchPlayEventWithOrganizer(id),
         fetchQuickGamePlayers(id, !!user),
         fetchQuickGameMatches(id),
         user ? fetchMyQuickGameParChanges(id, user.id) : Promise.resolve(new Map<string, number>()),
+        // Only event members can read flags; anyone else sees none.
+        user ? fetchOpenQuickGameFlags(id) : Promise.resolve([] as QuickGameFlag[]),
       ]);
       setEvent(ev);
       setPlayers(roster);
       setMatches(games);
       setMyPar(par);
+      setFlags(openFlags);
     } catch (e: unknown) {
       setLoadError(e instanceof Error ? e.message : 'Could not load scores.');
     } finally {
@@ -99,6 +109,42 @@ export default function QuickGameScoresScreen() {
     } catch (e: unknown) {
       Alert.alert('Could not save game', errorMessage(e));
       if (isQuickGameFinishedError(e)) { setEditing(null); await load(); }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleFlag(match: QuickGameMatch) {
+    Alert.alert(
+      'Flag this score?',
+      'This game stops counting toward PAR for everyone until the organizer corrects it or you withdraw the flag. The organizer will see that you flagged it.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Flag Score', style: 'destructive',
+          onPress: async () => {
+            setSaving(true);
+            try {
+              await flagQuickGameScore(match.id);
+              await load();
+            } catch (e: unknown) {
+              Alert.alert('Could not flag score', errorMessage(e));
+            } finally {
+              setSaving(false);
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  async function handleWithdraw(match: QuickGameMatch) {
+    setSaving(true);
+    try {
+      await withdrawQuickGameFlag(match.id);
+      await load();
+    } catch (e: unknown) {
+      Alert.alert('Could not withdraw flag', errorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -197,14 +243,21 @@ export default function QuickGameScoresScreen() {
     const aWon = m.winner === 1;
     const bWon = m.winner === 2;
     const change = formatParChange(myPar.get(m.id));
+    const gameFlags = flags.filter(f => f.match_id === m.id);
+    const disputed = gameFlags.length > 0;
+    const myFlag = !!user && gameFlags.some(f => f.flagged_by === user.id);
+    const iPlayed = !!user && [m.player_a_id, m.player_a2_id, m.player_b_id, m.player_b2_id]
+      .some(pid => !!pid && players.find(p => p.id === pid)?.claimedBy === user.id);
+    const canFlag = finished && iPlayed && !isOrganizer && !myFlag;
+    const flaggers = gameFlags.map(f => nameByUser.get(f.flagged_by) ?? 'A player').join(', ');
+    // Only the organizer's editable card is a button; otherwise a plain View,
+    // so the flag button inside it is never nested in a disabled touchable.
+    const Card = canEdit ? TouchableOpacity : View;
+    const cardProps = canEdit
+      ? { activeOpacity: 0.7, disabled: !!editing, onPress: () => setEditing({ mode: 'edit', match: m }) }
+      : {};
     return (
-      <TouchableOpacity
-        key={m.id}
-        style={s.game}
-        activeOpacity={canEdit ? 0.7 : 1}
-        disabled={!canEdit || !!editing}
-        onPress={() => setEditing({ mode: 'edit', match: m })}
-      >
+      <Card key={m.id} style={s.game} {...cardProps}>
         <View style={s.gameHeader}>
           <Text style={s.gameLabel}>GAME {index + 1}</Text>
           {!!change && (
@@ -222,7 +275,28 @@ export default function QuickGameScoresScreen() {
           {bWon && <Ionicons name="trophy" size={13} color={t.accent} />}
           <Text style={[s.sideScore, bWon && s.sideWinner]}>{m.score_b ?? '–'}</Text>
         </View>
-      </TouchableOpacity>
+
+        {disputed && (
+          <View style={s.disputed}>
+            <Ionicons name="flag" size={13} color={t.danger} />
+            <Text style={s.disputedText}>
+              Disputed by {flaggers}. Not counted toward PAR
+              {isOrganizer ? ' until you reopen and correct the score.' : ' until the score is corrected.'}
+            </Text>
+          </View>
+        )}
+
+        {(canFlag || myFlag) && (
+          <TouchableOpacity
+            style={s.flagBtn}
+            onPress={() => (myFlag ? handleWithdraw(m) : handleFlag(m))}
+            disabled={saving}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Text style={s.flagText}>{myFlag ? 'Withdraw my flag' : 'Not right? Flag this score'}</Text>
+          </TouchableOpacity>
+        )}
+      </Card>
     );
   }
 
@@ -324,7 +398,7 @@ export default function QuickGameScoresScreen() {
 
             <Text style={s.footnote}>
               {finished
-                ? 'Games with at least one registered player count toward PAR. Guests are rated from their self-rating.'
+                ? 'A game counts toward PAR when a registered player besides the organizer played in it. Guests are rated from their self-rating. Players can flag a wrong score.'
                 : canEdit
                   ? 'Only you, the organizer, can record or edit scores. Games are rated for PAR when you finish, or automatically a day after the game ends.'
                   : 'Scores are recorded by the organizer and count toward PAR once the game is finished.'}
@@ -369,6 +443,13 @@ const styles = (t: ThemeRoles) => StyleSheet.create({
   finishText: { color: t.textPrimary, fontSize: text.action.size, fontWeight: '800' },
   gamePar: { flex: 1, textAlign: 'right', marginRight: spacing.xs, color: t.success, fontSize: text.caption.size, fontWeight: '800' },
   gameParDown: { color: t.danger },
+  disputed: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, marginTop: 4,
+    borderRadius: shape.badge, backgroundColor: t.dangerBg, paddingHorizontal: spacing.sm, paddingVertical: 6,
+  },
+  disputedText: { flex: 1, color: t.danger, fontSize: text.caption.size, fontWeight: '600' },
+  flagBtn: { alignSelf: 'flex-start', marginTop: 2 },
+  flagText: { color: t.textSecondary, fontSize: text.caption.size, fontWeight: '700', textDecorationLine: 'underline' },
 
   game: {
     borderWidth: 1, borderColor: t.border, borderRadius: shape.card, backgroundColor: t.surface,
