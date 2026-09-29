@@ -678,14 +678,6 @@ export default function TournamentDetail() {
                 icon="speedometer-outline"
               />
             )}
-            {/* Structure, labelled as web labels it. */}
-            <StatusChip
-              label={tournament.tournamentFormat === 'pool_bracket' && tournament.poolCount
-                ? `${formatLabel(tournament.tournamentFormat)} · ${tournament.poolCount} pools`
-                : formatLabel(tournament.tournamentFormat)}
-              variant="navy"
-              icon="git-branch-outline"
-            />
           </View>
 
           {/* ABOUT THIS EVENT
@@ -786,6 +778,19 @@ export default function TournamentDetail() {
                 <Ionicons name="time-outline" size={13} color={L.textMuted} />
                 <Text style={s.edtText}>All times in EDT</Text>
               </View>
+            </View>
+
+            {/* Structure, labelled as web labels it. Under DIVISIONS (owner,
+                2026-09-29): it describes how the divisions are played, and the
+                status row above ran off the screen with it. */}
+            <View style={s.formatRow}>
+              <StatusChip
+                label={tournament.tournamentFormat === 'pool_bracket' && tournament.poolCount
+                  ? `${formatLabel(tournament.tournamentFormat)} · ${tournament.poolCount} pools`
+                  : formatLabel(tournament.tournamentFormat)}
+                variant="navy"
+                icon="git-branch-outline"
+              />
             </View>
 
             {divisions.length === 0 ? (
@@ -1497,6 +1502,7 @@ const s = StyleSheet.create({
     color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing,
     paddingHorizontal: 16, marginBottom: 12,
   },
+  formatRow: { flexDirection: 'row', marginBottom: 12 },
   edtRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   edtText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
