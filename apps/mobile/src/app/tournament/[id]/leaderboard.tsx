@@ -172,11 +172,16 @@ const styles = (t: ThemeRoles) => StyleSheet.create({
   empty: { color: t.textSecondary, fontSize: text.body.size, textAlign: 'center' },
   retry: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: shape.cta, borderWidth: 1, borderColor: t.border },
   retryText: { color: t.textPrimary, fontSize: text.action.size, fontWeight: '700' },
-  tabsWrap: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: t.borderSubtle },
-  tabs: { paddingHorizontal: spacing.screenH, paddingVertical: spacing.sm, gap: spacing.xs },
-  tab: { paddingHorizontal: spacing.md, paddingVertical: 7, borderRadius: shape.pill, borderWidth: 1, borderColor: t.border },
+  // Same fix as the other pill rows (6edc08c, a2a6cf4): flexShrink: 0 so the
+  // parent column can't squeeze the row shorter than its pills (that clipped
+  // the bottom of the labels), alignItems: 'center' so pills don't stretch
+  // into tall capsules, and no fixed height anywhere, so larger text sizes fit.
+  tabsWrap: { flexGrow: 0, flexShrink: 0, borderBottomWidth: 1, borderBottomColor: t.borderSubtle },
+  tabs: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.screenH, paddingVertical: spacing.sm, gap: spacing.xs },
+  tab: { paddingHorizontal: spacing.md, paddingVertical: 7, borderRadius: shape.pill, borderWidth: 1, borderColor: t.border, flexShrink: 0 },
   tabActive: { backgroundColor: t.primary, borderColor: t.primary },
-  tabText: { color: t.textSecondary, fontSize: text.caption.size, fontWeight: '700' },
+  // Secondary text on white is under WCAG's 4.5:1; labels meant to be read use the main text colour.
+  tabText: { color: t.textPrimary, fontSize: text.caption.size, fontWeight: '700' },
   tabTextActive: { color: t.onPrimary },
   content: { paddingHorizontal: spacing.screenH, paddingTop: spacing.md },
   section: { color: t.textMuted, fontSize: text.caption.size, fontWeight: '800', letterSpacing: 0.8, marginTop: spacing.md, marginBottom: spacing.sm },
