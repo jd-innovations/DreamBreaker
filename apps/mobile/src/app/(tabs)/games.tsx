@@ -15,10 +15,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components';
+import { FloatingCircleButton } from '@/components/FloatingCircleButton';
 import { useSlideMenu } from '@/components/SlideMenu';
 import { getUpcomingEvents, getCompletedEvents, type GameCard } from '@/lib/gameEventHelpers';
 import { getHeldSpots, type HeldSpot } from '@/lib/tournamentStore';
@@ -1399,17 +1400,18 @@ export default function GamesScreen() {
       </View>
 
       {/* ── CREATE FAB ── */}
-      <TouchableOpacity
-        // tabBarClearance, not a raw inset: this is a tab screen, and the
-        // floating bar sits above the inset, so insets.bottom alone left the
-        // button tucked behind it.
-        style={[s.fab, { bottom: tabBarClearance(insets.bottom) }]}
-        activeOpacity={0.85}
-        onPress={() => router.push('/play-pickleball' as never)}
-      >
-        <Ionicons name="add" size={28} color={L.navy} />
-        <Text style={s.fabLabel}>CREATE</Text>
-      </TouchableOpacity>
+      {/* Same shared button as Help: small frosted circle, no outline, icon only.
+          tabBarClearance, not a raw inset: this is a tab screen, and the
+          floating bar sits above the inset, so insets.bottom alone left the
+          button tucked behind it. */}
+      <View pointerEvents="box-none" style={[s.fab, { bottom: tabBarClearance(insets.bottom) }]}>
+        <FloatingCircleButton
+          icon="add"
+          accessibilityLabel="Create"
+          accessibilityHint="Create a Quick Game, Round Robin, or Mini Tournament"
+          onPress={() => router.push('/play-pickleball' as never)}
+        />
+      </View>
     </View>
   );
 }
@@ -1435,14 +1437,6 @@ const s = StyleSheet.create({
 
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: L.border },
 
-  fab: {
-    position: 'absolute', right: 20,
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: L.bg,
-    borderWidth: 1.5, borderColor: L.gold,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.10, shadowRadius: 8, elevation: 4,
-  },
-  fabLabel: { color: L.navy, fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  // Same position as the Help launcher (spacing.lg from the right edge).
+  fab: { position: 'absolute', right: spacing.lg, zIndex: 20 },
 });

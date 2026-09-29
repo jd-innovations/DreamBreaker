@@ -1,16 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { AccessibilityInfo, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, View } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, useTheme } from '@/theme';
+import { spacing } from '@/theme';
 import { tabBarClearance } from '@/constants/tabBar';
 import { resolveSupportVisibility, useCurrentSupportContext } from '@/lib/support/supportContext';
 import { recordRouteVisit } from '@/lib/support/supportDiagnostics';
 import { trackSupportEvent } from '@/lib/support/supportAnalytics';
+import { FloatingCircleButton } from '@/components/FloatingCircleButton';
 import { useSupportEnabled } from './SupportProvider';
 import { SupportSheet } from './SupportSheet';
 
@@ -31,33 +28,20 @@ const TAB_ROUTE_PATHNAMES = new Set([
   '/landing',
 ]);
 
-const SIZE_FULL = 52;
-const SIZE_MINIMIZED = 40;
-
 /**
  * Global launcher for the context-aware support system
  * (SUPPORT_EXPERIENCE_ARCHITECTURE.md §8/§9). Mounted once by
  * SupportProvider; reads its own eligibility from the route-visibility
  * rules and the feature flag -- no screen renders or imports this directly.
+ * The button itself is the shared FloatingCircleButton (same as Events ->
+ * Create).
  */
 export function FloatingSupportButton() {
-  const { roles, scheme } = useTheme();
   const enabled = useSupportEnabled();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const context = useCurrentSupportContext();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    AccessibilityInfo.isReduceMotionEnabled().then((value) => {
-      if (!cancelled) setReduceMotion(value);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // Tracked here (not in the sheet/form) so the breadcrumb trail reflects
   // every screen the user actually visited, including ones where the button
@@ -65,9 +49,6 @@ export function FloatingSupportButton() {
   useEffect(() => {
     recordRouteVisit(pathname);
   }, [pathname]);
-
-  const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   // A screen that registers context has opted in -- default it to 'visible'
   // unless it says otherwise (score-entry sets 'hidden' explicitly, bracket
@@ -91,13 +72,6 @@ export function FloatingSupportButton() {
   // open regardless, or it would unmount the instant it was asked to open.
   if (!enabled) return null;
 
-  function handlePressIn() {
-    scale.value = reduceMotion ? 0.96 : withTiming(0.96, { duration: 90 });
-  }
-  function handlePressOut() {
-    scale.value = reduceMotion ? 1 : withSpring(1, { damping: 14, stiffness: 220 });
-  }
-
   const isTabScreen = TAB_ROUTE_PATHNAMES.has(pathname);
   // Two sources of bottom obstruction, and they do not overlap: the tab bar
   // is global and known here, while a screen's own bottom-anchored UI is only
@@ -105,46 +79,21 @@ export function FloatingSupportButton() {
   // declares nothing sits exactly where it always has.
   const baseBottom = isTabScreen ? tabBarClearance(insets.bottom) : insets.bottom + spacing.lg;
   const bottom = baseBottom + Math.max(0, context?.bottomClearance ?? 0);
-  const size = visibility === 'minimized' ? SIZE_MINIMIZED : SIZE_FULL;
-  const iconSize = visibility === 'minimized' ? 20 : 24;
-  const radius = size / 2;
 
   return (
     <>
       {buttonShown ? (
         <View pointerEvents="box-none" style={[styles.positioner, { bottom, right: spacing.lg }]}>
-          <Pressable
+          <FloatingCircleButton
+            icon="help-circle"
+            minimized={visibility === 'minimized'}
+            accessibilityLabel="Get help"
+            accessibilityHint={context?.entityLabel ? `Get help with ${context.entityLabel}` : 'Open support'}
             onPress={() => {
               trackSupportEvent({ name: 'support_button_tapped', payload: { routeName: pathname, feature } });
               setSheetOpen(true);
             }}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Get help"
-            accessibilityHint={context?.entityLabel ? `Get help with ${context.entityLabel}` : 'Open support'}
-          >
-            <Animated.View style={[styles.shadowLayer, { width: size, height: size, borderRadius: radius }, animatedStyle]}>
-              <View style={[styles.clip, { width: size, height: size, borderRadius: radius }]}>
-                <BlurView tint={scheme === 'dark' ? 'dark' : 'light'} intensity={44} style={StyleSheet.absoluteFill} />
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,18,40,0.14)' }]} />
-                <LinearGradient
-                  colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
-                  start={{ x: 0.15, y: 0.05 }}
-                  end={{ x: 0.8, y: 0.7 }}
-                  style={StyleSheet.absoluteFill}
-                />
-                <View
-                  pointerEvents="none"
-                  style={[styles.border, { borderRadius: radius }]}
-                />
-                <View style={styles.iconLayer}>
-                  <Ionicons name="help-circle" size={iconSize} color={roles.textPrimary} />
-                </View>
-              </View>
-            </Animated.View>
-          </Pressable>
+          />
         </View>
       ) : null}
       <SupportSheet
@@ -161,27 +110,5 @@ const styles = StyleSheet.create({
   positioner: {
     position: 'absolute',
     zIndex: 20,
-  },
-  shadowLayer: {
-    shadowColor: colors.navy,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  clip: {
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  border: {
-    ...StyleSheet.absoluteFillObject,
-    borderWidth: 1.25,
-    borderColor: 'rgba(201,168,76,0.35)',
-  },
-  iconLayer: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
