@@ -28,6 +28,7 @@ import { confirmBracketFormat } from '@/lib/tournamentFormats';
 import { createPools, fetchPoolProgress, playableTeams, poolsHaveScores, suggestPoolCount, DEFAULT_ADVANCE_PER_POOL } from '@/lib/supabase/pools';
 import { PoolSetupSheet } from '@/components/PoolSetupSheet';
 import { DivisionPlayChip, DivisionPlayControl, playState } from '@/components/DivisionPlayControl';
+import { fetchCourtsInUse, onCourtByDivision } from '@/lib/supabase/matches';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,7 @@ function DivisionBracketCard({
   poolProgress,
   onSetupPools,
   onPlayChanged,
+  onCourt = 0,
 }: {
   division: DivisionData;
   bracket: DirectorBracket | null;
@@ -89,6 +91,8 @@ function DivisionBracketCard({
   poolProgress?: { total: number; completed: number };
   onSetupPools?: () => void;
   onPlayChanged?: () => void;
+  /** This division's unfinished matches holding a court. */
+  onCourt?: number;
 }) {
   const registeredCount = registrations.filter(
     r => r.status === 'registered' || r.status === 'checked_in',
@@ -130,7 +134,7 @@ function DivisionBracketCard({
 
       {/* Play status: only live divisions get courts (20260928180000) */}
       <View style={dbc.playRow}>
-        <DivisionPlayChip state={playState(division.playStatus, bracket?.status === 'completed')} />
+        <DivisionPlayChip state={playState(division.playStatus, bracket?.status === 'completed')} onCourt={onCourt} />
         <DivisionPlayControl
           divisionId={division.id}
           state={playState(division.playStatus, bracket?.status === 'completed')}
@@ -310,6 +314,7 @@ function BracketsScreen() {
   const [loading, setLoading]           = useState(true);
   const [poolProgress, setPoolProgress] = useState<Record<string, { total: number; completed: number }>>({});
   const [poolSetup, setPoolSetup]       = useState<{ divisionId: string; hasScores: boolean } | null>(null);
+  const [onCourt, setOnCourt]           = useState<Map<string, number>>(new Map());
 
   const refresh = useCallback(async () => {
     const [t, divs, regs] = await Promise.all([
@@ -319,7 +324,8 @@ function BracketsScreen() {
     ]);
     const divNameMap: Record<string, string> = {};
     for (const d of divs ?? []) divNameMap[d.id] = d.name;
-    const [bkts, pools] = await Promise.all([fetchAllBrackets(id, divNameMap), fetchPoolProgress(id)]);
+    const [bkts, pools, inUse] = await Promise.all([fetchAllBrackets(id, divNameMap), fetchPoolProgress(id), fetchCourtsInUse(id)]);
+    setOnCourt(onCourtByDivision(inUse));
     setPoolProgress(pools);
     setTournament(t);
     setDivisions(divs ?? []);
@@ -493,6 +499,7 @@ function BracketsScreen() {
                 poolProgress={poolProgress[div.id]}
                 onSetupPools={() => { void openPoolSetup(div.id); }}
                 onPlayChanged={() => { void refresh(); }}
+                onCourt={onCourt.get(div.id) ?? 0}
               />
             );
           })

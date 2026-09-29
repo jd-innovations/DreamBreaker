@@ -39,7 +39,7 @@ import type { Tournament } from '@/lib/tournamentTypes';
 import { DirectorOnly } from '@/components/DirectorOnly';
 import { confirmBracketFormat } from '@/lib/tournamentFormats';
 import { DivisionPlayChip, DivisionPlayControl, playState } from '@/components/DivisionPlayControl';
-import { fetchDivisionsForTournament, type DivisionData } from '@/lib/supabase/divisions';
+import { fetchDivisionsForTournament, setDivisionPlayStatus, type DivisionData } from '@/lib/supabase/divisions';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -944,6 +944,8 @@ function DivisionBracketScreen() {
   const [roundFilter,   setRoundFilter]   = useState<string>('All');
   const [courtTarget,   setCourtTarget]   = useState<DirectorBracketMatch | null>(null);
   const [courtsInUse,   setCourtsInUse]   = useState<CourtInUse[]>([]);
+  // This division's unfinished matches holding a court (the play chip's count).
+  const divisionOnCourt = courtsInUse.filter(c => c.divisionId === divisionId).length;
   const [loadingUse,    setLoadingUse]    = useState(false);
   const [courtsOpen,    setCourtsOpen]    = useState(false);
   const [courtQueue,    setCourtQueue]    = useState<Map<string, number>>(new Map());
@@ -1086,13 +1088,41 @@ function DivisionBracketScreen() {
 
   function applyCourt(court: string | null) {
     if (!courtTarget) return;
+    // Hand-assigning in a division that isn't live is allowed, but it is how a
+    // "not started" division ends up holding courts. Offer to start it, which
+    // is almost always what the director means.
+    if (court && division && division.playStatus !== 'live') {
+      const verb = division.playStatus === 'paused' ? 'Resume' : 'Start';
+      Alert.alert(
+        `${verb} ${division.name}?`,
+        `${division.name} isn't live, so it won't get courts on its own. ${verb} it now so its next matches keep getting courts?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Assign only', onPress: () => doAssign(court, false) },
+          { text: `Assign & ${verb}`, onPress: () => doAssign(court, true) },
+        ],
+      );
+      return;
+    }
+    doAssign(court, false);
+  }
+
+  function doAssign(court: string | null, startDivision: boolean) {
+    if (!courtTarget) return;
     requireAuth(user?.id, async () => {
+      // Assign first: going live fills free courts at once, and could hand the
+      // chosen court to a different match if it went first.
       const result = await assignCourt(courtTarget.id, court);
       if (!result.ok) {
         Alert.alert('Court not assigned', result.error);
         // Someone else may have just taken it: show the current picture.
         setCourtsInUse(await fetchCourtsInUse(tournamentId));
         return;
+      }
+      if (startDivision && division) {
+        const started = await setDivisionPlayStatus(division.id, 'live');
+        if (started.ok) setDivision(prev => (prev ? { ...prev, playStatus: 'live' } : prev));
+        else Alert.alert('Court assigned', `The division wasn't started: ${started.error}`);
       }
       await refresh();
       setCourtTarget(null);
@@ -1254,13 +1284,18 @@ function DivisionBracketScreen() {
       {/* ── Division play status: only live divisions get courts ── */}
       {division && (
         <View style={s.playBar}>
-          <DivisionPlayChip state={playState(division.playStatus, bracket?.status === 'completed')} />
+          <DivisionPlayChip
+            state={playState(division.playStatus, bracket?.status === 'completed')}
+            onCourt={divisionOnCourt}
+          />
           <Text style={s.playHint} numberOfLines={2}>
             {division.playStatus === 'live'
               ? 'Getting courts automatically.'
-              : division.playStatus === 'paused'
-                ? 'Paused: matches on court finish, no new courts.'
-                : 'Not started: no courts until you start it.'}
+              : divisionOnCourt > 0
+                ? `${divisionOnCourt} on court, but no new courts until you ${division.playStatus === 'paused' ? 'resume' : 'start'} it.`
+                : division.playStatus === 'paused'
+                  ? 'Paused: matches on court finish, no new courts.'
+                  : 'Not started: no courts until you start it.'}
           </Text>
           <DivisionPlayControl
             divisionId={division.id}

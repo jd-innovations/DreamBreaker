@@ -28,12 +28,21 @@ export function playState(status: DivisionPlayStatus | undefined, bracketComplet
   return status ?? 'not_started';
 }
 
-export function DivisionPlayChip({ state }: { state: DivisionPlayState }) {
-  const t = TONE[state];
+/**
+ * `onCourt`: this division's unfinished matches that hold a court. A division
+ * that isn't live can still have some (hand-assigned, or placed before play
+ * status existed), and the chip says so rather than claiming nothing is
+ * happening while its matches occupy courts.
+ */
+export function DivisionPlayChip({ state, onCourt = 0 }: { state: DivisionPlayState; onCourt?: number }) {
+  const flagged = state !== 'live' && state !== 'complete' && onCourt > 0;
+  const t = flagged ? TONE.paused : TONE[state];
   return (
     <View style={[st.chip, { backgroundColor: t.bg, borderColor: t.border }]}>
       {state === 'live' && <View style={[st.dot, { backgroundColor: t.fg }]} />}
-      <Text style={[st.chipText, { color: t.fg }]}>{PLAY_STATE_LABEL[state].toUpperCase()}</Text>
+      <Text style={[st.chipText, { color: t.fg }]} numberOfLines={1}>
+        {PLAY_STATE_LABEL[state].toUpperCase()}{flagged ? ` · ${onCourt} ON COURT` : ''}
+      </Text>
     </View>
   );
 }

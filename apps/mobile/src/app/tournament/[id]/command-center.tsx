@@ -29,6 +29,7 @@ import { courtCountLabel } from '@/lib/tournamentCourts';
 import { formatLabel } from '@/lib/tournamentFormats';
 import { useTournamentLive } from '@/hooks/useTournamentLive';
 import { DivisionPlayChip, DivisionPlayControl, playState } from '@/components/DivisionPlayControl';
+import { fetchCourtsInUse, onCourtByDivision } from '@/lib/supabase/matches';
 
 // ─── Theme alias ──────────────────────────────────────────────────────────────
 
@@ -240,6 +241,7 @@ function CommandCenterScreen() {
   const [divMetrics, setDivMetrics]     = React.useState<DivisionMetrics[]>([]);
   const [cancelledCount, setCancelledCount] = React.useState(0);
   const [allBrackets, setAllBrackets]   = React.useState<DirectorBracket[]>([]);
+  const [onCourt, setOnCourt]           = React.useState<Map<string, number>>(new Map());
   const [matchCounts, setMatchCounts]   = React.useState({ total: 0, completed: 0, remaining: 0, completionPct: 0 });
   const [loading, setLoading]           = React.useState(true);
   // Separate from `loading`: that one gates the initial full-screen spinner
@@ -289,8 +291,9 @@ function CommandCenterScreen() {
     setCancelledCount(regs.filter((r: TournamentRegistration) => r.status === 'cancelled').length);
     const divNameMap: Record<string, string> = {};
     for (const d of divs) divNameMap[d.id] = d.name;
-    const [brackets, counts] = await Promise.all([fetchAllBrackets(id, divNameMap), getBracketMatchCounts(id)]);
+    const [brackets, counts, inUse] = await Promise.all([fetchAllBrackets(id, divNameMap), getBracketMatchCounts(id), fetchCourtsInUse(id)]);
     setAllBrackets(brackets);
+    setOnCourt(onCourtByDivision(inUse));
     setMatchCounts(counts);
     setRoster(regs);
     setLoading(false);
@@ -717,7 +720,7 @@ function CommandCenterScreen() {
                 return (
                   <View key={d.id} style={[s.playRow, i < allDivisions.length - 1 && s.playRowBorder]}>
                     <Text style={s.playName} numberOfLines={1}>{d.name}</Text>
-                    <DivisionPlayChip state={state} />
+                    <DivisionPlayChip state={state} onCourt={onCourt.get(d.id) ?? 0} />
                     <DivisionPlayControl divisionId={d.id} state={state} onChanged={() => { void refresh(); }} compact />
                   </View>
                 );

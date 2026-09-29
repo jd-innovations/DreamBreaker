@@ -39,6 +39,8 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
   const [scoring, setScoring] = useState<LiveMatch | null>(null);
   const [editingCourts, setEditingCourts] = useState(false);
   const [courtsDraft, setCourtsDraft] = useState("");
+  // Hand-assigning in a division that isn't live: offer to start it first.
+  const [pendingAssign, setPendingAssign] = useState<{ matchId: string; court: string; divisionId: string; name: string; paused: boolean } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -74,7 +76,11 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
     const finished = new Set(
       state.matches.filter((m) => m.round === "final" && !m.poolLabel && m.winner).map((m) => m.divisionId),
     );
-    return { divisionName, onCourt, courts, queued, waiting, completed, finished };
+    const onCourtByDivision = new Map<string, number>();
+    for (const m of onCourt.values()) {
+      if (m.divisionId) onCourtByDivision.set(m.divisionId, (onCourtByDivision.get(m.divisionId) ?? 0) + 1);
+    }
+    return { divisionName, onCourt, courts, queued, waiting, completed, finished, onCourtByDivision };
   }, [state]);
 
   if (loadError) {
@@ -89,7 +95,7 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
     return <div className="flex justify-center py-16"><div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" /></div>;
   }
 
-  const { divisionName, onCourt, courts, queued, waiting, completed, finished } = derived;
+  const { divisionName, onCourt, courts, queued, waiting, completed, finished, onCourtByDivision } = derived;
   const freeCourts = courts.filter((c) => !onCourt.has(c));
   const hasMatches = state.matches.some((m) => m.team1 || m.team2);
 
@@ -104,7 +110,23 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
   }
 
   function assign(matchId: string, court: string) {
+    const match = state?.matches.find((m) => m.id === matchId);
+    const division = state?.divisions.find((d) => d.id === match?.divisionId);
+    if (division && division.playStatus !== "live") {
+      setPendingAssign({ matchId, court, divisionId: division.id, name: division.name, paused: division.playStatus === "paused" });
+      return;
+    }
     return run(() => assignCourt(matchId, court), `Assigned to ${courtLabel(court)}.`);
+  }
+
+  // Assign first: going live fills free courts at once, and could hand the
+  // chosen court to a different match if it went first.
+  async function confirmAssign(start: boolean) {
+    const p = pendingAssign;
+    if (!p) return;
+    setPendingAssign(null);
+    const assigned = await run(() => assignCourt(p.matchId, p.court), `Assigned to ${courtLabel(p.court)}.`);
+    if (assigned && start) await run(() => setDivisionPlayStatus(p.divisionId, "live"), `${p.name}: live.`);
   }
 
   function changeStatus(divisionId: string, name: string, status: DivisionPlayStatus) {
@@ -179,10 +201,13 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
           <div className="grid gap-2 sm:grid-cols-2">
             {state.divisions.map((d) => {
               const st = finished.has(d.id) ? "complete" : d.playStatus;
+              const held = st !== "live" && st !== "complete" ? onCourtByDivision.get(d.id) ?? 0 : 0;
               return (
                 <div key={d.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2">
                   <span className="text-sm font-semibold flex-1 truncate">{d.name}</span>
-                  <span className={`px-2 py-0.5 rounded-full border font-mono text-[9px] tracking-widest ${STATUS_CLASS[st]}`}>{STATUS_LABEL[st]}</span>
+                  <span className={`px-2 py-0.5 rounded-full border font-mono text-[9px] tracking-widest whitespace-nowrap ${held ? STATUS_CLASS.paused : STATUS_CLASS[st]}`}>
+                    {STATUS_LABEL[st]}{held ? ` · ${held} ON COURT` : ""}
+                  </span>
                   {st !== "complete" && (
                     <button
                       disabled={busy}
@@ -320,6 +345,28 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
             </div>
           )}
         </>
+      )}
+
+      {pendingAssign && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-6 shadow-2xl">
+            <h3 className="font-display text-2xl tracking-wide mb-2">
+              {pendingAssign.paused ? "RESUME" : "START"} {pendingAssign.name.toUpperCase()}?
+            </h3>
+            <p className="text-sm text-muted-foreground mb-5">
+              {pendingAssign.name} isn’t live, so it won’t get courts on its own. {pendingAssign.paused ? "Resume" : "Start"} it now so its next matches keep getting courts?
+            </p>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => confirmAssign(true)} disabled={busy} className="h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-display tracking-wider disabled:opacity-50">
+                ASSIGN &amp; {pendingAssign.paused ? "RESUME" : "START"}
+              </button>
+              <button onClick={() => confirmAssign(false)} disabled={busy} className="h-11 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider disabled:opacity-50">
+                ASSIGN ONLY
+              </button>
+              <button onClick={() => setPendingAssign(null)} className="h-9 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {scoring && (

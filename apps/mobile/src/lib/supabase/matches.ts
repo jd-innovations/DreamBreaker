@@ -36,6 +36,15 @@ export async function fetchCourtsInUse(tournamentId: string): Promise<CourtInUse
   }));
 }
 
+/** Unfinished matches holding a court, per division id. */
+export function onCourtByDivision(inUse: CourtInUse[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const c of inUse) {
+    if (c.divisionId) out.set(c.divisionId, (out.get(c.divisionId) ?? 0) + 1);
+  }
+  return out;
+}
+
 /**
  * The tournament-wide court queue (court_queue(), 20260928150000): match id ->
  * 1-based position, first ready first played. The same definition the
