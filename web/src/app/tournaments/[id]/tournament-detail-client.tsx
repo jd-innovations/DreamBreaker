@@ -4,7 +4,7 @@ import { useState, use, useEffect } from "react";
 import Link from "next/link";
 import {
   MapPin, Calendar, Trophy, Lightning, ShieldCheck, Clock,
-  Medal, CurrencyDollar, HandGrabbing, CaretDown, ChatCircle,
+  CurrencyDollar, HandGrabbing, ChatCircle,
   NavigationArrow, CheckCircle, ChatCircleDots, X, ArrowSquareOut,
 } from "@phosphor-icons/react";
 import { MessagingPanel } from "@/components/messaging/panel";
@@ -22,16 +22,6 @@ import { computeInsight, type InsightResult } from "@/lib/insights";
 import { getUserId } from "@/lib/dev-user";
 import Image from "next/image";
 import { SafeImage } from "@/components/shared/safe-image";
-
-// ── FAQ data ──────────────────────────────────────────────────────────────────
-const FAQ_ITEMS = [
-  { q: "Can I change my partner after registering?", a: "Yes — partner substitutions are allowed up to 72 hours before first match. Contact the director to make the change." },
-  { q: "What happens if my partner drops out?", a: "You may find a replacement partner, or contact the tournament director about your entry. Hold My Spot deposits are non-refundable." },
-  { q: "Is there a waitlist if the tournament fills?", a: "Yes. Once the draw is full you'll be placed on a waitlist automatically. We'll notify you if a spot opens." },
-  { q: "What rating verification is required?", a: "DUPR rating is verified at registration. Self-rated players are welcome but may be re-rated post-event if scores warrant it." },
-  { q: "Are there age restrictions?", a: "This is an open-age event. Juniors under 18 require a guardian signature on the waiver." },
-  { q: "When does the bracket release?", a: "Brackets are published 48 hours before play begins. You'll receive an email and in-app notification." },
-];
 
 // ── Countdown hook ─────────────────────────────────────────────────────────────
 function useCountdown(targetDate: Date | null) {
@@ -118,6 +108,9 @@ type LiveTournament = {
   status: string;
   description: string | null;
   rules: string | null;
+  start_time: string | null;
+  checkin_opens_at: string | null;
+  checkin_closes_at: string | null;
   director: {
     id: string;
     full_name: string;
@@ -227,7 +220,6 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [holdOpen, setHoldOpen] = useState(false);
   const [activeDivision, setActiveDivision] = useState<Division | null>(null);
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
   // keyed by division_id (or "legacy" for null division_id)
   const [myRegs, setMyRegs] = useState<Map<string, DivisionReg>>(new Map());
   const [spotsFilled, setSpotsFilled] = useState(0);
@@ -255,7 +247,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
           format, bracket_type, skill_min, skill_max, draw_size, spots_filled,
           entry_fee_cents, hold_fee_cents, hold_duration_hours, hold_cutoff_days, prize_pool_cents,
           event_date, registration_opens_at, registration_closes_at,
-          created_at, status, description, rules,
+          created_at, status, description, rules, start_time, checkin_opens_at, checkin_closes_at,
           director:profiles!director_id (
             id, full_name, director_events_hosted, director_rating
           )
@@ -624,6 +616,18 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     : t.skill_min
     ? `${t.skill_min}+`
     : "Open";
+  // Schedule from the tournament's own fields only (no invented day). start_time is
+  // the venue's wall-clock time; the check-in window is a timestamp.
+  const atTime = (iso: string) => new Date(iso).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const schedule = [
+    t.checkin_opens_at && { label: "Check-in opens", when: atTime(t.checkin_opens_at) },
+    t.checkin_closes_at && { label: "Check-in closes", when: atTime(t.checkin_closes_at) },
+    t.start_time && {
+      label: "Play starts",
+      when: new Date(`1970-01-01T${t.start_time}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+    },
+  ].filter((x): x is { label: string; when: string } => !!x);
+  const hasRules = !!t.rules?.trim();
   const formatDisplay = t.format.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   const statusDisplay = t.status === "filling_fast" ? "Filling Fast"
     : t.status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -721,20 +725,19 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               <TabsTrigger value="overview" data-testid="tab-overview" className="rounded-full px-4">Overview</TabsTrigger>
               <TabsTrigger value="brackets" data-testid="tab-brackets" className="rounded-full px-4">Brackets</TabsTrigger>
               <TabsTrigger value="leaderboard" data-testid="tab-leaderboard" className="rounded-full px-4">Leaderboard</TabsTrigger>
-              <TabsTrigger value="schedule" data-testid="tab-schedule" className="rounded-full px-4">Schedule</TabsTrigger>
-              <TabsTrigger value="prize" data-testid="tab-prize" className="rounded-full px-4">Prize</TabsTrigger>
-              <TabsTrigger value="rules" data-testid="tab-rules" className="rounded-full px-4">Rules</TabsTrigger>
-              <TabsTrigger value="faq" data-testid="tab-faq" className="rounded-full px-4">FAQ</TabsTrigger>
+              {schedule.length > 0 && <TabsTrigger value="schedule" data-testid="tab-schedule" className="rounded-full px-4">Schedule</TabsTrigger>}
+              {!!t.prize_pool_cents && <TabsTrigger value="prize" data-testid="tab-prize" className="rounded-full px-4">Prize</TabsTrigger>}
+              {hasRules && <TabsTrigger value="rules" data-testid="tab-rules" className="rounded-full px-4">Rules</TabsTrigger>}
             </TabsList>
 
             {/* Overview */}
             <TabsContent value="overview" className="space-y-6">
-              <div className="border border-border rounded-2xl p-6 bg-card">
-                <h3 className="font-display text-2xl tracking-wide mb-3">ABOUT THIS EVENT</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  {t.description ?? `The ${t.name} is part of the Pickleball App Pro Circuit. ${formatDisplay} with players from across the region competing for ${prizeDisplay} in cash + sponsor prizes. Pool play seeds into a knockout bracket. Live scoring on every court.`}
-                </p>
-              </div>
+              {t.description?.trim() && (
+                <div className="border border-border rounded-2xl p-6 bg-card">
+                  <h3 className="font-display text-2xl tracking-wide mb-3">ABOUT THIS EVENT</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{t.description}</p>
+                </div>
+              )}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { label: "ENTRY FEE", value: `$${entryFee}`, onClick: undefined },
@@ -773,96 +776,46 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               <LiveBrackets tournamentId={t.id} initialView="leaderboard" currentUserId={currentUserId} />
             </TabsContent>
 
-            {/* Schedule */}
-            <TabsContent value="schedule">
-              <div className="border border-border rounded-2xl divide-y divide-border bg-card">
-                {["Check-in 7:00 AM", "Pool Play 8:00 AM – 12:00 PM", "Lunch 12:00 PM", "Knockouts 1:00 PM – 5:00 PM", "Finals 5:30 PM", "Awards 7:00 PM"].map((row, i) => (
-                  <div key={i} className="flex items-center gap-4 p-4">
-                    <div className="font-mono text-xs text-primary w-8">{String(i + 1).padStart(2, "0")}</div>
-                    <div className="font-semibold">{row}</div>
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-
-            {/* Prize */}
-            <TabsContent value="prize">
-              <div className="border border-border rounded-2xl bg-card overflow-hidden">
-                {[
-                  { p: "1st Place", a: Math.round(entryFee * t.draw_size * 0.45), icon: Trophy },
-                  { p: "2nd Place", a: Math.round(entryFee * t.draw_size * 0.25), icon: Medal },
-                  { p: "3rd Place", a: Math.round(entryFee * t.draw_size * 0.15), icon: Medal },
-                  { p: "4th Place", a: Math.round(entryFee * t.draw_size * 0.08), icon: Medal },
-                ].map((row, i) => (
-                  <div key={i} className="flex items-center justify-between p-5 border-b border-border last:border-0">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/15 text-primary flex items-center justify-center">
-                        <row.icon size={18} weight="fill" />
+            {/* Schedule: only the times the director set */}
+            {schedule.length > 0 && (
+              <TabsContent value="schedule">
+                <div className="border border-border rounded-2xl divide-y divide-border bg-card">
+                  {schedule.map((row, i) => (
+                    <div key={row.label} className="flex items-center gap-4 p-4">
+                      <div className="font-mono text-xs text-primary w-8">{String(i + 1).padStart(2, "0")}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold">{row.label}</div>
+                        <div className="text-sm text-muted-foreground">{row.when}</div>
                       </div>
-                      <span className="font-display text-xl tracking-wide">{row.p}</span>
                     </div>
-                    <span className="font-mono font-bold text-primary text-lg">${row.a.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
+                  ))}
+                </div>
+              </TabsContent>
+            )}
 
-            {/* Rules */}
-            <TabsContent value="rules">
-              <div className="border border-border rounded-2xl p-6 bg-card space-y-3 text-sm text-muted-foreground">
-                {t.rules
-                  ? t.rules.split("\n").map((line, i) => <p key={i}>{line}</p>)
-                  : <>
-                    <p>· USAPA official rules. Rally scoring to 11, win by 2.</p>
-                    <p>· Players must check in 30 minutes prior to first match.</p>
-                    <p>· DUPR rating verified at registration. Sandbagging results in disqualification.</p>
-                    <p>· Hold My Spot deposits are non-refundable and count toward your entry fee.</p>
-                    <p>· Tournament director&apos;s decisions are final.</p>
-                  </>
-                }
-              </div>
-            </TabsContent>
-
-            {/* FAQ */}
-            <TabsContent value="faq" className="space-y-3">
-              <div className="border border-border rounded-2xl bg-card overflow-hidden divide-y divide-border">
-                {FAQ_ITEMS.map((item, i) => (
-                  <div key={i}>
-                    <button
-                      onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                      className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-secondary/40 transition-colors"
-                      data-testid={`faq-item-${i}`}
-                    >
-                      <span className="font-semibold text-sm pr-4">{item.q}</span>
-                      <CaretDown
-                        size={16}
-                        weight="bold"
-                        className={`text-primary flex-shrink-0 transition-transform duration-200 ${openFaq === i ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                    {openFaq === i && (
-                      <div className="px-5 pb-4 text-sm text-muted-foreground leading-relaxed border-t border-border/50 pt-3">
-                        {item.a}
-                      </div>
-                    )}
+            {/* Prize: the total the director set. No split is stored, so none is shown. */}
+            {!!t.prize_pool_cents && (
+              <TabsContent value="prize">
+                <div className="border border-border rounded-2xl bg-card p-5 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/15 text-primary flex items-center justify-center">
+                    <Trophy size={18} weight="fill" />
                   </div>
-                ))}
-              </div>
-              <div className="border border-dashed border-border rounded-2xl p-6 text-center space-y-3">
-                <ChatCircle size={28} weight="duotone" className="mx-auto text-primary" />
-                <div className="font-display text-xl tracking-wide">STILL HAVE QUESTIONS?</div>
-                <p className="text-sm text-muted-foreground">
-                  Can&apos;t find the answer you&apos;re looking for? Reach out to {t.director?.full_name ?? "the director"} directly.
-                </p>
-                <button
-                  onClick={contactDirector}
-                  className="h-11 px-6 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] text-sm flex items-center gap-2 mx-auto transition-colors"
-                  data-testid="faq-contact-btn"
-                >
-                  <ChatCircle size={15} weight="fill" /> CONTACT DIRECTOR
-                </button>
-              </div>
-            </TabsContent>
+                  <div>
+                    <div className="font-mono font-bold text-primary text-lg">{prizeDisplay}</div>
+                    <div className="text-sm text-muted-foreground">Total prize pool. Ask the director how it’s split.</div>
+                  </div>
+                </div>
+              </TabsContent>
+            )}
+
+            {/* Rules: the director's own text only */}
+            {hasRules && (
+              <TabsContent value="rules">
+                <div className="border border-border rounded-2xl p-6 bg-card space-y-3 text-sm text-muted-foreground">
+                  {t.rules!.split("\n").map((line, i) => <p key={i}>{line}</p>)}
+                </div>
+              </TabsContent>
+            )}
           </Tabs>
 
           {/* Map card */}

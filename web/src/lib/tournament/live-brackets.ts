@@ -6,6 +6,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import type { LeaderboardMatch } from "@shared/leaderboard";
+import { parsePrevScore } from "@/lib/tournament/score-corrections";
 
 type Person = { id: string; full_name: string | null } | null;
 
@@ -13,6 +14,8 @@ export interface LiveBracketMatch extends LeaderboardMatch {
   divisionId: string;
   completedAt: string | null;
   editedAt: string | null;
+  /** The score before the latest correction, public like editedAt. */
+  prevScore: { s1: number; s2: number } | null;
 }
 
 export interface LiveDivision {
@@ -22,7 +25,7 @@ export interface LiveDivision {
 }
 
 const SELECT = `
-  id, division_id, round, pool_label, match_number, court, winner, completed_at, score_team1, score_team2, score_edited_at,
+  id, division_id, round, pool_label, match_number, court, winner, completed_at, score_team1, score_team2, score_edited_at, score_edited_prev,
   team1_guest_a, team1_guest_b, team2_guest_a, team2_guest_b,
   p1a:profiles!bracket_matches_team1_player_a_fkey(id,full_name),
   p1b:profiles!bracket_matches_team1_player_b_fkey(id,full_name),
@@ -75,6 +78,7 @@ export async function fetchLiveBrackets(tournamentId: string): Promise<LiveDivis
       completedAt: r.completed_at,
       court: r.court,
       editedAt: r.score_edited_at,
+      prevScore: parsePrevScore(r.score_edited_prev),
     });
     byDivision.set(r.division_id, list);
   }
@@ -82,6 +86,23 @@ export async function fetchLiveBrackets(tournamentId: string): Promise<LiveDivis
   return (dRes.data ?? [])
     .filter((d) => byDivision.has(d.id))
     .map((d) => ({ id: d.id, name: d.name, matches: byDivision.get(d.id)! }));
+}
+
+const THIRD_PLACE_ERRORS: Record<string, string> = {
+  not_allowed: "Only this tournament’s director or an admin can change the bracket.",
+  already_exists: "This bracket already has a 3rd-place match.",
+  no_semifinals: "This bracket has no semifinals yet.",
+  semifinal_walkover: "A semifinal was a walkover, so there is no second team to play for 3rd.",
+};
+
+/** Adds a 3rd-place match to an existing bracket, keeping every score (add_third_place_match). */
+export async function addThirdPlaceMatch(tournamentId: string, divisionId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await createClient().rpc("add_third_place_match", {
+    p_tournament_id: tournamentId, p_division_id: divisionId,
+  });
+  if (!error) return { ok: true };
+  const code = Object.keys(THIRD_PLACE_ERRORS).find((k) => error.message?.includes(k));
+  return { ok: false, error: code ? THIRD_PLACE_ERRORS[code] : "Could not add the 3rd-place match. Please try again." };
 }
 
 /** Live updates for the public page: this tournament's matches changing. */

@@ -12,9 +12,10 @@ import { CheckFat, DotsSixVertical, Pause, Play, PencilSimple, SoccerBall, X } f
 import { courtLabel, parseCourts } from "@shared/tournamentCourts";
 import { validateSingleGameScore } from "@shared/bracketScoring";
 import {
-  assignCourt, fetchDayOf, recordScore, roundName, saveCourts, setDivisionPlayStatus, subscribeDayOf,
+  assignCourt, fetchDayOf, recordScore, roundName, saveCourts, setAutoAssignCourts, setDivisionPlayStatus, subscribeDayOf,
   type DayOfState, type DivisionPlayStatus, type LiveMatch,
 } from "@/lib/tournament/day-of";
+import { EditScoreDialog, ScoreEditInfo } from "@/components/tournament/score-edit";
 
 const STATUS_LABEL: Record<DivisionPlayStatus | "complete", string> = {
   not_started: "NOT STARTED", live: "LIVE", paused: "PAUSED", complete: "COMPLETE",
@@ -37,6 +38,7 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
   const [dragMatchId, setDragMatchId] = useState<string | null>(null);
   const [dragOverCourt, setDragOverCourt] = useState<string | null>(null);
   const [scoring, setScoring] = useState<LiveMatch | null>(null);
+  const [correcting, setCorrecting] = useState<LiveMatch | null>(null);
   const [editingCourts, setEditingCourts] = useState(false);
   const [courtsDraft, setCourtsDraft] = useState("");
   // Hand-assigning in a division that isn't live: offer to start it first.
@@ -156,8 +158,28 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
       <div className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
           <span className="font-mono text-[10px] tracking-widest text-muted-foreground">
-            COURTS · {onCourt.size} IN PLAY · AUTO-ASSIGN {state.autoAssign ? "ON" : "OFF"}
+            COURTS · {onCourt.size} IN PLAY
           </span>
+          <span className="flex-1" />
+          <button
+            role="switch"
+            aria-checked={state.autoAssign}
+            disabled={busy}
+            title={state.autoAssign
+              ? "Free courts fill on their own from the queue. Turn off to assign every court by hand."
+              : "Courts are assigned by hand. Turn on to fill free courts from the queue."}
+            onClick={() => {
+              const next = !state.autoAssign;
+              setState((s) => (s ? { ...s, autoAssign: next } : s));
+              run(() => setAutoAssignCourts(tournamentId, next), `Auto-assign ${next ? "on" : "off"}.`);
+            }}
+            className="flex items-center gap-2 h-8 pl-3 pr-1.5 rounded-full border border-border hover:bg-secondary font-mono text-[10px] tracking-widest disabled:opacity-50"
+          >
+            AUTO-ASSIGN
+            <span className={`relative h-5 w-9 rounded-full transition-colors ${state.autoAssign ? "bg-primary" : "bg-muted"}`}>
+              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-background shadow transition-all ${state.autoAssign ? "left-[18px]" : "left-0.5"}`} />
+            </span>
+          </button>
           {!editingCourts && (
             <button
               onClick={() => { setCourtsDraft(state.courts.join(", ")); setEditingCourts(true); }}
@@ -331,14 +353,26 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
               <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-2">COMPLETED · {completed.length}</p>
               <div className="space-y-1.5">
                 {completed.slice(0, 12).map((m) => (
-                  <div key={m.id} className="flex items-center gap-2 text-sm">
+                  <div key={m.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
                     <CheckFat size={10} weight="fill" className="text-primary flex-shrink-0" />
-                    <span className="truncate flex-1">
+                    <span className="truncate flex-1 min-w-0">
                       <span className={m.winner === 1 ? "font-semibold" : "text-muted-foreground"}>{m.team1}</span>
                       <span className="font-mono text-xs mx-1.5">{m.score1}–{m.score2}</span>
                       <span className={m.winner === 2 ? "font-semibold" : "text-muted-foreground"}>{m.team2}</span>
                     </span>
                     <span className="font-mono text-[10px] text-muted-foreground hidden sm:inline">{matchLine(m)}</span>
+                    <span className="flex items-center gap-2 font-mono text-[9px] tracking-widest">
+                      {m.score1 != null && m.score2 != null && (
+                        <button onClick={() => setCorrecting(m)} className="flex items-center gap-1 text-primary hover:underline">
+                          <PencilSimple size={10} weight="bold" /> EDIT
+                        </button>
+                      )}
+                    </span>
+                    {m.editedAt && (
+                      <span className="flex flex-wrap items-center gap-x-2 font-mono text-[9px] tracking-widest">
+                        <ScoreEditInfo matchId={m.id} editedAt={m.editedAt} prev={m.prevScore} now={{ s1: m.score1, s2: m.score2 }} director />
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -367,6 +401,15 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
             </div>
           </div>
         </div>
+      )}
+
+      {correcting && (
+        <EditScoreDialog
+          match={{ id: correcting.id, team1: correcting.team1, team2: correcting.team2, score1: correcting.score1, score2: correcting.score2 }}
+          poolRebuildHint={!!correcting.poolLabel && state.matches.some((x) => x.divisionId === correcting.divisionId && !x.poolLabel)}
+          onClose={() => setCorrecting(null)}
+          onSaved={async () => { setCorrecting(null); toast.success("Score corrected."); await load(); }}
+        />
       )}
 
       {scoring && (

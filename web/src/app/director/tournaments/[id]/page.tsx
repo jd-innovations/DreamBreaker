@@ -24,6 +24,8 @@ import { SafeImage } from "@/components/shared/safe-image";
 import { DayOfBoard } from "@/components/director/day-of-board";
 import { LiveBrackets } from "@/components/tournament/live-brackets";
 import { buildDivisionBracket } from "@/lib/tournament/day-of";
+import { AddRegistrationDialog } from "@/components/director/add-registration-dialog";
+import { onsiteLabel } from "@/lib/tournament/director-registrations";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -84,8 +86,17 @@ interface Registration {
   status: string;
   division_id: string | null;
   created_at: string;
+  onsite_tender: string | null;
+  onsite_amount_cents: number | null;
   profiles: { full_name: string | null; dupr: number | null; skill_level: string | null } | null;
+  partner: { full_name: string | null } | null;
 }
+
+const ROSTER_STATUS: Record<string, { label: string; cls: string }> = {
+  registered: { label: "REGISTERED", cls: "text-primary border-primary/30 bg-primary/10" },
+  checked_in: { label: "CHECKED IN", cls: "text-green-500 border-green-500/30 bg-green-500/10" },
+  held: { label: "HELD", cls: "text-amber-400 border-amber-400/30 bg-amber-400/10" },
+};
 
 interface BracketSeed {
   player_id: string;
@@ -249,6 +260,10 @@ export default function DirectorTournamentPage() {
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
+  // Guest names come from tournament_guest_names (the guests table is creator-only).
+  const [guestNames, setGuestNames] = useState<Map<string, string>>(new Map());
+  const [rosterQuery, setRosterQuery] = useState("");
+  const [addingPlayer, setAddingPlayer] = useState(false);
   const [loading, setLoading] = useState(true);
   const validTabs = ["overview", "sponsors", "roster", "bracket", "dayof", "live"] as const;
   type TabId = typeof validTabs[number];
@@ -315,12 +330,16 @@ export default function DirectorTournamentPage() {
         .order("display_order", { ascending: true });
       setSponsors((spons ?? []) as Sponsor[]);
 
-      const { data: regs } = await supabase
-        .from("registrations")
-        .select("id,player_id,partner_id,guest_player_id,guest_partner_id,status,division_id,created_at,profiles!player_id(full_name,dupr,skill_level)")
-        .eq("tournament_id", id)
-        .order("created_at", { ascending: true });
+      const [{ data: regs }, { data: guests }] = await Promise.all([
+        supabase
+          .from("registrations")
+          .select("id,player_id,partner_id,guest_player_id,guest_partner_id,status,division_id,created_at,onsite_tender,onsite_amount_cents,profiles!player_id(full_name,dupr,skill_level),partner:profiles!partner_id(full_name)")
+          .eq("tournament_id", id)
+          .order("created_at", { ascending: true }),
+        supabase.rpc("tournament_guest_names", { p_tournament_id: id }),
+      ]);
       setRegistrations((regs ?? []) as unknown as Registration[]);
+      setGuestNames(new Map((guests ?? []).map((g) => [g.guest_id, g.display_name])));
 
       // Bracket seeds
       const { data: seedRows } = await supabase
@@ -596,7 +615,20 @@ export default function DirectorTournamentPage() {
 
   const registered = registrations.filter((r) => r.status === "registered").length;
   const held = registrations.filter((r) => r.status === "held").length;
-  const revenue = registered * tournament.entry_fee_cents;
+  // Paid-on-site entries are recorded, never processed, so they stay out of Revenue.
+  const revenue = registrations.filter((r) => r.status === "registered" && !r.onsite_tender).length * tournament.entry_fee_cents;
+  const checkedIn = registrations.filter((r) => r.status === "checked_in").length;
+  const onsiteCollected = registrations
+    .filter((r) => ["registered", "checked_in", "held"].includes(r.status))
+    .reduce((sum, r) => sum + (r.onsite_amount_cents ?? 0), 0);
+  const playerName = (r: Registration) =>
+    r.profiles?.full_name ?? (r.guest_player_id ? guestNames.get(r.guest_player_id) : null) ?? "Unknown Player";
+  const partnerName = (r: Registration) =>
+    r.partner?.full_name ?? (r.guest_partner_id ? guestNames.get(r.guest_partner_id) : null) ?? null;
+  const rosterNeedle = rosterQuery.trim().toLowerCase();
+  const rosterRows = rosterNeedle
+    ? registrations.filter((r) => [playerName(r), partnerName(r) ?? ""].some((n) => n.toLowerCase().includes(rosterNeedle)))
+    : registrations;
   const structureLabel = STRUCTURE_LABELS[tournament.tournament_format ?? "single_elim"] ?? "Single Elimination";
   const poolCount = tournament.pool_count ?? 4;
 
@@ -1052,40 +1084,73 @@ export default function DirectorTournamentPage() {
         )}
 
         {/* ── Live brackets + leaderboard (read-only, same view as the public page) ── */}
-        {activeTab === "live" && <LiveBrackets tournamentId={id} />}
+        {activeTab === "live" && <LiveBrackets tournamentId={id} director />}
 
         {/* ── Roster tab ── */}
         {activeTab === "roster" && (
           <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                value={rosterQuery}
+                onChange={(e) => setRosterQuery(e.target.value)}
+                placeholder="Search player or partner"
+                aria-label="Search registrations"
+                className="flex-1 min-w-[12rem] h-10 rounded-full bg-secondary border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+              <button onClick={() => setAddingPlayer(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-display tracking-wider transition-colors">
+                <Plus size={13} weight="bold" /> ADD PLAYER
+              </button>
+            </div>
             {registrations.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border p-12 text-center">
                 <Users size={32} className="text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">No registrations yet.</p>
+                <p className="text-sm text-muted-foreground">No registrations yet. Walk-ins can be added with Add Player, even after registration closes.</p>
               </div>
             ) : (
               <>
-                <div className="flex gap-4 text-xs font-mono text-muted-foreground px-1">
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-mono text-muted-foreground px-1">
                   <span>{registered} registered</span>
+                  <span>{checkedIn} checked in</span>
                   <span>{held} held</span>
+                  {onsiteCollected > 0 && <span>${(onsiteCollected / 100).toFixed(onsiteCollected % 100 === 0 ? 0 : 2)} collected on site</span>}
                 </div>
-                {registrations.map((r) => {
+                {rosterRows.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+                    <p className="text-sm text-muted-foreground mb-3">No player or partner matches “{rosterQuery.trim()}”.</p>
+                    <button onClick={() => setRosterQuery("")} className="h-9 px-4 rounded-full border border-border hover:bg-secondary text-xs font-display tracking-wider">CLEAR SEARCH</button>
+                  </div>
+                )}
+                {rosterRows.map((r) => {
                   const div = divisions.find((d) => d.id === r.division_id);
+                  const name = playerName(r);
+                  const partner = partnerName(r);
+                  const status = ROSTER_STATUS[r.status] ?? { label: r.status.replace(/_/g, " ").toUpperCase(), cls: "text-muted-foreground border-border" };
+                  const meta = [
+                    div?.name ?? "Open",
+                    r.profiles?.dupr ? `DUPR ${r.profiles.dupr}` : r.profiles?.skill_level?.replace("-", " – ") ?? (r.guest_player_id ? "Guest" : "—"),
+                    onsiteLabel(r.onsite_tender, r.onsite_amount_cents),
+                  ].filter(Boolean).join(" · ");
                   return (
-                    <div key={r.id} className="flex items-center gap-4 rounded-xl border border-border bg-card px-4 py-3">
+                    <div key={r.id} className="flex items-center gap-3 sm:gap-4 rounded-xl border border-border bg-card px-4 py-3">
                       <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                        <span className="font-display text-sm text-primary">{(r.profiles?.full_name ?? "?")[0]}</span>
+                        <span className="font-display text-sm text-primary">{name[0]}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">{r.profiles?.full_name ?? "Unknown Player"}</div>
-                        <div className="text-xs text-muted-foreground">{div?.name ?? "Open"} · {r.profiles?.dupr ? `DUPR ${r.profiles.dupr}` : r.profiles?.skill_level?.replace("-", " – ") ?? "—"}</div>
+                        <div className="font-medium text-sm truncate">
+                          {name}{partner && <span className="text-muted-foreground font-normal"> &amp; {partner}</span>}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">{meta}</div>
                       </div>
-                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${r.status === "registered" ? "text-primary border-primary/30 bg-primary/10" : "text-amber-400 border-amber-400/30 bg-amber-400/10"}`}>
-                        {r.status === "registered" ? "REGISTERED" : "HELD"}
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border whitespace-nowrap ${status.cls}`}>
+                        {status.label}
                       </span>
                     </div>
                   );
                 })}
               </>
+            )}
+            {addingPlayer && (
+              <AddRegistrationDialog tournamentId={id} onClose={() => setAddingPlayer(false)} onAdded={load} />
             )}
           </div>
         )}

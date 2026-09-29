@@ -47,24 +47,24 @@ the backlog items below (hold, no-show, activity log).
 | | **Setup** | | | | |
 | 1 | Create/edit tournament, format picker | ✅ | ✅ | Both | done |
 | 2 | Court list (names, ranges) | ❌ | ✅ | Both | W1 |
-| 3 | Divisions, "Mixed Doubles" naming rule | ⚠️ check | ✅ | Both | W2 |
+| 3 | Divisions, "Mixed Doubles" naming rule | ✅ fixed presets | ✅ | Both | done (W2) |
 | 4 | Seeding review / drag-reorder | ✅ `bracket_seeds` | ❌ | Web-first | — |
 | 5 | Build single-elim bracket, saved to `bracket_matches` | ⚠️ in-browser pairs only | ✅ | Both, saved | W1 |
 | 6 | Pool play: pools, standings, build bracket | ⚠️ pool letters only | ✅ | Both | W3 |
 | 7 | Sponsors, public page, analytics, messages | ✅ | partial | Web-first | — |
 | | **Registration & check-in** | | | | |
 | 8 | Registrations list + search | ✅ | ✅ | Both | done |
-| 9 | Walk-ins after close, paid on site | ❌ | ✅ | Both | W2 |
+| 9 | Walk-ins after close, paid on site | ✅ | ✅ | Both | done (W2) |
 | 10 | Manual check-in | ✅ | ✅ | Both | done |
 | 11 | QR check-in scanning | ❌ | ✅ | Mobile-only | — |
 | 12 | Exports (CSV) | ❌ | ❌ | Web-only | later |
 | | **Running the day** | | | | |
 | 13 | Live queue (`court_queue`), UP NEXT / ON DECK | ❌ in-browser | ✅ | Both | W1 |
 | 14 | Assign / clear court, one live match per court | ⚠️ drag-drop, in-browser | ✅ | Both (web keeps drag-drop) | W1 |
-| 15 | Auto-assign switch | ❌ | ✅ | Both | W2 |
+| 15 | Auto-assign switch | ✅ | ✅ | Both | done (W2) |
 | 16 | Division Start / Pause / Resume | ❌ | ✅ | Both | W2 |
 | 17 | Score entry | ⚠️ in-browser | ✅ | Both | W1 |
-| 18 | Score correction with reason, ⓘ history | ❌ | ✅ | Both | W2 |
+| 18 | Score correction with reason, ⓘ history | ✅ | ✅ | Both | done (W2) |
 | 19 | Live sync across devices | ❌ | ✅ | Both | W1 |
 | 20 | Big-screen court board / venue TV | ❌ | ❌ | Web-only | later |
 | | **Players & spectators** | | | | |
@@ -84,7 +84,26 @@ the backlog items below (hold, no-show, activity log).
   (0c90072): `web/src/components/tournament/live-brackets.tsx`, public Brackets +
   Leaderboard tabs, director LIVE BRACKETS tab, `tournament_guest_names` for guest names.
 
-### W2 scope (agreed 2026-09-28, not started)
+### W2 scope (agreed 2026-09-28). **Done 2026-09-28**, web only, no migrations
+
+What shipped:
+- `components/tournament/score-edit.tsx` (EditScoreDialog + ScoreEditInfo) and
+  `lib/tournament/score-corrections.ts`. Used in LIVE BRACKETS (`<LiveBrackets director />`)
+  and the Day Of Completed list. The public page's ⓘ shows when and the old score only.
+- Day Of: the AUTO-ASSIGN label is now a switch (`setAutoAssignCourts` in `day-of.ts`).
+- LIVE BRACKETS: Add 3rd-place match banner when a division has 2 semifinals and no bronze.
+- Roster tab: Add Player (`components/director/add-registration-dialog.tsx`,
+  `lib/tournament/director-registrations.ts`), search on player or partner, guest and partner
+  names, CHECKED IN status, "Cash $40 on site" / "Comped", "$X collected on site";
+  on-site rows are left out of the Overview Revenue tile.
+- Division naming: closed, web only creates divisions from the fixed FORMAT_OPTIONS presets.
+- Public page: Schedule is derived from checkin_opens_at / checkin_closes_at / start_time and
+  hidden when none is set; Prize shows only the real total and is hidden when unset; Rules and
+  the Overview "About" card show only the director's own text; the FAQ tab was removed.
+- Web still has no cancel-registration action, so the "refund at the desk" note has nowhere
+  to go yet.
+
+The original scope, for reference:
 
 All database functions below are live; W2 is web client work unless noted.
 

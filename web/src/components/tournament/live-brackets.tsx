@@ -2,13 +2,19 @@
 
 // Live brackets + leaderboard by division, for the public tournament page and
 // the director page (DIRECTOR_HUB_WEB_PARITY.md, W1b). Same data and leaderboard
-// rules as mobile; updates live as scores come in.
+// rules as mobile; updates live as scores come in. With `director`, completed
+// matches get Edit score (W2 item 1) and a division with semifinals but no 3rd-place
+// match gets Add 3rd-place match (W2 item 4); the database checks both.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Trophy, Info } from "@phosphor-icons/react";
+import { toast } from "sonner";
+import { Trophy, PencilSimple, Medal } from "@phosphor-icons/react";
 import { divisionLeaderboard, type LeaderboardEntry } from "@shared/leaderboard";
 import { courtLabel } from "@shared/tournamentCourts";
-import { fetchLiveBrackets, subscribeLiveBrackets, type LiveBracketMatch, type LiveDivision } from "@/lib/tournament/live-brackets";
+import {
+  addThirdPlaceMatch, fetchLiveBrackets, subscribeLiveBrackets, type LiveBracketMatch, type LiveDivision,
+} from "@/lib/tournament/live-brackets";
+import { EditScoreDialog, ScoreEditInfo } from "@/components/tournament/score-edit";
 import { roundName } from "@/lib/tournament/day-of";
 
 const DISPLAY_ORDER: Record<string, number> = { pool: 0, r64: 1, r32: 2, r16: 3, qf: 4, sf: 5, final: 7, bronze: 8 };
@@ -16,16 +22,19 @@ const DISPLAY_ORDER: Record<string, number> = { pool: 0, r64: 1, r32: 2, r16: 3,
 type View = "bracket" | "leaderboard";
 
 export function LiveBrackets({
-  tournamentId, initialView = "bracket", currentUserId = null,
+  tournamentId, initialView = "bracket", currentUserId = null, director = false,
 }: {
   tournamentId: string;
   initialView?: View;
   currentUserId?: string | null;
+  director?: boolean;
 }) {
   const [divisions, setDivisions] = useState<LiveDivision[] | null>(null);
   const [error, setError] = useState(false);
   const [divisionId, setDivisionId] = useState<string | null>(null);
   const [view, setView] = useState<View>(initialView);
+  const [editing, setEditing] = useState<LiveBracketMatch | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -47,6 +56,11 @@ export function LiveBrackets({
 
   const division = divisions?.find((d) => d.id === divisionId) ?? null;
   const board = useMemo(() => (division ? divisionLeaderboard(division.matches) : []), [division]);
+  // Brackets built before 3rd-place matches existed can get one without a rebuild.
+  const canAddThirdPlace = director && !!division
+    && division.matches.filter((m) => !m.poolLabel && m.round === "sf").length === 2
+    && !division.matches.some((m) => !m.poolLabel && m.round === "bronze");
+  const hasElimination = !!division?.matches.some((m) => !m.poolLabel);
 
   if (error) return <p className="text-sm text-muted-foreground">Brackets couldn’t load. Refresh to try again.</p>;
   if (!divisions) {
@@ -90,14 +104,49 @@ export function LiveBrackets({
         </div>
       </div>
 
+      {canAddThirdPlace && view === "bracket" && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border px-3 py-2.5">
+          <Medal size={16} className="text-muted-foreground flex-shrink-0" />
+          <p className="flex-1 min-w-[12rem] text-xs text-muted-foreground">
+            No 3rd-place match. The two semifinal losers can play for 3rd; semifinals already played send their loser straight away. No scores change.
+          </p>
+          <button
+            disabled={adding}
+            onClick={async () => {
+              if (!division || !window.confirm(`Add a 3rd-place match to ${division.name}?`)) return;
+              setAdding(true);
+              const result = await addThirdPlaceMatch(tournamentId, division.id);
+              setAdding(false);
+              if (!result.ok) { toast.error(result.error); return; }
+              toast.success("3rd-place match added.");
+              await load();
+            }}
+            className="h-8 px-3 rounded-full border border-border hover:bg-secondary font-mono text-[10px] tracking-widest disabled:opacity-40"
+          >
+            {adding ? "ADDING…" : "ADD 3RD-PLACE MATCH"}
+          </button>
+        </div>
+      )}
+
       {division && (view === "bracket"
-        ? <BracketView matches={division.matches} currentUserId={currentUserId} />
+        ? <BracketView matches={division.matches} currentUserId={currentUserId} director={director} onEdit={setEditing} />
         : <LeaderboardView rows={board} currentUserId={currentUserId} />)}
+
+      {editing && (
+        <EditScoreDialog
+          match={{ id: editing.id, team1: editing.team1Name, team2: editing.team2Name, score1: editing.score1, score2: editing.score2 }}
+          poolRebuildHint={!!editing.poolLabel && hasElimination}
+          onClose={() => setEditing(null)}
+          onSaved={async () => { setEditing(null); toast.success("Score corrected."); await load(); }}
+        />
+      )}
     </div>
   );
 }
 
-function BracketView({ matches, currentUserId }: { matches: LiveBracketMatch[]; currentUserId: string | null }) {
+type CardActions = { currentUserId: string | null; director: boolean; onEdit: (m: LiveBracketMatch) => void };
+
+function BracketView({ matches, ...actions }: { matches: LiveBracketMatch[] } & CardActions) {
   const pools = new Map<string, LiveBracketMatch[]>();
   for (const m of matches) if (m.poolLabel) pools.set(m.poolLabel, [...(pools.get(m.poolLabel) ?? []), m]);
   const elim = matches.filter((m) => !m.poolLabel);
@@ -112,7 +161,7 @@ function BracketView({ matches, currentUserId }: { matches: LiveBracketMatch[]; 
             {[...pools.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([label, list]) => (
               <div key={label} className="rounded-2xl border border-border bg-card p-3 space-y-2">
                 <p className="font-mono text-[10px] tracking-widest text-primary">POOL {label}</p>
-                {list.sort((a, b) => a.matchNumber - b.matchNumber).map((m) => <MatchCard key={m.id} m={m} currentUserId={currentUserId} compact />)}
+                {list.sort((a, b) => a.matchNumber - b.matchNumber).map((m) => <MatchCard key={m.id} m={m} {...actions} compact />)}
               </div>
             ))}
           </div>
@@ -126,7 +175,7 @@ function BracketView({ matches, currentUserId }: { matches: LiveBracketMatch[]; 
                 <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-2">{roundName(round, null).toUpperCase()}</p>
                 <div className="space-y-2">
                   {elim.filter((m) => m.round === round).sort((a, b) => a.matchNumber - b.matchNumber)
-                    .map((m) => <MatchCard key={m.id} m={m} currentUserId={currentUserId} />)}
+                    .map((m) => <MatchCard key={m.id} m={m} {...actions} />)}
                 </div>
               </div>
             ))}
@@ -137,9 +186,10 @@ function BracketView({ matches, currentUserId }: { matches: LiveBracketMatch[]; 
   );
 }
 
-function MatchCard({ m, currentUserId, compact = false }: { m: LiveBracketMatch; currentUserId: string | null; compact?: boolean }) {
+function MatchCard({ m, currentUserId, director, onEdit, compact = false }: { m: LiveBracketMatch; compact?: boolean } & CardActions) {
   const live = !!m.court && !m.completed;
   const bye = m.completed && (m.team1.length === 0 || m.team2.length === 0);
+  const editable = director && m.completed && !bye && m.winner != null && m.score1 != null && m.score2 != null;
   const side = (members: string[], name: string | null, score: number | null, won: boolean) => {
     const mine = !!currentUserId && members.includes(currentUserId);
     return (
@@ -152,14 +202,24 @@ function MatchCard({ m, currentUserId, compact = false }: { m: LiveBracketMatch;
   };
   return (
     <div className={`rounded-xl border bg-card overflow-hidden ${live ? "border-amber-400/60" : "border-border"}`}>
-      {!compact && (live || m.editedAt || bye) && (
-        <div className="flex items-center gap-1.5 px-2.5 pt-1.5 font-mono text-[9px] tracking-widest">
-          {live && <span className="text-amber-500">ON {m.court ? courtLabel(m.court).toUpperCase() : ""}</span>}
-          {bye && <span className="text-muted-foreground">BYE</span>}
+      {((!compact && (live || bye)) || m.editedAt || editable) && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 px-2.5 pt-1.5 font-mono text-[9px] tracking-widest">
+          {!compact && live && <span className="text-amber-500">ON {m.court ? courtLabel(m.court).toUpperCase() : ""}</span>}
+          {!compact && bye && <span className="text-muted-foreground">BYE</span>}
+          <span className="flex-1" />
+          {editable && (
+            <button onClick={() => onEdit(m)} className="flex items-center gap-1 text-primary hover:underline">
+              <PencilSimple size={10} weight="bold" /> EDIT SCORE
+            </button>
+          )}
           {m.editedAt && (
-            <span className="ml-auto text-muted-foreground flex items-center gap-1" title={`Score edited ${new Date(m.editedAt).toLocaleString()}`}>
-              <Info size={10} /> EDITED
-            </span>
+            <ScoreEditInfo
+              matchId={m.id}
+              editedAt={m.editedAt}
+              prev={m.prevScore}
+              now={{ s1: m.score1, s2: m.score2 }}
+              director={director}
+            />
           )}
         </div>
       )}

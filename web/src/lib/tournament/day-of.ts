@@ -6,11 +6,13 @@
 //   assign court  bracket_matches.court         one live match per court (23505)
 //   score         record_match_score()          score + advance, atomically
 //   play status   divisions.play_status         not_started | live | paused
+//   auto-assign   tournaments.auto_assign_courts set_tournament_auto_assign_courts()
 //   brackets      bracket_matches               packages/shared/src/bracketBuild.ts
 // The database's court automation fills free courts on its own when a match
 // finishes or a division goes live; nothing here re-derives the queue order.
 
 import { createClient } from "@/lib/supabase/client";
+import { parsePrevScore } from "@/lib/tournament/score-corrections";
 import {
   activeTeamEntries, buildBracketMatchRows, seededSlots,
   type BracketTeam,
@@ -37,6 +39,8 @@ export interface LiveMatch {
   score2: number | null;
   team1: string | null;
   team2: string | null;
+  editedAt: string | null;
+  prevScore: { s1: number; s2: number } | null;
 }
 
 export interface DayOfState {
@@ -51,7 +55,7 @@ export interface DayOfState {
 type Named = { full_name?: string | null; display_name?: string | null } | null;
 
 const MATCH_SELECT = `
-  id, division_id, match_number, round, court, pool_label, winner, completed_at, score_team1, score_team2,
+  id, division_id, match_number, round, court, pool_label, winner, completed_at, score_team1, score_team2, score_edited_at, score_edited_prev,
   p1a:profiles!bracket_matches_team1_player_a_fkey(full_name),
   p1b:profiles!bracket_matches_team1_player_b_fkey(full_name),
   p2a:profiles!bracket_matches_team2_player_a_fkey(full_name),
@@ -119,6 +123,8 @@ export async function fetchDayOf(tournamentId: string): Promise<DayOfState> {
       score2: r.score_team2?.[0] ?? null,
       team1: teamName(r.p1a, r.p1b, r.g1a, r.g1b),
       team2: teamName(r.p2a, r.p2b, r.g2a, r.g2b),
+      editedAt: r.score_edited_at,
+      prevScore: parsePrevScore(r.score_edited_prev),
     })),
     // The queue is additive: without it the courts and scores still work.
     queue: new Map((qRes.error ? [] : qRes.data ?? []).map((q) => [q.match_id, q.queue_position])),
@@ -177,6 +183,24 @@ export async function setDivisionPlayStatus(divisionId: string, status: Division
   if (!data || data.length === 0) return { ok: false, error: "You are not able to change this division." };
   return { ok: true };
 }
+
+/** Turns court auto-assign on or off; turning it on also fills free courts. */
+export async function setAutoAssignCourts(tournamentId: string, enabled: boolean): Promise<Result> {
+  const { error } = await createClient().rpc("set_tournament_auto_assign_courts", {
+    p_tournament_id: tournamentId, p_enabled: enabled,
+  });
+  if (error) {
+    const code = Object.keys(AUTO_ASSIGN_ERRORS).find((k) => error.message?.includes(k));
+    return { ok: false, error: code ? AUTO_ASSIGN_ERRORS[code] : "Could not change auto-assign. Please try again." };
+  }
+  return { ok: true };
+}
+
+const AUTO_ASSIGN_ERRORS: Record<string, string> = {
+  not_tournament_director: "Only this tournament’s director can change auto-assign.",
+  director_not_approved: "Your director account isn’t approved yet.",
+  tournament_closed: "This tournament is completed or cancelled.",
+};
 
 export async function saveCourts(tournamentId: string, courts: string[]): Promise<{ ok: true; courts: string[] } | { ok: false; error: string }> {
   const { data, error } = await createClient().rpc("set_tournament_courts", {
