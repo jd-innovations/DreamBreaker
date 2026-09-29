@@ -15,7 +15,70 @@ Branch: `feature/push-broadcast`. Read the commits for the full diffs.
 | 3 | Walk-ins in paid divisions, paid on site | `41ba511` | `20260928130000_director_onsite_payment` |
 | 4 | Mixed Doubles naming in Create Division | `8ca1146` | none (one data fix run by hand, see below) |
 | 5 | Tournament court list and one live match per court | `7c10746` | `20260928140000_tournament_courts` |
-| 6 | Court auto-assign queue and live bracket | (this commit) | `20260928150000_court_auto_assign`, `20260928160000_court_queue_fairness` |
+| 6 | Court auto-assign queue and live bracket | `eae6c69` | `20260928150000_court_auto_assign`, `20260928160000_court_queue_fairness` |
+| 7 | Tournament format picker | `2f00b98` | none |
+| 8 | Pool Play → Bracket, step 1: pools | `c15f995` | `20260928170000_pool_play` |
+| 9 | Pool Play → Bracket, step 2: build the bracket | `b546a5a` | none |
+| 10 | Division play status | `201559d` | `20260928180000_division_play_status` |
+| 11 | Score corrections | `daed1e6` | `20260928190000_score_corrections` |
+
+---
+
+## Agreed target: web ↔ mobile (owner, 2026-09-28)
+
+**Parity means one live system, not identical screens.** Every day-of fact (courts,
+queue, scores, corrections, division status) lives in the database under the same
+rules, both apps update live, and every action a director needs on the day works on
+either device. Each app keeps the layout that suits it: web for the desk (drag-and-drop
+courts board, bulk work), mobile for the courts (quick scoring, QR, walking the venue).
+
+**Codex's `feature/tournament-live-operations` (uncommitted in
+`C:\Users\dhjes\DreamBreaker-tournament`, 2026-08-27) is not the base.** It models
+courts, queue and corrections differently from what is live (`tournament_courts` /
+`court_assignments` / `operational_status` vs `tournaments.courts` / `court_queue()` /
+`correct_match_score()`), was never applied, and its mobile edits would overwrite the
+live court code. Reuse from it: the idea of hydrating Day Of from `bracket_matches`, and
+the backlog items below (hold, no-show, activity log).
+
+✅ works · ⚠️ partial · ❌ missing
+
+| # | Feature | Web today | Mobile today | Target | Phase |
+|---|---|---|---|---|---|
+| | **Setup** | | | | |
+| 1 | Create/edit tournament, format picker | ✅ | ✅ | Both | done |
+| 2 | Court list (names, ranges) | ❌ | ✅ | Both | W1 |
+| 3 | Divisions, "Mixed Doubles" naming rule | ⚠️ check | ✅ | Both | W2 |
+| 4 | Seeding review / drag-reorder | ✅ `bracket_seeds` | ❌ | Web-first | — |
+| 5 | Build single-elim bracket, saved to `bracket_matches` | ⚠️ in-browser pairs only | ✅ | Both, saved | W1 |
+| 6 | Pool play: pools, standings, build bracket | ⚠️ pool letters only | ✅ | Both | W3 |
+| 7 | Sponsors, public page, analytics, messages | ✅ | partial | Web-first | — |
+| | **Registration & check-in** | | | | |
+| 8 | Registrations list + search | ✅ | ✅ | Both | done |
+| 9 | Walk-ins after close, paid on site | ❌ | ✅ | Both | W2 |
+| 10 | Manual check-in | ✅ | ✅ | Both | done |
+| 11 | QR check-in scanning | ❌ | ✅ | Mobile-only | — |
+| 12 | Exports (CSV) | ❌ | ❌ | Web-only | later |
+| | **Running the day** | | | | |
+| 13 | Live queue (`court_queue`), UP NEXT / ON DECK | ❌ in-browser | ✅ | Both | W1 |
+| 14 | Assign / clear court, one live match per court | ⚠️ drag-drop, in-browser | ✅ | Both (web keeps drag-drop) | W1 |
+| 15 | Auto-assign switch | ❌ | ✅ | Both | W2 |
+| 16 | Division Start / Pause / Resume | ❌ | ✅ | Both | W2 |
+| 17 | Score entry | ⚠️ in-browser | ✅ | Both | W1 |
+| 18 | Score correction with reason, ⓘ history | ❌ | ✅ | Both | W2 |
+| 19 | Live sync across devices | ❌ | ✅ | Both | W1 |
+| 20 | Big-screen court board / venue TV | ❌ | ❌ | Web-only | later |
+| | **Players & spectators** | | | | |
+| 21 | Public brackets / results, live | ✅ static | ✅ live | Both, live | W1 |
+| 22 | "You're up on Court X" push | ❌ | ❌ | Mobile (push) | later |
+| 23 | Pool standings view | ❌ | ✅ | Both | W3 |
+| | **Backlog** | | | | |
+| 24 | Hold a match off the courts | ❌ | ❌ | Both | later |
+| 25 | No-show / withdrawn skips future matches | ❌ | ❌ | Both | later |
+| 26 | Full tournament activity log | ❌ | score edits only | Both (read on web) | later |
+
+- **W1** Web Day Of on live data: rows 2, 5, 13, 14, 17, 19, 21.
+- **W2** Director controls: rows 3, 9, 15, 16, 18.
+- **W3** Pool play on web: rows 6, 23.
 
 ---
 
