@@ -22,6 +22,7 @@ import { STATUS_BADGE_CLASS } from "@/lib/status";
 // distinct name from the Phosphor `Image` icon this file already imports.
 import { SafeImage } from "@/components/shared/safe-image";
 import { DayOfBoard } from "@/components/director/day-of-board";
+import { LiveBrackets } from "@/components/tournament/live-brackets";
 import { buildDivisionBracket } from "@/lib/tournament/day-of";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -249,7 +250,7 @@ export default function DirectorTournamentPage() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
-  const validTabs = ["overview", "sponsors", "roster", "bracket", "dayof"] as const;
+  const validTabs = ["overview", "sponsors", "roster", "bracket", "dayof", "live"] as const;
   type TabId = typeof validTabs[number];
   const initialTab = (validTabs.includes(searchParams.get("tab") as TabId) ? searchParams.get("tab") : "overview") as TabId;
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
@@ -710,13 +711,13 @@ export default function DirectorTournamentPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-border mb-8 overflow-x-auto scrollbar-hide">
-          {(["overview", "bracket", "dayof", "roster", "sponsors"] as const).map((tab) => (
+          {(["overview", "bracket", "dayof", "live", "roster", "sponsors"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2.5 font-mono text-xs tracking-widest transition-colors border-b-2 -mb-px whitespace-nowrap ${activeTab === tab ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
             >
-              {tab === "dayof" ? "DAY OF" : tab.toUpperCase()}
+              {tab === "dayof" ? "DAY OF" : tab === "live" ? "LIVE BRACKETS" : tab.toUpperCase()}
               {tab === "sponsors" && sponsors.length > 0 && <span className="ml-1.5 text-primary">({sponsors.length})</span>}
               {tab === "roster" && registrations.length > 0 && <span className="ml-1.5 text-primary">({registrations.length})</span>}
               {tab === "bracket" && seeds.length > 0 && <span className="ml-1.5 text-primary">({seeds.length})</span>}
@@ -1049,6 +1050,9 @@ export default function DirectorTournamentPage() {
         {activeTab === "dayof" && (
           <DayOfBoard tournamentId={id} onGoToBracket={() => setActiveTab("bracket")} />
         )}
+
+        {/* ── Live brackets + leaderboard (read-only, same view as the public page) ── */}
+        {activeTab === "live" && <LiveBrackets tournamentId={id} />}
 
         {/* ── Roster tab ── */}
         {activeTab === "roster" && (

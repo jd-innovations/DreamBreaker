@@ -47,6 +47,12 @@ export type BracketMatchRow = {
   g1b: GuestRef;
   g2a: GuestRef;
   g2b: GuestRef;
+  // Raw guest ids, readable by anyone who can read the match: withGuestNames
+  // uses them to name guests the joins above couldn't.
+  team1_guest_a: string | null;
+  team1_guest_b: string | null;
+  team2_guest_a: string | null;
+  team2_guest_b: string | null;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -268,8 +274,36 @@ export const MATCH_SELECT = `
   g1a:personal_guest_players!bracket_matches_team1_guest_a_fkey(id,display_name),
   g1b:personal_guest_players!bracket_matches_team1_guest_b_fkey(id,display_name),
   g2a:personal_guest_players!bracket_matches_team2_guest_a_fkey(id,display_name),
-  g2b:personal_guest_players!bracket_matches_team2_guest_b_fkey(id,display_name)
+  g2b:personal_guest_players!bracket_matches_team2_guest_b_fkey(id,display_name),
+  team1_guest_a, team1_guest_b, team2_guest_a, team2_guest_b
 `.trim();
+
+/**
+ * Fills guest names the joins above couldn't read. personal_guest_players is
+ * readable only by the director who added the guest, so for everyone else
+ * g1a..g2b come back null and a guest shows as "TBD" (or, in the leaderboard,
+ * a two-guest team vanishes). tournament_guest_names (20260928280000) returns
+ * display names only, for a published tournament's guests. Mutates and
+ * returns the rows; a failed lookup leaves them as they were.
+ */
+export async function withGuestNames<T extends BracketMatchRow>(rows: T[], tournamentId: string): Promise<T[]> {
+  const missing = rows.some(r =>
+    (r.team1_guest_a && !r.g1a) || (r.team1_guest_b && !r.g1b)
+    || (r.team2_guest_a && !r.g2a) || (r.team2_guest_b && !r.g2b));
+  if (!missing) return rows;
+  const { data, error } = await supabase.rpc('tournament_guest_names', { p_tournament_id: tournamentId });
+  if (error || !data) return rows;
+  const names = new Map((data as { guest_id: string; display_name: string }[]).map(g => [g.guest_id, g.display_name]));
+  const ref = (id: string | null, cur: GuestRef): GuestRef =>
+    cur ?? (id && names.has(id) ? { id, display_name: names.get(id)! } : null);
+  for (const r of rows) {
+    r.g1a = ref(r.team1_guest_a, r.g1a);
+    r.g1b = ref(r.team1_guest_b, r.g1b);
+    r.g2a = ref(r.team2_guest_a, r.g2a);
+    r.g2b = ref(r.team2_guest_b, r.g2b);
+  }
+  return rows;
+}
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -285,7 +319,7 @@ export async function fetchAllBrackets(
 
   if (error || !data || data.length === 0) return [];
 
-  const rows = data as unknown as BracketMatchRow[];
+  const rows = await withGuestNames(data as unknown as BracketMatchRow[], tournamentId);
   const byDivision = new Map<string, BracketMatchRow[]>();
   for (const row of rows) {
     const div = row.division_id ?? 'unknown';
@@ -311,7 +345,7 @@ export async function fetchBracket(
     .is('pool_label', null);
 
   if (error || !data || data.length === 0) return null;
-  return rowsToDivisionBracket(divisionId, divisionName, data as unknown as BracketMatchRow[]);
+  return rowsToDivisionBracket(divisionId, divisionName, await withGuestNames(data as unknown as BracketMatchRow[], tournamentId));
 }
 
 export async function hasBracket(

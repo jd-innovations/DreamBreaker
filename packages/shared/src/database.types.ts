@@ -8752,6 +8752,10 @@ export type Database = {
       }
       // Hand-added for 20260928240000_record_match_score (kept beside its
       // sibling correct_match_score rather than in generated order).
+      tournament_guest_names: {
+        Args: { p_tournament_id: string }
+        Returns: { display_name: string; guest_id: string }[]
+      }
       add_third_place_match: {
         Args: { p_division_id: string; p_tournament_id: string }
         Returns: string

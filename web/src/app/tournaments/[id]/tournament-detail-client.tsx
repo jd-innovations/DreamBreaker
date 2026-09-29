@@ -11,6 +11,7 @@ import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
+import { LiveBrackets } from "@/components/tournament/live-brackets";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { HoldMySpotDialog, type HoldTournament } from "@/components/shared/hold-my-spot-dialog";
 import { PickleballAppInsights } from "@/components/shared/pickleball-app-insights";
@@ -718,6 +719,8 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="rounded-full p-1 bg-secondary flex flex-wrap h-auto gap-1 mb-6">
               <TabsTrigger value="overview" data-testid="tab-overview" className="rounded-full px-4">Overview</TabsTrigger>
+              <TabsTrigger value="brackets" data-testid="tab-brackets" className="rounded-full px-4">Brackets</TabsTrigger>
+              <TabsTrigger value="leaderboard" data-testid="tab-leaderboard" className="rounded-full px-4">Leaderboard</TabsTrigger>
               <TabsTrigger value="schedule" data-testid="tab-schedule" className="rounded-full px-4">Schedule</TabsTrigger>
               <TabsTrigger value="prize" data-testid="tab-prize" className="rounded-full px-4">Prize</TabsTrigger>
               <TabsTrigger value="rules" data-testid="tab-rules" className="rounded-full px-4">Rules</TabsTrigger>
@@ -760,6 +763,14 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                   ),
                 )}
               </div>
+            </TabsContent>
+
+            {/* Live brackets and leaderboard (same data and rules as the mobile app) */}
+            <TabsContent value="brackets">
+              <LiveBrackets tournamentId={t.id} initialView="bracket" currentUserId={currentUserId} />
+            </TabsContent>
+            <TabsContent value="leaderboard">
+              <LiveBrackets tournamentId={t.id} initialView="leaderboard" currentUserId={currentUserId} />
             </TabsContent>
 
             {/* Schedule */}

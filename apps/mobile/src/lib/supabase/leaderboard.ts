@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { MATCH_SELECT, type BracketMatchRow } from '@/lib/supabase/brackets';
+import { MATCH_SELECT, withGuestNames, type BracketMatchRow } from '@/lib/supabase/brackets';
 import type { LeaderboardMatch } from '@shared/leaderboard';
 
 // A tournament's matches in the shape packages/shared/src/leaderboard.ts reads,
@@ -9,8 +9,10 @@ import type { LeaderboardMatch } from '@shared/leaderboard';
 function side(
   a: BracketMatchRow['p1a'], b: BracketMatchRow['p1b'],
   ga: BracketMatchRow['g1a'], gb: BracketMatchRow['g1b'],
+  gaId: string | null, gbId: string | null,
 ): { members: string[]; name: string | null } {
-  const members = [a?.id ?? ga?.id, b?.id ?? gb?.id].filter((x): x is string => !!x);
+  // Raw guest ids first: a team stays one team even if its names didn't load.
+  const members = [a?.id ?? gaId ?? ga?.id, b?.id ?? gbId ?? gb?.id].filter((x): x is string => !!x);
   const names = [a?.full_name ?? ga?.display_name, b?.full_name ?? gb?.display_name].filter(Boolean);
   return { members, name: names.length ? names.join(' / ') : null };
 }
@@ -23,10 +25,10 @@ export async function fetchLeaderboardMatches(tournamentId: string): Promise<Map
   if (error) throw error;
 
   const byDivision = new Map<string, LeaderboardMatch[]>();
-  for (const r of (data ?? []) as unknown as BracketMatchRow[]) {
+  for (const r of await withGuestNames((data ?? []) as unknown as BracketMatchRow[], tournamentId)) {
     if (!r.division_id) continue;
-    const t1 = side(r.p1a, r.p1b, r.g1a, r.g1b);
-    const t2 = side(r.p2a, r.p2b, r.g2a, r.g2b);
+    const t1 = side(r.p1a, r.p1b, r.g1a, r.g1b, r.team1_guest_a, r.team1_guest_b);
+    const t2 = side(r.p2a, r.p2b, r.g2a, r.g2b, r.team2_guest_a, r.team2_guest_b);
     const list = byDivision.get(r.division_id) ?? [];
     list.push({
       id: r.id,

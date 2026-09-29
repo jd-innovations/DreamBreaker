@@ -4,6 +4,7 @@ import {
   activeTeamRegistrations,
   createBracket,
   MATCH_SELECT,
+  withGuestNames,
   rowToMatch,
   type BracketMatchRow,
   type DirectorBracketMatch,
@@ -148,7 +149,7 @@ export async function fetchDivisionPools(tournamentId: string, divisionId: strin
   ]);
   if (error || !rows || rows.length === 0) return null;
 
-  const typed = rows as unknown as BracketMatchRow[];
+  const typed = await withGuestNames(rows as unknown as BracketMatchRow[], tournamentId);
   const names = new Map<string, string>();
   for (const r of typed) {
     const n1 = [r.p1a?.full_name ?? r.g1a?.display_name, r.p1b?.full_name ?? r.g1b?.display_name].filter(Boolean).join(' / ');
