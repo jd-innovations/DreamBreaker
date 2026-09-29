@@ -6,12 +6,17 @@ import { OPTIMIZABLE_IMAGE_HOSTS } from "./src/lib/image-hosts";
 // The repo root, so Turbopack can resolve @shared/* (../packages/shared/src).
 // Next 16.3 stopped inferring the root from a lockfile outside the git repo;
 // before that, a stray C:\Users\dhjes\package-lock.json made local builds work
-// by accident. Tracing uses the same root, as Next requires.
+// by accident. Tracing uses the same root, as Next requires. Local builds
+// only: Vercel sets the root itself (its build already resolved @shared), and
+// setting it here too broke next/font/google there ("queries have exactly one
+// entry", deployment dpl_HXA7nKeohhWMJphr4U5sQjM7V2fz).
 const repoRoot = path.join(__dirname, "..");
+const localRoot: Partial<NextConfig> = process.env.VERCEL
+  ? {}
+  : { turbopack: { root: repoRoot }, outputFileTracingRoot: repoRoot };
 
 const nextConfig: NextConfig = {
-  turbopack: { root: repoRoot },
-  outputFileTracingRoot: repoRoot,
+  ...localRoot,
   images: {
     // Generated from OPTIMIZABLE_IMAGE_HOSTS rather than listed by hand here.
     // That list is also what SafeImage (components/shared/safe-image.tsx)
