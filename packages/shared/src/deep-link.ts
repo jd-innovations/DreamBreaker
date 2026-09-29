@@ -238,3 +238,20 @@ export function validateBroadcastDestination(rawUrl: string): BroadcastDestinati
 export const BROADCAST_DESTINATION_TYPES: readonly DeepLinkType[] = [
   "tournament", "community", "marketplace", "group", "coach_offer",
 ];
+
+/**
+ * A sign-in / sign-up `returnTo` that is safe to navigate to after login, or
+ * null. Only an in-app path is allowed: it must start with a single "/".
+ *
+ * Why: expo-router hands any href that starts with a scheme ("https:",
+ * "mailto:", ...) or "//" to Linking.openURL (expo-router 6.0.24,
+ * build/utils/url.js shouldLinkExternally), so an unchecked returnTo from a
+ * crafted link would open an outside page right after the user signs in.
+ * Every returnTo the app sets itself is an in-app path (claim/[token].tsx,
+ * useExternalLinks.ts via appRoutes), so nothing legitimate is refused.
+ */
+export function safeReturnTo(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return null;
+  return value;
+}

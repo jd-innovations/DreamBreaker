@@ -25,6 +25,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Read-only token: every job only checks out and runs local checks (no push,
+# comment or upload), so it needs nothing more. Without this block the token
+# gets the repository default, which can be write access (rafter R-B9218).
+permissions:
+  contents: read
+
 jobs:
   # ── The job this CI exists for ──────────────────────────────────────────────
   # Deliberately installs nothing: `npx deno@2` fetches a pinned Deno, and the

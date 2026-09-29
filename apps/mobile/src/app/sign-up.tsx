@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeReturnTo } from '@shared/deep-link';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -23,7 +24,8 @@ const MUTED_BLUE = '#8297C3';
 export default function SignUpScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ returnTo?: string }>();
-  const returnTo = typeof params.returnTo === 'string' ? params.returnTo : null;
+  // In-app paths only: an outside URL here would be opened after login (see safeReturnTo).
+  const returnTo = safeReturnTo(params.returnTo);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
