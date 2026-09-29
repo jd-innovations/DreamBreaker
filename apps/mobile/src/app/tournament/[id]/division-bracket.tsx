@@ -1216,7 +1216,7 @@ function DivisionBracketScreen() {
       const result = await buildBracketFromPools({
         tournamentId,
         divisionId,
-        divisionName: bracket?.divisionName || pools?.divisionName || '',
+        divisionName: division?.name || bracket?.divisionName || pools?.divisionName || '',
         plan: buildPlan,
         registrations: registrations.filter(r => r.divisionId === divisionId),
       });
@@ -1266,7 +1266,9 @@ function DivisionBracketScreen() {
           <Ionicons name="chevron-back" size={24} color={L.navy} />
         </TouchableOpacity>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={s.title} numberOfLines={1}>{bracket?.divisionName || pools?.divisionName}</Text>
+          {/* division?.name first: fetchBracket is called without a name here, so
+              bracket.divisionName is '' and the title rendered blank. */}
+          <Text style={s.title} numberOfLines={1}>{division?.name || bracket?.divisionName || pools?.divisionName}</Text>
           <Text style={s.sub}>{view === 'pools' ? 'Pool Play' : 'Bracket Management'}</Text>
         </View>
         <View style={s.headerRight}>
