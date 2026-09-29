@@ -14,6 +14,10 @@ export { MAX_GAME_SCORE, validateQuickGameEntry, type QuickGameEntry } from '@/l
 //
 // Only the organizer writes. That is enforced by the existing
 // "play_matches: organizer manage" RLS policy, not by this module.
+//
+// Finishing (play_events.status -> 'completed', via completePlayEvent) rates
+// the games for PAR and locks the scores; reopen_quick_game() reverses that.
+// Both rules live in migration 20260928210000_par_quick_games.
 
 export type QuickGameMatch = Tables<'play_matches'>;
 
@@ -71,6 +75,33 @@ export async function fetchQuickGameMatches(eventId: string): Promise<QuickGameM
   return data ?? [];
 }
 
+// The viewer's own active PAR change per game of this Quick Game, keyed by
+// play_matches id. Additive: failures return an empty map.
+export async function fetchMyQuickGameParChanges(eventId: string, profileId: string): Promise<Map<string, number>> {
+  const byGame = new Map<string, number>();
+  const { data, error } = await (supabase as any)
+    .from('par_rating_events')
+    .select('game_id, par_change')
+    .eq('session_id', eventId)
+    .eq('profile_id', profileId)
+    .eq('event_type', 'game_processed')
+    .is('reversed_at', null);
+  if (error) {
+    console.warn('[quickGameScores] PAR changes unavailable:', error.message);
+    return byGame;
+  }
+  for (const row of (data ?? []) as { game_id: string; par_change: number }[]) {
+    byGame.set(row.game_id, Number(row.par_change));
+  }
+  return byGame;
+}
+
+// Raised by the finish lock (fn_play_matches_lock_finished / guard_finished).
+export function isQuickGameFinishedError(e: unknown): boolean {
+  return !!e && typeof e === 'object' && 'message' in e
+    && String((e as { message: unknown }).message).includes('quick_game_finished');
+}
+
 // ─── Writes (organizer only) ──────────────────────────────────────────────────
 
 export async function recordQuickGame(eventId: string, entry: QuickGameEntry, rosterIds: readonly string[]): Promise<void> {
@@ -108,5 +139,12 @@ export async function updateQuickGame(matchId: string, entry: QuickGameEntry, ro
 
 export async function deleteQuickGame(matchId: string): Promise<void> {
   const { error } = await supabase.from('play_matches').delete().eq('id', matchId);
+  if (error) throw error;
+}
+
+// Reverses the Quick Game's PAR changes and returns it to open (or full) so
+// its scores can be edited. Finishing again re-rates it.
+export async function reopenQuickGame(eventId: string): Promise<void> {
+  const { error } = await (supabase as any).rpc('reopen_quick_game', { p_event_id: eventId });
   if (error) throw error;
 }

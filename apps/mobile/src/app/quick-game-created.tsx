@@ -526,7 +526,7 @@ export default function QuickGameCreatedScreen() {
   function handleMarkComplete() {
     Alert.alert(
       'Mark this Quick Game complete?',
-      'Players will no longer be able to join or edit participation.',
+      'Players will no longer be able to join or edit participation. Recorded scores will be locked and count toward PAR.',
       [
         { text: 'Keep Active', style: 'cancel' },
         {

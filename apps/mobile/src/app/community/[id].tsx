@@ -981,7 +981,9 @@ export default function CommunityEventScreen() {
             onPress={() => router.push(`/quick-game/${event.id}/scores` as never)}
           >
             <Ionicons name="stats-chart-outline" size={16} color={t.accent} />
-            <Text style={s.bracketBannerText}>{IS_ORGANIZER ? 'Record Scores' : 'Scores'}</Text>
+            <Text style={s.bracketBannerText}>
+              {IS_ORGANIZER && rawPlayEvent.status !== 'completed' && rawPlayEvent.status !== 'cancelled' ? 'Record Scores' : 'Scores'}
+            </Text>
             <Ionicons name="chevron-forward" size={14} color={t.textSecondary} />
           </TouchableOpacity>
         )}

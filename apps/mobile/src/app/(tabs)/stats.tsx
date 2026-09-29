@@ -6,11 +6,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppHeader, APP_HEADER_HEIGHT } from '@/components/AppHeader';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { PlayerCredentialCard } from '@/components/stats';
+import { EventHistoryRow, PlayerCredentialCard } from '@/components/stats';
 import { ClaimInviteSheet } from '@/components';
 import { useSession } from '@/hooks/useSession';
 import { OnboardingEntrance } from '@/lib/onboarding/components';
 import { fetchMyStatsPlayerCard, type MyStatsPlayerCard } from '@/lib/stats/myStats';
+import { fetchEventHistory, type EventHistoryItem } from '@/lib/stats/eventHistory';
 import {
   fetchMyMatchHistory, fetchPersonalSessionWithGames, fetchPersonalGuestClaimStates,
   markPersonalGuestShareInitiated,
@@ -240,10 +241,27 @@ const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
   { key: 'cancelled', label: 'Cancelled' },
 ];
 
+type SourceFilter = 'all' | 'logged' | 'quick_game' | 'tournament';
+
+const SOURCE_FILTERS: { key: SourceFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'logged', label: 'Logged' },
+  { key: 'quick_game', label: 'Quick Games' },
+  { key: 'tournament', label: 'Tournaments' },
+];
+
+// One list, newest first: logged sessions plus Quick Games and tournaments.
+type HistoryEntry =
+  | { kind: 'logged'; key: string; sortKey: string; item: PersonalMatchHistoryItem }
+  | { kind: 'event'; key: string; sortKey: string; item: EventHistoryItem };
+
 function MyMatchesContent({ userId }: { userId: string | null }) {
   const [items, setItems] = useState<PersonalMatchHistoryItem[]>([]);
+  const [events, setEvents] = useState<EventHistoryItem[]>([]);
+  const [eventsError, setEventsError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -253,12 +271,22 @@ function MyMatchesContent({ userId }: { userId: string | null }) {
     useCallback(() => {
       if (!userId) {
         setItems([]);
+        setEvents([]);
         return;
       }
       let cancelled = false;
       setLoading(true);
       setError(null);
-      fetchMyMatchHistory(userId)
+      setEventsError(false);
+      // Quick Game / tournament history is loaded separately so a failure there
+      // leaves logged sessions visible, with a note rather than a silent gap.
+      const eventsLoad = fetchEventHistory(userId)
+        .then((rows) => { if (!cancelled) setEvents(rows); })
+        .catch((err) => {
+          console.warn('[stats] event history unavailable:', err instanceof Error ? err.message : err);
+          if (!cancelled) { setEvents([]); setEventsError(true); }
+        });
+      const loggedLoad = fetchMyMatchHistory(userId)
         .then((rows) => {
           if (!cancelled) setItems(rows);
         })
@@ -267,20 +295,27 @@ function MyMatchesContent({ userId }: { userId: string | null }) {
             setItems([]);
             setError(err instanceof Error ? err.message : 'Unable to load your match history.');
           }
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
         });
+      Promise.all([eventsLoad, loggedLoad]).finally(() => {
+        if (!cancelled) setLoading(false);
+      });
       return () => {
         cancelled = true;
       };
     }, [userId]),
   );
 
-  const filteredItems = items.filter((item) =>
-    (formatFilter === 'all' || item.session.format === formatFilter) &&
-    (statusFilter === 'all' || item.session.status === statusFilter),
-  );
+  const entries: HistoryEntry[] = [
+    ...items
+      .filter(() => sourceFilter === 'all' || sourceFilter === 'logged')
+      .filter((item) =>
+        (formatFilter === 'all' || item.session.format === formatFilter) &&
+        (statusFilter === 'all' || item.session.status === statusFilter))
+      .map((item) => ({ kind: 'logged' as const, key: `s-${item.session.id}`, sortKey: item.session.played_at.slice(0, 10), item })),
+    ...events
+      .filter((item) => sourceFilter === 'all' || sourceFilter === item.kind)
+      .map((item) => ({ kind: 'event' as const, key: `${item.kind}-${item.id}`, sortKey: item.date, item })),
+  ].sort((a, b) => (a.sortKey < b.sortKey ? 1 : a.sortKey > b.sortKey ? -1 : 0));
 
   if (loading) {
     return (
@@ -301,12 +336,16 @@ function MyMatchesContent({ userId }: { userId: string | null }) {
     );
   }
 
-  if (items.length === 0) {
+  if (items.length === 0 && events.length === 0) {
     return (
       <View style={mm.wrap}>
         <Ionicons name="grid-outline" size={48} color={colors.textMuted} />
         <Text style={mm.title}>No Matches Yet</Text>
-        <Text style={mm.sub}>Your match history will appear here once you log a session.</Text>
+        <Text style={mm.sub}>
+          {eventsError
+            ? 'Quick Game and tournament results couldn’t load. Open this tab again to retry.'
+            : 'Your match history will appear here once you log a session, or play a scored Quick Game or tournament.'}
+        </Text>
       </View>
     );
   }
@@ -314,20 +353,31 @@ function MyMatchesContent({ userId }: { userId: string | null }) {
   return (
     <>
       <View style={mm.filters}>
-        <FilterRow options={FORMAT_FILTERS} value={formatFilter} onChange={setFormatFilter} />
-        <FilterRow options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />
+        <FilterRow options={SOURCE_FILTERS} value={sourceFilter} onChange={setSourceFilter} />
+        {sourceFilter === 'logged' && (
+          <>
+            <FilterRow options={FORMAT_FILTERS} value={formatFilter} onChange={setFormatFilter} />
+            <FilterRow options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />
+          </>
+        )}
       </View>
 
-      {filteredItems.length === 0 ? (
+      {eventsError && (
+        <Text style={mm.inlineNote}>Quick Game and tournament results couldn’t load. Showing logged sessions only.</Text>
+      )}
+
+      {entries.length === 0 ? (
         <View style={mm.wrap}>
           <Ionicons name="filter-outline" size={40} color={colors.textMuted} />
           <Text style={mm.title}>No matches for these filters</Text>
-          <Text style={mm.sub}>Try a different format or status.</Text>
+          <Text style={mm.sub}>Try a different filter.</Text>
         </View>
       ) : (
         <View style={mm.list}>
-          {filteredItems.map((item) => (
-            <MatchHistoryRow key={item.session.id} item={item} onPress={() => setSelectedSessionId(item.session.id)} />
+          {entries.map((entry) => entry.kind === 'logged' ? (
+            <MatchHistoryRow key={entry.key} item={entry.item} onPress={() => setSelectedSessionId(entry.item.session.id)} />
+          ) : (
+            <EventHistoryRow key={entry.key} item={entry.item} />
           ))}
         </View>
       )}
@@ -992,6 +1042,12 @@ const mm = StyleSheet.create({
   filters: {
     marginTop: spacing.lg,
     gap: spacing.sm,
+  },
+  inlineNote: {
+    marginTop: spacing.md,
+    color: colors.textSub,
+    fontSize: text.caption.size,
+    fontWeight: '500',
   },
   filterRow: {
     flexDirection: 'row',

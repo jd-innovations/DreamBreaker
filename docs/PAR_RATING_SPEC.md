@@ -300,7 +300,8 @@ sources must feed PAR:
 | Tournaments | `bracket_matches` | `score_team1[]`, `score_team2[]`, `winner`, `score_entered_by/at` | `team1_player_a/b`, `team2_player_a/b` | Not yet ingested |
 | Round robins | `play_matches` (`round_robin`) | `score_a`, `score_b`, `winner` | `player_a_id` / `player_a2_id` / `player_b_id` / `player_b2_id` | Not yet ingested |
 | Mini tournaments | `play_matches` (`mini_tournament`) | same | same | Not yet ingested |
-| Organized Community Play | `play_matches` (`open_play` / `mixer` / `ladder` / `kings_court` / `clinic`) | same | same | Not yet ingested |
+| Quick Games | `play_matches` (`open_play`) | same | same | Wired to PAR (migration `20260928210000_par_quick_games`) |
+| Other Community Play | `play_matches` (`mixer` / `ladder` / `kings_court` / `clinic`) | same | same | Not yet ingested |
 | Leagues / facility events | No dedicated table — modeled via `play_events` or `tournaments` | via host table | via host table | Ingest through host table; no new schema required for V1 |
 
 The same qualifying-game requirements above (complete score, winner recorded, valid
@@ -309,14 +310,26 @@ remain recorded but non-qualifying until they claim an account (see Temporary Pl
 
 ## Implementation
 
-Delivered in migration `supabase/migrations/20260724000000_par_v1_organized_events.sql`:
-the personal-only FKs on `par_game_processing`/`par_rating_events` are dropped and a
-`source_type` (`personal` | `play_match` | `bracket_match`) discriminator is added. A
-generalized `par_process_match_roster(...)` reuses the personal engine's math, fed by
-`process_play_match_par` / `process_bracket_match_par` and their eligibility evaluators.
-Organizer scores auto-process via triggers on play-event completion and bracket-match
-completion, map to the new `official` verification level, and existing completed matches
-are backfilled. Personal-game PAR behavior is unchanged (`source_type='personal'`).
+**Approved for implementation (owner, 2026-09-28):** organized games use the same PAR
+formula as personal matches. Rollout is staged: Quick Games first, then round robins and
+mini tournaments, then tournaments.
+
+**Live: Quick Games** (`supabase/migrations/20260928210000_par_quick_games.sql`).
+- `source_type` (`personal` | `play_match`) on `par_game_processing` / `par_rating_events`;
+  for `play_match` rows, `game_id` is a `play_matches` id and `session_id` the `play_events` id.
+- A Quick Game is rated when it is finished (status → `completed`, by the organizer or
+  automatically 24 hours after it ends). Finishing locks the scores; `reopen_quick_game()`
+  reverses that event's PAR changes by subtracting them. Later games are not recalculated.
+- Verification matches personal logging: `participant_verified`, or `estimated` when a
+  guest played. A guest's strength is their numeric self-rating, else the personal guest
+  estimate anchored on the organizer. Only registered players' PAR moves.
+
+**Not applied:** `supabase/migrations_pending/20260725010000_par_v1_organized_events.sql` and
+`20260725011000_par_v1_replay_engine.sql`. An earlier version of this section said they were
+delivered; they never reached production. Their replay engine re-rates all history
+synchronously on every score write, and their bracket evaluator ignores guest slots
+(`team*_guest_*`), so it would exclude every match with a director-added guest. Both need
+rework before tournaments feed PAR.
 
 ---
 
