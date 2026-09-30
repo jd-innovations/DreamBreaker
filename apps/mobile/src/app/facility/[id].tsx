@@ -300,7 +300,7 @@ function MapSheet({
             {facility.address}, {facility.city}, {facility.state}{facility.postal_code ? ` ${facility.postal_code}` : ''}
           </Text>
 
-          <SoftButton label="Get Directions" icon="navigate-outline" onPress={onGetDirections} />
+          <SoftButton size="large" label="Get Directions" icon="navigate-outline" onPress={onGetDirections} />
         </Pressable>
       </Pressable>
     </Modal>

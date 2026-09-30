@@ -407,8 +407,11 @@ exempt below the 11pt floor, none left to interpretation.
 
 **18. A soft button is the quiet utility action.** `components/SoftButton.tsx`:
 white-to-light-grey fill (`gradients.ctaSoft`, `#FFFFFF` → `#F3F5F9`), 1px
-`colors.border`, navy label in `actionLarge` (16/800), 18pt icon in
-`colors.goldDeep` (`#7A6428`), radius `shape.cta` (10, decision 1 holds —
+`colors.border`, navy label in `action` (13/800) with a 16pt icon — or, with
+`size="large"` for a full-width button, `actionLarge` (16/800) with an 18pt
+icon — icons in `colors.goldDeep` (`#7A6428`). The label may shrink 15% before
+truncating. (Shipped first at 16/800 in half-width pairs; "Get Directions"
+truncated, corrected the same day.) Radius `shape.cta` (10, decision 1 holds —
 the owner's reference looked rounder and 10 was chosen on purpose). Light
 haptic on touch-down and a 0.98 press-down; not built on `PressableCTA`, whose
 18% pulse is sized for icon buttons. Paired soft buttons share the row equally
