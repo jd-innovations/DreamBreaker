@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image,
   ScrollView, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
-  Modal, Pressable, Alert, Linking, Animated,
+  Modal, Pressable, Alert, Linking, Animated, AccessibilityInfo,
   type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -16,6 +16,7 @@ import { ErrorState } from '@/components/states/ScreenState';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
+import { haptics } from '@/lib/haptics';
 import { supabase } from '@/lib/supabase';
 import { platformAlert } from '@/lib/platformAlert';
 import { eventCoverSource, EVENT_COVER_FILL } from '@/lib/eventCover';
@@ -296,26 +297,74 @@ const TAB_LABEL: Record<Tab, string> = {
   chat:     'Chat',
 };
 
+const TABS: Tab[] = ['overview', 'players', 'chat'];
+const TRACK_PAD = 4;
+
 // Rendered twice: inline under the hero, and again in the pinned overlay that
 // fades in once the inline one scrolls away. Shared so the two copies cannot
 // drift apart.
+//
+// A segmented control (owner's reference, 2026-09-30): a rounded track with a
+// white pill that slides to the active tab (200 ms; jumps when Reduce Motion is
+// on). A tap on a different tab gives the selection tick; re-tapping the
+// active tab, or the screen switching tabs itself, does not.
 function TabRow({ active, onSelect }: { active: Tab; onSelect: (t: Tab) => void }) {
   const tb = useThemedStyles(tbStyles);
+  const [segW, setSegW] = useState(0);
+  const x = useRef(new Animated.Value(0)).current;
+  const placed = useRef(false);
+  const reduceMotion = useRef(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(v => { reduceMotion.current = v; }).catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', v => { reduceMotion.current = v; });
+    return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
+    if (!segW) return;
+    const to = TABS.indexOf(active) * segW;
+    // First placement (and Reduce Motion) jumps; later changes slide.
+    if (!placed.current || reduceMotion.current) {
+      x.setValue(to);
+      placed.current = true;
+      return;
+    }
+    Animated.timing(x, { toValue: to, duration: 200, useNativeDriver: true }).start();
+  }, [active, segW, x]);
+
   return (
-    <View style={tb.bar}>
-      {(['overview', 'players', 'chat'] as Tab[]).map(tab => (
-        <TouchableOpacity
-          key={tab}
-          style={tb.tab}
-          onPress={() => onSelect(tab)}
-          activeOpacity={0.75}
-        >
-          <Text style={[tb.label, active === tab && tb.labelActive]}>
-            {TAB_LABEL[tab]}
-          </Text>
-          {active === tab && <View style={tb.underline} />}
-        </TouchableOpacity>
-      ))}
+    <View style={tb.wrap}>
+      <View
+        style={tb.track}
+        accessibilityRole="tablist"
+        onLayout={e => setSegW((e.nativeEvent.layout.width - TRACK_PAD * 2) / TABS.length)}
+      >
+        {segW > 0 && (
+          <Animated.View style={[tb.pill, { width: segW, transform: [{ translateX: x }] }]} />
+        )}
+        {TABS.map(tab => {
+          const selected = active === tab;
+          return (
+            <TouchableOpacity
+              key={tab}
+              style={tb.tab}
+              onPress={() => {
+                if (selected) return;
+                haptics.selection();
+                onSelect(tab);
+              }}
+              activeOpacity={0.75}
+              accessibilityRole="tab"
+              accessibilityState={{ selected }}
+            >
+              <Text style={[tb.label, selected && tb.labelActive]} numberOfLines={1}>
+                {TAB_LABEL[tab]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -1845,36 +1894,48 @@ export default function CommunityEventScreen() {
 // ─── Tab bar styles ───────────────────────────────────────────────────────────
 
 const tbStyles = (t: ThemeRoles) => StyleSheet.create({
-  bar: {
+  // Page background around the track, so the pinned copy is opaque too.
+  wrap: {
+    backgroundColor: t.background,
+    paddingHorizontal: spacing.screenH,
+    paddingTop: spacing.md,
+  },
+  track: {
     flexDirection: 'row',
+    backgroundColor: t.border,
+    borderRadius: shape.card,
+    padding: TRACK_PAD,
+  },
+  // Same pill as the Players tab's segmented filter (plStyles.segActive).
+  pill: {
+    position: 'absolute',
+    top: TRACK_PAD,
+    bottom: TRACK_PAD,
+    left: TRACK_PAD,
     backgroundColor: t.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: t.border,
+    borderRadius: shape.panel,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    position: 'relative',
+    paddingVertical: spacing.sm + 2,
   },
+  // Inactive: the primary text colour softened, not textSecondary/textMuted —
+  // those are under 4.5:1 on the track (same fix as the leaderboard pills).
   label: {
-    color: t.textMuted,
-    fontSize: text.controlLabel.size,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    color: t.textPrimary,
+    opacity: 0.7,
+    fontSize: text.body.size,
+    fontWeight: '600',
   },
   labelActive: {
-    color: t.textPrimary,
+    opacity: 1,
     fontWeight: '700',
-  },
-  underline: {
-    position: 'absolute',
-    bottom: 0,
-    left: '25%',
-    right: '25%',
-    height: 2.5,
-    borderRadius: 2,
-    backgroundColor: t.accent,
   },
 });
 
@@ -2198,7 +2259,7 @@ const sStyles = (t: ThemeRoles) => StyleSheet.create({
   // through, and elevated so Android keeps it above the ScrollView.
   stickyTabs: {
     position: 'absolute', top: 0, left: 0, right: 0,
-    backgroundColor: t.surface,
+    backgroundColor: t.background,
     zIndex: 20, elevation: 4,
   },
 
