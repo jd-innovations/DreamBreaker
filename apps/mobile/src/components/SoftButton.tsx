@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, Text, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, gradients } from '@/theme';
@@ -23,9 +23,11 @@ import { radius as shape, text as type } from '@shared/tokens';
  * this uses a slight press-down instead.
  */
 export function SoftButton({
-  label, icon, onPress, disabled, style, accessibilityLabel, size = 'default',
+  label, icon, onPress, disabled, loading, style, accessibilityLabel, size = 'default',
 }: {
   label: string;
+  /** Shows a spinner in place of the icon and blocks presses. */
+  loading?: boolean;
   size?: 'default' | 'large';
   icon?: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
@@ -37,16 +39,18 @@ export function SoftButton({
   const large = size === 'large';
   return (
     <Pressable
-      onPressIn={() => { if (!disabled) haptics.light(); }}
+      onPressIn={() => { if (!disabled && !loading) haptics.light(); }}
       onPress={onPress}
-      disabled={disabled}
+      disabled={disabled || loading}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       style={({ pressed }) => [s.box, pressed && s.pressed, disabled && s.disabled, style]}
     >
       <LinearGradient colors={[...gradients.ctaSoft]} style={[s.fill, large && s.fillLarge]}>
         <View style={s.row}>
-          {icon && <Ionicons name={icon} size={large ? 18 : 16} color={colors.goldDeep} />}
+          {loading
+            ? <ActivityIndicator size="small" color={colors.navy} />
+            : icon && <Ionicons name={icon} size={large ? 18 : 16} color={colors.goldDeep} />}
           <Text
             style={[s.label, large && s.labelLarge]}
             numberOfLines={1}

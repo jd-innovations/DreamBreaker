@@ -15,7 +15,8 @@ import { radius as shape, text } from '@shared/tokens';
 import { goBack } from '@/lib/navigation';
 import { getEventShell } from '@/lib/eventShellCache';   // F7 fix
 import { isTournamentCompleted as fetchHasPublishedResults, hasAnyBracket } from '@/lib/supabase/brackets';
-import { StatusChip, AddToCalendarButton, PressableCTA } from '@/components';
+import { StatusChip, AddToCalendarButton, PressableCTA, Avatar, SoftButton } from '@/components';
+import { getProfileInitials } from '@/lib/stats/myStats';
 import { InfoTooltip } from '@/components/InfoTooltip';
 import type { CalendarEventInput } from '@/lib/calendarEvents';
 import { withLink } from '@/lib/calendarEvents';
@@ -312,12 +313,10 @@ export default function TournamentDetail() {
     return (
       <>
         <View style={s.hostStat}>
-          <Ionicons name="people-outline" size={22} color={L.textSub} />
           <Text style={s.hostStatNum}>{playersServed.toLocaleString()}</Text>
           <Text style={s.hostStatLabel}>{playersServed === 1 ? 'Player' : 'Players'}{'\n'}Served</Text>
         </View>
         <View style={s.hostStat}>
-          <Ionicons name="calendar-outline" size={22} color={L.textSub} />
           <Text style={s.hostStatNum}>{tournamentsHosted.toLocaleString()}</Text>
           <Text style={s.hostStatLabel}>{tournamentsHosted === 1 ? 'Tournament' : 'Tournaments'}{'\n'}Hosted</Text>
         </View>
@@ -934,7 +933,13 @@ export default function TournamentDetail() {
               activeOpacity={0.75}
               onPress={() => setDirectorModalVisible(true)}
             >
-              <Image source={{ uri: directorProfile?.avatar_url ?? DIRECTOR_PHOTO }} style={s.hostAvatar} />
+              {/* Photo, or initials — never a stock photo standing in for the director. */}
+              <Avatar
+                uri={directorProfile?.avatar_url ?? null}
+                initials={getProfileInitials({ full_name: directorProfile?.full_name ?? 'Tournament Director' })}
+                bg={L.navy}
+                size={56}
+              />
               <View style={s.hostInfo}>
                 <Text style={s.hostedBy}>Hosted by</Text>
                 <View style={s.hostNameRow}>
@@ -942,36 +947,32 @@ export default function TournamentDetail() {
                   <Ionicons name="checkmark-circle" size={16} color="#3B82F6" style={{ marginLeft: 4 }} />
                 </View>
                 <View style={s.directorPill}>
-                  <Ionicons name="sync-circle-outline" size={12} color={L.gold} />
                   <Text style={s.directorText}>DIRECTOR</Text>
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={16} color={L.textMuted} style={{ alignSelf: 'center' }} />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={s.msgDirectorBtn}
-              activeOpacity={0.8}
-              disabled={msgingDirector}
-              onPress={openDirectorDM}
-            >
-              {msgingDirector
-                ? <ActivityIndicator size="small" color={L.navy} />
-                : <Ionicons name="chatbubble-outline" size={15} color={L.navy} />}
-              <Text style={s.msgDirectorText}>Message Director</Text>
-            </TouchableOpacity>
-
-            {/* Real contextual tournament group chat — directors and registered/held players only */}
-            {(playerRegStatus != null || (!!user && user.id === directorUserId)) && (
-              <TouchableOpacity
-                style={s.msgDirectorBtn}
-                activeOpacity={0.8}
-                onPress={() => router.push(`/conversation/tournament-${id}` as never)}
-              >
-                <Ionicons name="chatbubbles-outline" size={15} color={L.navy} />
-                <Text style={s.msgDirectorText}>Tournament Chat</Text>
-              </TouchableOpacity>
-            )}
+            {/* Soft buttons side by side (owner's reference, 2026-09-30). Message
+                Director takes the full width when Tournament Chat isn't offered. */}
+            <View style={s.hostActions}>
+              <SoftButton
+                label="Message Director"
+                icon="chatbubble-outline"
+                loading={msgingDirector}
+                style={s.hostAction}
+                onPress={openDirectorDM}
+              />
+              {/* Real contextual tournament group chat — directors and registered/held players only */}
+              {(playerRegStatus != null || (!!user && user.id === directorUserId)) && (
+                <SoftButton
+                  label="Tournament Chat"
+                  icon="chatbubbles-outline"
+                  style={s.hostAction}
+                  onPress={() => router.push(`/conversation/tournament-${id}` as never)}
+                />
+              )}
+            </View>
 
             {/* DIRECTOR BANNER — only this tournament's own director */}
             {isThisDirector && (
@@ -1388,7 +1389,6 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
     padding: 16,
   },
-  hostAvatar: { width: 56, height: 56, borderRadius: 28, flexShrink: 0 },
   hostInfo: { flex: 1 },
   hostedBy: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginBottom: 1 },
   hostNameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
@@ -1399,7 +1399,7 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.pill,
     paddingHorizontal: 10, paddingVertical: 3, marginBottom: 5,
   },
-  directorText: { color: L.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  directorText: { color: colors.goldDeep, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
 
   hostDivider: { height: 1, backgroundColor: L.border, marginHorizontal: 16, marginTop: 14 },
 
@@ -1407,18 +1407,14 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 14, gap: 4,
   },
-  hostStat: { flex: 1, alignItems: 'center', gap: 4 },
+  // Left-aligned number over label (owner's reference, 2026-09-30).
+  hostStat: { flex: 1, alignItems: 'flex-start', gap: 2 },
   hostStatNum: { color: L.navy, fontSize: text.statValueSm.size, fontWeight: '900' },
-  hostStatLabel: { color: L.textMuted, fontSize: 10, fontWeight: '500', textAlign: 'center', lineHeight: 14 },
+  hostStatLabel: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   hostMore: { paddingLeft: 8 },
 
-  msgDirectorBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    marginHorizontal: 16, marginTop: 14, marginBottom: 4,
-    borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta,
-    paddingVertical: 10, backgroundColor: L.page,
-  },
-  msgDirectorText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
+  hostActions: { flexDirection: 'row', gap: spacing.sm, marginHorizontal: 16, marginTop: 14, marginBottom: 4 },
+  hostAction: { flex: 1 },
 
   directorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
