@@ -229,7 +229,9 @@ const dr = StyleSheet.create({
   center: { flex: 1, minWidth: 0, gap: 8 },
   name: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
-  countRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // Wraps: a long level ("3.5-3.75") pushes "Registered" to its own line
+  // instead of into the status column.
+  countRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 8, rowGap: 4 },
   levelBadge: {
     borderRadius: shape.badge, paddingHorizontal: 8, paddingVertical: 3,
   },
