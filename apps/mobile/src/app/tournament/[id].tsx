@@ -204,7 +204,9 @@ function DivisionRow({
       {/* RIGHT — status pill with its subtext under it */}
       <View style={dr.statusCol}>
         <View style={pillStyle}>
-          <Text style={[dr.statusText, pillTextStyle]} numberOfLines={1}>{pillText}</Text>
+          <Text style={[dr.statusText, pillTextStyle]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+            {pillText}
+          </Text>
         </View>
         <Text style={[dr.statusSub, status === 'waitlist' && { color: L.red }]} numberOfLines={1}>
           {subText}
@@ -248,14 +250,15 @@ const dr = StyleSheet.create({
   statusBadge: {
     alignSelf: 'stretch', alignItems: 'center',
     borderWidth: 1.5, borderRadius: shape.pill,
-    paddingHorizontal: 10, paddingVertical: 7,
+    paddingHorizontal: 8, paddingVertical: 7,
   },
   statusAvail: { borderColor: L.green, backgroundColor: L.greenBg },
   statusWait: { borderColor: L.red,   backgroundColor: L.redBg   },
   statusHeld: { borderColor: L.gold,  backgroundColor: L.goldLight },
   statusRegistered: { borderColor: L.green, backgroundColor: L.greenBg  },
   statusPast: { borderColor: L.border, backgroundColor: L.page   },
-  statusText: { fontSize: text.action.size, fontWeight: '800' },
+  // chipValue: the role for a value inside a chip (an availability flag).
+  statusText: { fontSize: text.chipValue.size, fontWeight: '800' },
   statusTextAvail: { color: L.green },
   statusTextWait: { color: L.red   },
   statusTextHeld: { color: colors.goldDeep },
@@ -1387,10 +1390,10 @@ const s = StyleSheet.create({
   },
 
   // White sheet
+  // Square top edge, starting where the hero ends (owner, 2026-09-30).
   whiteSheet: {
     backgroundColor: L.bg,
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    marginTop: -24, paddingTop: 4,
+    paddingTop: 4,
     paddingBottom: 8,
   },
 
