@@ -126,13 +126,6 @@ function fmtRegDateTime(iso: string | null | undefined): { date: string; time: s
   };
 }
 
-// Splits "Mixed Doubles" → ["Mixed", "Doubles"], "Men's Doubles" → ["Men's", "Doubles"]
-function splitDivisionName(name: string): [string, string] {
-  const idx = name.lastIndexOf(' ');
-  if (idx === -1) return [name, ''];
-  return [name.slice(0, idx), name.slice(idx + 1)];
-}
-
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 type DivDisplayStatus = 'available' | 'waitlist' | 'held' | 'registered';
@@ -151,7 +144,12 @@ function DivisionRow({
   // "Registered" which stays as a settled, positive outcome.
   const isPastInactive = !!pastEvent && status !== 'registered';
   const isDisabled = status === 'registered' || isPastInactive;
-  const [nameLine1, nameLine2] = splitDivisionName(d.name);
+  // Fill of the registration bar, from the same numbers shown beside it.
+  const fillPct = d.capacity > 0 ? Math.min(100, Math.round((d.registered / d.capacity) * 100)) : null;
+  const barFill = isPastInactive ? dr.barPast :
+    status === 'held'     ? dr.barHeld :
+    status === 'waitlist' ? dr.barWait :
+                            dr.barAvail;
 
   const pillStyle = isPastInactive ? [dr.statusBadge, dr.statusPast] :
     status === 'registered' ? [dr.statusBadge, dr.statusRegistered] :
@@ -183,35 +181,38 @@ function DivisionRow({
       activeOpacity={isDisabled ? 1 : 0.75}
       onPress={isDisabled ? undefined : onPress}
     >
-      {/* COL 1 — name + dates */}
+      {/* LEFT — name, then level pill + count, then registration bar
+          (owner's reference, 2026-09-30; no date line: live divisions carry none) */}
       <View style={dr.center}>
-        <Text style={dr.nameLine}>{nameLine1}</Text>
-        {nameLine2 ? <Text style={dr.nameLine}>{nameLine2}</Text> : null}
-        <Text style={dr.dates}>{d.dates}</Text>
-      </View>
-
-      {/* COL 2 — rating badge (top) + count + label */}
-      <View style={dr.countCol}>
-        <View style={[dr.levelBadge, { backgroundColor: d.levelNavy ? L.navy : '#3A5070' }]}>
-          <Text style={dr.levelText}>{d.level}</Text>
+        <Text style={dr.name} numberOfLines={2}>{d.name}</Text>
+        <View style={dr.countRow}>
+          <View style={[dr.levelBadge, { backgroundColor: d.levelNavy ? L.navy : '#3A5070' }]}>
+            <Text style={dr.levelText}>{d.level}</Text>
+          </View>
+          <Text style={[dr.countNum, status === 'waitlist' && { color: L.red }]}>
+            {d.registered} / {d.capacity}
+          </Text>
+          <Text style={dr.countLabel}>Registered</Text>
         </View>
-        <Text style={[dr.countNum, status === 'waitlist' && { color: L.red }]}>
-          {d.registered} / {d.capacity}
-        </Text>
-        <Text style={dr.countLabel}>Registered</Text>
+        {fillPct !== null && (
+          <View style={dr.barTrack}>
+            <View style={[dr.barFill, barFill, { width: `${fillPct}%` }]} />
+          </View>
+        )}
       </View>
 
-      {/* COL 3 — status pill + sub + chevron */}
+      {/* RIGHT — status pill with its subtext under it */}
       <View style={dr.statusCol}>
         <View style={pillStyle}>
-          <Text style={[dr.statusText, pillTextStyle]}>{pillText}</Text>
+          <Text style={[dr.statusText, pillTextStyle]} numberOfLines={1}>{pillText}</Text>
         </View>
-        <Text style={[dr.statusSub, status === 'waitlist' && { color: L.red }]}>
+        <Text style={[dr.statusSub, status === 'waitlist' && { color: L.red }]} numberOfLines={1}>
           {subText}
         </Text>
-        {!isDisabled && (
-          <Ionicons name="chevron-forward" size={14} color={L.textMuted} style={{ marginTop: 2 }} />
-        )}
+      </View>
+
+      <View style={dr.chevron}>
+        {!isDisabled && <Ionicons name="chevron-forward" size={18} color={L.textMuted} />}
       </View>
     </TouchableOpacity>
   );
@@ -220,42 +221,48 @@ function DivisionRow({
 const dr = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 14, paddingHorizontal: 16, gap: 10,
+    paddingVertical: 16, paddingLeft: 16, paddingRight: 8, gap: 10,
     borderBottomWidth: 1, borderBottomColor: L.border,
   },
-  center: { flex: 1, minWidth: 0 },
-  nameLine: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', lineHeight: 20 },
-  dates: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', marginTop: 4 },
+  center: { flex: 1, minWidth: 0, gap: 8 },
+  name: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
 
-  // Col 2 — badge stacked above count
-  countCol: {
-    alignItems: 'center', flexShrink: 0, minWidth: 60, gap: 3,
-  },
+  countRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   levelBadge: {
-    borderRadius: shape.badge, paddingHorizontal: 8, paddingVertical: 2,
+    borderRadius: shape.badge, paddingHorizontal: 8, paddingVertical: 3,
   },
   levelText: { color: '#FFFFFF', fontSize: text.chipValue.size, fontWeight: '800' },
   countNum: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
-  countLabel: { color: L.textMuted, fontSize: 10 },
+  countLabel: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
 
-  // Col 3 — status pill + sub + chevron stacked
-  statusCol: { alignItems: 'center', flexShrink: 0, minWidth: 88, gap: 2 },
+  // Registration bar: fill = registered / capacity, colour follows the status.
+  barTrack: { height: 5, borderRadius: 3, backgroundColor: L.border, overflow: 'hidden' },
+  barFill: { height: '100%', borderRadius: 3 },
+  barAvail: { backgroundColor: L.green },
+  barHeld: { backgroundColor: L.gold },
+  barWait: { backgroundColor: L.red },
+  barPast: { backgroundColor: L.textMuted },
+
+  // Status pill with its subtext centred under it
+  statusCol: { alignItems: 'center', flexShrink: 0, width: 116, gap: 6 },
   statusBadge: {
+    alignSelf: 'stretch', alignItems: 'center',
     borderWidth: 1.5, borderRadius: shape.pill,
-    paddingHorizontal: 8, paddingVertical: 3,
+    paddingHorizontal: 10, paddingVertical: 7,
   },
   statusAvail: { borderColor: L.green, backgroundColor: L.greenBg },
   statusWait: { borderColor: L.red,   backgroundColor: L.redBg   },
   statusHeld: { borderColor: L.gold,  backgroundColor: L.goldLight },
   statusRegistered: { borderColor: L.green, backgroundColor: L.greenBg  },
   statusPast: { borderColor: L.border, backgroundColor: L.page   },
-  statusText: { fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  statusText: { fontSize: text.action.size, fontWeight: '800' },
   statusTextAvail: { color: L.green },
   statusTextWait: { color: L.red   },
-  statusTextHeld: { color: L.gold  },
+  statusTextHeld: { color: colors.goldDeep },
   statusTextRegistered: { color: L.green },
   statusTextPast: { color: L.textMuted },
-  statusSub: { color: L.textMuted, fontSize: 10, fontWeight: '500' },
+  statusSub: { color: L.navy, fontSize: text.caption.size, fontWeight: '500' },
+  chevron: { width: 18, alignItems: 'center' },
 });
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -799,6 +806,7 @@ export default function TournamentDetail() {
                 <Text style={s.noDivisionsSub}>Check back soon — divisions will appear once configured.</Text>
               </View>
             ) : (
+              <View style={s.divisionsShadow}>
               <View style={s.divisionsCard}>
                 {divisions.map((d) => {
                   const regAvailability = getRegistrationAvailability(tournament);
@@ -850,6 +858,7 @@ export default function TournamentDetail() {
                     />
                   );
                 })}
+              </View>
               </View>
             )}
           </View>
@@ -1514,6 +1523,13 @@ const s = StyleSheet.create({
   divisionsCard: {
     borderWidth: 1, borderColor: L.border, borderRadius: shape.card, overflow: 'hidden',
     backgroundColor: L.bg,
+  },
+  // Shadow lives on a wrapper: overflow: 'hidden' above (for the rounded
+  // corners) would clip it on iOS.
+  divisionsShadow: {
+    borderRadius: shape.card, backgroundColor: L.bg,
+    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   viewAllBtn: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6,
