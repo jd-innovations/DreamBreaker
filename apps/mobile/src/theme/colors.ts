@@ -42,6 +42,11 @@ export const colors = {
   goldLight: '#FDF6E7',
   goldBg: 'rgba(201,168,76,0.12)',
   goldBorder: 'rgba(201,168,76,0.35)',
+  /**
+   * Gold for icons on white (soft buttons). The brand gold is 2.2:1 on white,
+   * under the 3:1 floor for icons; this is ~5.8:1. Added 2026-09-30.
+   */
+  goldDeep: '#7A6428',
 
   // Status tints
   successBg: '#F0FDF4',

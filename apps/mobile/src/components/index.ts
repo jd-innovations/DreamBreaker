@@ -6,6 +6,7 @@ export type { ScreenStateAction } from './states';
 export { AppHeader, APP_HEADER_HEIGHT } from './AppHeader';
 export { PrimaryButton } from './PrimaryButton';
 export { SecondaryButton } from './SecondaryButton';
+export { SoftButton } from './SoftButton';
 export { StatusChip } from './StatusChip';
 export type { StatusVariant } from './StatusChip';
 export { SettingsRow } from './SettingsRow';

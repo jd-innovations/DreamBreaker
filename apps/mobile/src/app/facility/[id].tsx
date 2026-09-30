@@ -18,7 +18,7 @@ import { useSession } from '@/hooks/useSession';
 import { useSupportContext } from '@/lib/support/supportContext';
 import { createSupportTicket } from '@/lib/supportTicketService';
 import { shareEntity } from '@/lib/share';
-import { AppIcon, StatusChip } from '@/components';
+import { AppIcon, SoftButton, StatusChip } from '@/components';
 import { VenueMapCard } from '@/components/VenueMapCard';
 import {
   fetchFacilityById,
@@ -300,10 +300,7 @@ function MapSheet({
             {facility.address}, {facility.city}, {facility.state}{facility.postal_code ? ` ${facility.postal_code}` : ''}
           </Text>
 
-          <TouchableOpacity style={ms.directionsBtn} activeOpacity={0.88} onPress={onGetDirections}>
-            <Ionicons name="navigate-outline" size={18} color={L.white} />
-            <Text style={ms.directionsText}>Get Directions</Text>
-          </TouchableOpacity>
+          <SoftButton label="Get Directions" icon="navigate-outline" onPress={onGetDirections} />
         </Pressable>
       </Pressable>
     </Modal>
@@ -334,11 +331,6 @@ const ms = StyleSheet.create({
   mapUnavailableText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   name:    { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', marginBottom: 2 },
   address: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', lineHeight: 18, marginBottom: spacing.md },
-  directionsBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 14,
-  },
-  directionsText: { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
 });
 
 // ─── Play event card ──────────────────────────────────────────────────────────

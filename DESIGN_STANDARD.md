@@ -403,6 +403,24 @@ exempt below the 11pt floor, none left to interpretation.
 
 ---
 
+## Soft button — DECIDED 2026-09-30
+
+**18. A soft button is the quiet utility action.** `components/SoftButton.tsx`:
+white-to-light-grey fill (`gradients.ctaSoft`, `#FFFFFF` → `#F3F5F9`), 1px
+`colors.border`, navy label in `actionLarge` (16/800), 18pt icon in
+`colors.goldDeep` (`#7A6428`), radius `shape.cta` (10, decision 1 holds —
+the owner's reference looked rounder and 10 was chosen on purpose). Light
+haptic on touch-down and a 0.98 press-down; not built on `PressableCTA`, whose
+18% pulse is sized for icon buttons. Paired soft buttons share the row equally
+(`flex: 1`).
+
+- **Where:** Get Directions / View Facility on the community event location
+  card, `LocationCard` (tournament, marketplace listing) and the facility map
+  sheet.
+- **Why `goldDeep`:** the brand gold is 2.2:1 on white, under the 3:1 floor for
+  icons; `goldDeep` is ~5.8:1. Gold stays the brand colour for fills and
+  outlines; `goldDeep` is for gold marks on white.
+
 ## Where the tokens live
 
 `packages/shared/src/tokens.ts` — the canonical values for both platforms

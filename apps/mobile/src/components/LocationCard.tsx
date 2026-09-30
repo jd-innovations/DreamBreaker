@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { VenueMapCard } from './VenueMapCard';
+import { SoftButton } from './SoftButton';
 
 // The LOCATION section: a map well over the venue's name, address and actions.
 //
@@ -73,7 +74,9 @@ export default function LocationCard({
         {meta}
 
         <View style={s.btnRow}>
-          <TouchableOpacity
+          <SoftButton
+            label="Get Directions"
+            icon="navigate-outline"
             style={s.btn}
             onPress={() => {
               const q = encodeURIComponent(directionsQuery);
@@ -84,16 +87,10 @@ export default function LocationCard({
                 Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${q}`),
               );
             }}
-          >
-            <Ionicons name="navigate-outline" size={14} color={colors.gold} />
-            <Text style={s.btnText}>Get Directions</Text>
-          </TouchableOpacity>
+          />
 
           {onViewFacility && (
-            <TouchableOpacity style={s.btn} onPress={onViewFacility}>
-              <Ionicons name="business-outline" size={14} color={colors.gold} />
-              <Text style={s.btnText}>View Facility</Text>
-            </TouchableOpacity>
+            <SoftButton label="View Facility" icon="business-outline" style={s.btn} onPress={onViewFacility} />
           )}
         </View>
       </View>
@@ -121,11 +118,7 @@ const s = StyleSheet.create({
   },
   verifiedText: { fontSize: 9, fontWeight: '800', color: '#2563EB', letterSpacing: 0.4 },
   addr: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500' },
-  btnRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, justifyContent: 'center' },
-  btn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1.5, borderColor: colors.gold, borderRadius: shape.cta,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-  },
-  btnText: { color: colors.gold, fontSize: text.controlLabel.size, fontWeight: '700' },
+  // Soft buttons (owner, 2026-09-30), equal width across the row.
+  btnRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  btn: { flex: 1 },
 });

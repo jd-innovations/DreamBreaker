@@ -20,7 +20,7 @@ import { haptics } from '@/lib/haptics';
 import { supabase } from '@/lib/supabase';
 import { platformAlert } from '@/lib/platformAlert';
 import { eventCoverSource, EVENT_COVER_FILL } from '@/lib/eventCover';
-import { AppIcon, PickleballIcon, JoinCelebration, Avatar, ManageEventSheet, AddToCalendarButton, PressableCTA, type AppIconName } from '@/components';
+import { AppIcon, PickleballIcon, JoinCelebration, Avatar, ManageEventSheet, AddToCalendarButton, PressableCTA, SoftButton, type AppIconName } from '@/components';
 import { appLinks } from '@/lib/appLinks';
 import { withLink, type CalendarEventInput } from '@/lib/calendarEvents';
 import {
@@ -1204,8 +1204,10 @@ export default function CommunityEventScreen() {
               </>
             )}
             <View style={s.locationBtnRow}>
-              <TouchableOpacity
-                style={s.directionsBtn}
+              <SoftButton
+                label="Get Directions"
+                icon="navigate-outline"
+                style={s.locationBtn}
                 onPress={() => {
                   const q = encodeURIComponent(
                     facilityDetail
@@ -1216,18 +1218,14 @@ export default function CommunityEventScreen() {
                     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${q}`),
                   );
                 }}
-              >
-                <Ionicons name="navigate-outline" size={14} color={t.accent} />
-                <Text style={s.directionsBtnText}>Get Directions</Text>
-              </TouchableOpacity>
+              />
               {facilityDetail && (
-                <TouchableOpacity
-                  style={s.viewFacilityBtn}
+                <SoftButton
+                  label="View Facility"
+                  icon="business-outline"
+                  style={s.locationBtn}
                   onPress={() => router.push(`/facility/${facilityDetail.id}` as never)}
-                >
-                  <Ionicons name="business-outline" size={14} color={t.accent} />
-                  <Text style={s.viewFacilityBtnText}>View Facility</Text>
-                </TouchableOpacity>
+                />
               )}
             </View>
           </View>
@@ -2395,19 +2393,9 @@ const sStyles = (t: ThemeRoles) => StyleSheet.create({
   },
   locationVerifiedText: { fontSize: 9, fontWeight: '800', color: '#2563EB', letterSpacing: 0.4 },
   locationAddr: { color: t.textSecondary, fontSize: text.caption.size, fontWeight: '500' },
-  locationBtnRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, justifyContent: 'center' },
-  directionsBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1.5, borderColor: t.accent, borderRadius: shape.cta, alignSelf: 'flex-start',
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-  },
-  directionsBtnText: { color: t.accent, fontSize: text.action.size, fontWeight: '800' },
-  viewFacilityBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1.5, borderColor: t.accent, borderRadius: shape.cta, alignSelf: 'flex-start',
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-  },
-  viewFacilityBtnText: { color: t.accent, fontSize: text.action.size, fontWeight: '800' },
+  // Soft buttons (owner, 2026-09-30), equal width across the row.
+  locationBtnRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  locationBtn: { flex: 1 },
 
   // Joined state — stacked so the status message always gets full width
   // (a single row was squeezing it against the action buttons and truncating it).
