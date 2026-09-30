@@ -858,71 +858,79 @@ export default function TournamentDetail() {
           <View style={s.section}>
             <Text style={[s.sectionTitle, { marginBottom: 12 }]}>REGISTRATION & FEES</Text>
 
-            <View style={s.feesCard}>
-              <View style={s.feesGrid}>
-                <View style={s.feeRow}>
-                  <Ionicons name="calendar-outline" size={20} color={L.textSub} style={s.feeIcon} />
-                  <View style={s.feeTextCol}>
-                    <Text style={s.feeLabel}>Registration Opens</Text>
-                    {(() => {
-                      const opens = fmtRegDateTime(tournament.registrationOpensAt);
-                      return opens ? (
-                        <Text style={s.feeValue}>{opens.date} <Text style={s.feeUnit}>{opens.time}</Text></Text>
-                      ) : (
-                        <Text style={s.feeValue}>Open now</Text>
-                      );
-                    })()}
-                  </View>
+            {/* Four tiles in a 2x2 grid, then the Hold My Spot note on its own
+                (owner's reference, 2026-09-30). Content unchanged. */}
+            <View style={s.feeGrid}>
+              <View style={s.feeTile}>
+                <View style={s.feeHead}>
+                  <Ionicons name="calendar-outline" size={18} color={L.textSub} />
+                  <Text style={s.feeLabel} numberOfLines={1}>Registration Opens</Text>
                 </View>
-                <View style={s.feeRow}>
-                  <Ionicons name="calendar-outline" size={20} color={L.textSub} style={s.feeIcon} />
-                  <View style={s.feeTextCol}>
-                    <Text style={s.feeLabel}>Registration Closes</Text>
-                    {(() => {
-                      const closes = fmtRegDateTime(tournament.registrationClosesAt);
-                      return closes ? (
-                        <Text style={s.feeValue}>{closes.date} <Text style={s.feeUnit}>{closes.time}</Text></Text>
-                      ) : (
-                        <Text style={s.feeValue}>Not set</Text>
-                      );
-                    })()}
-                  </View>
-                </View>
-                <View style={s.feeRow}>
-                  <Ionicons name="cash-outline" size={20} color={L.textSub} style={s.feeIcon} />
-                  <View style={s.feeTextCol}>
-                    <Text style={s.feeLabel}>Entry Fee</Text>
-                    <Text style={s.feeValue}>{fmt(tournament.entryFeeCents)} <Text style={s.feeUnit}>/ {entryUnitLabel.toLowerCase()} · Per Division</Text></Text>
-                  </View>
-                </View>
-                <View style={[s.feeRow, s.feeRowLast]}>
-                  <Ionicons name="shield-outline" size={20} color={L.textSub} style={s.feeIcon} />
-                  <View style={s.feeTextCol}>
-                    <View style={s.feeSubRow}>
-                      <Text style={s.feeLabel}>Hold My Spot</Text>
-                      <TouchableOpacity
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                        onPress={() => setHoldTooltip(true)}
-                      >
-                        <Ionicons name="information-circle-outline" size={13} color={L.gold} />
-                      </TouchableOpacity>
-                    </View>
-                    <Text style={s.feeValue}>{fmt(tournament.holdFeeCents)} <Text style={s.feeUnit}>Applied to entry fee</Text></Text>
-                  </View>
-                </View>
+                {(() => {
+                  const opens = fmtRegDateTime(tournament.registrationOpensAt);
+                  return opens ? (
+                    <>
+                      <Text style={s.feeDate}>{opens.date}</Text>
+                      <Text style={s.feeUnit}>{opens.time}</Text>
+                    </>
+                  ) : (
+                    <Text style={s.feeDate}>Open now</Text>
+                  );
+                })()}
               </View>
+              <View style={s.feeTile}>
+                <View style={s.feeHead}>
+                  <Ionicons name="calendar-outline" size={18} color={L.textSub} />
+                  <Text style={s.feeLabel} numberOfLines={1}>Registration Closes</Text>
+                </View>
+                {(() => {
+                  const closes = fmtRegDateTime(tournament.registrationClosesAt);
+                  return closes ? (
+                    <>
+                      <Text style={s.feeDate}>{closes.date}</Text>
+                      <Text style={s.feeUnit}>{closes.time}</Text>
+                    </>
+                  ) : (
+                    <Text style={s.feeDate}>Not set</Text>
+                  );
+                })()}
+              </View>
+              <View style={s.feeTile}>
+                <View style={s.feeHead}>
+                  <Ionicons name="cash-outline" size={18} color={L.textSub} />
+                  <Text style={s.feeLabel} numberOfLines={1}>Entry Fee</Text>
+                </View>
+                <Text style={s.feeAmount}>{fmt(tournament.entryFeeCents)}</Text>
+                <Text style={s.feeUnit}>/ {entryUnitLabel.toLowerCase()} · Per Division</Text>
+              </View>
+              <View style={[s.feeTile, s.feeTileHold]}>
+                <View style={s.feeHead}>
+                  <Ionicons name="shield-outline" size={18} color={colors.goldDeep} />
+                  <Text style={[s.feeLabel, s.feeLabelHold]} numberOfLines={1}>Hold My Spot</Text>
+                  <TouchableOpacity
+                    style={s.feeInfo}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    onPress={() => setHoldTooltip(true)}
+                    accessibilityLabel="About Hold My Spot"
+                  >
+                    <Ionicons name="information-circle-outline" size={18} color={colors.goldDeep} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={s.feeAmount}>{fmt(tournament.holdFeeCents)}</Text>
+                <Text style={s.feeUnit}>Applied to entry fee</Text>
+              </View>
+            </View>
 
-              <View style={s.feesNote}>
-                {/* hand-left, not star: this note is about Hold My Spot, and a
-                    star reads as a rating or a favourite rather than a hold. */}
-                <Ionicons name="hand-left" size={14} color={L.gold} />
-                <Text style={s.feesNoteText}>
-                  Hold My Spot secures your place. Full balance due before registration closes.
-                </Text>
-                <TouchableOpacity onPress={() => Alert.alert('Hold My Spot', 'Reserve your place with a deposit. The deposit counts toward your entry fee and is non-refundable.')}>
-                  <Text style={s.learnMore}>Learn More</Text>
-                </TouchableOpacity>
-              </View>
+            <View style={s.feesNote}>
+              {/* hand-left, not star: this note is about Hold My Spot, and a
+                  star reads as a rating or a favourite rather than a hold. */}
+              <Ionicons name="hand-left" size={16} color={colors.goldDeep} />
+              <Text style={s.feesNoteText}>
+                Hold My Spot secures your place. Full balance due before registration closes.
+              </Text>
+              <TouchableOpacity onPress={() => Alert.alert('Hold My Spot', 'Reserve your place with a deposit. The deposit counts toward your entry fee and is non-refundable.')}>
+                <Text style={s.learnMore}>Learn More</Text>
+              </TouchableOpacity>
             </View>
           </View>
           {/* HOST CARD */}
@@ -1521,33 +1529,32 @@ const s = StyleSheet.create({
   noDivisionsSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', paddingHorizontal: 24 },
 
   // Fees card
-  feesCard: {
-    borderWidth: 1, borderColor: L.border, borderRadius: shape.card, overflow: 'hidden',
-    backgroundColor: L.bg,
+  // Registration & fees tiles (owner's reference, 2026-09-30).
+  feeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  feeTile: {
+    width: '48.5%', flexGrow: 1,
+    backgroundColor: L.bg, borderRadius: shape.card,
+    borderWidth: 1, borderColor: L.border,
+    padding: spacing.md, gap: 4,
+    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  feesGrid: {
-    flexDirection: 'column',
-  },
-  feeRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: L.border,
-  },
-  feeRowLast: { borderBottomWidth: 0 },
-  feeIcon: { flexShrink: 0 },
-  feeTextCol: { flex: 1, gap: 3 },
-  feeLabel: { color: L.textMuted, fontSize: 10, fontWeight: '600', lineHeight: 14 },
-  feeValue: { color: L.navy,     fontSize: text.rowValue.size, fontWeight: '800' },
-  feeUnit: { fontSize: text.caption.size, fontWeight: '500', color: L.textMuted },
-  feeSub: { color: L.textMuted, fontSize: 10 },
-  feeSubRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  feeTileHold: { backgroundColor: L.goldLight, borderColor: colors.goldBorder },
+  feeHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  feeLabel: { flex: 1, color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
+  feeLabelHold: { color: colors.goldDeep, fontWeight: '700' },
+  feeInfo: { marginLeft: 'auto' },
+  feeDate: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800' },
+  feeAmount: { color: L.navy, fontSize: text.statValueSm.size, fontWeight: '900' },
+  feeUnit: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500' },
 
   feesNote: {
-    flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5,
-    paddingHorizontal: 14, paddingVertical: 12,
-    backgroundColor: L.goldLight,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    marginTop: spacing.md, padding: spacing.md,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: L.border, borderRadius: shape.card,
   },
   feesNoteText: { color: L.text, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
-  learnMore: { color: L.gold, fontSize: text.link.size, fontWeight: '700' },
+  learnMore: { color: colors.goldDeep, fontSize: text.link.size, fontWeight: '800' },
 
   // Bottom bar — 2-row layout
   bottomBar: {
