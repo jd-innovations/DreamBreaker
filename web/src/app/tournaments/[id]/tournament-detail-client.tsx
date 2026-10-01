@@ -580,7 +580,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   if (!tournament) {
     return (
       <PageShell>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-6 animate-pulse">
+        <div className="w-full px-4 sm:px-6 lg:px-10 py-24 space-y-6 animate-pulse">
           <div className="h-12 bg-secondary rounded-xl w-2/3" />
           <div className="h-6 bg-secondary rounded w-1/3" />
           <div className="h-64 bg-secondary rounded-2xl" />
@@ -673,7 +673,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />
         </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+        <div className="relative w-full px-4 sm:px-6 lg:px-10 py-16 lg:py-24">
           <Link href="/tournaments" className="font-mono text-[11px] tracking-[0.3em] text-primary mb-4 inline-block" data-testid="back-to-tournaments">
             ← BACK TO CIRCUIT
           </Link>
@@ -715,15 +715,17 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
       {/* ── Pickleball App Insights banner ─────────────────────────── */}
       {insight && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <div className="w-full px-4 sm:px-6 lg:px-10 pt-6">
           <PickleballAppInsights insight={insight} />
         </div>
       )}
 
       {/* ── Main content grid ─────────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Full width (owner, 2026-09-30): the sidebar keeps a fixed 360px from lg
+          up so extra width goes to the tabs and brackets; below lg it stacks. */}
+      <section className="w-full px-4 sm:px-6 lg:px-10 py-8 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-8">
         {/* Left: Tabs + map */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="min-w-0 space-y-6">
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="rounded-full p-1 bg-secondary flex flex-wrap h-auto gap-1 mb-6">
               <TabsTrigger value="overview" data-testid="tab-overview" className="rounded-full px-4">Overview</TabsTrigger>
