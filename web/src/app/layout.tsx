@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/theme-provider";
@@ -7,16 +7,24 @@ import { OnboardingNudgeHost } from "@/components/onboarding/onboarding-nudge-ho
 import { AnalyticsProvider } from "@/components/layout/analytics-provider";
 import { Toaster } from "sonner";
 
-const manrope = Manrope({
+// Self-hosted (2026-09-30), not next/font/google: Google Fonts sometimes
+// answers the build's request with extensionless /l/font?kit=…&skey=… URLs,
+// which Turbopack cannot parse ("next/font/google queries have exactly one
+// entry", vercel/next.js#99114, unfixed in 16.3.x). That failed a production
+// build at random. These are the Latin variable-weight files from Fontsource
+// 5.3.0 (SIL OFL 1.1, licences alongside), so the build never fetches fonts.
+const manrope = localFont({
+  src: "./fonts/manrope-latin-wght-normal.woff2",
   variable: "--font-manrope",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: "200 800",
+  display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const jetbrainsMono = localFont({
+  src: "./fonts/jetbrains-mono-latin-wght-normal.woff2",
   variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: "100 800",
+  display: "swap",
 });
 
 export const viewport: Viewport = {
