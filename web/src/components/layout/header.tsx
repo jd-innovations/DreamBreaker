@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
-import { Sun, Moon, List, X, ShieldStar } from "@phosphor-icons/react";
+import { Sun, Moon, List, X, ShieldStar, CaretDown } from "@phosphor-icons/react";
 import { SlideMenu } from "@/components/layout/slide-menu";
 import { Logo } from "./logo";
 import { useTheme } from "./theme-provider";
@@ -21,10 +21,92 @@ const navLinks = [
   { to: "/lessons",      label: "Lessons",       testid: "nav-lessons" },
   { to: "/players",      label: "Players",       testid: "nav-players" },
   { to: "/matchmaking",  label: "Matchmaking",   testid: "nav-matchmaking" },
+];
+
+// Desktop groups the three dashboards under one "Dashboards" item (owner,
+// 2026-09-30) so the bar fits at 1280px. The phone slide menu lists them as
+// before. Visibility is unchanged: each page handles its own access.
+const dashboardLinks = [
   { to: "/dashboard",    label: "Player",        testid: "nav-player" },
   { to: "/director",     label: "Director",      testid: "nav-director" },
   { to: "/admin",        label: "Admin",         testid: "nav-admin" },
 ];
+
+/**
+ * "Dashboards" menu: opens on hover, click or keyboard focus (hover alone
+ * fails on touch laptops and for keyboard users); closes on Escape, an outside
+ * click, or leaving it, after a short delay so it doesn't snap shut.
+ */
+function DashboardsMenu({ pathname }: { pathname: string }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const active = dashboardLinks.some((l) => pathname === l.to || pathname.startsWith(`${l.to}/`));
+
+  const show = () => { if (closeTimer.current) clearTimeout(closeTimer.current); setOpen(true); };
+  const hideSoon = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setOpen(false), 150);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => { if (!wrapRef.current?.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+
+  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
+
+  return (
+    <div
+      ref={wrapRef}
+      className="relative"
+      onMouseEnter={show}
+      onMouseLeave={hideSoon}
+      onFocus={show}
+      onBlur={(e) => { if (!wrapRef.current?.contains(e.relatedTarget as Node)) hideSoon(); }}
+    >
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        data-testid="nav-dashboards"
+        className={`flex items-center gap-1 px-4 py-2 text-sm font-semibold rounded-full transition-colors ${
+          active ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+        }`}
+      >
+        Dashboards <CaretDown size={12} weight="bold" className={`transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div role="menu" className="absolute right-0 top-full pt-2 z-50">
+          <div className="min-w-44 rounded-2xl border border-border bg-card shadow-2xl p-1.5">
+            {dashboardLinks.map((l) => {
+              const current = pathname === l.to || pathname.startsWith(`${l.to}/`);
+              return (
+                <Link
+                  key={l.to}
+                  href={l.to}
+                  role="menuitem"
+                  data-testid={l.testid}
+                  onClick={() => setOpen(false)}
+                  className={`block px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                    current ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                  }`}
+                >
+                  {l.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Header() {
   const { theme, toggle } = useTheme();
@@ -168,6 +250,7 @@ export function Header() {
               {l.label}
             </Link>
           ))}
+          <DashboardsMenu pathname={pathname} />
         </nav>
 
         <div className="flex items-center gap-2">
