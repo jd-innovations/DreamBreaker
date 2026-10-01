@@ -26,7 +26,7 @@ import { LiveBrackets } from "@/components/tournament/live-brackets";
 import { buildDivisionBracket } from "@/lib/tournament/day-of";
 import { AddRegistrationDialog } from "@/components/director/add-registration-dialog";
 import { PoolPlayPanel } from "@/components/director/pool-play-panel";
-import { onsiteLabel } from "@/lib/tournament/director-registrations";
+import { directorCancelRegistration, formatFee, onsiteLabel } from "@/lib/tournament/director-registrations";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -213,6 +213,7 @@ export default function DirectorTournamentPage() {
   const [guestNames, setGuestNames] = useState<Map<string, string>>(new Map());
   const [rosterQuery, setRosterQuery] = useState("");
   const [addingPlayer, setAddingPlayer] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const validTabs = ["overview", "sponsors", "roster", "bracket", "dayof", "live"] as const;
   type TabId = typeof validTabs[number];
@@ -1052,6 +1053,40 @@ export default function DirectorTournamentPage() {
                       <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border whitespace-nowrap ${status.cls}`}>
                         {status.label}
                       </span>
+                      {/* Same action and messages as mobile's workspace; the
+                          cancel-registration function authorises, refunds and
+                          promotes the waitlist server-side. */}
+                      {["registered", "checked_in", "held"].includes(r.status) && (
+                        <button
+                          disabled={cancellingId !== null}
+                          onClick={async () => {
+                            if (!window.confirm(`Cancel ${name}'s registration? This cannot be undone.`)) return;
+                            setCancellingId(r.id);
+                            const result = await directorCancelRegistration(r.id);
+                            setCancellingId(null);
+                            if (!result.cancelled) {
+                              toast.error(result.error === "not_authorized"
+                                ? "You are not able to cancel this registration."
+                                : "Could not cancel. Please try again.");
+                              return;
+                            }
+                            if (result.refundStatus === "submitted") {
+                              toast.success(`Registration cancelled. ${formatFee(result.refundedCents)} has been refunded to the player's original payment method.`);
+                            } else if (result.refundStatus === "failed") {
+                              toast.warning("Registration cancelled. The refund could not be processed automatically and needs manual follow-up.");
+                            } else if (r.onsite_tender && r.onsite_tender !== "comp") {
+                              toast.success(`Registration cancelled. ${name} paid ${formatFee(r.onsite_amount_cents ?? 0)} on site. Refund them at the desk if needed.`);
+                            } else {
+                              toast.success("Registration cancelled.");
+                            }
+                            await load();
+                          }}
+                          aria-label={`Cancel ${name}'s registration`}
+                          className="h-7 px-2.5 rounded-full border border-border hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive font-mono text-[10px] whitespace-nowrap transition-colors disabled:opacity-40"
+                        >
+                          {cancellingId === r.id ? "…" : "CANCEL"}
+                        </button>
+                      )}
                     </div>
                   );
                 })}

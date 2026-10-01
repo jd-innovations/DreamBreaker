@@ -144,3 +144,35 @@ export function onsiteLabel(tender: string | null, amountCents: number | null): 
   if (tender === "comp") return "Comped";
   return `${tender === "cash" ? "Cash" : "Other"} ${formatFee(amountCents ?? 0)} on site`;
 }
+
+/** What the cancel-registration edge function did, so the director is told the truth. */
+export interface CancelOutcome {
+  cancelled: boolean;
+  refundStatus: "none" | "submitted" | "failed";
+  refundedCents: number;
+  error: string | null;
+}
+
+/**
+ * Cancels a registration as the tournament's director, through the
+ * cancel-registration edge function (the same call mobile's workspace makes).
+ * The server checks the caller is this tournament's approved director, derives
+ * any refund from what was actually paid, and promotes the waitlist; none of
+ * that can happen from a client. On-site payments are never refunded in-app.
+ */
+export async function directorCancelRegistration(registrationId: string): Promise<CancelOutcome> {
+  const failed = (error: string): CancelOutcome => ({ cancelled: false, refundStatus: "none", refundedCents: 0, error });
+  const { data, error } = await createClient().functions.invoke("cancel-registration", {
+    body: { registrationIds: [registrationId] },
+  });
+  if (error) return failed("request_failed");
+  const outcome = (data as { outcomes?: { cancelled: boolean; refundStatus: CancelOutcome["refundStatus"]; refundedCents: number; error?: string }[] } | null)
+    ?.outcomes?.[0];
+  if (!outcome) return failed("no_outcome");
+  return {
+    cancelled: outcome.cancelled,
+    refundStatus: outcome.refundStatus,
+    refundedCents: outcome.refundedCents,
+    error: outcome.error ?? null,
+  };
+}
