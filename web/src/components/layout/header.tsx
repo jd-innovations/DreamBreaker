@@ -313,7 +313,11 @@ export function Header() {
                 <span className="absolute inset-0 rounded-full bg-gradient-to-r from-violet-500 via-pink-400 to-cyan-400 opacity-0 group-hover:opacity-50 blur-[6px] transition-opacity duration-300" />
                 <Link
                   href="/auth?mode=signup"
-                  className="relative h-8 px-3 sm:h-10 sm:px-5 rounded-full font-semibold text-xs sm:text-sm dark:bg-zinc-950 bg-white text-foreground inline-flex items-center z-10"
+                  // "0-0-2" is the serve call that starts a game (25f9a97); the
+                  // aria-label says what the button does, and nowrap keeps it
+                  // from breaking at the hyphens.
+                  aria-label="Sign up"
+                  className="relative h-8 px-3 sm:h-10 sm:px-5 rounded-full font-semibold text-xs sm:text-sm whitespace-nowrap dark:bg-zinc-950 bg-white text-foreground inline-flex items-center z-10"
                   data-testid="header-getstarted-btn"
                 >
                   0-0-2
