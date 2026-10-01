@@ -20,6 +20,7 @@ import {
   type BracketPlan, type PoolRegistration,
 } from "@/lib/tournament/pools";
 import { PoolStandingsTable, usePoolStandings } from "@/components/tournament/pool-standings";
+import { makeTeamShortener, teamFull, type TeamPerson } from "@shared/teamNames";
 
 interface DivisionInfo { id: string; name: string }
 
@@ -179,6 +180,7 @@ function DivisionPoolCard({
         <BuildBracketDialog
           divisionName={division.name}
           plan={plan}
+          teamPeople={new Map((pools ?? []).flatMap((p) => p.standings.map((s) => [s.teamKey, s.people] as const)))}
           advancePerPool={advance}
           rebuild={hasBracket}
           scoredBracket={scoredBracket}
@@ -282,10 +284,12 @@ function PoolSetupDialog({
 }
 
 function BuildBracketDialog({
-  divisionName, plan, advancePerPool, rebuild, scoredBracket, onClose, onConfirm,
+  divisionName, plan, teamPeople, advancePerPool, rebuild, scoredBracket, onClose, onConfirm,
 }: {
   divisionName: string;
   plan: BracketPlan;
+  /** Each team's players by team key, for short one-line names. */
+  teamPeople: Map<string, TeamPerson[]>;
   advancePerPool: number;
   rebuild: boolean;
   scoredBracket: number;
@@ -294,6 +298,11 @@ function BuildBracketDialog({
 }) {
   const [busy, setBusy] = useState(false);
   const blocked = plan.unmatched.length > 0;
+  const short = makeTeamShortener([...teamPeople.values()]);
+  const seedName = (key: string, name: string) => {
+    const people = teamPeople.get(key);
+    return people?.length ? short(people) : name;
+  };
   return (
     <Dialog title={rebuild ? "REBUILD BRACKET" : "BUILD BRACKET"} onClose={onClose}>
       <p className="text-sm text-muted-foreground mb-3">
@@ -305,7 +314,9 @@ function BuildBracketDialog({
         {plan.seeds.map((s) => (
           <div key={s.teamKey} className="flex items-center gap-3 px-3 py-2 text-sm">
             <span className="font-mono text-xs text-primary w-5 text-right">{s.seed}</span>
-            <span className="flex-1 min-w-0 truncate">{s.name}</span>
+            <span className="flex-1 min-w-0 truncate" title={teamPeople.get(s.teamKey)?.length ? teamFull(teamPeople.get(s.teamKey)!) : s.name}>
+              {seedName(s.teamKey, s.name)}
+            </span>
             <span className="font-mono text-[10px] text-muted-foreground">{s.pool}{s.rank}</span>
           </div>
         ))}

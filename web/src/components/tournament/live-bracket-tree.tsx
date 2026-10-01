@@ -12,15 +12,21 @@ import { Info } from "@phosphor-icons/react";
 import { courtLabel } from "@shared/tournamentCourts";
 import type { LiveBracketMatch } from "@/lib/tournament/live-brackets";
 import { roundName } from "@/lib/tournament/day-of";
+import type { TeamPerson } from "@shared/teamNames";
+import { TeamNameLines, maxTeamSize } from "@/components/tournament/team-name";
 
 const ORDER: Record<string, number> = { pool: 0, r64: 1, r32: 2, r16: 3, qf: 4, sf: 5, final: 7 };
 
 const CARD_W = 232;
-const CARD_H = 70;   // two 26px team rows + the court line
+// Team rows: 26px for one name; 40px when a side has two players, one full name
+// per row (owner, 2026-10-01). Every card in a tree is the same height so it
+// stays aligned; the connector lines are drawn from that height.
+const ROW_H_ONE = 26;
+const ROW_H_TWO = 40;
+const COURT_H = 17;  // the court line under the two team rows
 const ROW_GAP = 18;  // vertical space between first-round cards
 const COL_GAP = 44;  // horizontal space for the connector lines
 const HEADER = 24;
-const UNIT = CARD_H + ROW_GAP;
 const UP_NEXT_SHOWN = 5;
 
 export interface TreeLayout {
@@ -64,6 +70,10 @@ export function LiveBracketTree({
   onOpen: (m: LiveBracketMatch) => void;
 }) {
   const { rounds, byRound, bronze } = layout;
+  const all = [...byRound.flat(), ...(bronze ? [bronze] : [])];
+  const rowH = maxTeamSize(all.flatMap((m) => [m.team1People, m.team2People])) > 1 ? ROW_H_TWO : ROW_H_ONE;
+  const CARD_H = rowH * 2 + 1 + COURT_H;
+  const UNIT = CARD_H + ROW_GAP;
   const first = byRound[0].length;
   const top = (r: number, i: number) => HEADER + (i * 2 ** r + (2 ** r - 1) / 2) * UNIT;
   const left = (r: number) => r * (CARD_W + COL_GAP);
@@ -109,6 +119,7 @@ export function LiveBracketTree({
             queuePos={queue.get(m.id)}
             currentUserId={currentUserId}
             onOpen={onOpen}
+            rowH={rowH}
             style={{ left: left(r), top: top(r, i) }}
           />
         )))}
@@ -124,6 +135,7 @@ export function LiveBracketTree({
               queuePos={queue.get(bronze.id)}
               currentUserId={currentUserId}
               onOpen={onOpen}
+              rowH={rowH}
               style={{ left: left(finalR), top: bronzeTop }}
             />
           </>
@@ -134,7 +146,7 @@ export function LiveBracketTree({
 }
 
 function TreeCard({
-  m, games, opening, queuePos, currentUserId, onOpen, style,
+  m, games, opening, queuePos, currentUserId, onOpen, rowH, style,
 }: {
   m: LiveBracketMatch;
   games: number;
@@ -142,22 +154,25 @@ function TreeCard({
   queuePos: number | undefined;
   currentUserId: string | null;
   onOpen: (m: LiveBracketMatch) => void;
+  rowH: number;
   style: React.CSSProperties;
 }) {
   const live = !!m.court && !m.completed;
   const upNext = !live && !m.completed && queuePos !== undefined && queuePos <= UP_NEXT_SHOWN ? queuePos : undefined;
 
-  const row = (members: string[], name: string | null, seed: number | null, scores: number[], won: boolean) => {
+  const row = (members: string[], name: string | null, people: TeamPerson[] | undefined, seed: number | null, scores: number[], won: boolean) => {
     const mine = !!currentUserId && members.includes(currentUserId);
     const empty = members.length === 0;
     return (
-      <div className={`flex items-center h-[26px] ${won ? "bg-primary/10 font-semibold text-foreground" : "text-muted-foreground"}`}>
+      <div className={`flex items-center ${won ? "bg-primary/10 font-semibold text-foreground" : "text-muted-foreground"}`} style={{ height: rowH }}>
         <span className="w-6 text-center font-mono text-[10px] flex-shrink-0">{seed ?? ""}</span>
-        <span className={`flex-1 min-w-0 truncate text-[13px] ${mine ? "text-primary" : ""}`}>
-          {empty ? (m.completed || opening ? <i>Bye</i> : "TBD") : name}
+        <span className={`flex-1 min-w-0 text-[13px] leading-4 ${mine ? "text-primary" : ""}`}>
+          {empty
+            ? <span className="block truncate">{m.completed || opening ? <i>Bye</i> : "TBD"}</span>
+            : <TeamNameLines people={people} fallback={name} />}
         </span>
         {Array.from({ length: games }, (_, g) => (
-          <span key={g} className={`w-6 text-center font-mono text-[12px] border-l border-border h-full leading-[26px] ${won && scores[g] != null ? "text-foreground" : ""}`}>
+          <span key={g} className={`w-6 text-center font-mono text-[12px] border-l border-border h-full flex items-center justify-center ${won && scores[g] != null ? "text-foreground" : ""}`}>
             {scores[g] ?? ""}
           </span>
         ))}
@@ -171,7 +186,7 @@ function TreeCard({
       className={`absolute flex rounded-lg border bg-card text-left overflow-visible hover:border-primary/60 transition-colors ${
         live || upNext === 1 ? "border-amber-400/70" : "border-border"
       }`}
-      style={{ ...style, width: CARD_W, height: CARD_H }}
+      style={{ ...style, width: CARD_W, height: rowH * 2 + 1 + COURT_H }}
       aria-label={`Match ${m.matchNumber + 1}: ${m.team1Name ?? "TBD"} vs ${m.team2Name ?? "TBD"}`}
     >
       <span className="w-7 flex-shrink-0 border-r border-border flex flex-col items-center justify-center gap-1 font-mono text-[10px] text-muted-foreground">
@@ -179,9 +194,9 @@ function TreeCard({
         {m.editedAt && <Info size={10} className="text-primary" aria-label="Score edited" />}
       </span>
       <span className="flex-1 min-w-0 flex flex-col">
-        {row(m.team1, m.team1Name, m.seed1, m.games1, m.winner === 1)}
+        {row(m.team1, m.team1Name, m.team1People, m.seed1, m.games1, m.winner === 1)}
         <span className="h-px bg-border" />
-        {row(m.team2, m.team2Name, m.seed2, m.games2, m.winner === 2)}
+        {row(m.team2, m.team2Name, m.team2People, m.seed2, m.games2, m.winner === 2)}
         <span className={`h-[17px] px-1.5 border-t border-border font-mono text-[9px] tracking-widest leading-[16px] truncate ${live ? "text-amber-500" : "text-primary/80"}`}>
           {m.court ? (live ? `● ON ${courtLabel(m.court).toUpperCase()}` : courtLabel(m.court).toUpperCase()) : ""}
         </span>

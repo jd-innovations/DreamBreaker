@@ -22,6 +22,8 @@ import { useLiveTournament, useLiveTournamentData } from "@/components/tournamen
 import { assignCourt, recordScore, roundName, setDivisionPlayStatus } from "@/lib/tournament/day-of";
 import { EditScoreDialog, ScoreEditInfo } from "@/components/tournament/score-edit";
 import { ScoreEntryDialog } from "@/components/tournament/score-entry-dialog";
+import { TeamNameLines, vsShort } from "@/components/tournament/team-name";
+import { makeTeamShortener, teamFull, type TeamPerson } from "@shared/teamNames";
 import { PoolStandingsTable, usePoolStandings } from "@/components/tournament/pool-standings";
 import { LiveBracketTree, treeLayout } from "@/components/tournament/live-bracket-tree";
 
@@ -226,7 +228,11 @@ export function LiveBrackets({
 
       {editing && (
         <EditScoreDialog
-          match={{ id: editing.id, team1: editing.team1Name, team2: editing.team2Name, score1: editing.score1, score2: editing.score2 }}
+          match={{
+            id: editing.id, team1: editing.team1Name, team2: editing.team2Name,
+            team1People: editing.team1People, team2People: editing.team2People,
+            score1: editing.score1, score2: editing.score2,
+          }}
           poolRebuildHint={!!editing.poolLabel && hasBracket}
           onClose={() => setEditing(null)}
           onSaved={async () => { setEditing(null); toast.success("Score corrected."); await load(); }}
@@ -237,6 +243,8 @@ export function LiveBrackets({
         <ScoreEntryDialog
           team1={scoring.team1Name}
           team2={scoring.team2Name}
+          team1People={scoring.team1People}
+          team2People={scoring.team2People}
           busy={busy}
           onClose={() => setScoring(null)}
           onSave={async (a, b) => {
@@ -282,15 +290,27 @@ function ChampionBanner({ elim, currentUserId }: { elim: LiveBracketMatch[]; cur
   const champMembers = final.winner === 1 ? final.team1 : final.team2;
   const runnerMembers = final.winner === 1 ? final.team2 : final.team1;
   const third = bronze?.winner ? (bronze.winner === 1 ? bronze.team1Name : bronze.team2Name) : null;
+  const champPeople = final.winner === 1 ? final.team1People : final.team2People;
+  const runnerPeople = final.winner === 1 ? final.team2People : final.team1People;
+  const thirdPeople = bronze?.winner ? (bronze.winner === 1 ? bronze.team1People : bronze.team2People) : undefined;
+  // The runner-up line is one line, so it uses the short form.
+  const short = makeTeamShortener([champPeople, runnerPeople, thirdPeople].filter((t): t is TeamPerson[] => !!t?.length));
+  const oneLine = (people: TeamPerson[] | undefined, name: string | null) => (people?.length ? short(people) : name);
   const you = (members: string[]) => !!currentUserId && members.includes(currentUserId);
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-primary/40 bg-primary/10 px-4 py-3">
       <Trophy size={22} weight="fill" className="text-primary flex-shrink-0" />
       <div className="min-w-0 flex-1">
         <p className="font-mono text-[10px] tracking-widest text-primary">CHAMPION</p>
-        <p className="font-semibold truncate">{champ}{you(champMembers) && <YouBadge />}</p>
-        <p className="text-xs text-muted-foreground truncate">
-          Runner-up: {runner}{you(runnerMembers) && <YouBadge />}{third ? ` · 3rd: ${third}` : ""}
+        <div className="font-semibold">
+          <TeamNameLines people={champPeople} fallback={champ} />
+          {you(champMembers) && <YouBadge />}
+        </div>
+        <p
+          className="text-xs text-muted-foreground truncate"
+          title={[runnerPeople?.length ? teamFull(runnerPeople) : runner, thirdPeople?.length ? teamFull(thirdPeople) : third].filter(Boolean).join(" · ")}
+        >
+          Runner-up: {oneLine(runnerPeople, runner)}{you(runnerMembers) && <YouBadge />}{third ? ` · 3rd: ${oneLine(thirdPeople, third)}` : ""}
         </p>
       </div>
     </div>
@@ -485,14 +505,16 @@ function MatchCard({
     : "border-border text-muted-foreground";
   const editable = director && m.completed && both && m.score1 != null && m.score2 != null;
 
-  const side = (members: string[], name: string | null, seed: number | null, score: number | null, won: boolean) => {
+  const side = (members: string[], name: string | null, people: TeamPerson[] | undefined, seed: number | null, score: number | null, won: boolean) => {
     const mine = !!currentUserId && members.includes(currentUserId);
     const empty = members.length === 0;
     return (
       <div className={`flex items-center gap-2 px-2.5 py-1.5 ${won ? "font-semibold text-foreground" : "text-muted-foreground"} ${mine ? "bg-primary/10" : ""}`}>
         <span className="w-5 text-center font-mono text-[10px] text-muted-foreground flex-shrink-0">{seed ?? ""}</span>
-        <span className="flex-1 truncate text-sm">
-          {empty ? (m.completed || opening ? <span className="italic">Bye</span> : "TBD") : name}
+        <span className="flex-1 min-w-0 text-sm">
+          {empty
+            ? <span className="block truncate">{m.completed || opening ? <span className="italic">Bye</span> : "TBD"}</span>
+            : <TeamNameLines people={people} fallback={name} />}
           {mine && <YouBadge />}
         </span>
         {won && <Trophy size={11} weight="fill" className="text-primary flex-shrink-0" />}
@@ -529,9 +551,9 @@ function MatchCard({
       )}
 
       <div className="mt-1.5">
-        {side(m.team1, m.team1Name, m.seed1, m.score1, m.winner === 1)}
+        {side(m.team1, m.team1Name, m.team1People, m.seed1, m.score1, m.winner === 1)}
         <div className="h-px bg-border" />
-        {side(m.team2, m.team2Name, m.seed2, m.score2, m.winner === 2)}
+        {side(m.team2, m.team2Name, m.team2People, m.seed2, m.score2, m.winner === 2)}
       </div>
 
       {awaiting && !opening && (
@@ -587,7 +609,9 @@ function CourtPickerDialog({
             <X size={14} weight="bold" />
           </button>
         </div>
-        <p className="text-xs text-muted-foreground mb-3 truncate">{match.team1Name} vs {match.team2Name}</p>
+        <p className="text-xs text-muted-foreground mb-3 truncate" title={`${match.team1Name ?? "TBD"} vs ${match.team2Name ?? "TBD"}`}>
+          {vsShort(match)}
+        </p>
         {notLive && (
           <label className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 mb-3 text-xs">
             <input type="checkbox" checked={start} onChange={(e) => setStart(e.target.checked)} className="mt-0.5" />

@@ -17,6 +17,7 @@ import {
   activeTeamEntries, buildBracketMatchRows, seededSlots,
   type BracketTeam,
 } from "@shared/bracketBuild";
+import type { TeamPerson } from "@shared/teamNames";
 
 export type DivisionPlayStatus = "not_started" | "live" | "paused";
 
@@ -39,6 +40,9 @@ export interface LiveMatch {
   score2: number | null;
   team1: string | null;
   team2: string | null;
+  /** Each side's players, for display (teamNames.ts). */
+  team1People: TeamPerson[];
+  team2People: TeamPerson[];
   editedAt: string | null;
   prevScore: { s1: number; s2: number } | null;
 }
@@ -65,6 +69,13 @@ const MATCH_SELECT = `
   g2a:personal_guest_players!bracket_matches_team2_guest_a_fkey(display_name),
   g2b:personal_guest_players!bracket_matches_team2_guest_b_fkey(display_name)
 `;
+
+/** Each present player, in order (teamNames.ts); empty with no team yet. */
+function teamPeople(a: Named, b: Named, ga: Named, gb: Named): TeamPerson[] {
+  const one = (p: Named, g: Named): TeamPerson[] =>
+    p?.full_name ? [{ name: p.full_name }] : g?.display_name ? [{ name: g.display_name, guest: true }] : [];
+  return [...one(a, ga), ...one(b, gb)];
+}
 
 function teamName(a: Named, b: Named, ga: Named, gb: Named): string | null {
   const first = a?.full_name ?? ga?.display_name ?? null;
@@ -123,6 +134,8 @@ export async function fetchDayOf(tournamentId: string): Promise<DayOfState> {
       score2: r.score_team2?.[0] ?? null,
       team1: teamName(r.p1a, r.p1b, r.g1a, r.g1b),
       team2: teamName(r.p2a, r.p2b, r.g2a, r.g2b),
+      team1People: teamPeople(r.p1a, r.p1b, r.g1a, r.g1b),
+      team2People: teamPeople(r.p2a, r.p2b, r.g2a, r.g2b),
       editedAt: r.score_edited_at,
       prevScore: parsePrevScore(r.score_edited_prev),
     })),

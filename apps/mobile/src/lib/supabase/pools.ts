@@ -14,6 +14,7 @@ import {
   seedQualifiers, placeSeeds, cutoffTies, type QualifiedSeed,
 } from '@/lib/poolSchedule';
 import { buildPoolMatchRows } from '@shared/poolSchedule';
+import type { TeamPerson } from '@shared/teamNames';
 
 // Pool Play → Bracket, step 1: pools (migration 20260928170000).
 //
@@ -87,6 +88,8 @@ export async function createPools(input: {
 export type PoolStanding = {
   teamKey: string;
   name: string;
+  /** The team's players, for display (teamNames.ts). */
+  people: TeamPerson[];
   played: number;
   wins: number;
   losses: number;
@@ -131,11 +134,16 @@ export async function fetchDivisionPools(tournamentId: string, divisionId: strin
 
   const typed = await withGuestNames(rows as unknown as BracketMatchRow[], tournamentId);
   const names = new Map<string, string>();
+  const people = new Map<string, TeamPerson[]>();
+  const person = (p: BracketMatchRow['p1a'], g: BracketMatchRow['g1a']): TeamPerson[] =>
+    p?.full_name ? [{ name: p.full_name }] : g?.display_name ? [{ name: g.display_name, guest: true }] : [];
   for (const r of typed) {
     const n1 = [r.p1a?.full_name ?? r.g1a?.display_name, r.p1b?.full_name ?? r.g1b?.display_name].filter(Boolean).join(' / ');
     const n2 = [r.p2a?.full_name ?? r.g2a?.display_name, r.p2b?.full_name ?? r.g2b?.display_name].filter(Boolean).join(' / ');
     names.set(teamKeyOf(r.p1a ?? r.g1a, r.p1b ?? r.g1b), n1);
     names.set(teamKeyOf(r.p2a ?? r.g2a, r.p2b ?? r.g2b), n2);
+    people.set(teamKeyOf(r.p1a ?? r.g1a, r.p1b ?? r.g1b), [...person(r.p1a, r.g1a), ...person(r.p1b, r.g1b)]);
+    people.set(teamKeyOf(r.p2a ?? r.g2a, r.p2b ?? r.g2b), [...person(r.p2a, r.g2a), ...person(r.p2b, r.g2b)]);
   }
 
   const labels = [...new Set(typed.map(r => r.pool_label as string))].sort();
@@ -149,6 +157,7 @@ export async function fetchDivisionPools(tournamentId: string, divisionId: strin
       .map(s => ({
         teamKey:       s.team_key,
         name:          names.get(s.team_key) ?? 'Team',
+        people:        people.get(s.team_key) ?? [],
         played:        s.played,
         wins:          s.wins,
         losses:        s.losses,

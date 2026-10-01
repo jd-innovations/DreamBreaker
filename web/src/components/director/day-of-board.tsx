@@ -16,6 +16,8 @@ import {
 } from "@/lib/tournament/day-of";
 import { EditScoreDialog, ScoreEditInfo } from "@/components/tournament/score-edit";
 import { ScoreEntryDialog } from "@/components/tournament/score-entry-dialog";
+import { TeamNameLines } from "@/components/tournament/team-name";
+import { makeTeamShortener, teamFull, type TeamPerson } from "@shared/teamNames";
 
 const STATUS_LABEL: Record<DivisionPlayStatus | "complete", string> = {
   not_started: "NOT STARTED", live: "LIVE", paused: "PAUSED", complete: "COMPLETE",
@@ -33,6 +35,16 @@ function isReady(m: LiveMatch) {
 
 export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: string; onGoToBracket: () => void }) {
   const [state, setState] = useState<DayOfState | null>(null);
+  // One-line rows (queue, completed) use short names ("A. Waters / A. Bright");
+  // the board lists every division together, so a clash anywhere keeps full names.
+  const short = useMemo(
+    () => makeTeamShortener((state?.matches ?? []).flatMap((m) => [m.team1People, m.team2People])),
+    [state?.matches],
+  );
+  const oneLine = useCallback(
+    (people: TeamPerson[], name: string | null) => (people.length ? short(people) : name ?? "TBD"),
+    [short],
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [dragMatchId, setDragMatchId] = useState<string | null>(null);
@@ -292,9 +304,9 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
                         <div className="flex-1 flex flex-col justify-between">
                           <div>
                             <div className="text-[10px] font-mono text-muted-foreground mb-1.5 truncate">{matchLine(m)}</div>
-                            <div className="text-sm font-semibold truncate">{m.team1}</div>
+                            <TeamNameLines people={m.team1People} fallback={m.team1} className="text-sm font-semibold" />
                             <div className="font-mono text-[10px] text-muted-foreground text-center">VS</div>
-                            <div className="text-sm font-semibold truncate">{m.team2}</div>
+                            <TeamNameLines people={m.team2People} fallback={m.team2} className="text-sm font-semibold" />
                           </div>
                           <button
                             onClick={() => setScoring(m)}
@@ -326,6 +338,7 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
             }}
             highlight={(m) => state.queue.get(m.id) === 1}
             line={matchLine}
+            team={oneLine}
             freeCourts={freeCourts}
             busy={busy}
             onDragStart={setDragMatchId}
@@ -340,6 +353,7 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
               label={() => "WAITING"}
               highlight={() => false}
               line={matchLine}
+              team={oneLine}
               freeCourts={freeCourts}
               busy={busy}
               onDragStart={setDragMatchId}
@@ -355,10 +369,10 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
                 {completed.slice(0, 12).map((m) => (
                   <div key={m.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
                     <CheckFat size={10} weight="fill" className="text-primary flex-shrink-0" />
-                    <span className="truncate flex-1 min-w-0">
-                      <span className={m.winner === 1 ? "font-semibold" : "text-muted-foreground"}>{m.team1}</span>
+                    <span className="truncate flex-1 min-w-0" title={`${m.team1 ?? "TBD"} vs ${m.team2 ?? "TBD"}`}>
+                      <span className={m.winner === 1 ? "font-semibold" : "text-muted-foreground"}>{oneLine(m.team1People, m.team1)}</span>
                       <span className="font-mono text-xs mx-1.5">{m.score1}–{m.score2}</span>
-                      <span className={m.winner === 2 ? "font-semibold" : "text-muted-foreground"}>{m.team2}</span>
+                      <span className={m.winner === 2 ? "font-semibold" : "text-muted-foreground"}>{oneLine(m.team2People, m.team2)}</span>
                     </span>
                     <span className="font-mono text-[10px] text-muted-foreground hidden sm:inline">{matchLine(m)}</span>
                     <span className="flex items-center gap-2 font-mono text-[9px] tracking-widest">
@@ -405,7 +419,11 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
 
       {correcting && (
         <EditScoreDialog
-          match={{ id: correcting.id, team1: correcting.team1, team2: correcting.team2, score1: correcting.score1, score2: correcting.score2 }}
+          match={{
+            id: correcting.id, team1: correcting.team1, team2: correcting.team2,
+            team1People: correcting.team1People, team2People: correcting.team2People,
+            score1: correcting.score1, score2: correcting.score2,
+          }}
           poolRebuildHint={!!correcting.poolLabel && state.matches.some((x) => x.divisionId === correcting.divisionId && !x.poolLabel)}
           onClose={() => setCorrecting(null)}
           onSaved={async () => { setCorrecting(null); toast.success("Score corrected."); await load(); }}
@@ -416,6 +434,8 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
         <ScoreEntryDialog
           team1={scoring.team1}
           team2={scoring.team2}
+          team1People={scoring.team1People}
+          team2People={scoring.team2People}
           busy={busy}
           onClose={() => setScoring(null)}
           onSave={async (a, b) => {
@@ -429,7 +449,7 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
 }
 
 function QueueList({
-  title, empty, matches, label, highlight, line, freeCourts, busy, onDragStart, onAssign,
+  title, empty, matches, label, highlight, line, team, freeCourts, busy, onDragStart, onAssign,
 }: {
   title: string;
   empty: string;
@@ -437,6 +457,8 @@ function QueueList({
   label: (m: LiveMatch) => string;
   highlight: (m: LiveMatch) => boolean;
   line: (m: LiveMatch) => string;
+  /** One team on one line: short names (teamNames.ts). */
+  team: (people: TeamPerson[], name: string | null) => string;
   freeCourts: string[];
   busy: boolean;
   onDragStart: (id: string | null) => void;
@@ -462,7 +484,9 @@ function QueueList({
               <DotsSixVertical size={14} className="text-muted-foreground flex-shrink-0 hidden sm:block" />
               <span className={`font-mono text-[9px] tracking-widest flex-shrink-0 w-20 ${highlight(m) ? "text-amber-500" : "text-muted-foreground"}`}>{label(m)}</span>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold truncate">{m.team1} <span className="font-mono text-[10px] text-muted-foreground font-normal">vs</span> {m.team2}</div>
+                <div className="text-sm font-semibold truncate" title={`${teamFull(m.team1People) || m.team1 || "TBD"} vs ${teamFull(m.team2People) || m.team2 || "TBD"}`}>
+                  {team(m.team1People, m.team1)} <span className="font-mono text-[10px] text-muted-foreground font-normal">vs</span> {team(m.team2People, m.team2)}
+                </div>
                 <div className="text-[10px] font-mono text-muted-foreground truncate">{line(m)}</div>
               </div>
               <select

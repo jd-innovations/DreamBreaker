@@ -8,6 +8,7 @@ import { spacing, useTheme, useThemedStyles, type ThemeRoles } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { divisionLeaderboard, type LeaderboardEntry, type LeaderboardMatch } from '@shared/leaderboard';
+import { makeTeamShortener, teamFull } from '@shared/teamNames';
 import { useSession } from '@/hooks/useSession';
 import { useTournamentLive } from '@/hooks/useTournamentLive';
 import { fetchTournamentById } from '@/lib/supabase/tournaments';
@@ -59,6 +60,9 @@ export default function TournamentLeaderboardScreen() {
     () => (divisionId ? divisionLeaderboard(matches.get(divisionId) ?? []) : []),
     [divisionId, matches],
   );
+  // One line per team: "A. Waters / A. Bright" (owner, 2026-10-01). Every row in
+  // the division goes in, so two players who would shorten alike keep full names.
+  const short = useMemo(() => makeTeamShortener(rows.map(r => r.people)), [rows]);
   const still = rows.filter(r => r.status === 'in');
   const placed = rows.filter(r => r.status === 'placed');
   const pool = rows.filter(r => r.status === 'pool');
@@ -77,8 +81,12 @@ export default function TournamentLeaderboardScreen() {
               </Text>}
         </View>
         <View style={s.rowMain}>
-          <Text style={s.name} numberOfLines={1}>
-            {r.name}{mine ? '  ' : ''}
+          <Text
+            style={s.name}
+            numberOfLines={1}
+            accessibilityLabel={`${r.people.length ? teamFull(r.people) : r.name}${mine ? ', you' : ''}`}
+          >
+            {r.people.length ? short(r.people) : r.name}{mine ? '  ' : ''}
             {mine && <Text style={s.you}>YOU</Text>}
           </Text>
           <Text style={s.sub} numberOfLines={1}>

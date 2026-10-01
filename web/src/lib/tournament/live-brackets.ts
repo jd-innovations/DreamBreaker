@@ -6,6 +6,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import type { LeaderboardMatch } from "@shared/leaderboard";
+import type { TeamPerson } from "@shared/teamNames";
 import { openingRoundSeeds } from "@shared/bracketBuild";
 import { parsePrevScore } from "@/lib/tournament/score-corrections";
 
@@ -58,8 +59,14 @@ export async function fetchLiveBrackets(tournamentId: string): Promise<LiveDivis
     const members = [a?.id ?? ga, b?.id ?? gb].filter((x): x is string => !!x);
     const names = [a?.full_name ?? (ga ? guest.get(ga) : null), b?.full_name ?? (gb ? guest.get(gb) : null)];
     const named = names.filter(Boolean);
+    // Each present player, in order; a guest whose name didn't load is "Player".
+    const people: TeamPerson[] = [
+      ...(a ? [{ name: a.full_name ?? "Player" }] : ga ? [{ name: guest.get(ga) ?? "Player", guest: true }] : []),
+      ...(b ? [{ name: b.full_name ?? "Player" }] : gb ? [{ name: guest.get(gb) ?? "Player", guest: true }] : []),
+    ];
     return {
       members,
+      people,
       name: members.length ? (named.length ? named.join(" / ") : "Player") : null,
     };
   };
@@ -81,6 +88,8 @@ export async function fetchLiveBrackets(tournamentId: string): Promise<LiveDivis
       team2: t2.members,
       team1Name: t1.name,
       team2Name: t2.name,
+      team1People: t1.people,
+      team2People: t2.people,
       score1: r.score_team1?.[0] ?? null,
       score2: r.score_team2?.[0] ?? null,
       winner: r.winner === 1 || r.winner === 2 ? r.winner : null,

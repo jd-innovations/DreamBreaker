@@ -9,6 +9,8 @@
 import { useState } from "react";
 import { Info, X } from "@phosphor-icons/react";
 import { validateSingleGameScore } from "@shared/bracketScoring";
+import type { TeamPerson } from "@shared/teamNames";
+import { TeamNameLines } from "@/components/tournament/team-name";
 import {
   correctMatchScore, fetchLatestScoreEdit, previewScoreCorrection, type ScoreEditDetail,
 } from "@/lib/tournament/score-corrections";
@@ -17,6 +19,9 @@ export interface EditableMatch {
   id: string;
   team1: string | null;
   team2: string | null;
+  /** Each side's players: one full name per row. */
+  team1People?: TeamPerson[];
+  team2People?: TeamPerson[];
   score1: number | null;
   score2: number | null;
 }
@@ -94,9 +99,9 @@ export function EditScoreDialog({
         ) : (
           <>
             <p className="text-xs text-muted-foreground mb-3">Was {match.score1}–{match.score2}.</p>
-            {[{ name: match.team1, value: a, set: setA }, { name: match.team2, value: b, set: setB }].map((side, i) => (
+            {[{ name: match.team1, people: match.team1People, value: a, set: setA }, { name: match.team2, people: match.team2People, value: b, set: setB }].map((side, i) => (
               <div key={i} className="flex items-center gap-3 mb-3">
-                <span className="flex-1 text-sm font-semibold truncate">{side.name}</span>
+                <TeamNameLines people={side.people} fallback={side.name} className="flex-1 text-sm font-semibold" />
                 <input
                   inputMode="numeric"
                   value={side.value}

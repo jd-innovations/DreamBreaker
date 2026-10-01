@@ -14,6 +14,8 @@
 //   Ties are ordered by point difference, then points scored.
 // Byes and walkovers (a match with only one team) count for nobody's record.
 
+import type { TeamPerson } from './teamNames';
+
 export type LeaderboardMatch = {
   id: string;
   round: string;            // round_label: pool | r64 | r32 | r16 | qf | sf | bronze | final
@@ -24,6 +26,9 @@ export type LeaderboardMatch = {
   team2: string[];
   team1Name: string | null;
   team2Name: string | null;
+  /** Each side's players, for display (teamNames.ts). Optional: older callers omit it. */
+  team1People?: TeamPerson[];
+  team2People?: TeamPerson[];
   score1: number | null;
   score2: number | null;
   winner: 1 | 2 | null;
@@ -35,6 +40,8 @@ export type LeaderboardEntry = {
   key: string;
   name: string;
   members: string[];
+  /** The team's players, for display (teamNames.ts); empty when the caller gave none. */
+  people: TeamPerson[];
   /** 'in' = still playing for a better place; 'placed' = final placing known; 'pool' = out in pools. */
   status: 'in' | 'placed' | 'pool';
   place: number | null;
@@ -72,19 +79,20 @@ const teamKey = (members: string[]) => [...members].sort().join('+');
 
 export function divisionLeaderboard(matches: LeaderboardMatch[]): LeaderboardEntry[] {
   const teams = new Map<string, LeaderboardEntry>();
-  const touch = (members: string[], name: string | null): LeaderboardEntry | null => {
+  const touch = (members: string[], name: string | null, people: TeamPerson[] | undefined): LeaderboardEntry | null => {
     if (members.length === 0) return null;
     const key = teamKey(members);
     let t = teams.get(key);
     if (!t) {
       t = {
-        key, name: name ?? 'TBD', members: [...members], status: 'in', place: null, placeLabel: null,
+        key, name: name ?? 'TBD', members: [...members], people: people ?? [], status: 'in', place: null, placeLabel: null,
         currentRound: null, onCourt: null, wins: 0, losses: 0, pointsFor: 0, pointsAgainst: 0, pointDiff: 0,
       };
       teams.set(key, t);
     } else if (name && t.name === 'TBD') {
       t.name = name;
     }
+    if (t.people.length === 0 && people?.length) t.people = people;
     return t;
   };
 
@@ -96,8 +104,8 @@ export function divisionLeaderboard(matches: LeaderboardMatch[]): LeaderboardEnt
   const inBracket = new Set<string>();
 
   for (const m of matches) {
-    const a = touch(m.team1, m.team1Name);
-    const b = touch(m.team2, m.team2Name);
+    const a = touch(m.team1, m.team1Name, m.team1People);
+    const b = touch(m.team2, m.team2Name, m.team2People);
     if (!m.poolLabel) {
       if (a) inBracket.add(a.key);
       if (b) inBracket.add(b.key);

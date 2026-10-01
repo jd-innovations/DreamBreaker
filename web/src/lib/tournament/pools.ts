@@ -17,6 +17,7 @@ import {
   registrationTeam, saveEliminationBracket, type BracketRegistration, type Result,
 } from "@/lib/tournament/day-of";
 import type { LiveBracketMatch } from "@/lib/tournament/live-brackets";
+import type { TeamPerson } from "@shared/teamNames";
 
 export interface PoolRegistration extends BracketRegistration {
   playerDupr: number | null;
@@ -85,6 +86,8 @@ export interface PoolStanding {
   teamKey: string;
   name: string;
   members: string[];
+  /** The team's players, for display (teamNames.ts); empty if no pool match named them. */
+  people: TeamPerson[];
   played: number;
   wins: number;
   losses: number;
@@ -111,11 +114,23 @@ function namesFromMatches(matches: LiveBracketMatch[]): Map<string, string> {
   return names;
 }
 
+/** Each team's players, keyed the same way. */
+function peopleFromMatches(matches: LiveBracketMatch[]): Map<string, TeamPerson[]> {
+  const people = new Map<string, TeamPerson[]>();
+  for (const m of matches) {
+    if (!m.poolLabel) continue;
+    if (m.team1.length && m.team1People?.length) people.set(m.team1.join("|"), m.team1People);
+    if (m.team2.length && m.team2People?.length) people.set(m.team2.join("|"), m.team2People);
+  }
+  return people;
+}
+
 /** Standings per pool, ranked by division_pool_standings(). Anyone can read them. */
 export async function fetchPoolStandings(divisionId: string, matches: LiveBracketMatch[]): Promise<DivisionPool[]> {
   const { data, error } = await createClient().rpc("division_pool_standings", { p_division_id: divisionId });
   if (error) throw error;
   const names = namesFromMatches(matches);
+  const people = peopleFromMatches(matches);
   const byPool = new Map<string, PoolStanding[]>();
   for (const s of data ?? []) {
     const list = byPool.get(s.pool_label) ?? [];
@@ -123,6 +138,7 @@ export async function fetchPoolStandings(divisionId: string, matches: LiveBracke
       teamKey: s.team_key,
       name: names.get(s.team_key) ?? "Team",
       members: s.team_key.split("|"),
+      people: people.get(s.team_key) ?? [],
       played: s.played,
       wins: s.wins,
       losses: s.losses,

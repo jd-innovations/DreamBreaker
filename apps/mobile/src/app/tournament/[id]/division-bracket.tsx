@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
+import { makeTeamShortener, teamFull } from '@shared/teamNames';
 import { StatusChip } from '@/components';
 import { useSession } from '@/hooks/useSession';
 import { requireAuth } from '@/lib/authGuard';
@@ -1472,7 +1473,10 @@ function DivisionBracketScreen() {
               </Text>
             </View>
           )}
-          {pools.pools.map(pool => (
+          {pools.pools.map(pool => {
+            // One line per team: "A. Waters / A. Bright" (owner, 2026-10-01).
+            const short = makeTeamShortener(pool.standings.map(st => st.people));
+            return (
             <View key={pool.label} style={s.poolBlock}>
               <Text style={s.poolTitle}>POOL {pool.label}</Text>
               <View style={s.standings}>
@@ -1487,7 +1491,13 @@ function DivisionBracketScreen() {
                   return (
                     <View key={st.teamKey} style={[s.standRow, advances && s.standAdvance]}>
                       <Text style={[s.standRank, advances && s.standAdvanceText]}>{st.rank}</Text>
-                      <Text style={[s.standName, advances && s.standAdvanceText]} numberOfLines={1}>{st.name}</Text>
+                      <Text
+                        style={[s.standName, advances && s.standAdvanceText]}
+                        numberOfLines={1}
+                        accessibilityLabel={st.people.length ? teamFull(st.people) : st.name}
+                      >
+                        {st.people.length ? short(st.people) : st.name}
+                      </Text>
                       <Text style={s.standNum}>{st.wins}-{st.losses}</Text>
                       <Text style={s.standNum}>{st.diff > 0 ? `+${st.diff}` : st.diff}</Text>
                     </View>
@@ -1511,7 +1521,8 @@ function DivisionBracketScreen() {
                 ))}
               </ScrollView>
             </View>
-          ))}
+            );
+          })}
         </ScrollView>
       )}
 

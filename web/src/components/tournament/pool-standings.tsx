@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchPoolStandings, type DivisionPool } from "@/lib/tournament/pools";
+import { makeTeamShortener, teamFull } from "@shared/teamNames";
 import type { LiveBracketMatch } from "@/lib/tournament/live-brackets";
 
 /** Loads the division's standings, again whenever its matches change. */
@@ -30,6 +31,8 @@ export function PoolStandingsTable({
   advancePerPool: number;
   currentUserId?: string | null;
 }) {
+  // One line per team: short names, full names on hover.
+  const short = makeTeamShortener(pool.standings.map((s) => s.people));
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
@@ -48,7 +51,9 @@ export function PoolStandingsTable({
             return (
               <tr key={s.teamKey} className={`${cut ? "border-b border-dashed border-primary/60" : ""} ${mine ? "bg-primary/10" : ""}`}>
                 <td className={`py-1.5 pr-2 font-mono ${s.rank <= advancePerPool ? "text-primary font-bold" : "text-muted-foreground"}`}>{s.rank}</td>
-                <td className="py-1.5 pr-2 truncate max-w-[10rem] sm:max-w-none">{s.name}</td>
+                <td className="py-1.5 pr-2 truncate max-w-[10rem] sm:max-w-none" title={s.people.length ? teamFull(s.people) : s.name}>
+                  {s.people.length ? short(s.people) : s.name}
+                </td>
                 <td className="py-1.5 px-1 text-right font-mono whitespace-nowrap">{s.wins}-{s.losses}</td>
                 <td className="py-1.5 pl-1 text-right font-mono">{s.diff > 0 ? "+" : ""}{s.diff}</td>
               </tr>

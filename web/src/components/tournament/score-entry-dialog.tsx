@@ -6,12 +6,17 @@
 import { useState } from "react";
 import { X } from "@phosphor-icons/react";
 import { validateSingleGameScore } from "@shared/bracketScoring";
+import type { TeamPerson } from "@shared/teamNames";
+import { TeamNameLines } from "@/components/tournament/team-name";
 
 export function ScoreEntryDialog({
-  team1, team2, busy, onClose, onSave,
+  team1, team2, team1People, team2People, busy, onClose, onSave,
 }: {
   team1: string | null;
   team2: string | null;
+  /** Each side's players: one full name per row. */
+  team1People?: TeamPerson[];
+  team2People?: TeamPerson[];
   busy: boolean;
   onClose: () => void;
   onSave: (a: number, b: number) => void;
@@ -30,9 +35,9 @@ export function ScoreEntryDialog({
             <X size={14} weight="bold" />
           </button>
         </div>
-        {[{ name: team1, value: a, set: setA }, { name: team2, value: b, set: setB }].map((side, i) => (
+        {[{ name: team1, people: team1People, value: a, set: setA }, { name: team2, people: team2People, value: b, set: setB }].map((side, i) => (
           <div key={i} className="flex items-center gap-3 mb-3">
-            <span className="flex-1 text-sm font-semibold truncate">{side.name}</span>
+            <TeamNameLines people={side.people} fallback={side.name} className="flex-1 text-sm font-semibold" />
             <input
               inputMode="numeric"
               value={side.value}

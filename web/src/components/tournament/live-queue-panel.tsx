@@ -13,13 +13,16 @@ import { courtLabel } from "@shared/tournamentCourts";
 import { roundName } from "@/lib/tournament/day-of";
 import type { LiveBracketMatch } from "@/lib/tournament/live-brackets";
 import { useLiveTournament } from "@/components/tournament/live-tournament-context";
+import { vsShort } from "@/components/tournament/team-name";
+import { makeTeamShortener, type TeamPerson } from "@shared/teamNames";
 
 const UP_NEXT_SHOWN = 5;
 const RESULTS_SHOWN = 3;
 
 interface Row { m: LiveBracketMatch; division: string }
 
-const vs = (m: LiveBracketMatch) => `${m.team1Name ?? "TBD"} vs ${m.team2Name ?? "TBD"}`;
+// Full names for the hover title; the row itself uses the short form.
+const vsFull = (m: LiveBracketMatch) => `${m.team1Name ?? "TBD"} vs ${m.team2Name ?? "TBD"}`;
 const where = (r: Row) => `${r.division} · ${roundName(r.m.round, r.m.poolLabel)} · M${r.m.matchNumber + 1}`;
 
 export function LiveQueuePanel({
@@ -33,6 +36,15 @@ export function LiveQueuePanel({
 }) {
   const live = useLiveTournament();
   const [expanded, setExpanded] = useState(false);
+
+  // One line per match, so names are short ("A. Waters / A. Bright"). The panel
+  // lists every division together, so a clash anywhere keeps full names.
+  const short = useMemo(
+    () => makeTeamShortener((live?.divisions ?? []).flatMap((d) => d.matches.flatMap((m) => [m.team1People ?? [], m.team2People ?? []]))),
+    [live?.divisions],
+  );
+  const vs = (m: LiveBracketMatch) => vsShort(m, short);
+  const oneLine = (people: TeamPerson[] | undefined, name: string | null) => (people?.length ? short(people) : name);
 
   const data = useMemo(() => {
     const divisions = live?.divisions ?? [];
@@ -119,7 +131,7 @@ export function LiveQueuePanel({
                     <span className="text-xs font-semibold text-amber-500 w-16 flex-shrink-0">{courtLabel(c)}</span>
                     <span className="font-mono text-[9px] tracking-wide text-muted-foreground truncate">{where(r)}</span>
                   </div>
-                  <div className="text-[13px] truncate mt-0.5">{vs(r.m)}</div>
+                  <div className="text-[13px] truncate mt-0.5" title={vsFull(r.m)}>{vs(r.m)}</div>
                 </button>
               ) : (
                 <div key={c} className="flex items-center gap-2 rounded-xl border border-dashed border-border px-3 py-1.5">
@@ -153,7 +165,7 @@ export function LiveQueuePanel({
                   </span>
                   <span className="font-mono text-[9px] tracking-wide text-muted-foreground truncate">{where(row)}</span>
                 </div>
-                <div className="text-[13px] truncate mt-0.5">{vs(row.m)}</div>
+                <div className="text-[13px] truncate mt-0.5" title={vsFull(row.m)}>{vs(row.m)}</div>
               </button>
             ))}
             {data.queue.length > UP_NEXT_SHOWN && (
@@ -171,14 +183,14 @@ export function LiveQueuePanel({
           <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-2">JUST FINISHED</p>
           <div className="space-y-1.5">
             {data.results.map((r) => {
-              const w = r.m.winner === 1 ? r.m.team1Name : r.m.team2Name;
-              const l = r.m.winner === 1 ? r.m.team2Name : r.m.team1Name;
+              const w = r.m.winner === 1 ? oneLine(r.m.team1People, r.m.team1Name) : oneLine(r.m.team2People, r.m.team2Name);
+              const l = r.m.winner === 1 ? oneLine(r.m.team2People, r.m.team2Name) : oneLine(r.m.team1People, r.m.team1Name);
               const ws = r.m.winner === 1 ? r.m.score1 : r.m.score2;
               const ls = r.m.winner === 1 ? r.m.score2 : r.m.score1;
               return (
                 <button key={r.m.id} onClick={() => open(r)} className="w-full text-left rounded-xl px-3 py-1.5 hover:bg-secondary/60 transition-colors">
                   <div className="font-mono text-[9px] tracking-wide text-muted-foreground truncate">{where(r)}</div>
-                  <div className="text-[13px] truncate flex items-center gap-1.5">
+                  <div className="text-[13px] truncate flex items-center gap-1.5" title={vsFull(r.m)}>
                     <Trophy size={11} weight="fill" className="text-primary flex-shrink-0" />
                     <span className="font-semibold truncate">{w}</span>
                     <span className="text-muted-foreground">def.</span>
