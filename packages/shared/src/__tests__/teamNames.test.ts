@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { makeTeamShortener, shortName, teamFull, teamLines } from '../teamNames';
+import { looksLikeFullName, makeTeamShortener, shortName, teamFull, teamLines } from '../teamNames';
 
 describe('shortName', () => {
   it('uses the first initial and the last word', () => {
@@ -30,9 +30,11 @@ describe('makeTeamShortener', () => {
   it('shortens both players', () => {
     expect(makeTeamShortener([awAb])(awAb)).toBe('A. Waters / A. Bright');
   });
-  it('never shortens guests', () => {
-    const t = [{ name: 'Anna Bright' }, { name: 'Coach Dee', guest: true }];
-    expect(makeTeamShortener([t])(t)).toBe('A. Bright / Coach Dee');
+  it('shortens a guest only when the name looks like a first and last name', () => {
+    const t = [{ name: 'Andrei Daescu', guest: true }, { name: 'Mike T', guest: true }];
+    expect(makeTeamShortener([t])(t)).toBe('A. Daescu / Mike T');
+    const u = [{ name: 'coach dee', guest: true }];
+    expect(makeTeamShortener([u])(u)).toBe('coach dee');
   });
   it('keeps full names when two players in the field would collide', () => {
     const t1 = [{ name: 'John Smith' }, { name: 'Anna Bright' }];
@@ -48,5 +50,20 @@ describe('makeTeamShortener', () => {
   it('handles singles', () => {
     const t = [{ name: 'Ben Johns' }];
     expect(makeTeamShortener([t])(t)).toBe('B. Johns');
+  });
+});
+
+describe('looksLikeFullName', () => {
+  it('accepts capitalised first and last names', () => {
+    expect(looksLikeFullName('Andrei Daescu')).toBe(true);
+    expect(looksLikeFullName('Anna Leigh Waters')).toBe(true);
+    expect(looksLikeFullName('John Smith Jr.')).toBe(true);
+    expect(looksLikeFullName('Émile Zola')).toBe(true);
+  });
+  it('rejects initials, lower case and single words', () => {
+    expect(looksLikeFullName('Mike T')).toBe(false);
+    expect(looksLikeFullName('Mike T.')).toBe(false);
+    expect(looksLikeFullName('coach dee')).toBe(false);
+    expect(looksLikeFullName('Cher')).toBe(false);
   });
 });
