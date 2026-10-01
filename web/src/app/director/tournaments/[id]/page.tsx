@@ -23,6 +23,8 @@ import { STATUS_BADGE_CLASS } from "@/lib/status";
 import { SafeImage } from "@/components/shared/safe-image";
 import { DayOfBoard } from "@/components/director/day-of-board";
 import { LiveBrackets } from "@/components/tournament/live-brackets";
+import { LiveQueuePanel } from "@/components/tournament/live-queue-panel";
+import { LiveTournamentProvider, useLiveTournamentData } from "@/components/tournament/live-tournament-context";
 import { buildDivisionBracket } from "@/lib/tournament/day-of";
 import { AddRegistrationDialog } from "@/components/director/add-registration-dialog";
 import { PoolPlayPanel } from "@/components/director/pool-play-panel";
@@ -219,6 +221,9 @@ export default function DirectorTournamentPage() {
   type TabId = typeof validTabs[number];
   const initialTab = (validTabs.includes(searchParams.get("tab") as TabId) ? searchParams.get("tab") : "overview") as TabId;
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+  // LIVE BRACKETS shares one live source between the tree and the queue column;
+  // nothing loads while another tab is open.
+  const liveData = useLiveTournamentData(activeTab === "live" ? id : null);
 
   // Edit state
   const [editingBanner, setEditingBanner] = useState(false);
@@ -993,7 +998,17 @@ export default function DirectorTournamentPage() {
         )}
 
         {/* ── Live brackets + leaderboard (read-only, same view as the public page) ── */}
-        {activeTab === "live" && <LiveBrackets tournamentId={id} director />}
+        {activeTab === "live" && (
+          <LiveTournamentProvider value={liveData}>
+            {/* Queue column beside the tree from xl; stacked above it below. */}
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start">
+              <div className="min-w-0 order-2 xl:order-1"><LiveBrackets tournamentId={id} director /></div>
+              <div className="order-1 xl:order-2 xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto">
+                <LiveQueuePanel />
+              </div>
+            </div>
+          </LiveTournamentProvider>
+        )}
 
         {/* ── Roster tab ── */}
         {activeTab === "roster" && (

@@ -12,6 +12,8 @@ import type { UserProfile as MessagingUserProfile } from "@/components/messaging
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { LiveBrackets } from "@/components/tournament/live-brackets";
+import { LiveQueuePanel } from "@/components/tournament/live-queue-panel";
+import { LiveTournamentProvider, isLiveMode, useLiveTournamentData } from "@/components/tournament/live-tournament-context";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { HoldMySpotDialog, type HoldTournament } from "@/components/shared/hold-my-spot-dialog";
 import { PickleballAppInsights } from "@/components/shared/pickleball-app-insights";
@@ -213,6 +215,12 @@ function DivisionCard({
 
 export default function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  // One live source for the bracket and the Live Queue (2026-09-30). On event
+  // day ("live mode") the sidebar becomes the queue and the registration cards
+  // move to the top of Overview; before and after, the page is as it was.
+  const live = useLiveTournamentData(id);
+  const liveMode = isLiveMode(live);
+  const [tab, setTab] = useState("overview");
 
   const [tournament, setTournament] = useState<LiveTournament | null>(null);
   const [loadError, setLoadError] = useState<"not_found" | "error" | null>(null);
@@ -654,217 +662,10 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     hold_duration_hours: t.hold_duration_hours,
   };
 
-  return (
-    <PageShell>
-      {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="relative border-b border-border overflow-hidden">
-        <div className="absolute inset-0">
-          {/* t.cover_img_url is free-text a director can set to anything --
-              SafeImage, not Image directly. See lib/image-hosts.ts for the
-              incident (a live tournament on an unlisted host) this guards
-              against. */}
-          <SafeImage
-            src={t.cover_img_url ?? "https://images.unsplash.com/photo-1737477004595-e9b659bb44ca?w=1200&q=80"}
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover opacity-50 dark:opacity-60"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />
-        </div>
-        <div className="relative w-full px-4 sm:px-6 lg:px-10 py-16 lg:py-24">
-          <Link href="/tournaments" className="font-mono text-[11px] tracking-[0.3em] text-primary mb-4 inline-block" data-testid="back-to-tournaments">
-            ← BACK TO CIRCUIT
-          </Link>
-          <div className="flex flex-wrap gap-2 mb-4">
-            <span className="px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-mono tracking-widest font-bold">
-              {statusDisplay.toUpperCase()}
-            </span>
-            <span className="px-3 py-1.5 rounded-full bg-secondary text-foreground text-[10px] font-mono tracking-widest">
-              {levelLabel}
-            </span>
-            <span className="px-3 py-1.5 rounded-full bg-secondary text-foreground text-[10px] font-mono tracking-widest">
-              {formatDisplay.toUpperCase()}
-            </span>
-          </div>
-          <h1 className="font-display text-5xl sm:text-7xl lg:text-8xl tracking-tight leading-[0.85] max-w-4xl">
-            {t.name.toUpperCase()}
-          </h1>
-          <div className="flex flex-wrap gap-6 mt-6 text-sm">
-            <div className="flex items-center gap-2">
-              <MapPin size={16} weight="bold" className="text-primary" />
-              <span>
-                {t.venue_name ? <><span className="font-semibold">{t.venue_name}</span>, </> : null}
-                {t.city}, {t.state}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Calendar size={16} weight="bold" className="text-primary" />
-              <span>{dateDisplay}</span>
-            </div>
-            {t.prize_pool_cents && (
-              <div className="flex items-center gap-2">
-                <Trophy size={16} weight="fill" className="text-primary" />
-                <span className="font-mono">{prizeDisplay} prize pool</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Pickleball App Insights banner ─────────────────────────── */}
-      {insight && (
-        <div className="w-full px-4 sm:px-6 lg:px-10 pt-6">
-          <PickleballAppInsights insight={insight} />
-        </div>
-      )}
-
-      {/* ── Main content grid ─────────────────────────────────────── */}
-      {/* Full width (owner, 2026-09-30): the sidebar keeps a fixed 360px from lg
-          up so extra width goes to the tabs and brackets; below lg it stacks. */}
-      <section className="w-full px-4 sm:px-6 lg:px-10 py-8 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-8">
-        {/* Left: Tabs + map */}
-        <div className="min-w-0 space-y-6">
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="rounded-full p-1 bg-secondary flex flex-wrap h-auto gap-1 mb-6">
-              <TabsTrigger value="overview" data-testid="tab-overview" className="rounded-full px-4">Overview</TabsTrigger>
-              <TabsTrigger value="brackets" data-testid="tab-brackets" className="rounded-full px-4">Brackets</TabsTrigger>
-              <TabsTrigger value="leaderboard" data-testid="tab-leaderboard" className="rounded-full px-4">Leaderboard</TabsTrigger>
-              {schedule.length > 0 && <TabsTrigger value="schedule" data-testid="tab-schedule" className="rounded-full px-4">Schedule</TabsTrigger>}
-              {!!t.prize_pool_cents && <TabsTrigger value="prize" data-testid="tab-prize" className="rounded-full px-4">Prize</TabsTrigger>}
-              {hasRules && <TabsTrigger value="rules" data-testid="tab-rules" className="rounded-full px-4">Rules</TabsTrigger>}
-            </TabsList>
-
-            {/* Overview */}
-            <TabsContent value="overview" className="space-y-6">
-              {t.description?.trim() && (
-                <div className="border border-border rounded-2xl p-6 bg-card">
-                  <h3 className="font-display text-2xl tracking-wide mb-3">ABOUT THIS EVENT</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{t.description}</p>
-                </div>
-              )}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { label: "ENTRY FEE", value: `$${entryFee}`, onClick: undefined },
-                  { label: "FORMAT", value: formatDisplay, onClick: undefined },
-                  { label: "DRAW SIZE", value: String(t.draw_size), onClick: undefined },
-                  { label: "DIRECTOR", value: t.director?.full_name?.split(" ")[0]?.toUpperCase() ?? "—", onClick: contactDirector },
-                ].map((s) =>
-                  s.onClick ? (
-                    <button
-                      key={s.label}
-                      onClick={s.onClick}
-                      className="border border-border rounded-xl p-4 text-left hover:border-primary hover:bg-primary/5 transition-all group"
-                      data-testid="contact-director-btn"
-                    >
-                      <div className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground">{s.label}</div>
-                      <div className="font-display text-2xl tracking-wide mt-1">{s.value}</div>
-                      <div className="flex items-center gap-1 text-[10px] font-mono text-primary mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ChatCircle size={11} weight="fill" /> CONTACT
-                      </div>
-                    </button>
-                  ) : (
-                    <div key={s.label} className="border border-border rounded-xl p-4">
-                      <div className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground">{s.label}</div>
-                      <div className="font-display text-2xl tracking-wide mt-1">{s.value}</div>
-                    </div>
-                  ),
-                )}
-              </div>
-            </TabsContent>
-
-            {/* Live brackets and leaderboard (same data and rules as the mobile app) */}
-            <TabsContent value="brackets">
-              <LiveBrackets tournamentId={t.id} initialView="bracket" currentUserId={currentUserId} />
-            </TabsContent>
-            <TabsContent value="leaderboard">
-              <LiveBrackets tournamentId={t.id} initialView="leaderboard" currentUserId={currentUserId} />
-            </TabsContent>
-
-            {/* Schedule: only the times the director set */}
-            {schedule.length > 0 && (
-              <TabsContent value="schedule">
-                <div className="border border-border rounded-2xl divide-y divide-border bg-card">
-                  {schedule.map((row, i) => (
-                    <div key={row.label} className="flex items-center gap-4 p-4">
-                      <div className="font-mono text-xs text-primary w-8">{String(i + 1).padStart(2, "0")}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold">{row.label}</div>
-                        <div className="text-sm text-muted-foreground">{row.when}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </TabsContent>
-            )}
-
-            {/* Prize: the total the director set. No split is stored, so none is shown. */}
-            {!!t.prize_pool_cents && (
-              <TabsContent value="prize">
-                <div className="border border-border rounded-2xl bg-card p-5 flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-primary/15 text-primary flex items-center justify-center">
-                    <Trophy size={18} weight="fill" />
-                  </div>
-                  <div>
-                    <div className="font-mono font-bold text-primary text-lg">{prizeDisplay}</div>
-                    <div className="text-sm text-muted-foreground">Total prize pool. Ask the director how it’s split.</div>
-                  </div>
-                </div>
-              </TabsContent>
-            )}
-
-            {/* Rules: the director's own text only */}
-            {hasRules && (
-              <TabsContent value="rules">
-                <div className="border border-border rounded-2xl p-6 bg-card space-y-3 text-sm text-muted-foreground">
-                  {t.rules!.split("\n").map((line, i) => <p key={i}>{line}</p>)}
-                </div>
-              </TabsContent>
-            )}
-          </Tabs>
-
-          {/* Map card */}
-          <div className="border border-border rounded-2xl bg-card overflow-hidden">
-            <div className="px-5 py-4 border-b border-border flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 min-w-0">
-                <MapPin size={16} weight="fill" className="text-primary flex-shrink-0" />
-                <div className="min-w-0">
-                  <div className="font-display tracking-[0.15em] text-sm truncate">
-                    {t.venue_name ?? `${t.city}, ${t.state}`}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {[t.venue_address, t.city, t.state].filter(Boolean).join(", ")}
-                  </div>
-                </div>
-              </div>
-              <a
-                href={directionsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="h-9 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-[11px] flex items-center gap-1.5 transition-colors flex-shrink-0"
-                data-testid="get-directions-btn"
-              >
-                <NavigationArrow size={13} weight="fill" /> DIRECTIONS
-              </a>
-            </div>
-            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="block relative h-44 bg-secondary overflow-hidden group">
-              <iframe
-                title="venue-map"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                src={`https://maps.google.com/maps?q=${mapsQuery}&output=embed&z=15`}
-                className="w-full h-full border-0 pointer-events-none"
-              />
-              <div className="absolute inset-0 bg-transparent group-hover:bg-primary/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                <span className="bg-background/80 backdrop-blur px-4 py-2 rounded-full font-display text-sm tracking-wide">OPEN IN MAPS</span>
-              </div>
-            </a>
-          </div>
-        </div>
-
-        {/* ── Sidebar ───────────────────────────────────────────────── */}
-        <aside className="lg:sticky lg:top-24 self-start space-y-4">
+  // Spots, fees, events, badges and actions: the sidebar normally, the top of
+  // Overview in live mode (registration is closed by then).
+  const registrationCards = (
+    <>
           <div className="border border-border rounded-2xl bg-card p-6 space-y-5">
             {/* Registration countdown */}
             {countdown && (
@@ -1143,8 +944,237 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               )}
             </div>
           )}
+    </>
+  );
+
+  return (
+    <PageShell>
+      {/* ── Hero ─────────────────────────────────────────────────── */}
+      <section className="relative border-b border-border overflow-hidden">
+        <div className="absolute inset-0">
+          {/* t.cover_img_url is free-text a director can set to anything --
+              SafeImage, not Image directly. See lib/image-hosts.ts for the
+              incident (a live tournament on an unlisted host) this guards
+              against. */}
+          <SafeImage
+            src={t.cover_img_url ?? "https://images.unsplash.com/photo-1737477004595-e9b659bb44ca?w=1200&q=80"}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover opacity-50 dark:opacity-60"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />
+        </div>
+        <div className="relative w-full px-4 sm:px-6 lg:px-10 py-16 lg:py-24">
+          <Link href="/tournaments" className="font-mono text-[11px] tracking-[0.3em] text-primary mb-4 inline-block" data-testid="back-to-tournaments">
+            ← BACK TO CIRCUIT
+          </Link>
+          <div className="flex flex-wrap gap-2 mb-4">
+            <span className="px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-mono tracking-widest font-bold">
+              {statusDisplay.toUpperCase()}
+            </span>
+            <span className="px-3 py-1.5 rounded-full bg-secondary text-foreground text-[10px] font-mono tracking-widest">
+              {levelLabel}
+            </span>
+            <span className="px-3 py-1.5 rounded-full bg-secondary text-foreground text-[10px] font-mono tracking-widest">
+              {formatDisplay.toUpperCase()}
+            </span>
+          </div>
+          <h1 className="font-display text-5xl sm:text-7xl lg:text-8xl tracking-tight leading-[0.85] max-w-4xl">
+            {t.name.toUpperCase()}
+          </h1>
+          <div className="flex flex-wrap gap-6 mt-6 text-sm">
+            <div className="flex items-center gap-2">
+              <MapPin size={16} weight="bold" className="text-primary" />
+              <span>
+                {t.venue_name ? <><span className="font-semibold">{t.venue_name}</span>, </> : null}
+                {t.city}, {t.state}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar size={16} weight="bold" className="text-primary" />
+              <span>{dateDisplay}</span>
+            </div>
+            {t.prize_pool_cents && (
+              <div className="flex items-center gap-2">
+                <Trophy size={16} weight="fill" className="text-primary" />
+                <span className="font-mono">{prizeDisplay} prize pool</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Pickleball App Insights banner ─────────────────────────── */}
+      {insight && (
+        <div className="w-full px-4 sm:px-6 lg:px-10 pt-6">
+          <PickleballAppInsights insight={insight} />
+        </div>
+      )}
+
+      {/* ── Main content grid ─────────────────────────────────────── */}
+      {/* Full width (owner, 2026-09-30): the sidebar keeps a fixed 360px from lg
+          up so extra width goes to the tabs and brackets; below lg it stacks. */}
+      <LiveTournamentProvider value={live}>
+      <section className="w-full px-4 sm:px-6 lg:px-10 py-8 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-8">
+        {/* Left: Tabs + map */}
+        <div className="min-w-0 space-y-6">
+          {liveMode && (
+            <div className="lg:hidden">
+              <LiveQueuePanel variant="strip" currentUserId={currentUserId} onOpenMatch={() => setTab("brackets")} />
+            </div>
+          )}
+          <Tabs value={tab} onValueChange={setTab} className="w-full">
+            <TabsList className="rounded-full p-1 bg-secondary flex flex-wrap h-auto gap-1 mb-6">
+              <TabsTrigger value="overview" data-testid="tab-overview" className="rounded-full px-4">Overview</TabsTrigger>
+              <TabsTrigger value="brackets" data-testid="tab-brackets" className="rounded-full px-4">Brackets</TabsTrigger>
+              <TabsTrigger value="leaderboard" data-testid="tab-leaderboard" className="rounded-full px-4">Leaderboard</TabsTrigger>
+              {schedule.length > 0 && <TabsTrigger value="schedule" data-testid="tab-schedule" className="rounded-full px-4">Schedule</TabsTrigger>}
+              {!!t.prize_pool_cents && <TabsTrigger value="prize" data-testid="tab-prize" className="rounded-full px-4">Prize</TabsTrigger>}
+              {hasRules && <TabsTrigger value="rules" data-testid="tab-rules" className="rounded-full px-4">Rules</TabsTrigger>}
+            </TabsList>
+
+            {/* Overview */}
+            <TabsContent value="overview" className="space-y-6">
+              {liveMode && <div className="space-y-4 max-w-md">{registrationCards}</div>}
+              {t.description?.trim() && (
+                <div className="border border-border rounded-2xl p-6 bg-card">
+                  <h3 className="font-display text-2xl tracking-wide mb-3">ABOUT THIS EVENT</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{t.description}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: "ENTRY FEE", value: `$${entryFee}`, onClick: undefined },
+                  { label: "FORMAT", value: formatDisplay, onClick: undefined },
+                  { label: "DRAW SIZE", value: String(t.draw_size), onClick: undefined },
+                  { label: "DIRECTOR", value: t.director?.full_name?.split(" ")[0]?.toUpperCase() ?? "—", onClick: contactDirector },
+                ].map((s) =>
+                  s.onClick ? (
+                    <button
+                      key={s.label}
+                      onClick={s.onClick}
+                      className="border border-border rounded-xl p-4 text-left hover:border-primary hover:bg-primary/5 transition-all group"
+                      data-testid="contact-director-btn"
+                    >
+                      <div className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground">{s.label}</div>
+                      <div className="font-display text-2xl tracking-wide mt-1">{s.value}</div>
+                      <div className="flex items-center gap-1 text-[10px] font-mono text-primary mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ChatCircle size={11} weight="fill" /> CONTACT
+                      </div>
+                    </button>
+                  ) : (
+                    <div key={s.label} className="border border-border rounded-xl p-4">
+                      <div className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground">{s.label}</div>
+                      <div className="font-display text-2xl tracking-wide mt-1">{s.value}</div>
+                    </div>
+                  ),
+                )}
+              </div>
+            </TabsContent>
+
+            {/* Live brackets and leaderboard (same data and rules as the mobile app) */}
+            <TabsContent value="brackets">
+              <LiveBrackets tournamentId={t.id} initialView="bracket" currentUserId={currentUserId} />
+            </TabsContent>
+            <TabsContent value="leaderboard">
+              <LiveBrackets tournamentId={t.id} initialView="leaderboard" currentUserId={currentUserId} />
+            </TabsContent>
+
+            {/* Schedule: only the times the director set */}
+            {schedule.length > 0 && (
+              <TabsContent value="schedule">
+                <div className="border border-border rounded-2xl divide-y divide-border bg-card">
+                  {schedule.map((row, i) => (
+                    <div key={row.label} className="flex items-center gap-4 p-4">
+                      <div className="font-mono text-xs text-primary w-8">{String(i + 1).padStart(2, "0")}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold">{row.label}</div>
+                        <div className="text-sm text-muted-foreground">{row.when}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+            )}
+
+            {/* Prize: the total the director set. No split is stored, so none is shown. */}
+            {!!t.prize_pool_cents && (
+              <TabsContent value="prize">
+                <div className="border border-border rounded-2xl bg-card p-5 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/15 text-primary flex items-center justify-center">
+                    <Trophy size={18} weight="fill" />
+                  </div>
+                  <div>
+                    <div className="font-mono font-bold text-primary text-lg">{prizeDisplay}</div>
+                    <div className="text-sm text-muted-foreground">Total prize pool. Ask the director how it’s split.</div>
+                  </div>
+                </div>
+              </TabsContent>
+            )}
+
+            {/* Rules: the director's own text only */}
+            {hasRules && (
+              <TabsContent value="rules">
+                <div className="border border-border rounded-2xl p-6 bg-card space-y-3 text-sm text-muted-foreground">
+                  {t.rules!.split("\n").map((line, i) => <p key={i}>{line}</p>)}
+                </div>
+              </TabsContent>
+            )}
+          </Tabs>
+
+          {/* Map card */}
+          <div className="border border-border rounded-2xl bg-card overflow-hidden">
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <MapPin size={16} weight="fill" className="text-primary flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="font-display tracking-[0.15em] text-sm truncate">
+                    {t.venue_name ?? `${t.city}, ${t.state}`}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {[t.venue_address, t.city, t.state].filter(Boolean).join(", ")}
+                  </div>
+                </div>
+              </div>
+              <a
+                href={directionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-9 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-[11px] flex items-center gap-1.5 transition-colors flex-shrink-0"
+                data-testid="get-directions-btn"
+              >
+                <NavigationArrow size={13} weight="fill" /> DIRECTIONS
+              </a>
+            </div>
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="block relative h-44 bg-secondary overflow-hidden group">
+              <iframe
+                title="venue-map"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                src={`https://maps.google.com/maps?q=${mapsQuery}&output=embed&z=15`}
+                className="w-full h-full border-0 pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-transparent group-hover:bg-primary/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                <span className="bg-background/80 backdrop-blur px-4 py-2 rounded-full font-display text-sm tracking-wide">OPEN IN MAPS</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        {/* ── Sidebar ───────────────────────────────────────────────── */}
+        {/* ── Sidebar: the Live Queue on event day, registration otherwise ── */}
+        <aside className={liveMode
+          ? "hidden lg:block lg:sticky lg:top-24 self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto"
+          : "lg:sticky lg:top-24 self-start space-y-4"}
+        >
+          {liveMode
+            ? <LiveQueuePanel currentUserId={currentUserId} onOpenMatch={() => setTab("brackets")} />
+            : registrationCards}
         </aside>
       </section>
+      </LiveTournamentProvider>
 
       {/* ── Messaging overlay ── */}
       {messagingTarget && currentUserId && (

@@ -10,15 +10,15 @@
 // score, and a division with semifinals but no 3rd-place match gets Add
 // 3rd-place match. The database checks every action. Updates live.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Trophy, PencilSimple, Medal, CheckFat, MapPin, Megaphone, Hourglass, Clock, X } from "@phosphor-icons/react";
 import { divisionLeaderboard, type LeaderboardEntry } from "@shared/leaderboard";
 import { courtLabel } from "@shared/tournamentCourts";
 import {
-  addThirdPlaceMatch, fetchBracketContext, fetchLiveBrackets, subscribeLiveBrackets,
-  type BracketContext, type LiveBracketMatch, type LiveDivision,
+  addThirdPlaceMatch, type LiveBracketMatch, type LiveDivision,
 } from "@/lib/tournament/live-brackets";
+import { useLiveTournament, useLiveTournamentData } from "@/components/tournament/live-tournament-context";
 import { assignCourt, recordScore, roundName, setDivisionPlayStatus } from "@/lib/tournament/day-of";
 import { EditScoreDialog, ScoreEditInfo } from "@/components/tournament/score-edit";
 import { ScoreEntryDialog } from "@/components/tournament/score-entry-dialog";
@@ -40,10 +40,13 @@ export function LiveBrackets({
   currentUserId?: string | null;
   director?: boolean;
 }) {
-  const [divisions, setDivisions] = useState<LiveDivision[] | null>(null);
-  const [ctx, setCtx] = useState<BracketContext>({ courts: [], autoAssign: true, queue: new Map() });
-  const [error, setError] = useState(false);
-  const [divisionId, setDivisionId] = useState<string | null>(null);
+  // Shared page data when a LiveTournamentProvider is above; otherwise our own.
+  const shared = useLiveTournament();
+  const own = useLiveTournamentData(shared ? null : tournamentId);
+  const live = shared ?? own;
+  const { divisions, ctx, error } = live;
+  const load = live.reload;
+  const [pickedDivisionId, setDivisionId] = useState<string | null>(null);
   const [view, setView] = useState<View>(initialView);
   const [stage, setStage] = useState<Stage | null>(null);
   const [roundTab, setRoundTab] = useState<string>("all");
@@ -54,24 +57,27 @@ export function LiveBrackets({
   const [openId, setOpenId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const [d, c] = await Promise.all([fetchLiveBrackets(tournamentId), fetchBracketContext(tournamentId)]);
-      setDivisions(d);
-      setCtx(c);
-      setDivisionId((prev) => (prev && d.some((x) => x.id === prev) ? prev : d[0]?.id ?? null));
-      setError(false);
-    } catch {
-      setError(true);
-    }
-  }, [tournamentId]);
+  const divisionId = pickedDivisionId && divisions?.some((d) => d.id === pickedDivisionId)
+    ? pickedDivisionId
+    : divisions?.[0]?.id ?? null;
 
+  // The Live Queue panel asked to show a match: switch to its division and
+  // open its card (pools or bracket as needed).
+  const focusNonce = live.focus?.nonce;
   useEffect(() => {
-    // Database fetch (an external system); state is set after it resolves.
+    const f = live.focus;
+    if (!f) return;
+    const m = divisions?.find((d) => d.id === f.divisionId)?.matches.find((x) => x.id === f.matchId);
+    // Responding to an explicit request from the queue panel.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-    return subscribeLiveBrackets(tournamentId, load);
-  }, [tournamentId, load]);
+    setDivisionId(f.divisionId);
+    setView("bracket");
+    setRoundTab("all");
+    setStage(m?.poolLabel ? "pools" : "bracket");
+    setOpenId(f.matchId);
+    // Only a new request should move the view, not every live refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusNonce]);
 
   const division = divisions?.find((d) => d.id === divisionId) ?? null;
   const board = useMemo(() => (division ? divisionLeaderboard(division.matches) : []), [division]);
