@@ -1632,7 +1632,7 @@ export default function CommunityEventScreen() {
         <View style={s.root}>
           <StatusBar style="light" />
           <View style={s.hero}>
-            <Image source={shell.photo} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            <Image source={shell.photo} style={EVENT_COVER_FILL} resizeMode="cover" />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
             <LinearGradient
               colors={['rgba(0,0,0,0.22)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.70)']}

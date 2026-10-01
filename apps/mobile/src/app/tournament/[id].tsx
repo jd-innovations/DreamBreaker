@@ -512,7 +512,7 @@ export default function TournamentDetail() {
             </TouchableOpacity>
           </View>
           <View style={[s.hero, { height: HERO_H }]}>
-            <Image source={shell.photo} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            <Image source={shell.photo} style={EVENT_COVER_FILL} resizeMode="cover" />
             <LinearGradient
               colors={['rgba(0,0,0,0.25)', 'rgba(0,0,0,0.10)', 'rgba(0,0,0,0.72)']}
               locations={[0, 0.4, 1]}
