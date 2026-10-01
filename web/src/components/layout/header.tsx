@@ -75,7 +75,7 @@ function DashboardsMenu({ pathname }: { pathname: string }) {
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         data-testid="nav-dashboards"
-        className={`flex items-center gap-1 px-4 py-2 text-sm font-semibold rounded-full transition-colors ${
+        className={`flex items-center gap-1 px-3 2xl:px-4 py-2 text-sm font-semibold rounded-full transition-colors ${
           active ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
         }`}
       >
@@ -235,13 +235,15 @@ export function Header() {
           <Logo />
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-1">
+        {/* Inline links from xl (1280px): below that they don't fit, so the ☰
+            slide menu (same as phones) takes over from 1024 to 1279 too. */}
+        <nav className="hidden xl:flex items-center gap-1">
           {navLinks.map((l) => (
             <Link
               key={l.to}
               href={l.to}
               data-testid={l.testid}
-              className={`px-4 py-2 text-sm font-semibold rounded-full transition-colors ${
+              className={`px-3 2xl:px-4 py-2 text-sm font-semibold rounded-full transition-colors ${
                 pathname === l.to
                   ? "bg-secondary text-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
@@ -321,7 +323,7 @@ export function Header() {
           )}
 
           <button
-            className="lg:hidden h-9 w-9 rounded-full border border-border flex items-center justify-center"
+            className="xl:hidden h-9 w-9 rounded-full border border-border flex items-center justify-center"
             onClick={() => setOpen(!open)}
             data-testid="mobile-menu-toggle"
             aria-label="Menu"

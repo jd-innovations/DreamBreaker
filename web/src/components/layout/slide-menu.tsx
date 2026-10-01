@@ -121,7 +121,7 @@ export function SlideMenu({
 
   return createPortal(
     <div
-      className={cn("lg:hidden fixed inset-0 z-[100]", open ? "pointer-events-auto" : "pointer-events-none")}
+      className={cn("xl:hidden fixed inset-0 z-[100]", open ? "pointer-events-auto" : "pointer-events-none")}
       aria-hidden={!open}
     >
       {/* Backdrop. Fades rather than appears, so the panel reads as sliding
