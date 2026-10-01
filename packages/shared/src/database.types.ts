@@ -10790,6 +10790,43 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      tournament_registrant_pin_players: {
+        Args: {
+          p_division_id?: string
+          p_key: string
+          p_kind: string
+          p_status_group?: string
+          p_tournament_id: string
+        }
+        Returns: {
+          avatar_url: string
+          divisions: string
+          dupr: number
+          full_name: string
+          handle: string
+          id: string
+          location_city: string
+          location_state: string
+          self_rating: string
+          statuses: string
+        }[]
+      }
+      tournament_registrant_pins: {
+        Args: {
+          p_division_id?: string
+          p_status_group?: string
+          p_tournament_id: string
+        }
+        Returns: {
+          key: string
+          kind: string
+          label: string
+          lat: number
+          lng: number
+          player_count: number
+          sublabel: string
+        }[]
+      }
       unaccent: { Args: { "": string }; Returns: string }
       unlockrows: { Args: { "": string }; Returns: number }
       updategeometrysrid: {

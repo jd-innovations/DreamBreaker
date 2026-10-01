@@ -28,6 +28,7 @@ import { LiveTournamentProvider, useLiveTournamentData } from "@/components/tour
 import { buildDivisionBracket } from "@/lib/tournament/day-of";
 import { AddRegistrationDialog } from "@/components/director/add-registration-dialog";
 import { PoolPlayPanel } from "@/components/director/pool-play-panel";
+import { RegistrantMap } from "@/components/director/registrant-map";
 import { directorCancelRegistration, formatFee, onsiteLabel } from "@/lib/tournament/director-registrations";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -217,7 +218,7 @@ export default function DirectorTournamentPage() {
   const [addingPlayer, setAddingPlayer] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const validTabs = ["overview", "sponsors", "roster", "bracket", "dayof", "live"] as const;
+  const validTabs = ["overview", "sponsors", "roster", "map", "bracket", "dayof", "live"] as const;
   type TabId = typeof validTabs[number];
   const initialTab = (validTabs.includes(searchParams.get("tab") as TabId) ? searchParams.get("tab") : "overview") as TabId;
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
@@ -686,13 +687,13 @@ export default function DirectorTournamentPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-border mb-8 overflow-x-auto scrollbar-hide">
-          {(["overview", "bracket", "dayof", "live", "roster", "sponsors"] as const).map((tab) => (
+          {(["overview", "bracket", "dayof", "live", "roster", "map", "sponsors"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2.5 font-mono text-xs tracking-widest transition-colors border-b-2 -mb-px whitespace-nowrap ${activeTab === tab ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
             >
-              {tab === "dayof" ? "DAY OF" : tab === "live" ? "LIVE BRACKETS" : tab.toUpperCase()}
+              {tab === "dayof" ? "DAY OF" : tab === "live" ? "LIVE BRACKETS" : tab === "map" ? "REGISTRANT MAP" : tab.toUpperCase()}
               {tab === "sponsors" && sponsors.length > 0 && <span className="ml-1.5 text-primary">({sponsors.length})</span>}
               {tab === "roster" && registrations.length > 0 && <span className="ml-1.5 text-primary">({registrations.length})</span>}
               {tab === "bracket" && seeds.length > 0 && <span className="ml-1.5 text-primary">({seeds.length})</span>}
@@ -1008,6 +1009,11 @@ export default function DirectorTournamentPage() {
               </div>
             </div>
           </LiveTournamentProvider>
+        )}
+
+        {/* ── Registrant map: where the field comes from (director only, enforced by the RPC) ── */}
+        {activeTab === "map" && (
+          <RegistrantMap tournamentId={id} divisions={divisions.map((d) => ({ id: d.id, name: d.name }))} />
         )}
 
         {/* ── Roster tab ── */}
