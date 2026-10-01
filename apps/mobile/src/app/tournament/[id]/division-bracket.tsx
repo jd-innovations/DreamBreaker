@@ -130,7 +130,8 @@ function ParticipantRow({
       pr.row,
       isWinner && { backgroundColor: L.successBg, borderColor: 'rgba(34,197,94,0.30)', borderWidth: 1, borderRadius: 8 },
     ]}>
-      {seed !== undefined && (
+      {/* 0 means no seed (bracket not built with standard placement). */}
+      {!!seed && (
         <View style={pr.seed}>
           <Text style={pr.seedText}>{isBye ? '' : seed}</Text>
         </View>

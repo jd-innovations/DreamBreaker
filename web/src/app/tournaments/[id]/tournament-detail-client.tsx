@@ -22,6 +22,7 @@ import { computeInsight, type InsightResult } from "@/lib/insights";
 import { getUserId } from "@/lib/dev-user";
 import Image from "next/image";
 import { SafeImage } from "@/components/shared/safe-image";
+import { fillPercent, spotsLeft as spotsLeftOf, tournamentCapacity } from "@shared/capacity";
 
 // ── Countdown hook ─────────────────────────────────────────────────────────────
 function useCountdown(targetDate: Date | null) {
@@ -589,8 +590,11 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   }
 
   const t = tournament;
-  const pct = Math.round((spotsFilled / t.draw_size) * 100);
-  const spotsLeft = t.draw_size - spotsFilled;
+  // Capacity is the divisions' total when there are divisions: the
+  // tournament's own draw_size is a creation-time number (packages/shared/src/capacity.ts).
+  const capacity = tournamentCapacity(t.draw_size, divisions.map((d) => d.draw_size));
+  const pct = fillPercent(capacity, spotsFilled);
+  const spotsLeft = spotsLeftOf(capacity, spotsFilled);
   const isFull = spotsLeft <= 0;
   // Hold cutoff: holds are disabled this many days before the event
   const holdCutoffDate = new Date(t.event_date);
@@ -880,8 +884,8 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
             <div>
               <div className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground mb-1">SPOTS</div>
               <div className="flex items-end justify-between">
-                <div className="font-display text-5xl tracking-wide">{t.draw_size - spotsFilled}</div>
-                <div className="text-sm text-muted-foreground">of {t.draw_size} left</div>
+                <div className="font-display text-5xl tracking-wide">{isFull ? "Full" : spotsLeft}</div>
+                <div className="text-sm text-muted-foreground">{isFull ? `${capacity} spots` : `of ${capacity} left`}</div>
               </div>
               <div className="h-2 w-full bg-secondary rounded-full mt-3 overflow-hidden">
                 <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />

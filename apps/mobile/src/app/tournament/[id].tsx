@@ -76,12 +76,6 @@ const L = {
   redBg:     colors.dangerBg,
 };
 
-// Director avatar fallback only — a headshot placeholder, unrelated to the
-// tournament-cover bug fixed via eventCoverSource() below. Flagging rather
-// than fixing silently: this is a different image category (profile photo,
-// not event cover) and worth its own decision on whether to swap in a
-// bundled local default too.
-const DIRECTOR_PHOTO = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&q=80';
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 // DIVISIONS imported from @/data/divisions — kept here as a shaped alias so
@@ -1109,7 +1103,12 @@ export default function TournamentDetail() {
             </View>
 
             <View style={sheet.directorHeader}>
-              <Image source={{ uri: directorProfile?.avatar_url ?? DIRECTOR_PHOTO }} style={sheet.directorAvatar} />
+              <Avatar
+                uri={directorProfile?.avatar_url ?? null}
+                initials={getProfileInitials({ full_name: directorProfile?.full_name ?? 'Tournament Director' })}
+                bg={L.navy}
+                size={64}
+              />
               <View style={{ flex: 1 }}>
                 <View style={s.hostNameRow}>
                   <Text style={sheet.directorName}>{directorProfile?.full_name ?? 'Tournament Director'}</Text>
@@ -1666,7 +1665,6 @@ const sheet = StyleSheet.create({
 
 
   directorHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
-  directorAvatar: { width: 64, height: 64, borderRadius: 32 },
   directorName: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', textTransform: 'uppercase' },
   directorBio: { color: L.text, fontSize: text.caption.size, fontWeight: '500', lineHeight: 20, marginBottom: 14 },
 

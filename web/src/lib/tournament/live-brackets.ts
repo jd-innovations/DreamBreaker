@@ -6,7 +6,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import type { LeaderboardMatch } from "@shared/leaderboard";
-import { bracketPositions } from "@shared/bracketBuild";
+import { openingRoundSeeds } from "@shared/bracketBuild";
 import { parsePrevScore } from "@/lib/tournament/score-corrections";
 
 type Person = { id: string; full_name: string | null } | null;
@@ -110,29 +110,17 @@ export async function fetchLiveBrackets(tournamentId: string): Promise<LiveDivis
 
 const ELIM_ORDER = ["pool", "r64", "r32", "r16", "qf", "sf", "final"];
 
-/**
- * Seeds from the bracket's first round: the shared builder places slot i at
- * standard position bracketPositions(size)[i] (1v8, 4v5, ...), so a team's
- * seed is its first-round slot's position. Carried to later rounds by team.
- */
+/** Seeds from the opening round (packages/shared openingRoundSeeds), carried to later rounds by team. */
 export function withSeeds(matches: LiveBracketMatch[]): LiveBracketMatch[] {
   const elim = matches.filter((m) => !m.poolLabel && m.round !== "bronze");
   const first = ELIM_ORDER.find((r) => elim.some((m) => m.round === r));
   if (!first) return matches;
   const opening = elim.filter((m) => m.round === first).sort((a, b) => a.matchNumber - b.matchNumber);
-  const positions = bracketPositions(opening.length * 2);
-  // Only trust positions when the bracket was built with standard placement:
-  // with N teams, exactly the slots for seeds 1..N are filled (byes on the top
-  // seeds). Older or hand-built brackets don't match, and get no seeds rather
-  // than wrong ones.
-  const filled = opening.flatMap((m) => [m.team1.length > 0, m.team2.length > 0]);
-  const teamCount = filled.filter(Boolean).length;
-  if (filled.some((f, i) => f !== positions[i] <= teamCount)) return matches;
-  const seedByTeam = new Map<string, number>();
-  opening.forEach((m, k) => {
-    if (m.team1.length) seedByTeam.set(m.team1.join("|"), positions[k * 2]);
-    if (m.team2.length) seedByTeam.set(m.team2.join("|"), positions[k * 2 + 1]);
-  });
+  const seedByTeam = openingRoundSeeds(opening.map((m) => ({
+    team1: m.team1.length ? m.team1.join("|") : null,
+    team2: m.team2.length ? m.team2.join("|") : null,
+  })));
+  if (!seedByTeam) return matches;
   return matches.map((m) => m.poolLabel ? m : {
     ...m,
     seed1: m.team1.length ? seedByTeam.get(m.team1.join("|")) ?? null : null,

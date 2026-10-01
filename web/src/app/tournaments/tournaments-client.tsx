@@ -8,6 +8,7 @@ import { ShareButton } from "@/components/shared/share-button";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
 import { SafeImage } from "@/components/shared/safe-image";
+import { fillPercent, tournamentCapacity } from "@shared/capacity";
 
 const formats = ["All", "Doubles", "Singles", "Mixed", "Juniors"];
 const levels = ["All", "3.0 – 4.0", "3.5 – 4.5", "4.0 – 5.0", "4.5+", "U18"];
@@ -40,6 +41,7 @@ type TournamentRow = {
   prize_pool_cents: number | null;
   event_date: string;
   status: string;
+  divisions?: { draw_size: number }[] | null;
 };
 
 function toDisplayFormat(fmt: string) {
@@ -69,7 +71,7 @@ export default function TournamentsPage() {
     async function load() {
       const { data, error } = await supabase
         .from("tournaments")
-        .select("id,name,city,state,venue_name,venue_address,cover_img_url,format,skill_min,skill_max,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,prize_pool_cents,event_date,status")
+        .select("id,name,city,state,venue_name,venue_address,cover_img_url,format,skill_min,skill_max,draw_size,spots_filled,entry_fee_cents,hold_fee_cents,prize_pool_cents,event_date,status,divisions(draw_size)")
         .in("status", ["open", "filling_fast", "registration_closed"])
         .gte("event_date", todayLocalDateString())
         .order("event_date", { ascending: true });
@@ -161,7 +163,8 @@ export default function TournamentsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtered.map((t) => {
-              const pct = Math.round((t.spots_filled / t.draw_size) * 100);
+              const capacity = tournamentCapacity(t.draw_size, (t.divisions ?? []).map((d) => d.draw_size));
+              const pct = fillPercent(capacity, t.spots_filled);
               const prizeDisplay = t.prize_pool_cents ? `$${(t.prize_pool_cents / 100).toLocaleString()}` : "—";
               const dateDisplay = new Date(t.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
               const fmtDisplay = toDisplayFormat(t.format);
@@ -204,7 +207,7 @@ export default function TournamentsPage() {
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground flex items-center gap-1"><Users size={12} weight="bold" /> {t.spots_filled}/{t.draw_size}</span>
+                        <span className="text-muted-foreground flex items-center gap-1"><Users size={12} weight="bold" /> {t.spots_filled}/{capacity}</span>
                         <span className="font-mono text-muted-foreground">{pct}% FILLED</span>
                       </div>
                       <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} /></div>

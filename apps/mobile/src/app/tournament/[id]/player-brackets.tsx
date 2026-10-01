@@ -104,7 +104,8 @@ function ParticipantRow({
       isWinner && pr.rowWinner,
       isMe      && pr.rowMe,
     ]}>
-      {seed !== undefined && (
+      {/* 0 means no seed (bracket not built with standard placement). */}
+      {!!seed && (
         <View style={pr.seed}>
           <Text style={pr.seedText}>{isBye ? '' : seed}</Text>
         </View>

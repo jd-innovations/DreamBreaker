@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  activeTeamEntries, bracketPositions, bracketRoundLabel, bracketSizeFor, buildBracketMatchRows, seededSlots,
+  activeTeamEntries, bracketPositions, bracketRoundLabel, bracketSizeFor, buildBracketMatchRows, openingRoundSeeds, seededSlots,
   type BracketTeam,
 } from '../bracketBuild';
 
@@ -130,5 +130,23 @@ describe('buildBracketMatchRows', () => {
 
   it('rejects slot counts that are not a power of two', () => {
     expect(() => build([team('a'), team('b'), team('c')])).toThrow();
+  });
+});
+
+describe('openingRoundSeeds', () => {
+  it('reads standard placement, byes on the top seeds', () => {
+    // 6 teams in 8 slots: positions 1,8,4,5,2,7,3,6.
+    const seeds = openingRoundSeeds([
+      { team1: 'a', team2: null }, { team1: 'd', team2: 'e' },
+      { team1: 'b', team2: null }, { team1: 'c', team2: 'f' },
+    ]);
+    expect(seeds && Object.fromEntries(seeds)).toEqual({ a: 1, d: 4, e: 5, b: 2, c: 3, f: 6 });
+  });
+  it('returns null for a bracket not built with standard placement', () => {
+    expect(openingRoundSeeds([
+      { team1: 'a', team2: 'b' }, { team1: 'c', team2: null },
+      { team1: 'd', team2: 'e' }, { team1: 'f', team2: null },
+    ])).toBeNull();
+    expect(openingRoundSeeds([])).toBeNull();
   });
 });

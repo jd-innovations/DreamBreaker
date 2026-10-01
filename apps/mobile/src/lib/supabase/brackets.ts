@@ -8,7 +8,7 @@ import type {
 } from '@/lib/directorBracketStore';
 import type { Database } from '@shared/database.types';
 import { validateSingleGameScore } from '@/lib/bracketScoring';
-import { activeTeamEntries, bracketSizeFor, buildBracketMatchRows, type BracketTeam } from '@shared/bracketBuild';
+import { activeTeamEntries, bracketSizeFor, buildBracketMatchRows, openingRoundSeeds, type BracketTeam } from '@shared/bracketBuild';
 
 // Re-export types consumed by screens
 export type { DirectorBracket, DirectorBracketMatch, DirectorBracketParticipant, DirectorBracketRound };
@@ -188,6 +188,26 @@ function rowsToDivisionBracket(
       matches,
     };
   });
+
+  // Real seeds on every match's sides, from the opening round's standard
+  // placement (packages/shared openingRoundSeeds, same rule as web). A bracket
+  // not built that way keeps seed 0, which the cards treat as "no seed"; they
+  // used to print the 0.
+  const opening = rounds.find(r => r.roundName !== '3rd Place');
+  const seedById = opening
+    ? openingRoundSeeds(opening.matches.map(m => ({
+        team1: m.participant1?.id ?? null,
+        team2: m.participant2?.id ?? null,
+      })))
+    : null;
+  if (seedById) {
+    for (const r of rounds) {
+      for (const m of r.matches) {
+        if (m.participant1) m.participant1 = { ...m.participant1, seed: seedById.get(m.participant1.id) ?? 0 };
+        if (m.participant2) m.participant2 = { ...m.participant2, seed: seedById.get(m.participant2.id) ?? 0 };
+      }
+    }
+  }
 
   // Collect all participants from first round
   const firstRound = rounds[0];

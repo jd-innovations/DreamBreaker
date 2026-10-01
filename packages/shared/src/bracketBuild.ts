@@ -264,3 +264,27 @@ export function buildBracketMatchRows(input: {
   }
   return rows;
 }
+
+/**
+ * Seeds read back from a saved bracket's opening round, keyed by team.
+ *
+ * buildBracketMatchRows puts first-round slot i at standard position
+ * bracketPositions(size)[i] (1v8, 4v5, ...), so a team's seed is its slot's
+ * position. That only holds for brackets built with standard placement: with
+ * N teams, exactly the slots for seeds 1..N are filled (byes on the top seeds).
+ * Anything else (older or hand-built brackets) returns null rather than wrong
+ * seeds. `opening` is the first round in match-number order; a side is a team
+ * key, or null for an empty slot. Shared by web and mobile.
+ */
+export function openingRoundSeeds(
+  opening: readonly { team1: string | null; team2: string | null }[],
+): Map<string, number> | null {
+  if (opening.length === 0) return null;
+  const positions = bracketPositions(opening.length * 2);
+  const slots = opening.flatMap(m => [m.team1, m.team2]);
+  const teamCount = slots.filter(Boolean).length;
+  if (slots.some((team, i) => !!team !== positions[i] <= teamCount)) return null;
+  const seeds = new Map<string, number>();
+  slots.forEach((team, i) => { if (team) seeds.set(team, positions[i]); });
+  return seeds;
+}
