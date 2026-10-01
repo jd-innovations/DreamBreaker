@@ -13,7 +13,8 @@ export function PageShell({
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Header />
-      <main className="flex-1 pb-28 lg:pb-0">{children}</main>
+      {/* Room for the slimmer phone bottom bar (about 60px + 12px margin). */}
+      <main className="flex-1 pb-24 lg:pb-0">{children}</main>
       {!hideFooter && (
         <>
           <SponsorCarousel />

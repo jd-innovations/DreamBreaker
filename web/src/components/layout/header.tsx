@@ -11,6 +11,7 @@ import { useTheme } from "./theme-provider";
 import { createClient } from "@/lib/supabase/client";
 import { resetAnalytics } from "@/lib/analytics";
 import { NotificationBell } from "@/components/notifications/bell";
+import { useHideOnScroll } from "./use-hide-on-scroll";
 
 const navLinks = [
   { to: "/tournaments",  label: "Tournaments",   testid: "nav-tournaments" },
@@ -35,6 +36,15 @@ export function Header() {
   const [loggingOut, setLoggingOut] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  // Phone layout only (below lg): slides away on scroll down, back on scroll
+  // up; never while the menu is open. Desktop is unchanged.
+  const hidden = useHideOnScroll(open);
+
+  // Bars pinned under the header (Tournaments filter bar) follow it up, via
+  // --mobile-header-top on the root element.
+  useEffect(() => {
+    document.documentElement.style.setProperty("--mobile-header-top", hidden ? "0px" : "52px");
+  }, [hidden]);
 
   const toInitials = (fullName: string) => {
     const parts = fullName.trim().split(/\s+/);
@@ -132,8 +142,13 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border" data-testid="site-header">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+    <header
+      className={`sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border transition-transform duration-200 motion-reduce:transition-none ${
+        hidden ? "max-lg:-translate-y-full" : ""
+      }`}
+      data-testid="site-header"
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[52px] lg:h-16 flex items-center justify-between gap-3 lg:gap-4">
         <Link href="/" className="shrink-0" data-testid="header-logo-link">
           <Logo />
         </Link>
@@ -166,9 +181,10 @@ export function Header() {
             onClick={toggle}
             data-testid="theme-toggle-btn"
             aria-label="Toggle theme"
-            className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-foreground hover:bg-secondary transition-colors"
+            className="h-9 w-9 lg:h-10 lg:w-10 rounded-full border border-border flex items-center justify-center text-foreground hover:bg-secondary transition-colors"
           >
-            {theme === "dark" ? <Sun size={18} weight="bold" /> : <Moon size={18} weight="bold" />}
+            {theme === "dark" ? <Sun size={16} weight="bold" className="lg:hidden" /> : <Moon size={16} weight="bold" className="lg:hidden" />}
+            {theme === "dark" ? <Sun size={18} weight="bold" className="hidden lg:block" /> : <Moon size={18} weight="bold" className="hidden lg:block" />}
           </button>
 
           {authed ? (
@@ -176,7 +192,7 @@ export function Header() {
               <button
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="hidden sm:inline-flex h-10 px-5 rounded-full font-semibold text-sm border border-border hover:bg-secondary/60 transition-colors items-center disabled:opacity-60"
+                className="hidden lg:inline-flex h-10 px-5 rounded-full font-semibold text-sm border border-border hover:bg-secondary/60 transition-colors items-center disabled:opacity-60"
                 data-testid="header-logout-btn"
               >
                 {loggingOut ? "Signing out…" : "Log Out"}
@@ -186,7 +202,7 @@ export function Header() {
                 className="relative p-[1.5px] rounded-full bg-gradient-to-r from-violet-500 via-pink-400 to-cyan-400 hover:brightness-110 transition-all inline-flex"
                 data-testid="header-getstarted-btn"
               >
-                <span className="h-[37px] px-5 rounded-full font-mono tracking-widest text-sm bg-gradient-to-br dark:from-zinc-950 dark:to-zinc-800 from-white to-zinc-100 dark:text-white text-zinc-900 inline-flex items-center">
+                <span className="h-[33px] px-4 lg:h-[37px] lg:px-5 rounded-full font-mono tracking-widest text-sm bg-gradient-to-br dark:from-zinc-950 dark:to-zinc-800 from-white to-zinc-100 dark:text-white text-zinc-900 inline-flex items-center">
                   {initials ?? "ME"}
                 </span>
                 {isDirector && (
@@ -222,7 +238,7 @@ export function Header() {
           )}
 
           <button
-            className="lg:hidden h-10 w-10 rounded-full border border-border flex items-center justify-center"
+            className="lg:hidden h-9 w-9 rounded-full border border-border flex items-center justify-center"
             onClick={() => setOpen(!open)}
             data-testid="mobile-menu-toggle"
             aria-label="Menu"

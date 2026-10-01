@@ -107,7 +107,7 @@ export default function TournamentsPage() {
         </div>
       </section>
 
-      <section className="border-b border-border sticky top-16 z-30 bg-background/90 backdrop-blur-xl">
+      <section className="border-b border-border sticky max-lg:top-[var(--mobile-header-top,52px)] lg:top-16 z-30 bg-background/90 backdrop-blur-xl max-lg:transition-[top] max-lg:duration-200 motion-reduce:transition-none">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col lg:flex-row gap-3 lg:items-center">
           <div className="relative flex-1">
             <MagnifyingGlass size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" weight="bold" />
