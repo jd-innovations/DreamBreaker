@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DreamBreaker - PPA Replay Preview</title>
+  <style>
+    :root { --navy:#0A1228; --gold:#C9A84C; --page:#F3F6FC; --white:#FFF; --border:#E0E8F5; --muted:#7184A8; --green:#22C55E; --gold-bg:#F8F2E2; }
+    * { box-sizing: border-box; }
+    body { margin:0; overflow-x:hidden; background:var(--page); color:var(--navy); font-family:Inter,Arial,sans-serif; letter-spacing:0; }
+    header { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:12px; padding:16px 20px; background:var(--white); border-bottom:1px solid var(--border); }
+    .back { font-size:24px; line-height:1; }
+    .head-copy { flex:1; min-width:0; }
+    h1 { margin:0; font-size:18px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .subtitle { margin-top:3px; color:var(--muted); font-size:12px; }
+    .status { flex:none; padding:5px 8px; border:1px solid rgba(201,168,76,.4); border-radius:5px; background:var(--gold-bg); color:#8A6B19; font-size:10px; font-weight:800; text-transform:uppercase; }
+    main { width:min(100%, 820px); margin:0 auto; padding:18px 16px 40px; }
+    .notice { display:flex; gap:10px; padding:12px; margin-bottom:20px; border:1px solid rgba(201,168,76,.4); border-radius:8px; background:var(--gold-bg); }
+    .notice-mark { color:var(--gold); font-weight:900; }
+    .notice > div { min-width:0; }
+    .notice strong { display:block; font-size:14px; }
+    .notice span { display:block; margin-top:3px; color:var(--muted); font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
+    .section { margin-bottom:22px; }
+    .section-label { display:flex; align-items:center; gap:7px; margin:0 0 11px; font-size:11px; font-weight:900; text-transform:uppercase; }
+    .section-label::before { content:""; width:7px; height:7px; border:2px solid var(--gold); border-radius:50%; }
+    .summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+    .metric { min-height:76px; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:10px 4px; border:1px solid var(--border); border-radius:8px; background:var(--white); text-align:center; }
+    .metric strong { font-size:20px; }
+    .metric small { max-width:100%; margin-top:5px; color:var(--muted); font-size:9px; font-weight:800; text-align:center; text-transform:uppercase; overflow-wrap:anywhere; }
+    .metric.success strong { color:var(--green); }
+    .metric.gold { background:var(--gold-bg); border-color:rgba(201,168,76,.4); }
+    .metric.gold strong { color:#9A781F; }
+    .division { overflow:hidden; border:1px solid var(--border); border-radius:8px; background:var(--white); }
+    .division-head { display:flex; align-items:center; gap:10px; padding:14px; border-bottom:1px solid var(--border); }
+    .division-head div:first-child { flex:1; }
+    .division-head h2 { margin:0 0 3px; font-size:16px; }
+    .division-head p { margin:0; color:var(--muted); font-size:12px; }
+    .published { color:var(--green); font-size:10px; font-weight:800; text-transform:uppercase; }
+    .podium { display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--border); }
+    .podium.champion { background:var(--gold-bg); }
+    .rank { width:36px; height:36px; display:grid; place-items:center; flex:none; border:1px solid var(--border); border-radius:50%; font-weight:900; }
+    .champion .rank { color:#8A6B19; border-color:rgba(201,168,76,.4); background:var(--white); }
+    .podium small { display:block; margin-bottom:2px; color:var(--muted); font-size:9px; font-weight:800; text-transform:uppercase; }
+    .podium strong { font-size:14px; }
+    details { background:var(--page); }
+    summary { cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; padding:13px 14px; font-size:12px; font-weight:800; }
+    summary::-webkit-details-marker { display:none; }
+    summary::after { content:"+"; color:var(--gold); font-size:18px; }
+    details[open] summary::after { content:"-"; }
+    .detail-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+    .detail { padding:12px; background:var(--white); }
+    .detail small { display:block; color:var(--muted); font-size:9px; font-weight:800; text-transform:uppercase; }
+    .detail strong { display:block; margin-top:4px; font-size:13px; }
+    .round { padding:12px 14px; border-bottom:1px solid var(--border); }
+    .round:last-child { border-bottom:0; }
+    .round-title { display:flex; justify-content:space-between; gap:10px; margin-bottom:8px; }
+    .round-title strong { font-size:12px; }
+    .round-title span { color:var(--muted); font-size:11px; }
+    .matches { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+    .match { display:grid; grid-template-columns:1fr auto; gap:4px 10px; padding:9px 10px; background:var(--white); border:1px solid var(--border); border-radius:6px; font-size:11px; }
+    .match .winner { font-weight:800; }
+    .match .loser { color:var(--muted); }
+    .score { font-variant-numeric:tabular-nums; font-weight:900; }
+    @media (max-width:560px) { .summary { grid-template-columns:repeat(2,minmax(0,1fr)); } .matches { grid-template-columns:1fr; } .detail-grid { grid-template-columns:1fr; } .status { max-width:80px; text-align:center; } }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="back">‹</span>
+    <div class="head-copy"><h1>Veolia Arizona Open</h1><div class="subtitle">Sep 20, 2026 · Mesa, AZ</div></div>
+    <span class="status">Replay Preview</span>
+  </header>
+  <main>
+    <div class="notice"><span class="notice-mark">TEST</span><div><strong>PPA replay preview</strong><span>Development-only results. No records were written to Supabase.</span></div></div>
+    <section class="section">
+      <h2 class="section-label">Tournament summary</h2>
+      <div class="summary">
+        <div class="metric success"><strong>1/1</strong><small>Divisions</small></div>
+        <div class="metric"><strong>29</strong><small>Total matches</small></div>
+        <div class="metric gold"><strong>1</strong><small>Champions</small></div>
+        <div class="metric success"><strong>100%</strong><small>Complete</small></div>
+      </div>
+    </section>
+    <section class="section">
+      <h2 class="section-label">Division results</h2>
+      <article class="division">
+        <div class="division-head"><div><h2>Women's Doubles</h2><p>29 matches played</p></div><span class="published">Published</span></div>
+        <div class="podium champion"><span class="rank">1</span><div><small>Champion</small><strong>Rachel Rohrabacher / Parris Todd</strong></div></div>
+        <div class="podium"><span class="rank">2</span><div><small>Runner-up</small><strong>Tyra Hurricane Black / Meghan Dizon</strong></div></div>
+        <details open>
+          <summary>Full division detail</summary>
+          <div class="detail-grid"><div class="detail"><small>Final score</small><strong>11 - 4</strong></div><div class="detail"><small>Teams</small><strong>30 registered</strong></div><div class="detail"><small>Rounds</small><strong>6 rounds</strong></div></div>
+          <div id="rounds"></div>
+        </details>
+      </article>
+    </section>
+  </main>
+  <script>
+    const teams={1:'Rachel Rohrabacher / Parris Todd',2:'Tyra Hurricane Black / Meghan Dizon',3:'Lacy Schneemann / Tina Pisnik',4:'Sofia Sewing / Catherine Parenteau',5:'Kate Fahey / Ting Chieh Wei',6:'Chao Yi Wang / Milan Rane',7:'Brooke Buckner / Kaitlyn Christian',8:'Etta Tuionetoa / Jessie Irvine',9:'Mari Humberg / Judit Castillo',10:'Liz Truluck / Cailyn Campbell',11:'Angie Walker / Alex Walker',12:'Genie Erokhina / Emma Nelson',13:'Xiao Yi Wang-Beckvall / Zoeya Khan',14:'Hannah Blatt / Jalina Ingram',15:'Victoria Dimuzio / Layne Sleeth',16:'Christa Gecheva / Elsie Hendershot',17:'Lauren Stratman / Lindsey Newman',18:'Nicole Conard / Marcela Aguila Ampon',19:'Isabella Dunlap / Alexa Schull',20:'Daria Walczak / Kiora Kunimoto',21:'Mary Brascia / Maggie Brascia',22:'Olivia McMillan / Chloe Igleski',23:'Kelly Goodnow / Naomi Nguyen',24:'Luana Stanciu / Camila Zilveti',25:'Ava Cavataio / Estee Widdershoven',26:'Audrey Adele Brown / Rachel Rettger',27:'Ella Cosma / Polina Libo',28:'Gina Li / Eileen Wang',29:'Carlota Trevino / Cc Eleven Sacca',30:'Naomi Tran / Janet Liu'};
+    const m=[['Round of 64',24,29,5,11],['Round of 64',27,30,5,11],['Round of 32',12,20,2,11],['Round of 32',7,26,11,2],['Round of 32',9,21,11,7],['Round of 32',4,29,11,6],['Round of 32',17,19,11,3],['Round of 32',10,23,11,7],['Round of 32',14,18,11,5],['Round of 32',8,28,11,5],['Round of 32',11,15,10,12],['Round of 32',16,25,9,11],['Round of 32',6,30,11,9],['Round of 32',13,22,0,11],['Round of 16',1,20,11,5],['Round of 16',7,9,9,11],['Round of 16',4,17,11,2],['Round of 16',5,10,11,8],['Round of 16',2,14,11,2],['Round of 16',8,15,11,4],['Round of 16',3,25,11,5],['Round of 16',6,22,11,1],['Quarterfinals',1,9,11,8],['Quarterfinals',4,5,11,6],['Quarterfinals',2,8,11,5],['Quarterfinals',3,6,11,6],['Semifinals',1,4,11,5],['Semifinals',2,3,11,8],['Final',1,2,11,4]];
+    const rounds=[...new Set(m.map(x=>x[0]))];
+    document.getElementById('rounds').innerHTML=rounds.map(r=>{const games=m.filter(x=>x[0]===r);return `<div class="round"><div class="round-title"><strong>${r}</strong><span>${games.length}/${games.length} completed</span></div><div class="matches">${games.map(x=>{const one=x[3]>x[4];return `<div class="match"><span class="${one?'winner':'loser'}">${teams[x[1]]}</span><span class="score">${x[3]}</span><span class="${one?'loser':'winner'}">${teams[x[2]]}</span><span class="score">${x[4]}</span></div>`}).join('')}</div></div>`}).join('');
+  </script>
+</body>
+</html>

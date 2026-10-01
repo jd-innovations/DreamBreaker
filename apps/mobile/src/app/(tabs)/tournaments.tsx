@@ -23,6 +23,7 @@ import {
   getPlayerRegStatusInfo,
   type PlayerRegStatusKey,
 } from '@/lib/tournamentStatus';
+import { PPA_ARIZONA_PREVIEW_ID } from '@/lib/replays/ppaArizonaWomensDoubles';
 
 const FILTERS = ['All', 'Open', 'Filling Fast', '$5k+ Prize'];
 const DEFAULT_FILTER = 'Open';
@@ -271,6 +272,22 @@ export default function TournamentsScreen() {
           extraData={playerStatusMap}
           contentContainerStyle={[s2.list, { paddingBottom: insets.bottom + 16 }]}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={__DEV__ ? (
+            <TouchableOpacity
+              style={s2.replayPreview}
+              activeOpacity={0.82}
+              onPress={() => router.push(`/tournament/${PPA_ARIZONA_PREVIEW_ID}/player-results` as never)}
+            >
+              <View style={s2.replayIcon}>
+                <Ionicons name="trophy-outline" size={18} color={colors.gold} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={s2.replayTitle}>Review PPA replay</Text>
+                <Text style={s2.replaySub}>Arizona Open · Women's Doubles · 29 matches</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textSub} />
+            </TouchableOpacity>
+          ) : null}
           ListEmptyComponent={
             <View style={s2.empty}>
               <Ionicons name="search" size={38} color={colors.textSub} />
@@ -389,6 +406,18 @@ const s2 = StyleSheet.create({
     paddingLeft: 20, paddingRight: 20, paddingBottom: 12, paddingTop: 8,
   },
   title: { fontSize: text.sectionTitle.size, fontWeight: '900', color: colors.navy },
+  replayPreview: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: colors.goldBg, borderWidth: 1, borderColor: colors.goldBorder,
+    borderRadius: shape.card, padding: 14, marginBottom: 14,
+  },
+  replayIcon: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.goldBorder,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  replayTitle: { color: colors.navy, fontSize: text.rowTitle.size, fontWeight: '800', marginBottom: 2 },
+  replaySub: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500' },
   notifBtn: {
     width: 38, height: 38, borderRadius: 19, backgroundColor: colors.bg,
     borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center',

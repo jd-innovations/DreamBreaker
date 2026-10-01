@@ -1,3 +1,6 @@
+import type { DirectorBracket } from '@/lib/directorBracketStore';
+import type { Tournament } from '@/lib/tournamentTypes';
+
 export type ReplayMatch = {
   round: string;
   number: number;
@@ -7,9 +10,6 @@ export type ReplayMatch = {
   score2: number;
   winnerSeed: number;
 };
-
-import type { DirectorBracket } from '@/lib/directorBracketStore';
-import type { Tournament } from '@/lib/tournamentTypes';
 
 export const PPA_ARIZONA_PREVIEW_ID = 'preview-ppa-arizona-womens-doubles';
 
