@@ -465,9 +465,9 @@ export default function PartnerFinderScreen() {
           <View style={[s.infoCard, { paddingBottom: insets.bottom + 14 }]} pointerEvents="box-none">
 
             {/* Animated swipe hint — inside card for darker backdrop. Red X / green
-                tick (owner, 2026-10-02), the drag stamps' colours, so the hint and
-                the PASS / CONNECT stamps read as one system; the shapes and words
-                carry the meaning for anyone who can't tell red from green. */}
+                tick chips (owner, 2026-10-02), the drag stamps' colours, so the hint
+                and the PASS / CONNECT stamps read as one system; the sentence stays
+                plain white, and the shapes carry the meaning without colour. */}
             <View style={s.swipeHintWrap} pointerEvents="none">
               <View style={s.swipeHandRow}>
                 <View style={[s.swipeChip, { backgroundColor: SWIPE_PASS }]}>
@@ -480,11 +480,7 @@ export default function PartnerFinderScreen() {
                   <Ionicons name="checkmark" size={16} color="#FFFFFF" />
                 </View>
               </View>
-              <Text style={s.swipeHintText}>
-                Swipe left to <Text style={[s.swipeHintWord, { color: SWIPE_PASS }]}>pass</Text>
-                {' · right to '}
-                <Text style={[s.swipeHintWord, { color: SWIPE_CONNECT }]}>connect</Text>
-              </Text>
+              <Text style={s.swipeHintText}>Swipe left to pass · right to connect</Text>
             </View>
 
             {/* Divider */}
@@ -861,7 +857,6 @@ const s = StyleSheet.create({
   swipeHandRow: { flexDirection: 'row', alignItems: 'center', gap: 36 },
   swipeChip: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   swipeHintText: { color: 'rgba(255,255,255,0.52)', fontSize: text.caption.size, fontWeight: '500', letterSpacing: 0.2 },
-  swipeHintWord: { fontWeight: '700' },
 
   // ── Shared sheet styles ───────────────────────────────────────────────────
   handleWrap: { alignItems: 'center', paddingVertical: 8 },
