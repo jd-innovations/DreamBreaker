@@ -13,12 +13,24 @@ is why they were still unstyled long after Phase 5 wrapped the app templates.
 ## Applying
 
 Dashboard → Authentication → Emails. Paste the file body into the matching
-template. Subjects are set separately in that same screen and are unchanged:
+template, and the subject into that template's Subject field. Subjects accept
+the same template variables as the body:
 
 | File | Template | Subject |
 |---|---|---|
-| `confirm-signup.html` | Confirm signup | Confirm your email address |
-| `reset-password.html` | Reset password | Reset your password |
+| `confirm-signup.html` | Confirm signup | `Confirm your email address: {{ .Email }}` |
+| `reset-password.html` | Reset password | `Reset your password: {{ .Email }}` |
+
+The recipient's address in the subject (2026-10-02) keeps emails for different
+accounts out of one mail thread — two demo accounts on one inbox were threaded
+together and the older, already-used link got tapped.
+
+**Never put `.Data` (signup metadata such as `full_name`) in a subject or body.**
+Anyone can sign up with someone else's address and any name, so metadata is
+attacker-controlled text that GoTrue would deliver from our domain to a
+stranger's inbox — a phishing line in the subject, repeatable through resend.
+The first draft of this change did exactly that and the security review caught
+it. `.Email` is safe: it is the recipient's own address.
 
 ## Regenerating
 

@@ -25,12 +25,15 @@
 // drift apart.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
+} from 'react-native';
 import { router } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { completeEmailConfirmation, describeAuthLink } from '@/lib/auth';
+import { ResendConfirmation } from '@/components/auth/ResendConfirmation';
 import { colors, spacing } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 
@@ -85,26 +88,32 @@ export default function ConfirmEmailScreen() {
     );
   }
 
+  // Failure (2026-10-02): a way forward instead of a dead end. The usual causes
+  // are a link already used, an expired one, or an older email for another
+  // account in the same mail thread — a fresh link fixes all three.
   return (
-    <View style={s.center}>
-      <StatusBar style="dark" />
-      <Ionicons name="alert-circle-outline" size={56} color={colors.textSub} />
-      <Text style={s.title}>This link didn&apos;t work</Text>
-      <Text style={s.body}>
-        It may have already been used or expired. Try signing in — if your email is confirmed,
-        you&apos;re good to go.
-      </Text>
-      <TouchableOpacity style={s.cta} activeOpacity={0.85} onPress={() => router.replace('/sign-in')}>
-        <Text style={s.ctaText}>Go to Sign In</Text>
-      </TouchableOpacity>
-      {!!detail && <Text style={s.detail}>{detail}</Text>}
-    </View>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={s.center} keyboardShouldPersistTaps="handled">
+        <StatusBar style="dark" />
+        <Ionicons name="alert-circle-outline" size={56} color={colors.textSub} />
+        <Text style={s.title}>This link didn&apos;t work</Text>
+        <Text style={s.body}>
+          It may have been used already, expired, or come from an older email. Get a new link
+          below, or sign in if your email is already confirmed.
+        </Text>
+        <ResendConfirmation />
+        <TouchableOpacity style={s.cta} activeOpacity={0.85} onPress={() => router.replace('/sign-in')}>
+          <Text style={s.ctaText}>Go to Sign In</Text>
+        </TouchableOpacity>
+        {!!detail && <Text style={s.detail}>{detail}</Text>}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const s = StyleSheet.create({
   center: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
+    flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl,
     backgroundColor: colors.bg, paddingHorizontal: spacing.xl, gap: spacing.md,
   },
   title: {

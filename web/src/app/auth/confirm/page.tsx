@@ -27,6 +27,7 @@ import { redeemSessionFromUrl, type RedeemResult } from "@/lib/auth/redeem-url";
 import { loadDraft, clearDraft, draftBelongsTo } from "@/lib/onboarding/persistence";
 import { writeProfileFields } from "@/lib/onboarding/finalize";
 import { isProfileCompleteForEntry } from "@/lib/onboarding/completion";
+import { ResendConfirmation } from "@/components/auth/resend-confirmation";
 
 type State =
   | { status: "working" }
@@ -119,9 +120,10 @@ export default function ConfirmPage() {
               {state.message}
             </p>
             <p className="text-sm text-muted-foreground">
-              If you opened this link on a different device or browser than the one you signed up
-              on, try signing in directly — your account may already be confirmed.
+              It may have been used already, expired, or come from an older email. Get a new link
+              below, or sign in if your email is already confirmed.
             </p>
+            <ResendConfirmation />
             <Link
               href="/auth"
               className="inline-block font-display tracking-[0.2em] text-sm text-primary hover:underline"

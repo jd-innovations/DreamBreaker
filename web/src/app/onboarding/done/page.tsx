@@ -16,7 +16,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle, EnvelopeSimple } from "@phosphor-icons/react";
-import { loadDraft } from "@/lib/onboarding/persistence";
+import { loadDraft, loadSignupSeed } from "@/lib/onboarding/persistence";
+import { ResendConfirmation } from "@/components/auth/resend-confirmation";
 
 function DoneContent() {
   const params = useSearchParams();
@@ -32,6 +33,7 @@ function DoneContent() {
   // So the claim is now backed by a read of the stored draft. Field names only,
   // never values.
   const [held, setHeld] = useState<string[] | null>(null);
+  const [seedEmail, setSeedEmail] = useState("");
   useEffect(() => {
     if (!deferred) return;
     const stored = loadDraft();
@@ -39,6 +41,7 @@ function DoneContent() {
     // render, which is what this rule permits in prose and flags in code.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHeld(stored ? [...stored.touched].sort() : []);
+    setSeedEmail(loadSignupSeed()?.email ?? "");
   }, [deferred]);
 
   return (
@@ -90,6 +93,12 @@ function DoneContent() {
             ? `HOLDING ${held.length} ANSWERS — ${held.join(", ")}`
             : "NO ANSWERS STORED — TELL SUPPORT BEFORE CONFIRMING"}
         </p>
+      )}
+
+      {/* No email in the inbox, or an older one in the same thread: a fresh link
+          (2026-10-02). Prefilled from the signup seed when this browser has it. */}
+      {deferred && (
+        <ResendConfirmation key={seedEmail} initialEmail={seedEmail} className="max-w-xs mx-auto mb-6 text-left" />
       )}
 
       {deferred ? (

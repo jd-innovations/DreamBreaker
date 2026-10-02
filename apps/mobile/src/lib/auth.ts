@@ -55,6 +55,21 @@ export async function signIn(email: string, password: string) {
  * (which is safe) and only re-signs-up an unconfirmed one, which is the
  * pre-existing behaviour rather than something this makes worse.
  */
+/**
+ * Re-send the Confirm signup email (owner, 2026-10-02). Same destination as
+ * signUp() so the new link opens the app the same way. Returns GoTrue's error
+ * (or null); callers turn it into words with resendErrorMessage() from
+ * @shared/authResend, which also explains why success is worded neutrally.
+ */
+export async function resendConfirmation(email: string) {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: email.trim().toLowerCase(),
+    options: { emailRedirectTo: `${APP_LINK_ORIGIN}/auth/confirm` },
+  });
+  return error ? { code: error.code, status: error.status } : null;
+}
+
 export type ExistingAccountProbe = 'signed_in' | 'unconfirmed' | 'no_account';
 
 export async function probeExistingAccount(

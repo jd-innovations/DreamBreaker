@@ -86,7 +86,7 @@ const templates = {
   'reset-password.html': {
     preheader: 'Choose a new password for your Pickleball App account.',
     bodyHtml: `
-          <p>We received a request to reset your password. Use the button below to choose a new one.</p>
+          <p>We received a request to reset the password for <strong>{{ .Email }}</strong>. Use the button below to choose a new one.</p>
           <p>This link can only be used once, and it expires after a short while. If you didn&#39;t request this, you can safely ignore this email &mdash; your password will stay as it is.</p>`,
     ctaLabel: 'RESET PASSWORD',
     ctaUrl: TOKEN,
@@ -95,13 +95,18 @@ const templates = {
   'confirm-signup.html': {
     preheader: 'Confirm your email address to finish signing up.',
     bodyHtml: `
-          <p>Welcome to Pickleball App. Confirm this email address to finish setting up your account.</p>
+          <p>Welcome to Pickleball App. Confirm <strong>{{ .Email }}</strong> to finish setting up your account.</p>
           <p>If you didn&#39;t create an account, you can safely ignore this email.</p>`,
     ctaLabel: 'CONFIRM EMAIL',
     ctaUrl: TOKEN,
     href: CTA.confirm,
   },
 };
+
+// The recipient is named in the body ({{ .Email }}) and the subject (see
+// README.md) since 2026-10-02: two demo accounts on one inbox got identical
+// emails that Apple Mail threaded together, and the owner tapped the older,
+// already-used link -- "One-time token not found" with nothing else wrong.
 
 for (const [file, { href, ...opts }] of Object.entries(templates)) {
   const html = swap(renderEmail({ ...common, ...opts }), href);

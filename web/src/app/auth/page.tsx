@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { createClient, createEmailLinkClient } from "@/lib/supabase/client";
 import { saveSignupSeed, clearDraft, clearSignupSeed } from "@/lib/onboarding/persistence";
 import { LEGAL_ROUTES } from "@/lib/legal";
+import { ResendConfirmation } from "@/components/auth/resend-confirmation";
 
 const ROLE_OPTIONS = [
   { id: "player",   label: "PLAYER",   desc: "Compete in tournaments & find partners", icon: Trophy },
@@ -52,6 +53,9 @@ export default function AuthPage() {
   // Controlled so "Forgot?" can read the address the user already typed
   // instead of asking for it twice.
   const [loginEmail, setLoginEmail] = useState("");
+  // Right password, unconfirmed email (2026-10-02): offer a new link under the
+  // form instead of the bare "Email not confirmed" toast.
+  const [unconfirmed, setUnconfirmed] = useState(false);
 
   // These three lines used to read "184 active tournaments", "3,210 partners
   // matched" and "$1.2M in prizes awarded" — hardcoded, against a database of
@@ -178,6 +182,12 @@ export default function AuthPage() {
       });
       if (error) {
         track("auth_failed", { method: "email", source: "auth_page" });
+        if (error.code === "email_not_confirmed") {
+          // GoTrue returns this only after the password checks out.
+          setUnconfirmed(true);
+          toast.error("Confirm your email first. Open the newest email from us, or get a new link below.");
+          return;
+        }
         toast.error(error.message);
         return;
       }
@@ -319,6 +329,14 @@ export default function AuthPage() {
                 </div>
                 <Button type="submit" disabled={loading} className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em]" data-testid="auth-login-btn">{loading ? "SIGNING IN…" : "SIGN IN"}</Button>
               </form>
+              {unconfirmed && (
+                <div className="mt-4 rounded-xl border border-border p-4 space-y-2" data-testid="auth-unconfirmed">
+                  <p className="text-sm">
+                    Your email isn&apos;t confirmed yet. We sent a link to <strong>{loginEmail.trim()}</strong>.
+                  </p>
+                  <ResendConfirmation key={loginEmail.trim()} initialEmail={loginEmail.trim()} showEmailField={false} />
+                </div>
+              )}
               <div className="flex items-center gap-3 my-5"><div className="flex-1 h-px bg-border" /><span className="text-xs text-muted-foreground font-mono">OR</span><div className="flex-1 h-px bg-border" /></div>
               <div className="grid grid-cols-2 gap-3">
                 <button type="button" disabled={loading} onClick={() => handleOAuth("google")} className="h-12 rounded-full border border-border flex items-center justify-center gap-2 text-sm hover:bg-secondary/60 transition-colors disabled:opacity-60" data-testid="auth-google-btn"><GoogleLogo size={18} />Google</button>

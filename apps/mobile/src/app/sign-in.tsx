@@ -5,6 +5,7 @@ import {
   ScrollView, ActivityIndicator, Alert, Animated, Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { resendWithAlert } from '@/components/auth/ResendConfirmation';
 import { router, useLocalSearchParams } from 'expo-router';
 import { safeReturnTo } from '@shared/deep-link';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -69,6 +70,21 @@ export default function SignInScreen() {
       router.replace((returnTo ?? '/') as never);
     } catch (e: any) {
       haptics.error();
+      // Right password, unconfirmed email: offer a new link (2026-10-02) instead
+      // of the server's bare "Email not confirmed". GoTrue only returns this
+      // code after the password checks out, so it reveals nothing new.
+      if (e?.code === 'email_not_confirmed') {
+        const address = email.trim().toLowerCase();
+        Alert.alert(
+          'Confirm your email first',
+          `We sent a confirmation link to ${address}. Open the newest email from us, or get a new link.`,
+          [
+            { text: 'OK', style: 'cancel' },
+            { text: 'Send new link', onPress: () => { void resendWithAlert(address); } },
+          ],
+        );
+        return;
+      }
       Alert.alert('Sign in failed', e.message ?? 'Please check your credentials and try again.');
     } finally {
       setLoading(false);

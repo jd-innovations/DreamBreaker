@@ -116,7 +116,8 @@ function draftToProfileFields(draft: OnboardingDraft) {
 }
 
 export type FinalizeOnboardingResult =
-  | { ok: true; needsEmailConfirmation: boolean }
+  /** email: set when confirmation is needed, so the screen can offer a resend. */
+  | { ok: true; needsEmailConfirmation: boolean; email?: string }
   | { ok: false; error: string }
   /**
    * An account already exists for this email and its address was never
@@ -194,7 +195,7 @@ export async function finalizeOnboarding(draft: OnboardingDraft): Promise<Finali
     // raw_user_meta_data and the profile row is written by the trigger only
     // once the email is confirmed — counting it now would claim a completed
     // profile for everyone who never opens the confirmation mail.
-    return { ok: true, needsEmailConfirmation: true };
+    return { ok: true, needsEmailConfirmation: true, email: draft.profileEmail };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Something went wrong. Please try again.' };
   }

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Easing, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { resendWithAlert } from '@/components/auth/ResendConfirmation';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing } from '@/theme';
@@ -255,10 +256,16 @@ function FinalCTA() {
     haptics.success();
 
     if (result.needsEmailConfirmation) {
+      const goSignIn = () => router.replace('/sign-in');
       Alert.alert(
         'Check your email',
         'We sent you a confirmation link. Open it, then come back and sign in to finish.',
-        [{ text: 'Go to Sign In', onPress: () => router.replace('/sign-in') }],
+        [
+          ...(result.email
+            ? [{ text: 'Resend link', onPress: () => { void resendWithAlert(result.email!, goSignIn); } }]
+            : []),
+          { text: 'Go to Sign In', onPress: goSignIn },
+        ],
       );
       return;
     }

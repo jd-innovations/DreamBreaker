@@ -5,6 +5,7 @@ import {
   ScrollView, ActivityIndicator, Alert, Animated, Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { resendWithAlert } from '@/components/auth/ResendConfirmation';
 import { router, useLocalSearchParams } from 'expo-router';
 import { safeReturnTo } from '@shared/deep-link';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -68,12 +69,17 @@ export default function SignUpScreen() {
     haptics.medium();
     setLoading(true);
     try {
-      await signUp(email.trim().toLowerCase(), password, fullName.trim());
+      const address = email.trim().toLowerCase();
+      await signUp(address, password, fullName.trim());
       haptics.success();
+      const goSignIn = () => router.replace({ pathname: '/sign-in', params: returnTo ? { returnTo } : {} });
       Alert.alert(
         'Check your email',
         'We sent you a confirmation link. Open it, then come back to sign in.',
-        [{ text: 'Go to Sign In', onPress: () => router.replace({ pathname: '/sign-in', params: returnTo ? { returnTo } : {} }) }],
+        [
+          { text: 'Resend link', onPress: () => { void resendWithAlert(address, goSignIn); } },
+          { text: 'Go to Sign In', onPress: goSignIn },
+        ],
       );
     } catch (e: any) {
       haptics.error();
