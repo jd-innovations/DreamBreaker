@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PLAY_STYLE_KEYS, playStyleLabel } from '@shared/play-profile';
+import { BIO_MAX_LENGTH, PLAY_STYLE_KEYS, playStyleLabel } from '@shared/play-profile';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   TextInput, Switch, Image, ActivityIndicator, Alert,
@@ -58,7 +58,6 @@ const L = {
   danger:   colors.danger,
 };
 
-const BIO_LIMIT = 100;
 
 // ─── Section header ───────────────────────────────────────────────────────────
 
@@ -201,26 +200,30 @@ function HandleField({
 
 // ─── Bio field ────────────────────────────────────────────────────────────────
 
+// Its own full-width block (owner, 2026-10-02): the label/value row right-aligned
+// a paragraph into half the width. maxLength trims a paste and always allows
+// deleting; the old guard rejected every edit while a bio was over the limit,
+// so a longer bio written on web could not even be shortened here.
 function BioField({ value, onChangeText }: { value: string; onChangeText: (t: string) => void }) {
   return (
     <>
       <Div />
-      <View style={s.bioRow}>
-        <Text style={s.fieldLabel}>Bio</Text>
-        <View style={s.bioRight}>
-          <TextInput
-            style={s.bioInput}
-            value={value}
-            onChangeText={t => { if (t.length <= BIO_LIMIT) onChangeText(t); }}
-            placeholder="Tell players about yourself…"
-            placeholderTextColor={L.textMuted}
-            selectionColor={L.navy}
-            underlineColorAndroid="transparent"
-            multiline
-            returnKeyType="done"
-          />
-          <Text style={s.bioCount}>{value.length}/{BIO_LIMIT}</Text>
-        </View>
+      <View style={s.bioBlock}>
+        <Text style={s.bioLabel}>Bio</Text>
+        <TextInput
+          style={s.bioInput}
+          value={value}
+          onChangeText={onChangeText}
+          maxLength={BIO_MAX_LENGTH}
+          placeholder="Tell players about yourself…"
+          placeholderTextColor={L.textMuted}
+          selectionColor={L.navy}
+          underlineColorAndroid="transparent"
+          multiline
+          textAlignVertical="top"
+          accessibilityLabel="Bio"
+        />
+        <Text style={s.bioCount}>{value.length}/{BIO_MAX_LENGTH}</Text>
       </View>
     </>
   );
@@ -980,15 +983,14 @@ const s = StyleSheet.create({
   },
 
   // Bio
-  bioRow: {
-    flexDirection: 'row', paddingHorizontal: 16, paddingTop: 13, paddingBottom: 10,
-    alignItems: 'flex-start',
-  },
-  bioRight: { flex: 1 },
+  bioBlock: { paddingHorizontal: 16, paddingTop: 13, paddingBottom: 10, gap: 8 },
+  bioLabel: { color: L.text, fontSize: text.body.size, fontWeight: '500' },
   bioInput: {
     color: L.text, fontSize: text.body.size, fontWeight: '500',
-    textAlign: 'right', padding: 0, minHeight: 56,
-    borderWidth: 0, backgroundColor: 'transparent',
+    textAlign: 'left', minHeight: 96,
+    paddingHorizontal: 12, paddingTop: 10, paddingBottom: 10,
+    borderWidth: 1, borderColor: L.border, borderRadius: shape.panel,
+    backgroundColor: 'transparent',
     shadowColor: 'transparent', elevation: 0,
   },
   bioCount: {

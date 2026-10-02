@@ -237,3 +237,10 @@ function titleCaseKey(raw: string): string {
   const words = raw.replace(/_/g, " ").trim();
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
+
+/**
+ * Longest profile bio, in characters (owner, 2026-10-02). One limit for mobile,
+ * web and the database (profiles_bio_length check, 20261002120000); it used to be
+ * 100 on mobile only, with none on web.
+ */
+export const BIO_MAX_LENGTH = 300;

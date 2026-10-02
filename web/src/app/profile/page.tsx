@@ -19,7 +19,7 @@ import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/client";
-import { PLAY_STYLE_KEYS, playStyleLabel } from "@shared/play-profile";
+import { BIO_MAX_LENGTH, PLAY_STYLE_KEYS, playStyleLabel } from "@shared/play-profile";
 import { getUserId } from "@/lib/dev-user";
 import { ensureFreshSession } from "@/lib/ensure-session";
 import { toast } from "sonner";
@@ -1035,7 +1035,9 @@ export default function ProfilePage() {
                     {/* Bio */}
                     <div>
                       <label className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5">BIO</label>
-                      <textarea rows={3} value={fields.bio} onChange={(e) => setFields((f) => ({ ...f, bio: e.target.value }))} placeholder="Tell players about your game..." className="w-full bg-secondary border border-border rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none" />
+                      {/* Same limit as mobile and the database (BIO_MAX_LENGTH). */}
+                      <textarea rows={4} maxLength={BIO_MAX_LENGTH} value={fields.bio} onChange={(e) => setFields((f) => ({ ...f, bio: e.target.value }))} placeholder="Tell players about your game..." className="w-full bg-secondary border border-border rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none" />
+                      <p className="mt-1 text-right font-mono text-[10px] text-muted-foreground">{fields.bio.length}/{BIO_MAX_LENGTH}</p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

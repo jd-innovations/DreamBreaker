@@ -12,7 +12,7 @@ import Link from "next/link";
 import { Camera, Check, UserCircle } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { PLAY_STYLE_KEYS, playStyleLabel } from "@shared/play-profile";
+import { BIO_MAX_LENGTH, PLAY_STYLE_KEYS, playStyleLabel } from "@shared/play-profile";
 import { ensureFreshSession } from "@/lib/ensure-session";
 import type { Tables } from "@shared/database.types";
 import Image from "next/image";
@@ -261,7 +261,9 @@ export function ProfileSettings({ userId }: { userId: string }) {
       {/* Bio */}
       <div>
         <label className={labelCls}>BIO</label>
-        <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} className={`${inputCls} h-auto py-3 resize-none`} placeholder="Tell players about your game..." />
+        {/* Same limit as mobile and the database (BIO_MAX_LENGTH). */}
+        <textarea value={bio} maxLength={BIO_MAX_LENGTH} onChange={(e) => setBio(e.target.value)} rows={4} className={`${inputCls} h-auto py-3 resize-none`} placeholder="Tell players about your game..." />
+        <p className="mt-1 text-right font-mono text-[10px] text-muted-foreground">{bio.length}/{BIO_MAX_LENGTH}</p>
       </div>
 
       {/* Skill */}
