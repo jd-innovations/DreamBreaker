@@ -39,6 +39,10 @@ const L = {
   danger:    '#E5343A',
 };
 
+// Swipe colours, shared by the PASS / CONNECT drag stamps and the swipe hint.
+const SWIPE_PASS = '#FF4D4D';
+const SWIPE_CONNECT = L.online;
+
 const REPORT_REASONS = [
   { id: 'inappropriate', label: 'Inappropriate images',          icon: 'image-outline'       },
   { id: 'fake',          label: 'Fake or misleading profile',    icon: 'person-remove-outline'},
@@ -452,14 +456,27 @@ export default function PartnerFinderScreen() {
         >
           <View style={[s.infoCard, { paddingBottom: insets.bottom + 14 }]} pointerEvents="box-none">
 
-            {/* Animated swipe hint — inside card for darker backdrop */}
+            {/* Animated swipe hint — inside card for darker backdrop. Red X / green
+                tick (owner, 2026-10-02), the drag stamps' colours, so the hint and
+                the PASS / CONNECT stamps read as one system; the shapes and words
+                carry the meaning for anyone who can't tell red from green. */}
             <View style={s.swipeHintWrap} pointerEvents="none">
-              <Animated.View style={[s.swipeHandRow, { transform: [{ translateX: swipeX }], opacity: swipeOpacity }]}>
-                <Ionicons name="arrow-back"         size={13} color="rgba(255,255,255,0.65)" />
-                <Ionicons name="hand-left-outline"  size={21} color="rgba(255,255,255,0.88)" />
-                <Ionicons name="arrow-forward"      size={13} color="rgba(255,255,255,0.65)" />
-              </Animated.View>
-              <Text style={s.swipeHintText}>Swipe left to pass · right to connect</Text>
+              <View style={s.swipeHandRow}>
+                <View style={[s.swipeChip, { backgroundColor: SWIPE_PASS }]}>
+                  <Ionicons name="close" size={16} color="#FFFFFF" />
+                </View>
+                <Animated.View style={{ transform: [{ translateX: swipeX }], opacity: swipeOpacity }}>
+                  <Ionicons name="hand-left-outline" size={21} color="rgba(255,255,255,0.88)" />
+                </Animated.View>
+                <View style={[s.swipeChip, { backgroundColor: SWIPE_CONNECT }]}>
+                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                </View>
+              </View>
+              <Text style={s.swipeHintText}>
+                Swipe left to <Text style={[s.swipeHintWord, { color: SWIPE_PASS }]}>pass</Text>
+                {' · right to '}
+                <Text style={[s.swipeHintWord, { color: SWIPE_CONNECT }]}>connect</Text>
+              </Text>
             </View>
 
             {/* Divider */}
@@ -770,10 +787,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 18, paddingVertical: 10,
     borderRadius: shape.cta, borderWidth: 3,
   },
-  passBadge:        { left: 24,  borderColor: '#FF4D4D', transform: [{ rotate: '-15deg' }] },
-  passBadgeText: { color: '#FF4D4D', fontSize: 28, fontWeight: '900', letterSpacing: 2 },
-  connectBadge:     { right: 24, borderColor: L.online,  transform: [{ rotate: '15deg'  }] },
-  connectBadgeText: { color: L.online,  fontSize: 28, fontWeight: '900', letterSpacing: 2 },
+  passBadge:        { left: 24,  borderColor: SWIPE_PASS, transform: [{ rotate: '-15deg' }] },
+  passBadgeText: { color: SWIPE_PASS, fontSize: 28, fontWeight: '900', letterSpacing: 2 },
+  connectBadge:     { right: 24, borderColor: SWIPE_CONNECT,  transform: [{ rotate: '15deg'  }] },
+  connectBadgeText: { color: SWIPE_CONNECT,  fontSize: 28, fontWeight: '900', letterSpacing: 2 },
 
   // Info overlay — anchored to bottom, no extra padding so card fills to edge
   infoOverlay: {
@@ -822,8 +839,11 @@ const s = StyleSheet.create({
 
   // Swipe hint — now inside card
   swipeHintWrap: { alignItems: 'center', gap: 5, paddingTop: 15, paddingBottom: 10 },
-  swipeHandRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // The hand travels ±26px (the hint loop), so the gap keeps it clear of the chips.
+  swipeHandRow: { flexDirection: 'row', alignItems: 'center', gap: 36 },
+  swipeChip: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   swipeHintText: { color: 'rgba(255,255,255,0.52)', fontSize: text.caption.size, fontWeight: '500', letterSpacing: 0.2 },
+  swipeHintWord: { fontWeight: '700' },
 
   // ── Shared sheet styles ───────────────────────────────────────────────────
   handleWrap: { alignItems: 'center', paddingVertical: 8 },
