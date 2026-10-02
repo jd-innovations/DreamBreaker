@@ -13,6 +13,7 @@ import { colors, spacing } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import { supabase } from '@/lib/supabase';
 import { useSupportContext } from '@/lib/support/supportContext';
+import { haptics } from '@/lib/haptics';
 import type { ConnectionRequest } from '@/lib/connectionStore';
 
 const L = {
@@ -356,7 +357,7 @@ export default function MatchRequestsScreen() {
             <TouchableOpacity
               key={t}
               style={[s.segBtn, activeTab === t && s.segBtnActive]}
-              onPress={() => setActiveTab(t)}
+              onPress={() => { if (t !== activeTab) { haptics.selection(); setActiveTab(t); } }}
             >
               <Text style={[s.segText, activeTab === t && s.segTextActive]}>
                 {t.charAt(0).toUpperCase() + t.slice(1)}
