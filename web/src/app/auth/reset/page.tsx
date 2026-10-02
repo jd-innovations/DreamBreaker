@@ -33,7 +33,8 @@ import { createClient } from "@/lib/supabase/client";
 
 type SessionState =
   | { status: "checking" }
-  | { status: "ready" }
+  /** email: whose password this will change, shown on the form. */
+  | { status: "ready"; email: string | null }
   | { status: "failed"; message: string; received: string };
 
 const DEFAULT_FAILURE =
@@ -102,12 +103,30 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    // A link that carries its own credentials must be the ONLY source of the
+    // session (2026-10-02). This used to accept any session at all, so in a
+    // browser already signed in as someone else, INITIAL_SESSION for THAT
+    // account marked the page ready, and Save ran updateUser() on whichever
+    // session won the race: a reset sent to one account could change another
+    // account's password. Seen when a demo account's reset link opened in a
+    // browser signed in as the owner (auth logs: the demo account's implicit
+    // login and the owner's refresh one second apart).
+    const linkHasCredentials =
+      hashParams.has("access_token") || searchParams.has("token_hash");
+
+    // Without credentials in the link (PKCE ?code, redeemed at client init),
+    // an existing session is the only possible proof; keep listening for it.
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) settle({ status: "ready" });
+      if (session && !linkHasCredentials) settle({ status: "ready", email: session.user.email ?? null });
     });
 
     void (async () => {
       try {
+        // Clear whoever is signed in here before redeeming, so the session that
+        // results is the link's account and nobody else's. Local scope: their
+        // other devices stay signed in.
+        if (linkHasCredentials) await supabase.auth.signOut({ scope: "local" });
+
         // ── Implicit fragment: redeem it by hand ──────────────────────────────
         //
         // This CANNOT be left to detectSessionInUrl. auth-js refuses to consume
@@ -134,28 +153,29 @@ export default function ResetPasswordPage() {
           }
           // Don't leave live tokens sitting in the address bar or in history.
           window.history.replaceState(null, "", window.location.pathname);
-          settle({ status: "ready" });
+          const { data: { user } } = await supabase.auth.getUser();
+          settle({ status: "ready", email: user?.email ?? null });
           return;
         }
 
         // ── token_hash: stateless, must be redeemed explicitly ────────────────
         const tokenHash = searchParams.get("token_hash");
         if (tokenHash) {
-          const { error } = await supabase.auth.verifyOtp({
+          const { data: verified, error } = await supabase.auth.verifyOtp({
             type: (searchParams.get("type") as "recovery" | "email" | "invite" | "magiclink") ?? "recovery",
             token_hash: tokenHash,
           });
           settle(
             error
               ? { status: "failed", message: error.message, received }
-              : { status: "ready" },
+              : { status: "ready", email: verified.user?.email ?? null },
           );
           return;
         }
 
         // ── PKCE, or an already-established session ───────────────────────────
         const { data } = await supabase.auth.getSession();
-        if (data.session) settle({ status: "ready" });
+        if (data.session) settle({ status: "ready", email: data.session.user.email ?? null });
       } catch (err: unknown) {
         settle({
           status: "failed",
@@ -247,8 +267,12 @@ export default function ResetPasswordPage() {
         {sessionState.status === "ready" && (
           <>
             <h1 className="font-display text-3xl tracking-wide mb-2">SET A NEW PASSWORD</h1>
-            <p className="text-sm text-muted-foreground mb-6">
-              Choose a new password for your account.
+            <p className="text-sm text-muted-foreground mb-6" data-testid="reset-account">
+              {sessionState.email ? (
+                <>Choose a new password for <strong className="text-foreground">{sessionState.email}</strong>.</>
+              ) : (
+                "Choose a new password for your account."
+              )}
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
