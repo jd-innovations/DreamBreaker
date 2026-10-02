@@ -417,12 +417,20 @@ export default function PartnerFinderScreen() {
         ]}
         {...panResponder.panHandlers}
       >
-        {/* Photo */}
-        <Image
-          source={{ uri: player.photos[photoIdx] }}
-          style={StyleSheet.absoluteFill}
-          resizeMode="cover"
-        />
+        {/* Photo. Today a profile has at most one (its avatar); Plus may allow up
+            to three later. With none, a placeholder instead of an empty frame. */}
+        {player.photos.length > 0 ? (
+          <Image
+            source={{ uri: player.photos[photoIdx] }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={s.noPhoto}>
+            <Ionicons name="person-outline" size={72} color="rgba(255,255,255,0.28)" />
+            <Text style={s.noPhotoText}>No photo yet</Text>
+          </View>
+        )}
 
         {/* PASS badge */}
         <Animated.View style={[s.swipeBadge, s.passBadge, { opacity: passOpacity }]}>
@@ -537,10 +545,13 @@ export default function PartnerFinderScreen() {
               >
                 <Ionicons name="information-circle" size={28} color="rgba(255,255,255,0.9)" />
               </TouchableOpacity>
-              <View style={s.photoCount}>
-                <Ionicons name="camera-outline" size={12} color="#FFF" />
-                <Text style={s.photoCountText}>{photoIdx + 1}/{player.photos.length}</Text>
-              </View>
+              {/* The real count; nothing when there are no photos (it read "1/0"). */}
+              {player.photos.length > 0 && (
+                <View style={s.photoCount}>
+                  <Ionicons name="camera-outline" size={12} color="#FFF" />
+                  <Text style={s.photoCountText}>{photoIdx + 1}/{player.photos.length}</Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -596,7 +607,7 @@ export default function PartnerFinderScreen() {
               if (!player) return;
               persistLike(player.id, 'save', player.name);
             }} filled={false} />
-          <ActionBtn icon="heart"        label="Connect" onPress={handleConnect} filled={true}  />
+          <ActionBtn icon="checkmark"    label="Connect" onPress={handleConnect} filled={true}  />
         </View>
         <View style={s.sheetHintRow}>
           <Ionicons name="swap-horizontal-outline" size={14} color={L.textMuted} />
@@ -828,6 +839,13 @@ const s = StyleSheet.create({
 
   cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   infoBtn: { padding: 2 },
+  noPhoto: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#111827',
+    alignItems: 'center', justifyContent: 'center', gap: 10,
+    paddingBottom: 220, // sit above the info card, not behind it
+  },
+  noPhotoText: { color: 'rgba(255,255,255,0.4)', fontSize: text.caption.size, fontWeight: '600', letterSpacing: 0.3 },
   photoCount: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: shape.cta,
