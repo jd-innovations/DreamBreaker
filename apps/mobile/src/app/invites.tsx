@@ -523,6 +523,8 @@ export default function InvitesScreen() {
   // when nothing is waiting in Received but something unread is in Activity,
   // open Activity. Decided once; later refocuses leave the chosen tab alone.
   const tabDecided = useRef(false);
+  const receivedBadge = gameInvites.length + groupInvites.length;
+  const activityBadge = notifications.filter(n => !n.readAt).length;
 
   useFocusEffect(useCallback(() => {
     const invitesPending = Promise.all([refreshReceivedInvites(), refreshReceivedGroupInvites()]);
@@ -662,19 +664,36 @@ export default function InvitesScreen() {
 
       {/* ── Tab bar ── */}
       <View style={s.tabBar}>
-        {(['received', 'sent', 'activity'] as TabKey[]).map((t) => (
-          <TouchableOpacity
-            key={t}
-            style={s.tabItem}
-            onPress={() => setTab(t)}
-            activeOpacity={0.8}
-          >
-            <Text style={[s.tabLabel, tab === t && s.tabLabelActive]}>
-              {t === 'received' ? 'Received' : t === 'sent' ? 'Sent' : 'Activity'}
-            </Text>
-            {tab === t && <View style={s.tabUnderline} />}
-          </TouchableOpacity>
-        ))}
+        {(['received', 'sent', 'activity'] as TabKey[]).map((t) => {
+          // Where the new items are, without tapping each tab (owner,
+          // 2026-10-02): Received = invitations awaiting an answer, Activity =
+          // unread notifications, Sent = none (nothing there is new to you).
+          // An unanswered game invite also has a notification, so it can count
+          // in both; each tab honestly shows what is in it (owner's call).
+          const label = t === 'received' ? 'Received' : t === 'sent' ? 'Sent' : 'Activity';
+          const count = t === 'received' ? receivedBadge : t === 'activity' ? activityBadge : 0;
+          return (
+            <TouchableOpacity
+              key={t}
+              style={s.tabItem}
+              onPress={() => setTab(t)}
+              activeOpacity={0.8}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: tab === t }}
+              accessibilityLabel={count > 0 ? `${label}, ${count} new` : label}
+            >
+              <View style={s.tabLabelRow}>
+                <Text style={[s.tabLabel, tab === t && s.tabLabelActive]}>{label}</Text>
+                {count > 0 && (
+                  <View style={s.tabBadge}>
+                    <Text style={s.tabBadgeText}>{count > 9 ? '9+' : count}</Text>
+                  </View>
+                )}
+              </View>
+              {tab === t && <View style={s.tabUnderline} />}
+            </TouchableOpacity>
+          );
+        })}
       </View>
       <View style={s.tabDivider} />
 
@@ -849,7 +868,14 @@ const s = StyleSheet.create({
   tabItem: {
     flex: 1, alignItems: 'center', paddingVertical: 12, position: 'relative',
   },
+  tabLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tabLabel: { color: L.textMuted, fontSize: text.controlLabel.size, fontWeight: '700' },
+  // Same bubble as the home Invitations tile.
+  tabBadge: {
+    minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4,
+    backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center',
+  },
+  tabBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
   tabLabelActive: { color: L.gold },
   tabUnderline: {
     position: 'absolute', bottom: 0, left: 24, right: 24,
