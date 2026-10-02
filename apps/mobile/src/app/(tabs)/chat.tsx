@@ -135,7 +135,17 @@ function StoryCircle({ category }: { category: StoryCategory }) {
         </View>
       </View>
       {!isPlaceholder && category.hasUnviewed && <View style={st.dot} />}
-      <Text style={[st.label, isPlaceholder && { color: L.textMuted }]} numberOfLines={2}>{config.label}</Text>
+      {/* One word gets one line: at 2 lines iOS broke "Tournaments" into
+          "Tournamen / ts". Only labels written with a line break ("Your\nArea")
+          get two; adjustsFontSizeToFit is the safety net for a longer word. */}
+      <Text
+        style={[st.label, isPlaceholder && { color: L.textMuted }]}
+        numberOfLines={config.label.includes('\n') ? 2 : 1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.85}
+      >
+        {config.label}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -153,7 +163,9 @@ const st = StyleSheet.create({
     width: 13, height: 13, borderRadius: 6.5,
     backgroundColor: L.online, borderWidth: 2, borderColor: L.bg,
   },
-  label: { color: L.text, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', lineHeight: 14, marginTop: 6 },
+  // microLabel: the token for the label under a quick-action icon (2026-10-02;
+  // caption at 12pt overflowed the 72pt column).
+  label: { color: L.text, fontSize: text.microLabel.size, fontWeight: '700', textAlign: 'center', lineHeight: 13, marginTop: 6 },
 });
 
 
