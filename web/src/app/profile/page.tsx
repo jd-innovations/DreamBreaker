@@ -752,10 +752,15 @@ export default function ProfilePage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex items-end justify-between -mt-12 lg:-mt-20 pb-6 border-b border-border">
-          <div className="flex items-end gap-5 min-w-0">
-            <div className="relative flex-shrink-0">
+        {/* Header. Pulled up so the avatar overlaps the cover; relative z-10 so it
+            draws above the cover's positioned photo and fade. Phones (owner,
+            2026-10-02): a grid with the avatar and Edit on the first row and the
+            name block full width underneath, so a long name wraps below the photo
+            instead of into it. From sm up the inner wrapper is a flex row again and
+            the layout is unchanged. */}
+        <div className="relative z-10 grid grid-cols-[auto_1fr] items-end gap-x-5 gap-y-3 sm:flex sm:items-end sm:justify-between -mt-12 lg:-mt-20 pb-6 border-b border-border">
+          <div className="contents sm:flex sm:items-end sm:gap-5 sm:min-w-0">
+            <div className="relative flex-shrink-0 col-start-1 row-start-1">
               {/* Multi-colored gradient ring outline */}
               <div className="rounded-full p-[3px] lg:p-[4px] bg-gradient-to-tr from-violet-500 via-pink-400 to-cyan-400">
                 <Image
@@ -796,9 +801,9 @@ export default function ProfilePage() {
                 <div className="absolute bottom-1.5 right-1.5 h-5 w-5 rounded-full bg-primary border-2 border-background" />
               )}
             </div>
-            <div className="pb-1">
+            <div className="pb-1 min-w-0 col-span-2 row-start-2">
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl tracking-wide text-foreground">{name}</h1>
+                <h1 className="font-display text-2xl sm:text-4xl lg:text-5xl tracking-wide text-foreground break-words min-w-0">{name}</h1>
                 {(profile as { director_status?: string | null } | null)?.director_status === "approved" && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-400 font-mono text-[9px] tracking-[0.2em]">
                     <ShieldStar size={11} weight="fill" /> DIRECTOR
@@ -813,7 +818,7 @@ export default function ProfilePage() {
             </div>
           </div>
           {editing ? (
-            <div className="flex flex-col gap-2 flex-shrink-0 items-stretch">
+            <div className="flex flex-col gap-2 flex-shrink-0 items-stretch col-start-2 row-start-1 justify-self-end">
               <button
                 onClick={saveProfile}
                 disabled={saving}
@@ -834,7 +839,7 @@ export default function ProfilePage() {
           ) : (
             <button
               onClick={() => setEditing(true)}
-              className="h-10 px-5 rounded-full border border-border flex items-center gap-2 text-sm hover:bg-secondary/60 transition-colors flex-shrink-0"
+              className="h-10 px-5 rounded-full border border-border flex items-center gap-2 text-sm hover:bg-secondary/60 transition-colors flex-shrink-0 col-start-2 row-start-1 justify-self-end"
               data-testid="profile-edit-btn"
             >
               <PencilSimple size={16} weight="bold" /> Edit
