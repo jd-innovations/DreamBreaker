@@ -269,8 +269,10 @@ export default function PartnerFinderScreen() {
       onPanResponderMove: (_, gs) => { cardX.setValue(gs.dx); },
       onPanResponderRelease: (_, gs) => {
         const { dx, vx } = gs;
-        if      (dx < -SWIPE_THRESH || vx < -VEL_THRESH) swipeOut('left');
-        else if (dx >  SWIPE_THRESH || vx >  VEL_THRESH) swipeOut('right');
+        // Same haptics as the sheet buttons (2026-10-02): light to pass, medium
+        // to connect. Only on a committed swipe, never on a snap-back.
+        if      (dx < -SWIPE_THRESH || vx < -VEL_THRESH) { haptics.light();  swipeOut('left'); }
+        else if (dx >  SWIPE_THRESH || vx >  VEL_THRESH) { haptics.medium(); swipeOut('right'); }
         else Animated.spring(cardX, { toValue: 0, useNativeDriver: true }).start();
       },
     })
