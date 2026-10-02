@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert,
 } from 'react-native';
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { goBack } from '@/lib/navigation';
+import { resolveExternalUrl } from '@/lib/externalRouting';
 import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -418,15 +419,27 @@ function NotificationRow({ notification, last, onPress }: { notification: AppNot
   );
 }
 
-// ─── Notification link rewrite ──────────────────────────────────────────────────
-// `notifications.link` is shared with the web app's Next.js router, so some
-// stored paths are web-only routes with no mobile equivalent (e.g.
-// `/dashboard`). Rewrite those to their mobile counterpart here rather than
-// in the database, so the one stored link keeps working correctly on web.
+// ─── Notification link → mobile route ──────────────────────────────────────────
+// `notifications.link` is shared with the web app's Next.js router, so many
+// stored paths are WEB routes: a mutual match is `/matchmaking/connections`,
+// which on mobile is `/match/connections`. Pushing those raw landed on
+// "Unmatched Route" (2026-10-02, a new_match tapped from this list).
+//
+// So a row resolves exactly as a tapped push does: through resolveExternalUrl
+// (packages/shared/src/deep-link.ts), which maps web paths to app screens.
+// Paths that are already app routes, and that the shared resolver has no root
+// for, pass through from a short known list. Anything else has no screen in the
+// app: return null and stay put rather than open a dead page.
 
-function mobileNotificationLink(link: string): string {
+const APP_NATIVE_PREFIXES = ['/(tabs)', '/director'];
+
+function mobileNotificationLink(link: string): string | null {
   if (link === '/dashboard') return '/(tabs)';
-  return link;
+  const resolved = resolveExternalUrl(link);
+  if (resolved) return resolved.href;
+  const path = link.split('?')[0];
+  if (APP_NATIVE_PREFIXES.some(prefix => path === prefix || path.startsWith(`${prefix}/`))) return link;
+  return null;
 }
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
@@ -458,29 +471,37 @@ export default function InvitesScreen() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
-  const refreshNotifications = useCallback(() => {
-    if (!user?.id) { setNotifications([]); return; }
-    fetchNotifications(user.id).then(setNotifications);
-  }, [user?.id]);
-
-  const refreshReceivedInvites = useCallback(() => {
-    if (!user?.id) { setGameInvites([]); setReceivedHistory([]); return; }
-    fetchReceivedInvites(user.id).then(invites => {
-      setGameInvites(invites.filter(i => i.status === 'pending'));
-      setReceivedHistory(invites.filter(i => i.status !== 'pending'));
+  const refreshNotifications = useCallback((): Promise<number> => {
+    if (!user?.id) { setNotifications([]); return Promise.resolve(0); }
+    return fetchNotifications(user.id).then(list => {
+      setNotifications(list);
+      return list.filter(n => !n.readAt).length;
     });
   }, [user?.id]);
 
-  const refreshReceivedGroupInvites = useCallback(() => {
-    if (!user?.id) { setGroupInvites([]); setGroupInviteHistory([]); return; }
-    fetchReceivedGroupInvites(user.id)
+  const refreshReceivedInvites = useCallback((): Promise<number> => {
+    if (!user?.id) { setGameInvites([]); setReceivedHistory([]); return Promise.resolve(0); }
+    return fetchReceivedInvites(user.id).then(invites => {
+      const pending = invites.filter(i => i.status === 'pending');
+      setGameInvites(pending);
+      setReceivedHistory(invites.filter(i => i.status !== 'pending'));
+      return pending.length;
+    });
+  }, [user?.id]);
+
+  const refreshReceivedGroupInvites = useCallback((): Promise<number> => {
+    if (!user?.id) { setGroupInvites([]); setGroupInviteHistory([]); return Promise.resolve(0); }
+    return fetchReceivedGroupInvites(user.id)
       .then(invites => {
-        setGroupInvites(invites.filter(i => i.status === 'pending'));
+        const pending = invites.filter(i => i.status === 'pending');
+        setGroupInvites(pending);
         setGroupInviteHistory(invites.filter(i => i.status !== 'pending'));
+        return pending.length;
       })
       .catch(() => {
         setGroupInvites([]);
         setGroupInviteHistory([]);
+        return 0;
       });
   }, [user?.id]);
 
@@ -496,12 +517,27 @@ export default function InvitesScreen() {
       .catch(() => setSentGroupInvites([]));
   }, [user?.id]);
 
+  // The home "Invitations" tile counts every unread notification, but this
+  // screen opened on Received, which lists only game and group invitations — so
+  // a new match showed a count and an empty tab (2026-10-02). On the first visit,
+  // when nothing is waiting in Received but something unread is in Activity,
+  // open Activity. Decided once; later refocuses leave the chosen tab alone.
+  const tabDecided = useRef(false);
+
   useFocusEffect(useCallback(() => {
-    refreshReceivedInvites();
-    refreshReceivedGroupInvites();
+    const invitesPending = Promise.all([refreshReceivedInvites(), refreshReceivedGroupInvites()]);
     refreshSentInvites();
     refreshSentGroupInvites();
-    refreshNotifications();
+    const unread = refreshNotifications();
+    if (!tabDecided.current) {
+      Promise.all([invitesPending, unread])
+        .then(([[games, groups], unreadCount]) => {
+          if (tabDecided.current) return;
+          tabDecided.current = true;
+          if (games + groups === 0 && unreadCount > 0) setTab('activity');
+        })
+        .catch(() => { tabDecided.current = true; });
+    }
   }, [refreshReceivedInvites, refreshReceivedGroupInvites, refreshSentInvites, refreshSentGroupInvites, refreshNotifications]));
 
   async function handleMarkAllRead() {
@@ -518,7 +554,8 @@ export default function InvitesScreen() {
       setNotifications(prev => prev.map(n => (n.id === notification.id ? { ...n, readAt: new Date().toISOString() } : n)));
       markNotificationRead(notification.id);
     }
-    if (notification.link) router.push(mobileNotificationLink(notification.link) as never);
+    const href = notification.link ? mobileNotificationLink(notification.link) : null;
+    if (href) router.push(href as never);
   }
 
   async function handleAcceptGameInvite(invite: ReceivedPlayEventInvite) {
