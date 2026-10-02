@@ -19,7 +19,11 @@ const HREF: Record<DeepLinkType, (id: string) => string> = {
   group: appRoutes.group,
   tournament: appRoutes.tournament,
   community: appRoutes.communityEvent,
-  marketplace: appRoutes.marketplaceListing,
+  // /marketplace/my-listings (the listing-expiring notification) arrives as a
+  // "listing" with id "my-listings". It opened the right screen only because
+  // expo-router prefers the static my-listings.tsx over [id].tsx; said
+  // explicitly here so it no longer depends on that (2026-10-02).
+  marketplace: (id) => (id === MY_LISTINGS ? '/marketplace/my-listings' : appRoutes.marketplaceListing(id)),
   booking: appRoutes.booking,
   coach_offer: appRoutes.coachOffer,
   claim: appRoutes.claim,
@@ -41,10 +45,15 @@ const HREF: Record<DeepLinkType, (id: string) => string> = {
         : appRoutes.matchmaking(),
 };
 
+const MY_LISTINGS = 'my-listings';
+
 export function resolveExternalUrl(rawUrl: string): ExternalDestination | null {
   const resolved = resolveDeepLink(rawUrl);
   if (!resolved) return null;
-  return { href: HREF[resolved.type](resolved.id), type: resolved.type, requiresAuth: resolved.requiresAuth };
+  // A public listing needs no account; your own listings do, so a signed-out
+  // tap goes through sign-in first like the other personal screens.
+  const requiresAuth = resolved.requiresAuth || (resolved.type === 'marketplace' && resolved.id === MY_LISTINGS);
+  return { href: HREF[resolved.type](resolved.id), type: resolved.type, requiresAuth };
 }
 
 export function resolveNotificationDestination(data: Record<string, unknown> | undefined): ExternalDestination | null {
