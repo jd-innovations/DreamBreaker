@@ -856,7 +856,7 @@ const s = StyleSheet.create({
   // The hand travels ±26px (the hint loop), so the gap keeps it clear of the chips.
   swipeHandRow: { flexDirection: 'row', alignItems: 'center', gap: 36 },
   swipeChip: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  swipeHintText: { color: 'rgba(255,255,255,0.52)', fontSize: text.caption.size, fontWeight: '500', letterSpacing: 0.2 },
+  swipeHintText: { color: 'rgba(255,255,255,0.72)', fontSize: text.caption.size, fontWeight: '500', letterSpacing: 0.2 },
 
   // ── Shared sheet styles ───────────────────────────────────────────────────
   handleWrap: { alignItems: 'center', paddingVertical: 8 },
