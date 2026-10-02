@@ -17,6 +17,7 @@ import {
   Easing,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { haptics } from '@/lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
@@ -75,15 +76,29 @@ const tp = StyleSheet.create({
 
 // ─── Action button ────────────────────────────────────────────────────────────
 
-function ActionBtn({ icon, label, onPress, filled }: {
-  icon: string; label: string; onPress: () => void; filled: boolean;
+// Pass and Connect use the swipe colours (SWIPE_PASS / SWIPE_CONNECT), filled,
+// matching the hint chips and the drag stamps (owner, 2026-10-02). Save stays a
+// gold outline. Each tap gives a haptic: light for Pass and Save, medium for
+// Connect, the action that reaches another person.
+type ActionTone = 'pass' | 'save' | 'connect';
+const ACTION_FILL: Partial<Record<ActionTone, string>> = { pass: SWIPE_PASS, connect: SWIPE_CONNECT };
+
+function ActionBtn({ icon, label, onPress, tone }: {
+  icon: string; label: string; onPress: () => void; tone: ActionTone;
 }) {
+  const fill = ACTION_FILL[tone];
   return (
-    <TouchableOpacity style={ab.wrap} onPress={onPress} activeOpacity={0.75}>
-      <View style={[ab.circle, filled && ab.circleFilled]}>
-        <Ionicons name={icon as never} size={28} color={filled ? '#FFF' : label === 'Pass' ? '#9AAABF' : L.gold} />
+    <TouchableOpacity
+      style={ab.wrap}
+      onPress={() => { if (tone === 'connect') haptics.medium(); else haptics.light(); onPress(); }}
+      activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <View style={[ab.circle, fill ? { backgroundColor: fill, borderColor: fill } : null]}>
+        <Ionicons name={icon as never} size={28} color={fill ? '#FFF' : L.gold} />
       </View>
-      <Text style={[ab.label, filled && ab.labelFilled]}>{label}</Text>
+      <Text style={[ab.label, fill ? { color: fill } : null]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -94,9 +109,7 @@ const ab = StyleSheet.create({
     backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E0E8F5',
     alignItems: 'center', justifyContent: 'center',
   },
-  circleFilled: { backgroundColor: L.gold, borderColor: L.gold },
   label: { color: L.text, fontSize: text.controlLabel.size, fontWeight: '700' },
-  labelFilled: { color: L.gold },
 });
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -598,12 +611,12 @@ export default function PartnerFinderScreen() {
         </View>
         <Text style={s.sheetSub}>Send a connect to start a conversation.</Text>
         <View style={s.actionRow}>
-          <ActionBtn icon="close"        label="Pass"    onPress={handlePass}    filled={false} />
+          <ActionBtn icon="close"        label="Pass"    onPress={handlePass}    tone="pass" />
           <ActionBtn icon="star-outline" label="Save"    onPress={() => {
               if (!player) return;
               persistLike(player.id, 'save', player.name);
-            }} filled={false} />
-          <ActionBtn icon="checkmark"    label="Connect" onPress={handleConnect} filled={true}  />
+            }} tone="save" />
+          <ActionBtn icon="checkmark"    label="Connect" onPress={handleConnect} tone="connect" />
         </View>
         <View style={s.sheetHintRow}>
           <Ionicons name="swap-horizontal-outline" size={14} color={L.textMuted} />
