@@ -87,6 +87,8 @@ const templates = {
     preheader: 'Choose a new password for your Pickleball App account.',
     bodyHtml: `
           <p>We received a request to reset the password for <strong>{{ .Email }}</strong>. Use the button below to choose a new one.</p>
+          <p style="text-align:center;margin:20px 0 4px;">Or enter this code in the app:</p>
+          <p style="text-align:center;margin:0;font-size:28px;font-weight:bold;letter-spacing:0.3em;">{{ .Token }}</p>
           <p>This link can only be used once, and it expires after a short while. If you didn&#39;t request this, you can safely ignore this email &mdash; your password will stay as it is.</p>`,
     ctaLabel: 'RESET PASSWORD',
     ctaUrl: TOKEN,
@@ -96,6 +98,8 @@ const templates = {
     preheader: 'Confirm your email address to finish signing up.',
     bodyHtml: `
           <p>Welcome to Pickleball App. Confirm <strong>{{ .Email }}</strong> to finish setting up your account.</p>
+          <p style="text-align:center;margin:20px 0 4px;">Or enter this code in the app:</p>
+          <p style="text-align:center;margin:0;font-size:28px;font-weight:bold;letter-spacing:0.3em;">{{ .Token }}</p>
           <p>If you didn&#39;t create an account, you can safely ignore this email.</p>`,
     ctaLabel: 'CONFIRM EMAIL',
     ctaUrl: TOKEN,
@@ -103,6 +107,13 @@ const templates = {
   },
 };
 
+// The 6-digit code ({{ .Token }}, 2026-10-04) is the same one-time pass as the
+// link: using either uses up both, and a resend cancels both. It is an
+// ADDITION — the button and link are unchanged — for typing into the app when a
+// link can't be used (wrong mail thread, a preview that burned it, another
+// device). The shell has no slot under the button, so it sits in the body,
+// worded to read correctly above it.
+//
 // The recipient is named in the body ({{ .Email }}) and the subject (see
 // README.md) since 2026-10-02: two demo accounts on one inbox got identical
 // emails that Apple Mail threaded together, and the owner tapped the older,
