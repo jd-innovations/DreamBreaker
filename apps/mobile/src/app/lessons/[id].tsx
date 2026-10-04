@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIn
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { colors } from '@/theme';
+import { StatusBar } from 'expo-status-bar';
+import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { fetchCoachOfferBrowseDetail, travelAreaLabel, type CoachOfferBrowseCard } from '@/lib/coach/offers';
@@ -12,7 +13,7 @@ import { useMembership } from '@/hooks/useMembership';
 import { useSession } from '@/hooks/useSession';
 import { useCoachOfferPayment } from '@/lib/payments/useCoachOfferPayment';
 import { coachOfferPaymentErrorMessage } from '@/lib/payments/coachOfferPaymentIntent';
-import { DEFAULT_LESSON_COVER } from '@/lib/coach/defaultLessonCover';
+import { CourtArt, lessonTint } from '@/components/coach/CourtArt';
 import { useCoachServiceFee } from '@/lib/coach/serviceFee';
 
 // Offer detail + checkout.
@@ -22,11 +23,19 @@ import { useCoachServiceFee } from '@/lib/coach/serviceFee';
 // the app, which is why coach_offer_purchases had zero rows while tournament
 // and booking payments ran through the same webhook every week. This screen
 // is that missing caller.
+//
+// Layout redesigned 2026-10-04 (owner-approved): the lesson's photo or the
+// drawn court on its type's tint as a full-bleed header, a rounded content
+// sheet over it, capitals title in the body face (never condensed), coach
+// chip, price card with the member band, DETAILS and TERMS, and a gold Book
+// bar. Booking, fees and the can-book rules are unchanged.
 
 const L = {
   navy: colors.navy, gold: colors.gold, text: colors.text, textSub: colors.textSub,
-  border: colors.border, bg: colors.bg, page: colors.page, goldBg: colors.goldBg,
+  border: colors.border, bg: colors.bg, page: colors.page,
 };
+
+const HERO_H = 220;
 
 export default function LessonOfferDetailScreen() {
   const insets = useSafeAreaInsets();
@@ -121,90 +130,114 @@ export default function LessonOfferDetailScreen() {
   // transaction. The server computes this identically and snapshots it.
   const feeCents = serviceFee.feeFor(unitPriceCents, quantity);
 
+  const travel = travelAreaLabel(offer);
+  const nameParts = (offer.coach?.full_name ?? '').trim().split(/\s+/).filter(Boolean);
+  const initials = ((nameParts[0]?.[0] ?? '') + (nameParts.length > 1 ? nameParts[nameParts.length - 1][0] : '')).toUpperCase();
+
   return (
     <View style={s.root}>
-      {/* Safe-area inset on the HEADER, not the root, so the white header
-          colour runs to the top of the screen. Pattern from wallet.tsx. */}
-      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={24} color={L.navy} />
-        </TouchableOpacity>
-        <Text style={s.headerTitle} numberOfLines={1}>{typeLabel}</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
-        <Image
-          source={offer.images[0] ? { uri: offer.images[0].url } : DEFAULT_LESSON_COVER}
-          style={s.hero}
-          resizeMode="cover"
-        />
-
-        {offer.premium_only && (
-          <View style={s.premiumBadge}><Text style={s.premiumBadgeText}>PREMIUM MEMBERS ONLY</Text></View>
-        )}
-
-        <Text style={s.title}>{offer.title}</Text>
-
-        {offer.coach && (
-          // The only route into the coach profile. Without it that screen is
-          // unreachable, and the coach's other lessons undiscoverable from here.
+      {/* White status-bar text over the dark header. */}
+      <StatusBar style="light" />
+      <ScrollView contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+        {/* Header: the lesson's photo, else the drawn court on its type's tint.
+            Runs under the status bar. */}
+        <View style={[s.hero, { height: HERO_H + insets.top }]}>
+          {offer.images[0]
+            ? <Image source={{ uri: offer.images[0].url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            : <CourtArt tint={lessonTint(offer.offer_type)} />}
           <TouchableOpacity
-            style={s.coachRow}
-            activeOpacity={0.7}
-            onPress={() => router.push(`/coach/${offer.coach_id}` as never)}
+            style={[s.backBtn, { top: insets.top + 8 }]}
+            onPress={() => router.back()}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
           >
-            {offer.coach.avatar_url ? (
-              <Image source={{ uri: offer.coach.avatar_url }} style={s.coachAvatar} />
-            ) : (
-              <View style={[s.coachAvatar, s.coachAvatarPlaceholder]}>
-                <Ionicons name="person" size={16} color={L.textSub} />
+            <Ionicons name="chevron-back" size={22} color={colors.white} />
+          </TouchableOpacity>
+          <View style={[s.typeBadge, { top: insets.top + 14 }]}>
+            <Text style={s.typeBadgeText}>{typeLabel}</Text>
+          </View>
+        </View>
+
+        <View style={s.sheet}>
+          {offer.premium_only && (
+            <View style={s.premiumBadge}><Text style={s.premiumBadgeText}>MEMBERS ONLY</Text></View>
+          )}
+
+          {/* Capitals in the body face, never condensed (owner, 2026-09-23). */}
+          <Text style={s.title} numberOfLines={3}>{offer.title}</Text>
+
+          {offer.coach && (
+            // The only route into the coach profile. Without it that screen is
+            // unreachable, and the coach's other lessons undiscoverable from here.
+            <TouchableOpacity
+              style={s.coachChip}
+              activeOpacity={0.7}
+              onPress={() => router.push(`/coach/${offer.coach_id}` as never)}
+              accessibilityRole="button"
+              accessibilityLabel={`Coach ${offer.coach.full_name}`}
+            >
+              {offer.coach.avatar_url ? (
+                <Image source={{ uri: offer.coach.avatar_url }} style={s.coachAvatar} />
+              ) : (
+                <View style={[s.coachAvatar, s.coachInitials]}>
+                  <Text style={s.coachInitialsText}>{initials || '·'}</Text>
+                </View>
+              )}
+              <Text style={s.coachName} numberOfLines={1}>{offer.coach.full_name}</Text>
+              <Ionicons name="chevron-forward" size={16} color={L.textSub} />
+            </TouchableOpacity>
+          )}
+
+          <View style={s.priceCard}>
+            <View style={s.priceRow}>
+              {offer.regular_price_cents > price.cents && (
+                <Text style={s.priceStrike}>{formatPriceCents(offer.regular_price_cents)}</Text>
+              )}
+              <Text style={s.priceNow}>{formatPriceCents(price.cents)}</Text>
+              {pct > 0 && <View style={s.offPill}><Text style={s.offText}>{pct}% OFF</Text></View>}
+            </View>
+            {/* Two different messages. A member is told the lower price they see
+                IS the member price, so the benefit is visible rather than a
+                silent discount at checkout. A non-member is told what it would
+                cost them — the only upsell in this flow, and it costs nothing. */}
+            {(price.isMemberPrice || offer.premium_price_cents != null) && (
+              <View style={s.memberBand}>
+                <Ionicons name="star" size={14} color={colors.goldDeep} />
+                <Text style={s.memberBandText}>
+                  {price.isMemberPrice
+                    ? 'Member price applied'
+                    : `Members pay ${formatPriceCents(offer.premium_price_cents ?? 0)}`}
+                </Text>
               </View>
             )}
-            <Text style={s.coachName}>{offer.coach.full_name}</Text>
-            <Ionicons name="chevron-forward" size={14} color={L.textSub} />
-          </TouchableOpacity>
-        )}
-
-        <View style={s.priceCard}>
-          <View style={s.priceRow}>
-            <Text style={s.priceStrike}>{formatPriceCents(offer.regular_price_cents)}</Text>
-            <Text style={s.priceNow}>{formatPriceCents(price.cents)}</Text>
-            <Text style={s.pctOff}>{pct}% off</Text>
           </View>
-          {/* Two different messages. A member is told the lower price they see
-              IS the member price, so the benefit is visible rather than a
-              silent discount at checkout. A non-member is told what it would
-              cost them — the only upsell in this flow, and it costs nothing. */}
-          {price.isMemberPrice ? (
-            <Text style={s.premiumPriceHint}>Member price applied</Text>
-          ) : offer.premium_price_cents != null ? (
-            <Text style={s.premiumPriceHint}>
-              Members pay {formatPriceCents(offer.premium_price_cents)}
-            </Text>
-          ) : null}
+
+          {offer.description && <Text style={s.description}>{offer.description}</Text>}
+
+          <Text style={s.sectionLabel}>DETAILS</Text>
+          <View style={s.detailsCard}>
+            {offer.skill_level_label && <DetailRow label="Skill Level" value={offer.skill_level_label} />}
+            {offer.duration_minutes && <DetailRow label="Duration" value={`${offer.duration_minutes} min`} />}
+            {offer.max_participants && <DetailRow label="Max Participants" value={String(offer.max_participants)} />}
+            {offer.lessons_included && <DetailRow label="Lessons Included" value={String(offer.lessons_included)} />}
+            {offer.quantity_available != null && <DetailRow label="Availability" value={`${offer.quantity_remaining} of ${offer.quantity_available} left`} />}
+            {offer.purchase_limit_per_customer && <DetailRow label="Purchase Limit" value={`${offer.purchase_limit_per_customer} per customer`} />}
+            {/* Coaches are mobile, so the facility is the closest place they
+                teach, not necessarily the only one (owner, 2026-10-04). */}
+            {offer.facility && (
+              <DetailRow label="Closest Location" value={`${offer.facility.name} — ${offer.facility.city}, ${offer.facility.state}`} last={!travel} />
+            )}
+            {!!travel && <DetailRow label="Travels to You" value={travel.replace('Travels to you · ', '')} last />}
+          </View>
+
+          {offer.terms && (
+            <>
+              <Text style={s.sectionLabel}>TERMS</Text>
+              <Text style={s.terms}>{offer.terms}</Text>
+            </>
+          )}
         </View>
-
-        {offer.description && <Text style={s.description}>{offer.description}</Text>}
-
-        <View style={s.detailsCard}>
-          {offer.skill_level_label && <DetailRow label="Skill Level" value={offer.skill_level_label} />}
-          {offer.duration_minutes && <DetailRow label="Duration" value={`${offer.duration_minutes} min`} />}
-          {offer.max_participants && <DetailRow label="Max Participants" value={String(offer.max_participants)} />}
-          {offer.lessons_included && <DetailRow label="Lessons Included" value={String(offer.lessons_included)} />}
-          {offer.quantity_available != null && <DetailRow label="Availability" value={`${offer.quantity_remaining} of ${offer.quantity_available} left`} />}
-          {offer.purchase_limit_per_customer && <DetailRow label="Purchase Limit" value={`${offer.purchase_limit_per_customer} per customer`} />}
-          {offer.facility && <DetailRow label="Location" value={`${offer.facility.name} — ${offer.facility.city}, ${offer.facility.state}`} last={!travelAreaLabel(offer)} />}
-          {/* Travels to you (2026-10-04): the coach's home base city and range. */}
-          {!!travelAreaLabel(offer) && <DetailRow label={offer.facility ? 'Or' : 'Location'} value={travelAreaLabel(offer)!} last />}
-        </View>
-
-        {offer.terms && (
-          <>
-            <Text style={s.sectionLabel}>Terms</Text>
-            <Text style={s.terms}>{offer.terms}</Text>
-          </>
-        )}
       </ScrollView>
 
       {/* ── CHECKOUT ── */}
@@ -239,7 +272,7 @@ export default function LessonOfferDetailScreen() {
           onPress={handleBook}
         >
           {processing ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={L.navy} />
           ) : (
             <>
               <Text style={s.bookBtnText}>
@@ -277,7 +310,7 @@ function DetailRow({ label, value, last }: { label: string; value: string; last?
   return (
     <View style={[dr.row, last && dr.rowLast]}>
       <Text style={dr.label}>{label}</Text>
-      <Text style={dr.value} numberOfLines={2}>{value}</Text>
+      <Text style={dr.value} numberOfLines={3}>{value}</Text>
     </View>
   );
 }
@@ -285,18 +318,87 @@ function DetailRow({ label, value, last }: { label: string; value: string; last?
 const dr = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'flex-start',
-    paddingHorizontal: 14, paddingVertical: 11,
+    paddingHorizontal: 16, paddingVertical: 13,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   rowLast: { borderBottomWidth: 0 },
-  label: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', width: 120, paddingTop: 1 },
-  value: { color: colors.text, fontSize: text.caption.size, fontWeight: '500', flex: 1 },
+  label: { color: colors.textSub, fontSize: text.caption.size, fontWeight: '500', width: 130, paddingTop: 1 },
+  value: { color: colors.navy, fontSize: text.caption.size, fontWeight: '700', flex: 1 },
 });
 
 const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: L.page },
+
+  hero: { backgroundColor: colors.navy, overflow: 'hidden' },
+  backBtn: {
+    position: 'absolute', left: 16, width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(10,18,40,0.55)', alignItems: 'center', justifyContent: 'center',
+  },
+  typeBadge: {
+    position: 'absolute', alignSelf: 'center',
+    backgroundColor: 'rgba(10,18,40,0.85)', borderRadius: shape.pill, paddingHorizontal: 12, paddingVertical: 6,
+  },
+  typeBadgeText: {
+    color: colors.white, fontSize: text.cardLabel.size, fontWeight: '800',
+    letterSpacing: text.cardLabel.letterSpacing, textTransform: 'uppercase',
+  },
+
+  sheet: {
+    marginTop: -24, backgroundColor: L.page,
+    borderTopLeftRadius: shape.card + 8, borderTopRightRadius: shape.card + 8,
+    paddingHorizontal: 20, paddingTop: spacing.lg, gap: spacing.md,
+  },
+  premiumBadge: {
+    alignSelf: 'flex-start', backgroundColor: colors.gold, borderRadius: shape.badge, paddingHorizontal: 8, paddingVertical: 4,
+  },
+  premiumBadgeText: { color: L.navy, fontSize: text.microLabel.size, fontWeight: '800' },
+
+  title: {
+    color: L.navy, fontSize: text.pageTitle.size, fontWeight: '900', lineHeight: text.pageTitle.size + 4,
+    textTransform: 'uppercase', letterSpacing: 0.3,
+  },
+
+  coachChip: {
+    alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 10, maxWidth: '100%',
+    backgroundColor: L.bg, borderRadius: shape.pill, paddingLeft: 6, paddingRight: 12, paddingVertical: 6,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: L.border,
+  },
+  coachAvatar: { width: 30, height: 30, borderRadius: 15 },
+  coachInitials: { backgroundColor: colors.goldLight, alignItems: 'center', justifyContent: 'center' },
+  coachInitialsText: { color: L.navy, fontSize: text.microLabel.size, fontWeight: '800' },
+  coachName: { color: L.navy, fontSize: text.body.size, fontWeight: '700', flexShrink: 1 },
+
+  priceCard: {
+    backgroundColor: L.bg, borderRadius: shape.card, padding: spacing.md, gap: spacing.sm,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: L.border,
+  },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  priceStrike: { color: L.textSub, fontSize: text.body.size, fontWeight: '500', textDecorationLine: 'line-through' },
+  priceNow: { color: L.navy, fontSize: text.statNumber.size, fontWeight: '900', letterSpacing: -0.5 },
+  offPill: { backgroundColor: colors.goldLight, borderRadius: shape.badge, paddingHorizontal: 8, paddingVertical: 4 },
+  offText: { color: colors.goldDeep, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
+  memberBand: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: colors.goldLight, borderRadius: shape.panel, paddingHorizontal: 12, paddingVertical: 10,
+  },
+  memberBandText: { color: colors.goldDeep, fontSize: text.caption.size, fontWeight: '700' },
+
+  description: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 22 },
+
+  sectionLabel: {
+    color: L.textSub, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing,
+    marginTop: 4, marginBottom: -6,
+  },
+  detailsCard: {
+    backgroundColor: L.bg, borderRadius: shape.card, overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: L.border,
+  },
+  terms: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19 },
+
   checkoutBar: {
-    borderTopWidth: 1, borderTopColor: L.border, backgroundColor: L.bg,
-    paddingHorizontal: 16, paddingTop: 12, gap: 10,
+    backgroundColor: L.bg, paddingHorizontal: 16, paddingTop: 12, gap: 10,
+    borderTopLeftRadius: shape.card + 8, borderTopRightRadius: shape.card + 8,
+    shadowColor: L.navy, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: -4 }, elevation: 8,
   },
   qtyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   qtyLabel: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
@@ -308,47 +410,11 @@ const s = StyleSheet.create({
   stepBtnDisabled: { opacity: 0.4 },
   qtyValue: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', minWidth: 20, textAlign: 'center' },
   bookBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 15, minHeight: 52,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: L.gold, borderRadius: shape.cta, paddingVertical: 15, paddingHorizontal: 20, minHeight: 56,
   },
   bookBtnDisabled: { opacity: 0.45 },
-  bookBtnText: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800' },
-  bookBtnPrice: { color: '#FFFFFF', fontSize: text.actionLarge.size, fontWeight: '800', opacity: 0.85 },
+  bookBtnText: { color: L.navy, fontSize: text.actionLarge.size, fontWeight: '800' },
+  bookBtnPrice: { color: L.navy, fontSize: text.statValueSm.size, fontWeight: '900' },
   feeNote: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center' },
-  root: { flex: 1, backgroundColor: L.page },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: L.bg,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: L.border,
-  },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: L.navy, fontSize: text.titleSm.size, fontWeight: '800', flex: 1, textAlign: 'center' },
-
-  scroll: { paddingHorizontal: 20, paddingTop: 16 },
-  hero: { width: '100%', height: 180, borderRadius: shape.card, marginBottom: 12 },
-
-  premiumBadge: { alignSelf: 'flex-start', backgroundColor: L.navy, borderRadius: shape.badge, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 8 },
-  premiumBadgeText: { color: L.bg, fontSize: 10, fontWeight: '800' },
-
-  title: { color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800', marginBottom: 8 },
-
-  coachRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
-  coachAvatar: { width: 28, height: 28, borderRadius: 14 },
-  coachAvatarPlaceholder: { backgroundColor: L.goldBg, alignItems: 'center', justifyContent: 'center' },
-  coachName: { color: L.text, fontSize: text.caption.size, fontWeight: '500' },
-
-  priceCard: { backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: shape.card, padding: 14, marginBottom: 16 },
-  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  priceStrike: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textDecorationLine: 'line-through' },
-  priceNow: { color: L.navy, fontSize: text.cardTitle.size, fontWeight: '800' },
-  pctOff: { color: colors.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
-  premiumPriceHint: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 6 },
-
-  description: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 21, marginBottom: 16 },
-
-  detailsCard: { backgroundColor: L.bg, borderWidth: 1, borderColor: L.border, borderRadius: shape.card, marginBottom: 16 },
-
-  sectionLabel: { color: L.navy, fontSize: text.sectionLabel.size, fontWeight: '800', letterSpacing: text.sectionLabel.letterSpacing, marginBottom: 6 },
-  terms: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', lineHeight: 19, marginBottom: 16 },
-
 });

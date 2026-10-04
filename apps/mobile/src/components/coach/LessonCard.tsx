@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import Svg, { Line, Polygon, Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing } from '@/theme';
-import { radius as shape, text, lessonTypeTint, LESSON_TYPE_TINT_FALLBACK } from '@shared/tokens';
+import { radius as shape, text } from '@shared/tokens';
 import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent, effectiveOfferPrice } from '@/lib/coach/constants';
 import { travelAreaLabel, type BrowseLesson } from '@/lib/coach/offers';
+import { CourtArt, lessonTint } from '@/components/coach/CourtArt';
 
 // One lesson in the Lesson Marketplace list (owner-approved redesign,
 // 2026-10-04). Header: the lesson's photo when it has one; otherwise a drawn
@@ -17,21 +17,6 @@ import { travelAreaLabel, type BrowseLesson } from '@/lib/coach/offers';
 
 const HEADER_H = 150;
 
-function CourtArt({ tint }: { tint: string }) {
-  // A court seen at a slight angle; lines in translucent white over the tint.
-  const line = { stroke: 'rgba(255,255,255,0.32)', strokeWidth: 3 };
-  return (
-    <Svg width="100%" height="100%" viewBox="0 0 400 150" preserveAspectRatio="xMidYMid slice">
-      <Polygon points="0,0 400,0 400,150 0,150" fill={tint} />
-      <Polygon points="40,18 372,0 388,152 52,170" fill="none" {...line} />
-      <Line x1="206" y1="9" x2="220" y2="161" {...line} />
-      <Line x1="46" y1="72" x2="380" y2="52" {...line} />
-      <Line x1="49" y1="116" x2="384" y2="98" stroke="rgba(255,255,255,0.55)" strokeWidth={4} />
-      <Circle cx="340" cy="34" r="16" fill={colors.gold} />
-    </Svg>
-  );
-}
-
 function initials(name: string | null | undefined): string {
   const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase() || '·';
@@ -39,7 +24,7 @@ function initials(name: string | null | undefined): string {
 
 export function LessonCard({ item, isMember, onPress }: { item: BrowseLesson; isMember: boolean; onPress: () => void }) {
   const typeLabel = OFFER_TYPE_OPTIONS.find((o) => o.value === item.offer_type)?.label ?? item.offer_type;
-  const tint = (lessonTypeTint as Record<string, string>)[item.offer_type] ?? LESSON_TYPE_TINT_FALLBACK;
+  const tint = lessonTint(item.offer_type);
   const price = effectiveOfferPrice(item, isMember);
   const off = discountPercent(item.regular_price_cents, price.cents);
   const travel = travelAreaLabel(item);
