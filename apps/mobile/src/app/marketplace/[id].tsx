@@ -1,7 +1,7 @@
 // Listing Detail — the immersive, image-first screen the spec centers the
 // whole product on. Full-bleed ProgressiveImageViewer behind a 3-snap
 // DraggableSheet (collapsed → half → full) carrying progressively more detail.
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, TextInput, Image,
   KeyboardAvoidingView, Platform, Pressable,
@@ -49,7 +49,7 @@ function memberSinceLabel(createdAt: string | null): string {
 }
 
 export default function ListingDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, action } = useLocalSearchParams<{ id: string; action?: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useSession();
 
@@ -125,6 +125,46 @@ export default function ListingDetailScreen() {
       .catch(() => {});
     return () => { active = false; };
   }, [user?.id, listing?.seller_id]);
+
+  // Arriving from the listing-expiring email (2026-10-04): ?action=renew|sold.
+  // Asks the OWNER to confirm, then uses the same renew / mark-sold calls as
+  // the menu. Never acts on the link alone — mail apps and link scanners open
+  // links unprompted — and never for anyone but the seller.
+  const actionHandled = useRef(false);
+  useEffect(() => {
+    if (actionHandled.current || !listing || !user) return;
+    if (action !== 'renew' && action !== 'sold') return;
+    actionHandled.current = true;
+    router.setParams({ action: undefined });
+    if (user.id !== listing.seller_id) return;
+
+    const title = listing.title;
+    if (listing.status === 'sold' || listing.status === 'deleted') {
+      Alert.alert('Already closed', `"${title}" is no longer listed.`);
+      return;
+    }
+    if (action === 'sold') {
+      Alert.alert('Mark as sold?', `"${title}" will stop showing in the Marketplace.`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Mark Sold', onPress: async () => {
+            try { await setListingStatus(listing.id, 'sold'); await load(); }
+            catch (err) { Alert.alert('Could not update listing', err instanceof Error ? err.message : 'Please try again.'); }
+          },
+        },
+      ]);
+    } else {
+      Alert.alert('Renew for 30 days?', `"${title}" stays live in the Marketplace for another 30 days.`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Renew', onPress: async () => {
+            try { await renewListing(listing.id); await load(); }
+            catch (err) { Alert.alert('Could not renew', err instanceof Error ? err.message : 'Please try again.'); }
+          },
+        },
+      ]);
+    }
+  }, [action, listing, user, load]);
 
   if (loading) {
     return <View style={s.centerFill}><ActivityIndicator color="#FFFFFF" /></View>;

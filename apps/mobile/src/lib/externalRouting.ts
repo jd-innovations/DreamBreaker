@@ -53,7 +53,21 @@ export function resolveExternalUrl(rawUrl: string): ExternalDestination | null {
   // A public listing needs no account; your own listings do, so a signed-out
   // tap goes through sign-in first like the other personal screens.
   const requiresAuth = resolved.requiresAuth || (resolved.type === 'marketplace' && resolved.id === MY_LISTINGS);
-  return { href: HREF[resolved.type](resolved.id), type: resolved.type, requiresAuth };
+  return { href: HREF[resolved.type](resolved.id) + listingActionQuery(rawUrl, resolved), type: resolved.type, requiresAuth };
+}
+
+// The listing-expiring email links to /marketplace/<id>?action=renew|sold
+// (2026-10-04). The resolver keeps only the path, so the action is carried
+// through here — just these two values, just on a listing. The listing screen
+// asks the owner to confirm; nothing happens on the link alone.
+const LISTING_ACTIONS = new Set(['renew', 'sold']);
+
+function listingActionQuery(rawUrl: string, resolved: { type: string; id: string }): string {
+  if (resolved.type !== 'marketplace' || !resolved.id || resolved.id === MY_LISTINGS) return '';
+  const q = rawUrl.split('?')[1];
+  if (!q) return '';
+  const action = new URLSearchParams(q.split('#')[0]).get('action');
+  return action && LISTING_ACTIONS.has(action) ? `?action=${action}` : '';
 }
 
 export function resolveNotificationDestination(data: Record<string, unknown> | undefined): ExternalDestination | null {
