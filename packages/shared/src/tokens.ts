@@ -300,6 +300,24 @@ export type RadiusToken = keyof typeof radius;
 export type SpaceToken = keyof typeof space;
 export type TextToken = keyof typeof text;
 
+/**
+ * Lesson-type tints (owner, 2026-10-04): the header colour of a lesson card,
+ * behind the drawn court, so the type reads at a glance. Dark enough that
+ * white court lines and the white-on-navy type badge stay legible. Hex, not
+ * HSL roles: these are illustration fills, not themeable surface colours, and
+ * they look the same in light and dark mode. Keys are coach_offer_type values.
+ */
+export const lessonTypeTint = {
+  private:      '#2F4A8A', // deep blue
+  semi_private: '#4A5A78', // slate
+  group_clinic: '#2E5C5F', // deep teal
+  camp:         '#2F5D3A', // forest green
+  package:      '#0A1228', // navy
+} as const;
+
+/** Unknown or future types fall back to navy. */
+export const LESSON_TYPE_TINT_FALLBACK = '#0A1228';
+
 export const fontStacks = {
   sans: "var(--font-manrope), system-ui, sans-serif",
   display: "var(--font-bebas-neue), sans-serif",

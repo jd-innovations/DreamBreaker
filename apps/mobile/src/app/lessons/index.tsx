@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, FlatList, Image, TextInput, ScrollView, Modal,
+  View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, ScrollView, Modal,
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,18 +10,18 @@ import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import {
-  browseLessons, fetchLessonMapPins, travelAreaLabel,
+  browseLessons, fetchLessonMapPins,
   type BrowseLesson, type LessonMapPin, type LessonSort,
 } from '@/lib/coach/offers';
 import { LoadingState, EmptyState, ErrorState } from '@/components';
 import { ExploreMap } from '@/components/ExploreMap';
 import type { MapPinLike, Region } from '@/components/ExploreMap.types';
-import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent, effectiveOfferPrice } from '@/lib/coach/constants';
+import { OFFER_TYPE_OPTIONS, formatPriceCents } from '@/lib/coach/constants';
 import { useMembership } from '@/hooks/useMembership';
 import { useProfile } from '@/hooks/useProfile';
 import { useCurrentLocation } from '@/lib/location';
 import { haptics } from '@/lib/haptics';
-import { DEFAULT_LESSON_COVER } from '@/lib/coach/defaultLessonCover';
+import { LessonCard } from '@/components/coach/LessonCard';
 
 // Lesson Marketplace browse — location first (owner, 2026-10-04).
 //
@@ -60,30 +60,6 @@ type Filters = { radius: number | null; offerType: string | null; sort: LessonSo
 const DEFAULTS: Filters = { radius: 25, offerType: null, sort: 'nearest' };
 
 const typeLabel = (t: string) => OFFER_TYPE_OPTIONS.find((o) => o.value === t)?.label ?? t;
-
-/**
- * The card's price, from this buyer's point of view.
- *
- * A member sees the member price as THE price, with the public one struck
- * through, so the benefit is visible while browsing rather than a surprise at
- * checkout. Everyone else sees what membership would save them on this
- * specific offer, which is a far better upsell than a generic pitch.
- */
-function PriceRow({ item, isMember }: { item: BrowseLesson; isMember: boolean }) {
-  const price = effectiveOfferPrice(item, isMember);
-  return (
-    <>
-      <View style={s.priceRow}>
-        <Text style={s.priceStrike}>{formatPriceCents(item.regular_price_cents)}</Text>
-        <Text style={s.priceNow}>{formatPriceCents(price.cents)}</Text>
-        <Text style={s.pctOff}>{discountPercent(item.regular_price_cents, price.cents)}% off</Text>
-      </View>
-      {!price.isMemberPrice && item.premium_price_cents != null && (
-        <Text style={s.memberHint}>Members pay {formatPriceCents(item.premium_price_cents)}</Text>
-      )}
-    </>
-  );
-}
 
 function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
   return (
@@ -462,42 +438,10 @@ export default function LessonMarketplaceScreen() {
           data={offers}
           keyExtractor={(o) => o.id}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 12 }}
-          renderItem={({ item }) => {
-            const travel = travelAreaLabel(item);
-            const miles = item.distance_miles != null ? `${item.distance_miles} mi` : null;
-            return (
-              <TouchableOpacity style={s.card} activeOpacity={0.85} onPress={() => router.push(`/lessons/${item.id}` as never)}>
-                <View style={s.cardRow}>
-                  <Image
-                    source={item.photo_url ? { uri: item.photo_url } : DEFAULT_LESSON_COVER}
-                    style={s.thumb}
-                    resizeMode="cover"
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.cardTitle} numberOfLines={1}>{item.title}</Text>
-                    <Text style={s.cardSub}>
-                      {typeLabel(item.offer_type)}{item.coach_name ? ` · ${item.coach_name}` : ''}
-                    </Text>
-                    {!!item.facility_name && (
-                      <Text style={s.cardLocation} numberOfLines={1}>
-                        {miles && !travel ? `${miles} · ` : ''}{item.facility_name} · {item.city}, {item.state}
-                      </Text>
-                    )}
-                    {!!travel && (
-                      <Text style={s.cardTravel} numberOfLines={1}>
-                        {miles && !item.facility_name ? `${miles} · ` : ''}{travel}
-                      </Text>
-                    )}
-                    <PriceRow item={item} isMember={isMember} />
-                  </View>
-                  {item.premium_only && (
-                    <View style={s.premiumBadge}><Text style={s.premiumBadgeText}>PREMIUM</Text></View>
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          }}
+          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 16 }}
+          renderItem={({ item }) => (
+            <LessonCard item={item} isMember={isMember} onPress={() => router.push(`/lessons/${item.id}` as never)} />
+          )}
         />
       )}
 
@@ -604,20 +548,4 @@ const s = StyleSheet.create({
   pinBtn: { marginTop: 8, backgroundColor: L.gold, borderRadius: shape.cta, paddingVertical: 12, alignItems: 'center' },
   pinBtnText: { color: L.navy, fontSize: text.action.size, fontWeight: '800' },
 
-  // Cards
-  card: { backgroundColor: L.bg, borderRadius: shape.card, borderWidth: 1, borderColor: L.border, padding: 12 },
-  cardRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  thumb: { width: 64, height: 64, borderRadius: shape.cta },
-  cardTitle: { color: L.navy, fontSize: text.rowTitle.size, fontWeight: '700' },
-  cardSub: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
-  memberHint: { color: L.gold, fontSize: text.caption.size, fontWeight: '700', marginTop: 2 },
-  cardLocation: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', marginTop: 2 },
-  cardTravel: { color: L.navy, fontSize: text.caption.size, fontWeight: '600', marginTop: 2 },
-  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  priceStrike: { color: L.textSub, fontSize: text.caption.size, fontWeight: '500', textDecorationLine: 'line-through' },
-  priceNow: { color: L.navy, fontSize: text.rowValue.size, fontWeight: '800' },
-  pctOff: { color: colors.gold, fontSize: text.cardLabel.size, fontWeight: '800', letterSpacing: text.cardLabel.letterSpacing },
-
-  premiumBadge: { backgroundColor: L.navy, borderRadius: shape.badge, paddingHorizontal: 6, paddingVertical: 3 },
-  premiumBadgeText: { color: L.bg, fontSize: 9, fontWeight: '800' },
 });
