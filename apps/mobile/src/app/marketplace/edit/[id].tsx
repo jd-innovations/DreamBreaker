@@ -40,7 +40,11 @@ const L = {
 };
 
 export default function EditListingScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // suggestedPrice (cents): from the seller tip's "Lower the price"
+  // (2026-10-04). Prefills the asking price; nothing saves until the seller does.
+  const { id, suggestedPrice } = useLocalSearchParams<{ id: string; suggestedPrice?: string }>();
+  const suggestedCents = suggestedPrice && /^\d+$/.test(suggestedPrice) ? Number(suggestedPrice) : null;
+  const [originalCents, setOriginalCents] = useState<number | null>(null);
   const insets = useSafeAreaInsets();
   const { user } = useSession();
 
@@ -79,8 +83,12 @@ export default function EditListingScreen() {
       setBrand(listing.brand);
       setModel(listing.model);
       setCondition(listing.condition);
-      setAskingPrice(String(listing.asking_price_cents / 100));
-      setMinOffer(String(listing.min_offer_cents / 100));
+      setOriginalCents(listing.asking_price_cents);
+      const useSuggested = suggestedCents != null && suggestedCents > 0 && suggestedCents < listing.asking_price_cents;
+      const askCents = useSuggested ? suggestedCents! : listing.asking_price_cents;
+      setAskingPrice(String(askCents / 100));
+      // A minimum offer above the new price would block saving; bring it down with it.
+      setMinOffer(String(Math.min(listing.min_offer_cents, askCents) / 100));
       setDescription(listing.description ?? '');
       setPickupFacility(listing.pickupFacility);
       setFulfillment(listing.fulfillment);
@@ -94,7 +102,7 @@ export default function EditListingScreen() {
       Alert.alert('Could not load listing', err instanceof Error ? err.message : 'Please try again.');
       router.back();
     }).finally(() => setLoading(false));
-  }, [id]);
+  }, [id, suggestedCents]);
 
   const asking = parseFloat(askingPrice);
   const min = parseFloat(minOffer);
@@ -251,6 +259,11 @@ export default function EditListingScreen() {
         ))}
 
         <Text style={[s.fieldLabel, { marginTop: 20 }]}>Asking Price</Text>
+        {suggestedCents != null && originalCents != null && suggestedCents < originalCents && (
+          <Text style={s.stepHint}>
+            Suggested ${Math.round(suggestedCents / 100)} (was ${Math.round(originalCents / 100)}). Saving a lower price notifies everyone who saved it.
+          </Text>
+        )}
         <View style={s.amountRow}>
           <Text style={s.amountPrefix}>$</Text>
           <TextInput

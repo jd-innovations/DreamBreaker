@@ -7,6 +7,7 @@ import {
   type MarketplaceCondition,
 } from './constants';
 import { notifyListingsUpdated } from './listingEvents';
+import type { ListingInsight } from '@shared/listingTip';
 
 export type MarketplaceListing = Tables<'marketplace_listings'>;
 export type MarketplaceListingPhoto = Tables<'marketplace_listing_photos'>;
@@ -478,4 +479,16 @@ export async function reportListing(params: {
     notes: params.notes ?? null,
   });
   if (error) throw error;
+}
+
+/**
+ * The seller tip's numbers for one of YOUR listings (20261004150000): saves,
+ * buyer conversations, comparable asking prices, a suggested price. The
+ * server refuses anyone but the seller. Wording: listingTip() in
+ * @shared/listingTip.
+ */
+export async function fetchSellerInsight(listingId: string): Promise<ListingInsight | null> {
+  const { data, error } = await supabase.rpc('listing_seller_insight', { p_listing_id: listingId });
+  if (error) throw error;
+  return (data?.[0] as ListingInsight | undefined) ?? null;
 }

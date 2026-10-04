@@ -19,7 +19,9 @@ import { makeOffer, messageSellerAboutListing } from '@/lib/marketplace/offers';
 import { blockUser, hasBlocked } from '@/lib/services/blocking';
 import { fetchProfile, type UserProfile } from '@/lib/services/profile';
 import { conditionLabel, formatPriceCents, listingAgeLabel, type MarketplaceBrand } from '@/lib/marketplace/constants';
-import { renewListing, setListingStatus, deleteListing } from '@/lib/marketplace/listingService';
+import { renewListing, setListingStatus, deleteListing, fetchSellerInsight } from '@/lib/marketplace/listingService';
+import { listingTip, type ListingTip } from '@shared/listingTip';
+import { colors } from '@/theme';
 import { isListingSaved, saveListing, unsaveListing } from '@/lib/marketplace/savedListings';
 import { BRAND_LOGOS } from '@/lib/marketplace/brandLogos';
 import LocationCard from '@/components/LocationCard';
@@ -126,6 +128,35 @@ export default function ListingDetailScreen() {
     return () => { active = false; };
   }, [user?.id, listing?.seller_id]);
 
+  // Seller tip (2026-10-04): in a listing's last week, one tailored line for
+  // its seller — from listing_seller_insight — with a button that acts on it.
+  const [tip, setTip] = useState<(ListingTip & { suggestedCents: number }) | null>(null);
+  useEffect(() => {
+    if (!listing || !user || user.id !== listing.seller_id) { setTip(null); return; }
+    const live = listing.status === 'active' || listing.status === 'pending';
+    const lastWeek = !!listing.expires_at && new Date(listing.expires_at).getTime() - Date.now() < 7 * 86400000;
+    if (!live || !lastWeek) { setTip(null); return; }
+    let active = true;
+    fetchSellerInsight(listing.id)
+      .then((i) => { if (active && i) setTip({ ...listingTip(i, listing.brand, listing.model), suggestedCents: i.suggested_cents }); })
+      .catch(() => { if (active) setTip(null); });
+    return () => { active = false; };
+  }, [listing, user]);
+
+  // "Lower the price": the edit screen with the suggested price filled in.
+  // Saving a lower price fires the existing price-drop push to every saver.
+  const openPriceEdit = useCallback(async (listingIdToEdit: string) => {
+    let suggested: number | null = null;
+    try { suggested = (await fetchSellerInsight(listingIdToEdit))?.suggested_cents ?? null; } catch { /* edit without a suggestion */ }
+    router.push({ pathname: `/marketplace/edit/${listingIdToEdit}`, params: suggested ? { suggestedPrice: String(suggested) } : {} } as never);
+  }, []);
+
+  const runTipAction = useCallback((action: ListingTip['action'], listingIdToUse: string) => {
+    if (action === 'messages') router.push('/(tabs)/chat' as never);
+    else if (action === 'edit') router.push(`/marketplace/edit/${listingIdToUse}` as never);
+    else void openPriceEdit(listingIdToUse);
+  }, [openPriceEdit]);
+
   // Arriving from the listing-expiring email (2026-10-04): ?action=renew|sold.
   // Asks the OWNER to confirm, then uses the same renew / mark-sold calls as
   // the menu. Never acts on the link alone — mail apps and link scanners open
@@ -133,10 +164,15 @@ export default function ListingDetailScreen() {
   const actionHandled = useRef(false);
   useEffect(() => {
     if (actionHandled.current || !listing || !user) return;
-    if (action !== 'renew' && action !== 'sold') return;
+    if (!action || !['renew', 'sold', 'price', 'edit', 'messages'].includes(action)) return;
     actionHandled.current = true;
     router.setParams({ action: undefined });
     if (user.id !== listing.seller_id) return;
+    // The tip's actions only open a screen; nothing changes until the seller saves.
+    if (action === 'price' || action === 'edit' || action === 'messages') {
+      runTipAction(action, listing.id);
+      return;
+    }
 
     const title = listing.title;
     if (listing.status === 'sold' || listing.status === 'deleted') {
@@ -164,7 +200,7 @@ export default function ListingDetailScreen() {
         },
       ]);
     }
-  }, [action, listing, user, load]);
+  }, [action, listing, user, load, runTipAction]);
 
   if (loading) {
     return <View style={s.centerFill}><ActivityIndicator color="#FFFFFF" /></View>;
@@ -397,6 +433,7 @@ export default function ListingDetailScreen() {
         collapsedBackgroundColor="rgba(255,255,255,0.5)"
         renderCollapsed={() => (
           <CollapsedContent listing={listing} isOwner={isOwner} onRenew={handleRenew}
+            tip={tip ? { text: tip.text, cta: tip.cta, onPress: () => runTipAction(tip.action, listing.id) } : null}
             blockedSeller={blockedSeller}
             onExpand={() => setSnap('half')}
             onMakeOffer={() => setOfferOpen(true)}
@@ -470,8 +507,10 @@ export default function ListingDetailScreen() {
 
 // ── Sheet tiers ──────────────────────────────────────────────────────────────
 
-function CollapsedContent({ listing, isOwner, blockedSeller, onExpand, onMakeOffer, onMessageSeller, onRenew, onMeasure }: {
+function CollapsedContent({ listing, isOwner, blockedSeller, onExpand, onMakeOffer, onMessageSeller, onRenew, onMeasure, tip }: {
   listing: MarketplaceListingWithPhotos; isOwner: boolean; blockedSeller: boolean; onRenew: () => void;
+  /** The seller tip, owner only, in the listing's last week. */
+  tip?: { text: string; cta: string; onPress: () => void } | null;
   onExpand: () => void; onMakeOffer: () => void; onMessageSeller: () => void;
   onMeasure?: (height: number) => void;
 }) {
@@ -555,6 +594,14 @@ function CollapsedContent({ listing, isOwner, blockedSeller, onExpand, onMakeOff
                     ? 'Marked sold. Only you can see this.'
                     : 'Paused — hidden from the Marketplace.'}
               </Text>
+            </View>
+          )}
+          {!!tip && (
+            <View style={s.tipCard}>
+              <Text style={s.tipText}>{tip.text}</Text>
+              <TouchableOpacity onPress={tip.onPress} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={s.tipCta}>{tip.cta} →</Text>
+              </TouchableOpacity>
             </View>
           )}
           <View style={s.ctaRow}>
@@ -778,6 +825,10 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
   ownerBannerText: { flex: 1, color: L.text, fontSize: text.caption.size, fontWeight: '600' },
+  // Seller tip (2026-10-04): goldLight card, goldDeep action (readable on white).
+  tipCard: { backgroundColor: colors.goldLight, borderRadius: shape.card, padding: 14, gap: 8, marginBottom: 10 },
+  tipText: { color: L.text, fontSize: text.caption.size, fontWeight: '600', lineHeight: 18 },
+  tipCta: { color: colors.goldDeep, fontSize: text.caption.size, fontWeight: '800' },
   locationText: { color: L.text, fontSize: text.caption.size, fontWeight: '500', marginBottom: 4 },
   pickupHint: { color: L.textMuted, fontSize: text.caption.size, lineHeight: 17, marginBottom: 10 },
   description: { color: L.text, fontSize: text.body.size, fontWeight: '500', lineHeight: 20, marginTop: 12 },

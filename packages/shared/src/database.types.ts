@@ -10812,6 +10812,20 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      listing_seller_insight: {
+        Args: { p_listing_id: string }
+        Returns: {
+          kind: string
+          saves: number
+          conversations: number
+          comp_count: number
+          comp_low_cents: number
+          comp_high_cents: number
+          comp_median_cents: number
+          asking_cents: number
+          suggested_cents: number
+        }[]
+      }
       tournament_registrant_pin_players: {
         Args: {
           p_division_id?: string

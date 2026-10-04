@@ -60,7 +60,8 @@ export function resolveExternalUrl(rawUrl: string): ExternalDestination | null {
 // (2026-10-04). The resolver keeps only the path, so the action is carried
 // through here — just these two values, just on a listing. The listing screen
 // asks the owner to confirm; nothing happens on the link alone.
-const LISTING_ACTIONS = new Set(['renew', 'sold']);
+// price / edit / messages: the seller tip's link (20261004150000) — they only open a screen.
+const LISTING_ACTIONS = new Set(['renew', 'sold', 'price', 'edit', 'messages']);
 
 function listingActionQuery(rawUrl: string, resolved: { type: string; id: string }): string {
   if (resolved.type !== 'marketplace' || !resolved.id || resolved.id === MY_LISTINGS) return '';
