@@ -8400,6 +8400,8 @@ export type Database = {
           p_lng?: number
           p_radius_miles?: number
           p_include_test?: boolean
+          p_facility_id?: string
+          p_travel_only?: boolean
         }
         Returns: {
           id: string
@@ -8472,7 +8474,7 @@ export type Database = {
         }[]
       }
       coach_offer_map_pins: {
-        Args: { p_include_test?: boolean; p_lat: number; p_lng: number; p_radius_meters?: number }
+        Args: { p_include_test?: boolean; p_lat: number; p_lng: number; p_offer_type?: string; p_radius_meters?: number }
         Returns: {
           facility_id: string
           facility_name: string
@@ -9012,7 +9014,7 @@ export type Database = {
         }[]
       }
       directory_map_pins: {
-        Args: { p_include_test?: boolean; p_lat: number; p_lng: number; p_radius_meters?: number }
+        Args: { p_include_test?: boolean; p_lat: number; p_lng: number; p_offer_type?: string; p_radius_meters?: number }
         Returns: {
           key: string
           kind: string

@@ -319,6 +319,10 @@ export type BrowseLessonsParams = {
   sort?: LessonSort;
   limit?: number;
   offset?: number;
+  /** Only lessons at this facility (the map's "See lessons"). */
+  facilityId?: string | null;
+  /** Only lessons whose coach travels (the map's travel banner). */
+  travelOnly?: boolean;
 };
 
 export type BrowseLesson = Database['public']['Functions']['browse_coach_offers']['Returns'][number];
@@ -334,6 +338,26 @@ export async function browseLessons(params: BrowseLessonsParams): Promise<Browse
     p_lng: params.near?.lng,
     p_radius_miles: params.near && params.radiusMiles != null ? params.radiusMiles : undefined,
     p_include_test: !IS_PRODUCTION_BUILD,
+    p_facility_id: params.facilityId ?? undefined,
+    p_travel_only: params.travelOnly || undefined,
+  });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export type LessonMapPin = Database['public']['Functions']['coach_offer_map_pins']['Returns'][number];
+
+/** One pin per facility with lessons, around a point (20261004130000). */
+export async function fetchLessonMapPins(
+  center: { lat: number; lng: number }, radiusMiles: number | null, offerType: string | null,
+): Promise<LessonMapPin[]> {
+  const { data, error } = await supabase.rpc('coach_offer_map_pins', {
+    p_lat: center.lat,
+    p_lng: center.lng,
+    // Anywhere still needs a bound for a map: 50 mi around the centre.
+    p_radius_meters: (radiusMiles ?? 50) * 1609.344,
+    p_include_test: !IS_PRODUCTION_BUILD,
+    p_offer_type: offerType ?? undefined,
   });
   if (error) throw error;
   return data ?? [];
