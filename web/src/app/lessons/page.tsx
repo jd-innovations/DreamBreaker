@@ -15,7 +15,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { MagnifyingGlass, MapTrifold, Rows } from "@phosphor-icons/react";
+import { MagnifyingGlass, MapTrifold, NavigationArrow, Rows } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 import { OfferCard } from "@/components/coaching/offer-card";
 import { LessonsMap, lessonsMapAvailable } from "@/components/coaching/lessons-map";
 import {
-  browseHref, fetchOffers, filtersFromParams, OFFER_PAGE_SIZE, OFFER_SORTS, OFFER_TYPES,
+  browseHref, fetchOffers, filtersFromParams, OFFER_PAGE_SIZE, OFFER_RADII, OFFER_SORTS, OFFER_TYPES,
   type OfferCard as Offer, type OfferFilters,
 } from "@/lib/coaching/browse";
 
@@ -46,12 +46,16 @@ function Lessons() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(filters.search);
   const [view, setView] = useState<"list" | "map">(params.get("view") === "map" ? "map" : "list");
+  // The visitor's position, from the browser, only after they ask. Kept in
+  // memory, never in the URL (2026-10-04).
+  const [near, setNear] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
 
   const mapOn = lessonsMapAvailable();
 
-  const load = useCallback(async (f: OfferFilters) => {
+  const load = useCallback(async (f: OfferFilters, pos: { lat: number; lng: number } | null) => {
     setLoading(true);
-    const r = await fetchOffers(f);
+    const r = await fetchOffers(f, pos);
     setLoading(false);
     if (!r.ok) { toast.error(r.message); return; }
     setOffers(r.data);
@@ -64,9 +68,24 @@ function Lessons() {
   // params changing, not to an event handler.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load(filtersFromParams(params));
+    void load(filtersFromParams(params), near);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params]);
+  }, [params, near]);
+
+  function useMyLocation() {
+    if (!navigator.geolocation) { toast.error("Your browser can't share a location."); return; }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        setNear({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        // Lessons are local: start at 25 miles, nearest first.
+        router.push(browseHref(filters, { page: 1, radius: filters.radius || "25", sort: "nearest" }));
+      },
+      () => { setLocating(false); toast.error("Couldn't get your location. Check your browser's permission."); },
+      { timeout: 10000, maximumAge: 600_000 },
+    );
+  }
 
   function apply(overrides: Partial<OfferFilters>) {
     // Any filter change resets to page 1: page 3 of a different search is
@@ -114,12 +133,32 @@ function Lessons() {
           <Label htmlFor="lesson-sort" className="sr-only">Sort</Label>
           <select id="lesson-sort" value={filters.sort} className={SELECT}
             onChange={(e) => apply({ sort: e.target.value })}>
-            {OFFER_SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            {OFFER_SORTS.filter((s) => near || s.value !== "nearest").map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
 
         <Button type="submit" variant="secondary">Search</Button>
       </form>
+
+      {/* Near me: position from the browser on request, then a radius. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {near ? (
+          <>
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
+              <NavigationArrow size={12} weight="fill" aria-hidden /> Near you
+            </span>
+            <Label htmlFor="lesson-radius" className="sr-only">Distance</Label>
+            <select id="lesson-radius" value={filters.radius} className={cn(SELECT, "h-9 w-auto")}
+              onChange={(e) => apply({ radius: e.target.value })}>
+              {OFFER_RADII.map((r) => <option key={r.label} value={r.value}>{r.label}</option>)}
+            </select>
+          </>
+        ) : (
+          <Button type="button" size="sm" variant="secondary" onClick={useMyLocation} disabled={locating}>
+            <NavigationArrow size={14} weight="fill" /> {locating ? "Locating…" : "Lessons near me"}
+          </Button>
+        )}
+      </div>
 
       {/* The city filter only appears when one is set, since it arrives from
           the map rather than from a control the visitor hunts for. */}
@@ -160,7 +199,9 @@ function Lessons() {
         <>
           {!loading && offers.length === 0 && (
             <div className="mt-4 rounded-lg border border-border bg-card p-10 text-center text-sm text-muted-foreground">
-              No lessons match that. Try a wider search.
+              {near && filters.radius
+                ? `No lessons within ${filters.radius} mi. Try a wider area.`
+                : "No lessons match that. Try a wider search."}
             </div>
           )}
 

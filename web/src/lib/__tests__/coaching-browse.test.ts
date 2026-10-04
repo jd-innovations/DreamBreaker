@@ -114,7 +114,7 @@ describe("browseHref and filtersFromParams", () => {
   });
 
   it("round-trips", () => {
-    const f = { search: "clinic", type: "camp", city: "Sarasota", sort: "price_high", page: 3 };
+    const f = { search: "clinic", type: "camp", city: "Sarasota", sort: "price_high", page: 3, radius: "25" };
     const url = browseHref(EMPTY_FILTERS, f);
     expect(filtersFromParams(new URLSearchParams(url.split("?")[1]))).toEqual(f);
   });
@@ -126,7 +126,7 @@ describe("browseHref and filtersFromParams", () => {
 
   it("reads plain objects too, for server components", () => {
     expect(filtersFromParams({ q: "camp", sort: undefined })).toEqual({
-      search: "camp", type: "", city: "", sort: "newest", page: 1,
+      search: "camp", type: "", city: "", sort: "newest", page: 1, radius: "",
     });
   });
 });

@@ -6,7 +6,7 @@ import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
-import { fetchCoachOfferBrowseDetail, type CoachOfferBrowseCard } from '@/lib/coach/offers';
+import { fetchCoachOfferBrowseDetail, travelAreaLabel, type CoachOfferBrowseCard } from '@/lib/coach/offers';
 import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent, effectiveOfferPrice } from '@/lib/coach/constants';
 import { useMembership } from '@/hooks/useMembership';
 import { useSession } from '@/hooks/useSession';
@@ -194,7 +194,9 @@ export default function LessonOfferDetailScreen() {
           {offer.lessons_included && <DetailRow label="Lessons Included" value={String(offer.lessons_included)} />}
           {offer.quantity_available != null && <DetailRow label="Availability" value={`${offer.quantity_remaining} of ${offer.quantity_available} left`} />}
           {offer.purchase_limit_per_customer && <DetailRow label="Purchase Limit" value={`${offer.purchase_limit_per_customer} per customer`} />}
-          {offer.facility && <DetailRow label="Location" value={`${offer.facility.name} — ${offer.facility.city}, ${offer.facility.state}`} last />}
+          {offer.facility && <DetailRow label="Location" value={`${offer.facility.name} — ${offer.facility.city}, ${offer.facility.state}`} last={!travelAreaLabel(offer)} />}
+          {/* Travels to you (2026-10-04): the coach's home base city and range. */}
+          {!!travelAreaLabel(offer) && <DetailRow label={offer.facility ? 'Or' : 'Location'} value={travelAreaLabel(offer)!} last />}
         </View>
 
         {offer.terms && (

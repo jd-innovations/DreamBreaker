@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Clock, MapPin, Users } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
 import {
-  discountPercent, formatPrice, initialsOf, offerMeta, OFFER_TYPE_LABEL, placeLabel, publicPrice,
+  discountPercent, formatPrice, initialsOf, offerMeta, OFFER_TYPE_LABEL, placeLabel, publicPrice, travelLabel,
   type OfferCard as Offer,
 } from "@/lib/coaching/browse";
 
@@ -82,7 +82,17 @@ export function OfferCard({ offer }: { offer: Offer }) {
         {place && (
           <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
             <MapPin size={12} weight="bold" aria-hidden />
-            <span className="truncate">{place}</span>
+            <span className="truncate">
+              {offer.distance_miles != null && !travelLabel(offer) ? `${offer.distance_miles} mi · ` : ""}{place}
+            </span>
+          </p>
+        )}
+        {travelLabel(offer) && (
+          <p className="flex items-center gap-1.5 truncate text-xs font-medium text-foreground">
+            <MapPin size={12} weight="bold" aria-hidden />
+            <span className="truncate">
+              {offer.distance_miles != null && !place ? `${offer.distance_miles} mi · ` : ""}{travelLabel(offer)}
+            </span>
           </p>
         )}
 

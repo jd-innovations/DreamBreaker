@@ -23,6 +23,8 @@ export const OFFER_TYPES = [
 ] as const;
 
 export const OFFER_SORTS = [
+  // Only offered once the visitor has shared a position (2026-10-04).
+  { value: "nearest", label: "Nearest" },
   { value: "newest", label: "Newest" },
   { value: "price_low", label: "Price: low to high" },
   { value: "price_high", label: "Price: high to low" },
@@ -57,10 +59,16 @@ export interface OfferCard {
   longitude: number | null;
   photo_url: string | null;
   created_at: string;
+  /** Travels to you (2026-10-04): the coach's home base city and range. */
+  travel_base_city: string | null;
+  travel_base_state: string | null;
+  travel_radius_miles: number | null;
+  /** Miles from the visitor's position; null without one. */
+  distance_miles: number | null;
   total_count: number;
 }
 
-export interface OfferDetail extends Omit<OfferCard, "total_count" | "created_at"> {
+export interface OfferDetail extends Omit<OfferCard, "total_count" | "created_at" | "distance_miles"> {
   terms: string | null;
   purchase_limit_per_customer: number | null;
   status: string;
@@ -85,18 +93,43 @@ export interface OfferFilters {
   city: string;
   sort: string;
   page: number;
+  /** Miles around the visitor's position; "" = anywhere. Needs a position to apply. */
+  radius: string;
 }
 
-export const EMPTY_FILTERS: OfferFilters = { search: "", type: "", city: "", sort: "newest", page: 1 };
+export const EMPTY_FILTERS: OfferFilters = { search: "", type: "", city: "", sort: "newest", page: 1, radius: "" };
+
+export const OFFER_RADII = [
+  { value: "10", label: "Within 10 mi" },
+  { value: "25", label: "Within 25 mi" },
+  { value: "50", label: "Within 50 mi" },
+  { value: "", label: "Anywhere" },
+] as const;
+
+/** "Travels to you · from Bradenton, up to 15 mi", or null. */
+export function travelLabel(o: Pick<OfferCard, "travel_base_city" | "travel_radius_miles">): string | null {
+  if (!o.travel_radius_miles || !o.travel_base_city) return null;
+  return `Travels to you · from ${o.travel_base_city}, up to ${o.travel_radius_miles} mi`;
+}
 
 export type Result<T> = { ok: true; data: T } | { ok: false; message: string };
 
-export async function fetchOffers(f: OfferFilters): Promise<Result<OfferCard[]>> {
+/**
+ * The visitor's position is passed for this one query and never stored or put
+ * in the URL. Without one, radius and "nearest" don't apply.
+ */
+export async function fetchOffers(
+  f: OfferFilters, near: { lat: number; lng: number } | null = null,
+): Promise<Result<OfferCard[]>> {
+  const radius = Number(f.radius);
   const { data, error } = await createClient().rpc("browse_coach_offers", {
     p_search: f.search.trim() || undefined,
     p_offer_type: f.type || undefined,
     p_city: f.city.trim() || undefined,
-    p_sort: f.sort || "newest",
+    p_sort: f.sort === "nearest" && !near ? "newest" : f.sort || "newest",
+    p_lat: near?.lat,
+    p_lng: near?.lng,
+    p_radius_miles: near && Number.isFinite(radius) && radius > 0 ? radius : undefined,
     p_limit: OFFER_PAGE_SIZE,
     p_offset: (Math.max(f.page, 1) - 1) * OFFER_PAGE_SIZE,
   });
@@ -192,6 +225,7 @@ export function browseHref(f: OfferFilters, overrides: Partial<OfferFilters> = {
   if (merged.city.trim()) qs.set("city", merged.city.trim());
   if (merged.sort && merged.sort !== "newest") qs.set("sort", merged.sort);
   if (merged.page > 1) qs.set("page", String(merged.page));
+  if (merged.radius) qs.set("radius", merged.radius);
   const s = qs.toString();
   return s ? `/lessons?${s}` : "/lessons";
 }
@@ -207,5 +241,6 @@ export function filtersFromParams(params: URLSearchParams | Record<string, strin
     city: get("city"),
     sort: get("sort") || "newest",
     page: Number.isFinite(page) && page > 1 ? page : 1,
+    radius: get("radius"),
   };
 }

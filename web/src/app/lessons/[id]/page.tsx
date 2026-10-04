@@ -130,6 +130,12 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
                 <span>{place}{offer.facility_address ? ` — ${offer.facility_address}` : ""}</span>
               </div>
             )}
+            {offer.travel_radius_miles && offer.travel_base_city && (
+              <div className="flex items-center gap-2 text-muted-foreground sm:col-span-2">
+                <MapPin size={14} weight="bold" aria-hidden />
+                <span>Travels to you · from {offer.travel_base_city}, up to {offer.travel_radius_miles} mi</span>
+              </div>
+            )}
           </dl>
 
           {offer.description && (

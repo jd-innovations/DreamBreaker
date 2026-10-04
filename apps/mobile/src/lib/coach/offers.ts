@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { IS_PRODUCTION_BUILD } from '@/lib/featureFlags';
-import type { Tables, TablesUpdate } from '@shared/database.types';
+import type { Database, Tables, TablesUpdate } from '@shared/database.types';
 
 // Coach Marketplace V1 Phase 2 — Coach Offers service layer. Mirrors
 // apps/mobile/src/lib/marketplace/listingService.ts's conventions (thin
@@ -128,6 +128,10 @@ export type CreateCoachOfferInput = {
   quantityAvailable?: number | null; // null = unlimited
   purchaseLimitPerCustomer?: number | null;
   facilityId?: string | null; // location metadata only — see coach_offers table comment
+  /** Travels to you (2026-10-04): home base city/state + range; all three or none. */
+  travelBaseCity?: string | null;
+  travelBaseState?: string | null;
+  travelRadiusMiles?: number | null;
   premiumOnly?: boolean;
   premiumPriceCents?: number | null;
   terms?: string | null;
@@ -155,6 +159,9 @@ export async function createCoachOffer(input: CreateCoachOfferInput): Promise<Co
       quantity_remaining: input.quantityAvailable ?? null,
       purchase_limit_per_customer: input.purchaseLimitPerCustomer ?? null,
       facility_id: input.facilityId ?? null,
+      travel_base_city: input.travelBaseCity ?? null,
+      travel_base_state: input.travelBaseState ?? null,
+      travel_radius_miles: input.travelRadiusMiles ?? null,
       premium_only: input.premiumOnly ?? false,
       premium_price_cents: input.premiumPriceCents ?? null,
       terms: input.terms ?? null,
@@ -192,6 +199,9 @@ export type UpdateCoachOfferInput = Partial<{
   quantityAvailable: number | null;
   purchaseLimitPerCustomer: number | null;
   facilityId: string | null;
+  travelBaseCity: string | null;
+  travelBaseState: string | null;
+  travelRadiusMiles: number | null;
   premiumOnly: boolean;
   premiumPriceCents: number | null;
   terms: string | null;
@@ -210,6 +220,9 @@ export async function updateCoachOffer(id: string, updates: UpdateCoachOfferInpu
   if (updates.quantityAvailable !== undefined) patch.quantity_available = updates.quantityAvailable;
   if (updates.purchaseLimitPerCustomer !== undefined) patch.purchase_limit_per_customer = updates.purchaseLimitPerCustomer;
   if (updates.facilityId !== undefined) patch.facility_id = updates.facilityId;
+  if (updates.travelBaseCity !== undefined) patch.travel_base_city = updates.travelBaseCity;
+  if (updates.travelBaseState !== undefined) patch.travel_base_state = updates.travelBaseState;
+  if (updates.travelRadiusMiles !== undefined) patch.travel_radius_miles = updates.travelRadiusMiles;
   if (updates.premiumOnly !== undefined) patch.premium_only = updates.premiumOnly;
   if (updates.premiumPriceCents !== undefined) patch.premium_price_cents = updates.premiumPriceCents;
   if (updates.terms !== undefined) patch.terms = updates.terms;
@@ -286,4 +299,48 @@ export async function duplicateCoachOffer(id: string, newId: string): Promise<Co
   }
 
   return copy;
+}
+
+// ── Location-aware browse (2026-10-04) ───────────────────────────────────────
+// The Lesson Marketplace now reads browse_coach_offers (20261004120000), the
+// same search web uses: position + radius, "nearest" sort, distance, type,
+// text search, sold-out hidden. Test coaches show on internal builds only —
+// the same rule fetchActiveCoachOffersBrowse applied with IS_PRODUCTION_BUILD.
+
+export type LessonSort = 'nearest' | 'price_low' | 'price_high' | 'newest';
+
+export type BrowseLessonsParams = {
+  search?: string;
+  offerType?: string | null;
+  /** Buyer position; omitted = no distance, no radius. Used for this query only. */
+  near?: { lat: number; lng: number } | null;
+  /** null = anywhere. */
+  radiusMiles?: number | null;
+  sort?: LessonSort;
+  limit?: number;
+  offset?: number;
+};
+
+export type BrowseLesson = Database['public']['Functions']['browse_coach_offers']['Returns'][number];
+
+export async function browseLessons(params: BrowseLessonsParams): Promise<BrowseLesson[]> {
+  const { data, error } = await supabase.rpc('browse_coach_offers', {
+    p_search: params.search?.trim() || undefined,
+    p_offer_type: params.offerType || undefined,
+    p_sort: params.sort ?? 'nearest',
+    p_limit: params.limit ?? 60,
+    p_offset: params.offset ?? 0,
+    p_lat: params.near?.lat,
+    p_lng: params.near?.lng,
+    p_radius_miles: params.near && params.radiusMiles != null ? params.radiusMiles : undefined,
+    p_include_test: !IS_PRODUCTION_BUILD,
+  });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** "Travels to you · from Bradenton, up to 15 mi", or null for a facility-only lesson. */
+export function travelAreaLabel(o: { travel_base_city: string | null; travel_radius_miles: number | null }): string | null {
+  if (!o.travel_radius_miles || !o.travel_base_city) return null;
+  return `Travels to you · from ${o.travel_base_city}, up to ${o.travel_radius_miles} mi`;
 }

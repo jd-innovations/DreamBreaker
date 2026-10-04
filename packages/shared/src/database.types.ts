@@ -874,6 +874,9 @@ export type Database = {
           status: Database["public"]["Enums"]["coach_offer_status"]
           terms: string | null
           title: string
+          travel_base_city: string | null
+          travel_base_state: string | null
+          travel_radius_miles: number | null
           updated_at: string
         }
         Insert: {
@@ -900,6 +903,9 @@ export type Database = {
           status?: Database["public"]["Enums"]["coach_offer_status"]
           terms?: string | null
           title: string
+          travel_base_city?: string | null
+          travel_base_state?: string | null
+          travel_radius_miles?: number | null
           updated_at?: string
         }
         Update: {
@@ -926,6 +932,9 @@ export type Database = {
           status?: Database["public"]["Enums"]["coach_offer_status"]
           terms?: string | null
           title?: string
+          travel_base_city?: string | null
+          travel_base_state?: string | null
+          travel_radius_miles?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -8387,6 +8396,10 @@ export type Database = {
           p_sort?: string
           p_limit?: number
           p_offset?: number
+          p_lat?: number
+          p_lng?: number
+          p_radius_miles?: number
+          p_include_test?: boolean
         }
         Returns: {
           id: string
@@ -8414,6 +8427,10 @@ export type Database = {
           longitude: number
           photo_url: string
           created_at: string
+          travel_base_city: string
+          travel_base_state: string
+          travel_radius_miles: number
+          distance_miles: number
           total_count: number
         }[]
       }
@@ -8449,10 +8466,13 @@ export type Database = {
           latitude: number
           longitude: number
           photo_url: string
+          travel_base_city: string
+          travel_base_state: string
+          travel_radius_miles: number
         }[]
       }
       coach_offer_map_pins: {
-        Args: { p_lat: number; p_lng: number; p_radius_meters?: number }
+        Args: { p_include_test?: boolean; p_lat: number; p_lng: number; p_radius_meters?: number }
         Returns: {
           facility_id: string
           facility_name: string
@@ -8992,7 +9012,7 @@ export type Database = {
         }[]
       }
       directory_map_pins: {
-        Args: { p_lat: number; p_lng: number; p_radius_meters?: number }
+        Args: { p_include_test?: boolean; p_lat: number; p_lng: number; p_radius_meters?: number }
         Returns: {
           key: string
           kind: string

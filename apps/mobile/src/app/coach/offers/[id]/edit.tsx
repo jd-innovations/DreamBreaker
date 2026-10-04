@@ -12,6 +12,11 @@ import {
 } from '@/lib/coach/offers';
 import { OFFER_TYPE_OPTIONS, formatPriceCents, discountPercent } from '@/lib/coach/constants';
 import { coachOfferErrorMessage } from '@/lib/coach/offerErrors';
+import {
+  LessonLocationFields, hasLessonLocation, lessonLocationColumns, type LessonLocationValue,
+} from '@/components/coach/LessonLocationFields';
+import { supabase } from '@/lib/supabase';
+import { useProfile } from '@/hooks/useProfile';
 
 // Editing here only ever writes to this offer's own coach_offers row —
 // there is no purchase/wallet table for it to reach into (Phase 3+), so
@@ -39,6 +44,8 @@ export default function EditCoachOfferScreen() {
   const [quantityAvailable, setQuantityAvailable] = useState('');
   const [purchaseLimit, setPurchaseLimit] = useState('');
   const [terms, setTerms] = useState('');
+  const [location, setLocation] = useState<LessonLocationValue>({ facility: null, travel: null });
+  const { profile } = useProfile();
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(() => {
@@ -54,6 +61,17 @@ export default function EditCoachOfferScreen() {
       setQuantityAvailable(o.quantity_available?.toString() ?? '');
       setPurchaseLimit(o.purchase_limit_per_customer?.toString() ?? '');
       setTerms(o.terms ?? '');
+      const travel = o.travel_radius_miles && o.travel_base_city
+        ? { city: o.travel_base_city, state: o.travel_base_state ?? '', radiusMiles: o.travel_radius_miles }
+        : null;
+      setLocation({ facility: null, travel });
+      // The picker needs the facility's name, not just its id.
+      if (o.facility_id) {
+        void supabase.from('facilities').select('id, name, city, state, address').eq('id', o.facility_id).maybeSingle()
+          .then(({ data: f }) => {
+            if (f) setLocation((cur) => ({ ...cur, facility: { mode: 'facility', facilityId: f.id, name: f.name, city: f.city ?? '', state: f.state ?? '', address: f.address ?? '' } }));
+          });
+      }
     }).finally(() => setLoading(false));
   }, [id]);
 
@@ -75,6 +93,7 @@ export default function EditCoachOfferScreen() {
         quantityAvailable: quantityAvailable ? parseInt(quantityAvailable, 10) : null,
         purchaseLimitPerCustomer: purchaseLimit ? parseInt(purchaseLimit, 10) : null,
         terms: terms.trim() || null,
+        ...lessonLocationColumns(location),
       });
       return true;
     } catch (err) {
@@ -100,7 +119,7 @@ export default function EditCoachOfferScreen() {
         else await publishCoachOffer(id);
         load();
       } catch (err) {
-        Alert.alert('Could Not Publish', err instanceof Error ? err.message : 'Please try again.');
+        Alert.alert('Could Not Publish', coachOfferErrorMessage(err));
       }
     }
     setSaving(false);
@@ -189,6 +208,14 @@ export default function EditCoachOfferScreen() {
 
         <Text style={s.sectionLabel}>Terms</Text>
         <TextInput style={[s.input, s.textArea]} value={terms} onChangeText={setTerms} multiline placeholderTextColor={L.textSub} />
+
+        <Text style={s.sectionLabel}>Location</Text>
+        <LessonLocationFields
+          value={location}
+          onChange={setLocation}
+          defaultCity={profile?.location_city ?? ''}
+          defaultState={profile?.location_state ?? ''}
+        />
       </ScrollView>
 
       <View style={[s.footer, { paddingBottom: insets.bottom + 12 }]}>
@@ -201,7 +228,7 @@ export default function EditCoachOfferScreen() {
               <Text style={s.secondaryBtnText}>Pause</Text>
             </TouchableOpacity>
           ) : offer.status !== 'archived' ? (
-            <TouchableOpacity style={[s.primaryBtn, (!canSave || saving) && s.btnDisabled]} disabled={!canSave || saving} onPress={handlePublishOrResume}>
+            <TouchableOpacity style={[s.primaryBtn, (!canSave || !hasLessonLocation(location) || saving) && s.btnDisabled]} disabled={!canSave || !hasLessonLocation(location) || saving} onPress={handlePublishOrResume}>
               {saving ? <ActivityIndicator size="small" color={L.bg} /> : <Text style={s.primaryBtnText}>{offer.status === 'paused' ? 'Resume' : 'Publish'}</Text>}
             </TouchableOpacity>
           ) : null}

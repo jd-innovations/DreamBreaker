@@ -11,7 +11,10 @@ import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
-import { FacilityPicker, type FacilityPickerValue } from '@/components/FacilityPicker';
+import {
+  LessonLocationFields, hasLessonLocation, lessonLocationColumns, type LessonLocationValue,
+} from '@/components/coach/LessonLocationFields';
+import { useProfile } from '@/hooks/useProfile';
 import { draftCoachOfferId, uploadCoachOfferPhoto, cleanupAbandonedCoachOfferPhotos } from '@/lib/coach/offerPhotos';
 import { createCoachOffer, type CoachOfferType } from '@/lib/coach/offers';
 import { OFFER_TYPE_OPTIONS, discountPercent, MAX_OFFER_PHOTOS } from '@/lib/coach/constants';
@@ -43,7 +46,8 @@ export default function CreateCoachOfferScreen() {
   const [discountedPrice, setDiscountedPrice] = useState('');
   const [quantityAvailable, setQuantityAvailable] = useState('');
   const [purchaseLimit, setPurchaseLimit] = useState('');
-  const [facility, setFacility] = useState<FacilityPickerValue | null>(null);
+  const [location, setLocation] = useState<LessonLocationValue>({ facility: null, travel: null });
+  const { profile } = useProfile();
   const [terms, setTerms] = useState('');
   const [premiumOnly, setPremiumOnly] = useState(false);
   const [premiumPrice, setPremiumPrice] = useState('');
@@ -116,7 +120,7 @@ export default function CreateCoachOfferScreen() {
         discountedPriceCents: discountedCents,
         quantityAvailable: quantityAvailable ? parseInt(quantityAvailable, 10) : null,
         purchaseLimitPerCustomer: purchaseLimit ? parseInt(purchaseLimit, 10) : null,
-        facilityId: facility?.mode === 'facility' ? facility.facilityId : null,
+        ...lessonLocationColumns(location),
         premiumOnly,
         premiumPriceCents: premiumOnly && premiumPrice ? Math.round(parseFloat(premiumPrice) * 100) : null,
         terms: terms.trim() || null,
@@ -236,9 +240,14 @@ export default function CreateCoachOfferScreen() {
           </View>
         </View>
 
-        <Text style={s.sectionLabel}>Location (optional)</Text>
-        <FacilityPicker value={facility} onChange={setFacility} />
-        <Text style={s.hint}>Location metadata only — you're responsible for arranging any court needed.</Text>
+        <Text style={s.sectionLabel}>Location</Text>
+        <LessonLocationFields
+          value={location}
+          onChange={setLocation}
+          defaultCity={profile?.location_city ?? ''}
+          defaultState={profile?.location_state ?? ''}
+        />
+        <Text style={s.hint}>You're responsible for arranging any court needed.</Text>
 
         <Text style={s.sectionLabel}>Terms</Text>
         <TextInput
@@ -266,7 +275,7 @@ export default function CreateCoachOfferScreen() {
         <TouchableOpacity style={[s.draftBtn, (!canSave || saving) && s.btnDisabled]} disabled={!canSave || saving} onPress={() => handleSave(false)}>
           {saving ? <ActivityIndicator size="small" color={L.navy} /> : <Text style={s.draftBtnText}>Save Draft</Text>}
         </TouchableOpacity>
-        <TouchableOpacity style={[s.publishBtn, (!canSave || saving) && s.btnDisabled]} disabled={!canSave || saving} onPress={() => handleSave(true)}>
+        <TouchableOpacity style={[s.publishBtn, (!canSave || !hasLessonLocation(location) || saving) && s.btnDisabled]} disabled={!canSave || !hasLessonLocation(location) || saving} onPress={() => handleSave(true)}>
           {saving ? <ActivityIndicator size="small" color={L.bg} /> : <Text style={s.publishBtnText}>Publish</Text>}
         </TouchableOpacity>
       </View>
