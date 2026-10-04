@@ -24,9 +24,7 @@ import Link from "next/link";
 import { Logo } from "@/components/layout/logo";
 import { createClient } from "@/lib/supabase/client";
 import { redeemSessionFromUrl, type RedeemResult } from "@/lib/auth/redeem-url";
-import { loadDraft, clearDraft, draftBelongsTo } from "@/lib/onboarding/persistence";
-import { writeProfileFields } from "@/lib/onboarding/finalize";
-import { isProfileCompleteForEntry } from "@/lib/onboarding/completion";
+import { finishConfirmedSignup } from "@/lib/auth/finish-confirmation";
 import { ResendConfirmation } from "@/components/auth/resend-confirmation";
 
 type State =
@@ -50,50 +48,14 @@ export default function ConfirmPage() {
         return;
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || cancelled) {
-        if (!cancelled) {
-          setState({
-            status: "failed",
-            message: "Your email is confirmed, but we could not start a session. Try signing in.",
-            received: "session missing after redeem",
-          });
-        }
+      // Draft flush + where to land: shared with /auth/code.
+      const finished = await finishConfirmedSignup(supabase);
+      if (cancelled) return;
+      if (!finished.ok) {
+        setState({ status: "failed", message: finished.message, received: "session missing after redeem" });
         return;
       }
-
-      // Flush the draft collected before this account had a session.
-      const stored = loadDraft();
-      if (stored) {
-        if (!draftBelongsTo(stored, user)) {
-          // Someone else's abandoned draft on a shared browser. Discard it
-          // rather than write it onto this account.
-          clearDraft();
-        } else {
-          const written = await writeProfileFields(
-            user.id,
-            stored.draft,
-            new Set(stored.touched),
-          );
-          // On failure the draft stays put; OnboardingNudgeHost retries on the
-          // next page load. Never block confirmation on it.
-          if (written.status === "saved") clearDraft();
-        }
-      }
-
-      // Decide where they land. A failed or missing profile read resolves to the
-      // dashboard, never onboarding: `fn_handle_new_user` always creates the row,
-      // so an absent one means the READ failed — and routing on that evidence
-      // lets finalize overwrite fields the user already set.
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("full_name, dupr, self_rating, skill_level")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (cancelled) return;
-      const destination =
-        error || !profile || isProfileCompleteForEntry(profile) ? "/dashboard" : "/onboarding";
+      const destination = finished.destination;
 
       router.replace(destination);
       router.refresh();
@@ -124,6 +86,9 @@ export default function ConfirmPage() {
               below, or sign in if your email is already confirmed.
             </p>
             <ResendConfirmation />
+            <Link href="/auth/code" className="block text-sm font-semibold hover:underline">
+              Have a code from the email? Enter it instead
+            </Link>
             <Link
               href="/auth"
               className="inline-block font-display tracking-[0.2em] text-sm text-primary hover:underline"

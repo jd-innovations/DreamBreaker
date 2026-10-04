@@ -102,6 +102,9 @@ export default function ConfirmEmailScreen() {
           below, or sign in if your email is already confirmed.
         </Text>
         <ResendConfirmation />
+        <TouchableOpacity onPress={() => router.push('/auth/code' as never)} activeOpacity={0.7} accessibilityRole="button">
+          <Text style={s.codeLink}>Have a code from the email? Enter it instead</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={s.cta} activeOpacity={0.85} onPress={() => router.replace('/sign-in')}>
           <Text style={s.ctaText}>Go to Sign In</Text>
         </TouchableOpacity>
@@ -129,6 +132,7 @@ const s = StyleSheet.create({
     minWidth: 200, alignItems: 'center',
   },
   ctaText: { color: colors.navy, fontSize: text.action.size, fontWeight: '800' },
+  codeLink: { color: colors.navy, fontSize: text.body.size, fontWeight: '700', textAlign: 'center', marginTop: spacing.sm },
   detail: {
     color: colors.textSub, fontSize: text.caption.size, fontWeight: '500',
     textAlign: 'center', marginTop: spacing.md, opacity: 0.8,

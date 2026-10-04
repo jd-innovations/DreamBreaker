@@ -262,7 +262,10 @@ function FinalCTA() {
         'We sent you a confirmation link. Open it, then come back and sign in to finish.',
         [
           ...(result.email
-            ? [{ text: 'Resend link', onPress: () => { void resendWithAlert(result.email!, goSignIn); } }]
+            ? [
+                { text: 'Enter code', onPress: () => router.replace({ pathname: '/auth/code', params: { email: result.email! } } as never) },
+                { text: 'Resend link', onPress: () => { void resendWithAlert(result.email!, goSignIn); } },
+              ]
             : []),
           { text: 'Go to Sign In', onPress: goSignIn },
         ],

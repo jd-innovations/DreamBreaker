@@ -77,6 +77,7 @@ export default function SignUpScreen() {
         'Check your email',
         'We sent you a confirmation link. Open it, then come back to sign in.',
         [
+          { text: 'Enter code', onPress: () => router.replace({ pathname: '/auth/code', params: { email: address } } as never) },
           { text: 'Resend link', onPress: () => { void resendWithAlert(address, goSignIn); } },
           { text: 'Go to Sign In', onPress: goSignIn },
         ],

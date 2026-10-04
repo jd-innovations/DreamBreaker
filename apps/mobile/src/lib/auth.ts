@@ -70,6 +70,23 @@ export async function resendConfirmation(email: string) {
   return error ? { code: error.code, status: error.status } : null;
 }
 
+/**
+ * Redeem the code from a Confirm signup or Reset password email (2026-10-04),
+ * the typed alternative to the link. Returns the new session; throws GoTrue's
+ * error, which callers word with codeErrorMessage() from @shared/authCode.
+ * verifyOtp with email+token involves no PKCE verifier, so it works on any
+ * device, whoever requested the email.
+ */
+export async function verifyEmailCode(email: string, code: string, purpose: 'signup' | 'recovery') {
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: email.trim().toLowerCase(),
+    token: code,
+    type: purpose,
+  });
+  if (error) throw error;
+  return data.session;
+}
+
 export type ExistingAccountProbe = 'signed_in' | 'unconfirmed' | 'no_account';
 
 export async function probeExistingAccount(

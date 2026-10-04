@@ -57,6 +57,14 @@ export default function ForgotPasswordScreen() {
             <Text style={s.sub}>
               If an account exists for {email.trim()}, we sent a link to reset your password.
             </Text>
+            <TouchableOpacity
+              style={s.linkBtn}
+              onPress={() => router.push({ pathname: '/auth/code', params: { purpose: 'recovery', email: email.trim().toLowerCase() } } as never)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+            >
+              <Text style={s.linkText}>Have the code? <Text style={s.linkAccent}>Enter it instead</Text></Text>
+            </TouchableOpacity>
             <TouchableOpacity style={s.linkBtn} onPress={() => router.replace('/sign-in')} activeOpacity={0.7}>
               <Text style={s.linkText}>Back to <Text style={s.linkAccent}>Sign In</Text></Text>
             </TouchableOpacity>

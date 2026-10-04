@@ -21,13 +21,14 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform,
   ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { completePasswordRecovery, describeAuthLink, updatePassword } from '@/lib/auth';
 import { isPasswordLongEnough, PASSWORD_PLACEHOLDER, PASSWORD_TOO_SHORT_MESSAGE } from '@/lib/authPolicy';
 import { colors, spacing } from '@/theme';
+import { supabase } from '@/lib/supabase';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 
@@ -36,6 +37,10 @@ type Status = 'verifying' | 'ready' | 'invalid';
 export default function ResetPasswordScreen() {
   const insets = useSafeAreaInsets();
   const url = Linking.useLinkingURL();
+  // Arriving from the code screen (2026-10-04): verifyOtp has already created
+  // the recovery session, and there is no link to redeem. Only that screen
+  // passes this; a bare visit with no link still never becomes ready.
+  const { verified } = useLocalSearchParams<{ verified?: string }>();
   const [status, setStatus] = useState<Status>('verifying');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -47,6 +52,12 @@ export default function ResetPasswordScreen() {
   // implicit link carries a live access token and this is rendered on screen.
   const [detail, setDetail] = useState<string | null>(null);
   const attempted = useRef(false);
+
+  useEffect(() => {
+    if (verified !== '1' || attempted.current) return;
+    attempted.current = true;
+    supabase.auth.getSession().then(({ data }) => setStatus(data.session ? 'ready' : 'invalid'));
+  }, [verified]);
 
   useEffect(() => {
     if (!url || attempted.current) return;

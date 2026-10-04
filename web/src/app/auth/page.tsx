@@ -56,6 +56,8 @@ export default function AuthPage() {
   // Right password, unconfirmed email (2026-10-02): offer a new link under the
   // form instead of the bare "Email not confirmed" toast.
   const [unconfirmed, setUnconfirmed] = useState(false);
+  // After Forgot (2026-10-04): offer the typed code beside the emailed link.
+  const [resetRequested, setResetRequested] = useState(false);
 
   // These three lines used to read "184 active tournaments", "3,210 partners
   // matched" and "$1.2M in prizes awarded" — hardcoded, against a database of
@@ -162,6 +164,7 @@ export default function AuthPage() {
         return;
       }
       toast.success("If that email has an account, a reset link is on its way.");
+      setResetRequested(true);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Could not send the reset email.");
     } finally {
@@ -329,12 +332,24 @@ export default function AuthPage() {
                 </div>
                 <Button type="submit" disabled={loading} className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em]" data-testid="auth-login-btn">{loading ? "SIGNING IN…" : "SIGN IN"}</Button>
               </form>
+              {resetRequested && (
+                <Link
+                  href={`/auth/code?purpose=recovery&email=${encodeURIComponent(loginEmail.trim())}`}
+                  className="mt-4 block text-center text-sm font-semibold hover:underline"
+                  data-testid="auth-reset-code"
+                >
+                  Got the reset email? Enter the code instead
+                </Link>
+              )}
               {unconfirmed && (
                 <div className="mt-4 rounded-xl border border-border p-4 space-y-2" data-testid="auth-unconfirmed">
                   <p className="text-sm">
                     Your email isn&apos;t confirmed yet. We sent a link to <strong>{loginEmail.trim()}</strong>.
                   </p>
                   <ResendConfirmation key={loginEmail.trim()} initialEmail={loginEmail.trim()} showEmailField={false} />
+                  <Link href={`/auth/code?email=${encodeURIComponent(loginEmail.trim())}`} className="block text-center text-sm font-semibold hover:underline">
+                    Have the code? Enter it instead
+                  </Link>
                 </div>
               )}
               <div className="flex items-center gap-3 my-5"><div className="flex-1 h-px bg-border" /><span className="text-xs text-muted-foreground font-mono">OR</span><div className="flex-1 h-px bg-border" /></div>

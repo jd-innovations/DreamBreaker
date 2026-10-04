@@ -98,7 +98,15 @@ function DoneContent() {
       {/* No email in the inbox, or an older one in the same thread: a fresh link
           (2026-10-02). Prefilled from the signup seed when this browser has it. */}
       {deferred && (
-        <ResendConfirmation key={seedEmail} initialEmail={seedEmail} className="max-w-xs mx-auto mb-6 text-left" />
+        <div className="max-w-xs mx-auto mb-6 text-left space-y-2">
+          <ResendConfirmation key={seedEmail} initialEmail={seedEmail} />
+          <Link
+            href={`/auth/code${seedEmail ? `?email=${encodeURIComponent(seedEmail)}` : ""}`}
+            className="block text-center text-sm font-semibold hover:underline"
+          >
+            Have the code from the email? Enter it
+          </Link>
+        </div>
       )}
 
       {deferred ? (
