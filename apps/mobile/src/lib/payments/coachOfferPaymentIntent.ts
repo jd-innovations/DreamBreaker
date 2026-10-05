@@ -26,6 +26,8 @@ export const COACH_OFFER_PAYMENT_ERROR_MESSAGES: Record<string, string> = {
   offer_sold_out: 'This lesson just sold out.',
   cannot_purchase_own_offer: 'You cannot book your own lesson.',
   coach_not_publish_ready: 'This coach is not set up to accept bookings yet.',
+  // Server guard (20261005120000): purchases only from live coaches.
+  coach_not_live: 'This coach is not taking bookings yet.',
   purchase_limit_exceeded: 'You have reached the booking limit for this lesson.',
   participant_quantity_exceeds_offer_max: 'That is more participants than this lesson allows.',
   // The RPC rejects premium_only offers outright: no Premium membership system
