@@ -31,6 +31,7 @@ import { shareEntity } from '@/lib/share';
 
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 const L = {
   navy: '#0A1228', gold: '#C9A84C', text: '#0A1228', textMuted: '#9AAABF',
@@ -111,7 +112,7 @@ export default function ListingDetailScreen() {
     let active = true;
     isListingSaved(viewer, id)
       .then((saved) => { if (active) setFavorited(saved); })
-      .catch(() => {});
+      .catch(reportSilentFailure('listing:saved-state'));
     return () => { active = false; };
   }, [user?.id, id]);
 
@@ -124,7 +125,7 @@ export default function ListingDetailScreen() {
     let active = true;
     hasBlocked(viewer, sellerId)
       .then((blocked) => { if (active) setBlockedSeller(blocked); })
-      .catch(() => {});
+      .catch(reportSilentFailure('listing:blocked-state'));
     return () => { active = false; };
   }, [user?.id, listing?.seller_id]);
 

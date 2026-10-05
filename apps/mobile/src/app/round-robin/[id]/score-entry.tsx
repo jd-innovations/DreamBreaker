@@ -11,7 +11,8 @@ import { colors, spacing } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { PickleballIcon } from '@/components';
+import { ErrorState, PickleballIcon } from '@/components';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 import { getRoundRobin } from '@/lib/roundRobinStore';
 import { useSupportContext } from '@/lib/support/supportContext';
 import {
@@ -200,6 +201,10 @@ export default function RRScoreEntryScreen() {
   // ── Supabase state ──
   const [sbMatchRow,   setSbMatchRow]   = useState<PlayMatchWithPlayers | null>(null);
   const [loadingMatch, setLoadingMatch] = useState(isSupabase);
+  // A failed load must not fall through to an empty form: the organizer could
+  // then save over a score that is already recorded (2026-10-05).
+  const [loadFailed,   setLoadFailed]   = useState(false);
+  const [reloadKey,    setReloadKey]    = useState(0);
   const [saving,       setSaving]       = useState(false);
 
   // ── Local match state ──
@@ -218,15 +223,16 @@ export default function RRScoreEntryScreen() {
   useEffect(() => {
     if (!isSupabase || !matchId) return;
     setLoadingMatch(true);
+    setLoadFailed(false);
     fetchRoundRobinMatchById(matchId, tournamentId)
       .then(row => {
         setSbMatchRow(row);
         if (row?.score_a != null) setScore1(String(row.score_a));
         if (row?.score_b != null) setScore2(String(row.score_b));
       })
-      .catch(() => {})
+      .catch((e) => { setLoadFailed(true); reportSilentFailure('rr-score-entry:match')(e); })
       .finally(() => setLoadingMatch(false));
-  }, [matchId, tournamentId, isSupabase]);
+  }, [matchId, tournamentId, isSupabase, reloadKey]);
 
   // Local: refresh on focus
   useFocusEffect(useCallback(() => {
@@ -304,6 +310,19 @@ export default function RRScoreEntryScreen() {
           <ActivityIndicator size="large" color={colors.gold} />
           <Text style={st.errorText}>Loading match…</Text>
         </View>
+      </View>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <View style={[st.root, { paddingTop: insets.top }]}>
+        <StatusBar style="dark" />
+        <ErrorState
+          title="Couldn't load this match"
+          message="Check your connection and try again. No score has been changed."
+          onRetry={() => setReloadKey(k => k + 1)}
+        />
       </View>
     );
   }

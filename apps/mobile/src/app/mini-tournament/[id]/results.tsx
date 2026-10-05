@@ -18,6 +18,7 @@ import type { BMatch, BParticipant } from '@/lib/bracketTypes';
 import { isTeam } from '@/lib/bracketTypes';
 import { fetchMiniTournamentMatches, sbMatchesToBracket } from '@/lib/supabase/miniTournament';
 import { fetchPlayEventById, completePlayEvent } from '@/lib/supabase/playEvents';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 // ─── Theme ───────────────────────────────────────────────────────────────────────
 
@@ -129,7 +130,7 @@ export default function ResultsScreen() {
           const finalM = bkt[bkt.length - 1]?.[0] ?? null;
           if (finalM?.status === 'completed') {
             completionFiredRef.current = true;
-            completePlayEvent(id!).catch(() => {});
+            completePlayEvent(id!).catch(reportSilentFailure('mini-results:complete-event'));
           }
         }
       }

@@ -26,6 +26,7 @@ import {
   addPlayParticipant, removePlayParticipant,
   type PlayParticipant,
 } from '@/lib/supabase/playEvents';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -611,7 +612,7 @@ export default function RRRosterScreen() {
           added_by_organizer: true,
         });
         setLoading(true);
-        await fetchSb().catch(() => {});
+        await fetchSb().catch(reportSilentFailure('rr-roster:refetch-after-add'));
         setLoading(false);
       } catch (e) {
         Alert.alert('Error', e instanceof Error ? e.message : 'Failed to add player.');
@@ -650,7 +651,7 @@ export default function RRRosterScreen() {
       try {
         await removePlayParticipant(playerId);
         setLoading(true);
-        await fetchSb().catch(() => {});
+        await fetchSb().catch(reportSilentFailure('rr-roster:refetch-after-remove'));
         setLoading(false);
       } catch {
         Alert.alert('Error', 'Failed to remove player.');

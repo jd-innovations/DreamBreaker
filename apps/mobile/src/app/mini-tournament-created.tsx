@@ -34,6 +34,7 @@ import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilitie
 import { shareEntity } from '@/lib/share';
 import { FacilityCard } from '@/components/FacilityCard';
 import { eventCoverSource, EVENT_COVER_FILL } from '@/lib/eventCover';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
 
@@ -276,7 +277,7 @@ export default function MiniTournamentCreatedScreen() {
         fetchPublicPlayParticipantCount(id!),
       ])
         .then(([rows, count]) => { setCurrentPlayers(count); setParticipants(rows); })
-        .catch(() => {});
+        .catch(reportSilentFailure('mini-created:participants'));
       fetchMiniTournamentMatches(id!)
         .then(rows => {
           const exists = rows.length > 0;
@@ -286,7 +287,7 @@ export default function MiniTournamentCreatedScreen() {
             setSbMatchesDone(bracket.flat().filter(m => m.status === 'completed').length);
           }
         })
-        .catch(() => {});
+        .catch(reportSilentFailure('mini-created:bracket'));
     } else {
       const latest = getMiniTournament();
       if (latest) {

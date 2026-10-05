@@ -20,6 +20,7 @@ import { fetchMiniTournamentMatches, sbMatchesToBracket } from '@/lib/supabase/m
 import { fetchPlayEventById } from '@/lib/supabase/playEvents';
 import type { BMatch, BPlayer, BTeam, BTeamPlayer, BParticipant, MatchStatus } from '@/lib/bracketTypes';
 import { isTeam } from '@/lib/bracketTypes';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 // ─── Theme ──────────────────────────────────────────────────────────────────────
 
@@ -818,7 +819,7 @@ export default function BracketScreen() {
           setSbMax(ev.max_players);
         }
       })
-      .catch(() => {})
+      .catch(reportSilentFailure('mini-bracket:load'))
       .finally(() => setLoadingBracket(false));
   }, [tournamentId, isSupabase]);
 
@@ -851,7 +852,7 @@ export default function BracketScreen() {
               setSbMax(ev.max_players);
             }
           })
-          .catch(() => {});
+          .catch(reportSilentFailure('mini-bracket:refresh'));
         return;
       }
 

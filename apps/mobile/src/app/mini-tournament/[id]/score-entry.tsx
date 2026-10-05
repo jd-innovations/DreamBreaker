@@ -8,7 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing } from '@/theme';
-import { LoadingState } from '@/components/states/ScreenState';
+import { ErrorState, LoadingState } from '@/components/states/ScreenState';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components/StatusChip';
@@ -110,6 +111,10 @@ export default function ScoreEntryScreen() {
   const [sbMatch,      setSbMatch]      = useState<BMatch | null>(null);
   const [sbTotalRounds,setSbTotalRounds]= useState(0);
   const [loadingMatch, setLoadingMatch] = useState(isSupabase);
+  // A failed load must not read as "Match not found" or an empty form
+  // (2026-10-05): offer Retry instead.
+  const [loadFailed,   setLoadFailed]   = useState(false);
+  const [reloadKey,    setReloadKey]    = useState(0);
   const [saving,       setSaving]       = useState(false);
 
   // Explicit user ask (§7): never risk a mis-tap during rapid score entry.
@@ -119,6 +124,7 @@ export default function ScoreEntryScreen() {
   useEffect(() => {
     if (!isSupabase) return;
     setLoadingMatch(true);
+    setLoadFailed(false);
     fetchMiniTournamentMatches(id!)
       .then(rows => {
         const bracket = sbMatchesToBracket(rows);
@@ -128,9 +134,9 @@ export default function ScoreEntryScreen() {
           if (found) { setSbMatch(found); break; }
         }
       })
-      .catch(() => {})
+      .catch((e) => { setLoadFailed(true); reportSilentFailure('mini-score-entry:matches')(e); })
       .finally(() => setLoadingMatch(false));
-  }, [id, matchId, isSupabase]);
+  }, [id, matchId, isSupabase, reloadKey]);
 
   // ── Local state ──
   const tournament  = getMiniTournament();
@@ -153,6 +159,20 @@ export default function ScoreEntryScreen() {
       <View style={[s.root, s.center]}>
         <StatusBar style="dark" />
         <LoadingState inline label="Loading match…" />
+      </View>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <View style={[s.root, s.center]}>
+        <StatusBar style="dark" />
+        <ErrorState
+          inline
+          title="Couldn't load this match"
+          message="Check your connection and try again. No score has been changed."
+          onRetry={() => setReloadKey(k => k + 1)}
+        />
       </View>
     );
   }

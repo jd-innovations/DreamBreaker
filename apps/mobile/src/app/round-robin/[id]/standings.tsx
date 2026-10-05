@@ -18,6 +18,7 @@ import {
   fetchRoundRobinMatches, sbMatchesToRRRounds,
 } from '@/lib/supabase/roundRobin';
 import { fetchPlayEventById, completePlayEvent } from '@/lib/supabase/playEvents';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
 
@@ -244,11 +245,11 @@ export default function RRStandingsScreen() {
           if (total > 0 && done === total && ev && ev.status !== 'completed') {
             completionFiredRef.current = true;
             setSbEventStatus('completed');
-            completePlayEvent(tournamentId).catch(() => {});
+            completePlayEvent(tournamentId).catch(reportSilentFailure('rr-standings:complete-event'));
           }
         }
       })
-      .catch(() => {})
+      .catch(reportSilentFailure('rr-standings:load'))
       .finally(() => setLoadingSb(false));
   }, [tournamentId, isSupabase]);
 
@@ -266,11 +267,11 @@ export default function RRStandingsScreen() {
             if (total > 0 && done === total) {
               completionFiredRef.current = true;
               setSbEventStatus('completed');
-              completePlayEvent(tournamentId).catch(() => {});
+              completePlayEvent(tournamentId).catch(reportSilentFailure('rr-standings:complete-event'));
             }
           }
         })
-        .catch(() => {});
+        .catch(reportSilentFailure('rr-standings:refresh'));
     } else {
       setStandings(computeStandings(getSchedule(tournamentId) ?? []));
     }

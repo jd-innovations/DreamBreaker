@@ -41,6 +41,7 @@ import { DirectorOnly } from '@/components/DirectorOnly';
 import { confirmBracketFormat } from '@/lib/tournamentFormats';
 import { DivisionPlayChip, DivisionPlayControl, playState } from '@/components/DivisionPlayControl';
 import { fetchDivisionsForTournament, setDivisionPlayStatus, type DivisionData } from '@/lib/supabase/divisions';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -197,7 +198,7 @@ function UpNextBanner({ position }: { position: number }) {
         );
         loop.start();
       })
-      .catch(() => {});
+      .catch(reportSilentFailure('division-bracket:queue'));
     return () => {
       cancelled = true;
       loop?.stop();
@@ -249,7 +250,7 @@ function OnDeckTicker({ label }: { label: string }) {
         );
         loop.start();
       })
-      .catch(() => {});
+      .catch(reportSilentFailure('division-bracket:queue-refresh'));
     return () => {
       cancelled = true;
       loop?.stop();
@@ -986,7 +987,7 @@ function DivisionBracketScreen() {
     ]);
     fetchDivisionsForTournament(id)
       .then(divs => setDivision(divs.find(d => d.id === divisionId) ?? null))
-      .catch(() => {});
+      .catch(reportSilentFailure('division-bracket:division'));
     setTournament(t);
     setBracket(bkt);
     setPools(pl);

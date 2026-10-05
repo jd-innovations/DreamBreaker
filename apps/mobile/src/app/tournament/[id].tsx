@@ -50,6 +50,7 @@ import type { Tournament } from '@/lib/tournamentTypes';
 import type { DivisionData } from '@/data/divisions';
 import { formatLabel } from '@/lib/tournamentFormats';
 import { useTournamentLive } from '@/hooks/useTournamentLive';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const HERO_H = SH * 0.44;
@@ -440,8 +441,8 @@ export default function TournamentDetail() {
 
   // Live: brackets being built and results being published, from any device.
   useTournamentLive(id, () => {
-    hasAnyBracket(id).then(setHasBrackets).catch(() => {});
-    fetchHasPublishedResults(id).then(setResultsAvailable).catch(() => {});
+    hasAnyBracket(id).then(setHasBrackets).catch(reportSilentFailure('tournament:has-brackets'));
+    fetchHasPublishedResults(id).then(setResultsAvailable).catch(reportSilentFailure('tournament:has-results'));
   });
 
   useFocusEffect(
@@ -461,18 +462,18 @@ export default function TournamentDetail() {
         setDivisions(divs);
         if (t) setTournamentStatusKey(getTournamentStatus(t));
         setDirectorUserId(t?.directorId ?? null);
-        hasAnyBracket(id).then(b => { if (active) setHasBrackets(b); }).catch(() => {});
+        hasAnyBracket(id).then(b => { if (active) setHasBrackets(b); }).catch(reportSilentFailure('tournament:has-brackets'));
         setResultsAvailable(false);
-        fetchHasPublishedResults(id).then(r => { if (active) setResultsAvailable(r); }).catch(() => {});
+        fetchHasPublishedResults(id).then(r => { if (active) setResultsAvailable(r); }).catch(reportSilentFailure('tournament:has-results'));
         setFacility(null);
         if (t?.facilityId) {
-          fetchFacilityById(t.facilityId).then(f => { if (active) setFacility(f); }).catch(() => {});
+          fetchFacilityById(t.facilityId).then(f => { if (active) setFacility(f); }).catch(reportSilentFailure('tournament:facility'));
         }
         setDirectorProfile(null);
         setDirectorStats(null);
         if (t?.directorId) {
-          fetchProfile(t.directorId).then(p => { if (active) setDirectorProfile(p); }).catch(() => {});
-          fetchDirectorStats(t.directorId).then(st => { if (active) setDirectorStats(st); }).catch(() => {});
+          fetchProfile(t.directorId).then(p => { if (active) setDirectorProfile(p); }).catch(reportSilentFailure('tournament:director-profile'));
+          fetchDirectorStats(t.directorId).then(st => { if (active) setDirectorStats(st); }).catch(reportSilentFailure('tournament:director-stats'));
         }
 
         if (user?.id) {

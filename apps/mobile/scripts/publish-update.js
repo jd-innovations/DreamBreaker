@@ -17,6 +17,12 @@
  * env cannot drift from the build env.
  *
  * Usage:  node ./scripts/publish-update.js <profile> [--message "..."] [extra eas args]
+ *         node ./scripts/publish-update.js all [--message "..."]
+ *
+ * `all` publishes to every build profile that has a channel (preview AND
+ * production), one after the other, each with its own environment. Use it for
+ * every fix once a production build exists — testers on the production build
+ * only receive updates on the `production` channel (2026-10-05).
  */
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -24,12 +30,25 @@ const path = require('node:path');
 
 const profile = process.argv[2];
 if (!profile) {
-  console.error('Usage: node ./scripts/publish-update.js <profile> [eas update args]');
+  console.error('Usage: node ./scripts/publish-update.js <profile|all> [eas update args]');
   process.exit(1);
 }
 
 const easPath = path.join(__dirname, '..', 'eas.json');
 const eas = JSON.parse(fs.readFileSync(easPath, 'utf8'));
+
+if (profile === 'all') {
+  // Re-run this script once per profile with a channel, stopping at the first
+  // failure so a broken publish is never followed by a "successful" one.
+  const profiles = Object.entries(eas.build ?? {}).filter(([, b]) => b.channel).map(([name]) => name);
+  for (const name of profiles) {
+    console.log(`
+=== ${name} ===`);
+    const r = spawnSync(process.execPath, [__filename, name, ...process.argv.slice(3)], { stdio: 'inherit' });
+    if (r.status !== 0) process.exit(r.status ?? 1);
+  }
+  process.exit(0);
+}
 const build = eas.build?.[profile];
 
 if (!build) {

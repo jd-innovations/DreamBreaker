@@ -21,6 +21,7 @@ import {
   fetchRoundRobinMatches, deleteRoundRobinSchedule, sbMatchesToRRRounds,
 } from '@/lib/supabase/roundRobin';
 import { fetchPlayEventById } from '@/lib/supabase/playEvents';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -397,7 +398,7 @@ export default function RRScheduleScreen() {
         setSbDate(ev.event_date);
         setSbMax(ev.max_players);
       })
-      .catch(() => {});
+      .catch(reportSilentFailure('rr-schedule:event'));
   }, [tournamentId, isSupabase]);
 
   // ── Display object used by summary card ──
@@ -423,7 +424,7 @@ export default function RRScheduleScreen() {
     setLoadingRounds(true);
     fetchRoundRobinMatches(tournamentId)
       .then(rows => setRounds(sbMatchesToRRRounds(rows)))
-      .catch(() => {})
+      .catch(reportSilentFailure('rr-schedule:matches'))
       .finally(() => setLoadingRounds(false));
   }, [tournamentId, isSupabase]);
 
@@ -431,7 +432,7 @@ export default function RRScheduleScreen() {
     if (isSupabase) {
       fetchRoundRobinMatches(tournamentId)
         .then(rows => setRounds(sbMatchesToRRRounds(rows)))
-        .catch(() => {});
+        .catch(reportSilentFailure('rr-schedule:matches-refresh'));
     } else {
       const fresh = getSchedule(tournamentId);
       if (fresh) setRounds(fresh);

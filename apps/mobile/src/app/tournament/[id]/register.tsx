@@ -25,6 +25,7 @@ import { useTournamentEntryPayment } from '@/lib/payments/useTournamentEntryPaym
 import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
 import { balanceDueCents, effectiveEntryFeeCents } from '@/lib/tournamentFees';
 import type { Tournament } from '@/lib/tournamentTypes';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 const L = {
   bg:        colors.bg,
@@ -297,7 +298,7 @@ export default function TournamentRegisterScreen() {
   useFocusEffect(useCallback(() => {
     let active = true;
     if (user?.id) {
-      fetchRealConnections(user.id).then(conns => { if (active) setConnections(conns); }).catch(() => {});
+      fetchRealConnections(user.id).then(conns => { if (active) setConnections(conns); }).catch(reportSilentFailure('register:connections'));
       // Same lookup handleSubmit makes before choosing between the balance and
       // the full-entry charge — read here so the quoted balance and the branch
       // that charges the card agree on whether a deposit exists.
@@ -317,7 +318,7 @@ export default function TournamentRegisterScreen() {
       // base fee from the param as the fallback leg (it is the tournament fee
       // in every caller that doesn't know the division's override).
       setResolvedEntryCents(effectiveEntryFeeCents(div?.entryFeeCents, paramEntryCents));
-    }).catch(() => {});
+    }).catch(reportSilentFailure('register:division-fee'));
     fetchTournamentById(tournamentId).then(t => {
       if (!active) return;
       if (t) {

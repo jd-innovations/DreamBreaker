@@ -18,6 +18,7 @@ import {
   teammatesOf,
   type RegistrationGroup,
 } from '@/lib/supabase/registrationGroups';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 const L = {
   bg:        colors.bg,
@@ -99,7 +100,7 @@ export default function RegistrationSuccessScreen() {
     let active = true;
     fetchRegistrationGroup(teamGroupId)
       .then(g => { if (active) setTeam(g); })
-      .catch(() => {});
+      .catch(reportSilentFailure('registration-success:team'));
     return () => { active = false; };
   }, [teamGroupId]);
 

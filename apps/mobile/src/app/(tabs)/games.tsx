@@ -51,6 +51,7 @@ import {
   declinePlayEventInvite,
   type ReceivedPlayEventInvite,
 } from '@/lib/supabase/playEventInvites';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 // Theme-backed alias — brand values resolve from @/theme.
 // blue is a secondary informational accent (no brand equivalent) — documented exception.
@@ -1300,7 +1301,7 @@ export default function GamesScreen() {
       // here too showed July games as OPEN.
       fetchJoinedPlayEvents(user.id)
         .then(rows => setJoined(rows.filter(isUpcomingPlayEvent).map(e => playEventToGameCard(e, 'Joined'))))
-        .catch(() => {});
+        .catch(reportSilentFailure('games:joined'));
 
       loadPastEvents(user.id, pastRangeRef.current, localCompleted);
     }, [user?.id]),

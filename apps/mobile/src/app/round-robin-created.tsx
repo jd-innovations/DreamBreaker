@@ -39,6 +39,7 @@ import { fetchFacilityById, type FacilityDetail } from '@/lib/supabase/facilitie
 import { shareEntity } from '@/lib/share';
 import { FacilityCard } from '@/components/FacilityCard';
 import { eventCoverSource, EVENT_COVER_FILL } from '@/lib/eventCover';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
 
@@ -329,7 +330,7 @@ export default function RoundRobinCreatedScreen() {
           setScheduleExists(rounds.length > 0);
           setStandings(computeStandings(rounds));
         })
-        .catch(() => {});
+        .catch(reportSilentFailure('rr-created:standings'));
     } else {
       const count = getRosterCount(g.id);
       setRosterCount(count + 1); // +1 for organizer not in local store

@@ -42,6 +42,7 @@ import type { Tournament } from '@/lib/tournamentTypes';
 import type { DivisionData } from '@/data/divisions';
 import { DirectorOnly } from '@/components/DirectorOnly';
 import { fetchBracketDivisions } from '@/lib/supabase/brackets';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 function toDirector(r: TournamentRegistration): DirectorRegistration {
   return {
@@ -720,7 +721,7 @@ function DirectorWorkspaceScreen() {
       fetchDivisionsForTournament(id),
       fetchTournamentRegistrations(id),
     ]);
-    fetchBracketDivisions([id]).then(m => setBracketDivs(m.get(id) ?? new Set())).catch(() => {});
+    fetchBracketDivisions([id]).then(m => setBracketDivs(m.get(id) ?? new Set())).catch(reportSilentFailure('workspace:bracket-divisions'));
     setTournament(t);
     const active    = allRegs.filter(r => r.status !== 'cancelled');
     const cancelled = allRegs.filter(r => r.status === 'cancelled');

@@ -20,6 +20,7 @@ import {
   fetchRoundRobinMatches, sbMatchesToRRRounds,
 } from '@/lib/supabase/roundRobin';
 import { fetchPlayEventById } from '@/lib/supabase/playEvents';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
 
@@ -313,7 +314,7 @@ export default function RRResultsScreen() {
           setSbDate(ev.event_date);
         }
       })
-      .catch(() => {});
+      .catch(reportSilentFailure('rr-results:event'));
   }, [tournamentId, isSupabase]);
 
   useFocusEffect(useCallback(() => {
@@ -324,7 +325,7 @@ export default function RRResultsScreen() {
           setRounds(r);
           setStandings(computeStandings(r));
         })
-        .catch(() => {});
+        .catch(reportSilentFailure('rr-results:standings'));
     } else {
       const fresh = getSchedule(tournamentId) ?? [];
       setRounds(fresh);
