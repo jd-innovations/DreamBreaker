@@ -50,6 +50,11 @@ const BRAND = {
 // are flipped light/dark whatever the background does, so locking a button
 // gold gives white-on-gold and locking the footer navy gives grey-on-navy --
 // both worse than Gmail's own olive/lavender. Leave those to Gmail.
+//
+// The footer's images carry their own navy instead (logo-footer-badge-v1,
+// social-*-badge-v1: the same art on a navy rounded rect / disc). On the navy
+// footer the badge is invisible; on Gmail's lavender it keeps the white logo
+// and icons legible, because Gmail never recolours image pixels.
 const lock = (c: string) => `background:${c};background-image:linear-gradient(${c},${c});`;
 
 const TAGLINE = "Everything pickleball. One app.";
@@ -59,10 +64,10 @@ const ADDRESS = "11615 Gramercy Park Ave, Bradenton, FL 34211";
 
 // TODO(phase-6): real profile URLs. Placeholders until the accounts are confirmed.
 const SOCIALS = [
-  { name: "Facebook", file: "social-facebook-v1.png", url: "https://facebook.com/" },
-  { name: "Instagram", file: "social-instagram-v1.png", url: "https://instagram.com/" },
-  { name: "YouTube", file: "social-youtube-v1.png", url: "https://youtube.com/" },
-  { name: "TikTok", file: "social-tiktok-v1.png", url: "https://tiktok.com/" },
+  { name: "Facebook", file: "social-facebook-badge-v1.png", url: "https://facebook.com/" },
+  { name: "Instagram", file: "social-instagram-badge-v1.png", url: "https://instagram.com/" },
+  { name: "YouTube", file: "social-youtube-badge-v1.png", url: "https://youtube.com/" },
+  { name: "TikTok", file: "social-tiktok-badge-v1.png", url: "https://tiktok.com/" },
 ];
 
 function defaultAssetBase(): string {
@@ -181,7 +186,7 @@ export function renderEmail(opts: EmailShellOptions): string {
     .dbp-header { padding:28px 20px !important; }
     .dbp-footer { padding:26px 20px 22px !important; }
     .dbp-logo   { width:250px !important; }
-    .dbp-flogo  { width:150px !important; }
+    .dbp-flogo  { width:172px !important; }
     /* Footer's two-column rows stack; side by side they crush below ~380px. */
     .dbp-stack     { display:block !important; width:100% !important; text-align:left !important; }
     .dbp-stack-gap { padding-top:14px !important; }
@@ -218,8 +223,8 @@ export function renderEmail(opts: EmailShellOptions): string {
 
           <tr>
             <td align="left" valign="top" class="dbp-stack">
-              <img src="${A}/logo-light-v1.png" width="168" height="31" alt="Pickleball App" class="dbp-flogo"
-                   style="display:block;border:0;width:168px;height:auto;color:${BRAND.white};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:bold;" />
+              <img src="${A}/logo-footer-badge-v1.png" width="192" height="52" alt="Pickleball App" class="dbp-flogo"
+                   style="display:block;border:0;width:192px;height:auto;color:${BRAND.white};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:bold;" />
               <div style="padding-top:9px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;color:${BRAND.mutedDark};">${TAGLINE}</div>
             </td>
             <td align="right" valign="top" class="dbp-stack dbp-stack-gap">
