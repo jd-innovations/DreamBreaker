@@ -39,6 +39,14 @@ const BRAND = {
   ruleOnNavy: "#232A3E",
 } as const;
 
+// Gmail's apps ignore prefers-color-scheme and recolour backgrounds themselves
+// in dark mode: the navy bands came out pale lavender (the white logo all but
+// vanished) and the gold button olive (owner report, 2026-10-07). They do not
+// recolour background IMAGES, so every brand-coloured surface also paints
+// itself as a one-colour gradient. Clients without gradient support (Outlook)
+// keep using bgcolor/background underneath.
+const lock = (c: string) => `background:${c};background-image:linear-gradient(${c},${c});`;
+
 const TAGLINE = "Everything pickleball. One app.";
 const SUPPORT_EMAIL = "support@pickleballapp.app";
 const COMPANY = "JD Innovations LLC";
@@ -104,8 +112,8 @@ export function renderEmail(opts: EmailShellOptions): string {
               <tr><td height="28" style="height:28px;font-size:0;line-height:0;">&nbsp;</td></tr>
               <tr><td align="center">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-                  <td align="center" bgcolor="${BRAND.gold}" style="background:${BRAND.gold};border-radius:26px;">
-                    <a href="${safeUrl(opts.ctaUrl)}" style="display:inline-block;padding:16px 44px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;letter-spacing:0.08em;color:${BRAND.navy};text-decoration:none;">${escapeHtml(opts.ctaLabel)}</a>
+                  <td align="center" bgcolor="${BRAND.gold}" style="${lock(BRAND.gold)}border-radius:26px;">
+                    <a href="${safeUrl(opts.ctaUrl)}" class="dbp-cta" style="display:inline-block;padding:16px 44px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;letter-spacing:0.08em;color:${BRAND.navy};text-decoration:none;">${escapeHtml(opts.ctaLabel)}</a>
                   </td>
                 </tr></table>
               </td></tr>`
@@ -147,6 +155,9 @@ export function renderEmail(opts: EmailShellOptions): string {
     .dbp-card { background:${BRAND.darkCard} !important; }
     .dbp-body, .dbp-body p, .dbp-body strong, .dbp-body h2 { color:${BRAND.textDark} !important; }
     .dbp-body a { color:${BRAND.gold} !important; }
+    /* The button label is a link inside .dbp-body too: without this it went
+       gold-on-gold and disappeared in Apple Mail dark mode (2026-10-07). */
+    .dbp-body a.dbp-cta { color:${BRAND.navy} !important; }
   }
   /* Phones. The card is fluid up to 600px rather than a fixed 600px table: a
      hard width made iOS Mail shrink the whole message to fit instead of
@@ -175,11 +186,11 @@ export function renderEmail(opts: EmailShellOptions): string {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="dbp-card" style="width:100%;max-width:600px;margin:0 auto;background:${BRAND.white};">
 
       <!-- Header A -->
-      <tr><td align="center" class="dbp-header" bgcolor="${BRAND.navy}" style="background:${BRAND.navy};padding:40px 32px;">
+      <tr><td align="center" class="dbp-header" bgcolor="${BRAND.navy}" style="${lock(BRAND.navy)}padding:40px 32px;">
         <img src="${A}/logo-light-v1.png" width="380" height="71" alt="Pickleball App" class="dbp-logo"
              style="display:block;border:0;width:380px;max-width:100%;height:auto;color:${BRAND.white};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:22px;font-weight:bold;" />
       </td></tr>
-      <tr><td height="3" bgcolor="${BRAND.gold}" style="height:3px;background:${BRAND.gold};font-size:0;line-height:0;">&nbsp;</td></tr>
+      <tr><td height="3" bgcolor="${BRAND.gold}" style="height:3px;${lock(BRAND.gold)}font-size:0;line-height:0;">&nbsp;</td></tr>
 
       <!-- Body -->
       <tr><td class="dbp-body dbp-hpad" style="padding:36px 32px 40px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:${BRAND.textLight};">
@@ -189,8 +200,8 @@ export function renderEmail(opts: EmailShellOptions): string {
       </td></tr>
 
       <!-- Footer B -->
-      <tr><td height="3" bgcolor="${BRAND.gold}" style="height:3px;background:${BRAND.gold};font-size:0;line-height:0;">&nbsp;</td></tr>
-      <tr><td class="dbp-footer" bgcolor="${BRAND.navy}" style="background:${BRAND.navy};padding:30px 32px 26px;">
+      <tr><td height="3" bgcolor="${BRAND.gold}" style="height:3px;${lock(BRAND.gold)}font-size:0;line-height:0;">&nbsp;</td></tr>
+      <tr><td class="dbp-footer" bgcolor="${BRAND.navy}" style="${lock(BRAND.navy)}padding:30px 32px 26px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
 
           <tr>
@@ -205,7 +216,7 @@ export function renderEmail(opts: EmailShellOptions): string {
           </tr>
 
           <tr><td colspan="2" height="20" style="height:20px;font-size:0;line-height:0;">&nbsp;</td></tr>
-          <tr><td colspan="2" height="1" bgcolor="${BRAND.ruleOnNavy}" style="height:1px;background:${BRAND.ruleOnNavy};font-size:0;line-height:0;">&nbsp;</td></tr>
+          <tr><td colspan="2" height="1" bgcolor="${BRAND.ruleOnNavy}" style="height:1px;${lock(BRAND.ruleOnNavy)}font-size:0;line-height:0;">&nbsp;</td></tr>
           <tr><td colspan="2" height="20" style="height:20px;font-size:0;line-height:0;">&nbsp;</td></tr>
 
           <tr>
