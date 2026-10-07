@@ -24,6 +24,13 @@
     /* The button label is a link inside .dbp-body too: without this it went
        gold-on-gold and disappeared in Apple Mail dark mode (2026-10-07). */
     .dbp-body a.dbp-cta { color:#0A1228 !important; }
+    /* Same bug in the 13 templates that write their own button into the body
+       (an <a> with an inline background): keep any link that paints its own
+       background navy. Matches the gold buttons and the white "I sold it". */
+    .dbp-body a[style*="background"] { color:#0A1228 !important; }
+    /* listing_expiring's cream tip box: the .dbp-body p rule turns its text white,
+       which is unreadable on cream, so the box goes dark instead. */
+    .dbp-body div[style*="#FDF6E7"] { background:#1C2849 !important; }
   }
   /* Phones. The card is fluid up to 600px rather than a fixed 600px table: a
      hard width made iOS Mail shrink the whole message to fit instead of
@@ -69,7 +76,7 @@
               <tr><td height="28" style="height:28px;font-size:0;line-height:0;">&nbsp;</td></tr>
               <tr><td align="center">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-                  <td align="center" bgcolor="#C9A84C" style="background:#C9A84C;background-image:linear-gradient(#C9A84C,#C9A84C);border-radius:26px;">
+                  <td align="center" bgcolor="#C9A84C" style="background:#C9A84C;border-radius:26px;">
                     <a href="https://pickleballapp.app/auth/confirm?token_hash={{ .TokenHash }}&amp;type=signup" class="dbp-cta" style="display:inline-block;padding:16px 44px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;letter-spacing:0.08em;color:#0A1228;text-decoration:none;">CONFIRM EMAIL</a>
                   </td>
                 </tr></table>
@@ -79,7 +86,7 @@
 
       <!-- Footer B -->
       <tr><td height="3" bgcolor="#C9A84C" style="height:3px;background:#C9A84C;background-image:linear-gradient(#C9A84C,#C9A84C);font-size:0;line-height:0;">&nbsp;</td></tr>
-      <tr><td class="dbp-footer" bgcolor="#0A1228" style="background:#0A1228;background-image:linear-gradient(#0A1228,#0A1228);padding:30px 32px 26px;">
+      <tr><td class="dbp-footer" bgcolor="#0A1228" style="background:#0A1228;padding:30px 32px 26px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
 
           <tr>
@@ -94,7 +101,7 @@
           </tr>
 
           <tr><td colspan="2" height="20" style="height:20px;font-size:0;line-height:0;">&nbsp;</td></tr>
-          <tr><td colspan="2" height="1" bgcolor="#232A3E" style="height:1px;background:#232A3E;background-image:linear-gradient(#232A3E,#232A3E);font-size:0;line-height:0;">&nbsp;</td></tr>
+          <tr><td colspan="2" height="1" bgcolor="#232A3E" style="height:1px;background:#232A3E;font-size:0;line-height:0;">&nbsp;</td></tr>
           <tr><td colspan="2" height="20" style="height:20px;font-size:0;line-height:0;">&nbsp;</td></tr>
 
           <tr>

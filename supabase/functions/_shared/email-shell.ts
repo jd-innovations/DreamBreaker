@@ -39,12 +39,17 @@ const BRAND = {
   ruleOnNavy: "#232A3E",
 } as const;
 
-// Gmail's apps ignore prefers-color-scheme and recolour backgrounds themselves
-// in dark mode: the navy bands came out pale lavender (the white logo all but
-// vanished) and the gold button olive (owner report, 2026-10-07). They do not
-// recolour background IMAGES, so every brand-coloured surface also paints
-// itself as a one-colour gradient. Clients without gradient support (Outlook)
-// keep using bgcolor/background underneath.
+// Gmail's apps ignore prefers-color-scheme and recolour the whole message in
+// dark mode: the navy header came out pale lavender and the white logo on it
+// all but vanished (owner report, 2026-10-07). Gmail does not recolour
+// background IMAGES, so a surface can hold its colour by also painting itself
+// as a one-colour gradient. Outlook ignores the gradient and keeps bgcolor.
+//
+// ONLY for surfaces with no text on them (the logo header, the gold rules).
+// Gmail recolours TEXT independently: navy button text and grey footer text
+// are flipped light/dark whatever the background does, so locking a button
+// gold gives white-on-gold and locking the footer navy gives grey-on-navy --
+// both worse than Gmail's own olive/lavender. Leave those to Gmail.
 const lock = (c: string) => `background:${c};background-image:linear-gradient(${c},${c});`;
 
 const TAGLINE = "Everything pickleball. One app.";
@@ -112,7 +117,7 @@ export function renderEmail(opts: EmailShellOptions): string {
               <tr><td height="28" style="height:28px;font-size:0;line-height:0;">&nbsp;</td></tr>
               <tr><td align="center">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-                  <td align="center" bgcolor="${BRAND.gold}" style="${lock(BRAND.gold)}border-radius:26px;">
+                  <td align="center" bgcolor="${BRAND.gold}" style="background:${BRAND.gold};border-radius:26px;">
                     <a href="${safeUrl(opts.ctaUrl)}" class="dbp-cta" style="display:inline-block;padding:16px 44px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;letter-spacing:0.08em;color:${BRAND.navy};text-decoration:none;">${escapeHtml(opts.ctaLabel)}</a>
                   </td>
                 </tr></table>
@@ -158,6 +163,13 @@ export function renderEmail(opts: EmailShellOptions): string {
     /* The button label is a link inside .dbp-body too: without this it went
        gold-on-gold and disappeared in Apple Mail dark mode (2026-10-07). */
     .dbp-body a.dbp-cta { color:${BRAND.navy} !important; }
+    /* Same bug in the 13 templates that write their own button into the body
+       (an <a> with an inline background): keep any link that paints its own
+       background navy. Matches the gold buttons and the white "I sold it". */
+    .dbp-body a[style*="background"] { color:${BRAND.navy} !important; }
+    /* listing_expiring's cream tip box: the .dbp-body p rule turns its text white,
+       which is unreadable on cream, so the box goes dark instead. */
+    .dbp-body div[style*="#FDF6E7"] { background:#1C2849 !important; }
   }
   /* Phones. The card is fluid up to 600px rather than a fixed 600px table: a
      hard width made iOS Mail shrink the whole message to fit instead of
@@ -201,7 +213,7 @@ export function renderEmail(opts: EmailShellOptions): string {
 
       <!-- Footer B -->
       <tr><td height="3" bgcolor="${BRAND.gold}" style="height:3px;${lock(BRAND.gold)}font-size:0;line-height:0;">&nbsp;</td></tr>
-      <tr><td class="dbp-footer" bgcolor="${BRAND.navy}" style="${lock(BRAND.navy)}padding:30px 32px 26px;">
+      <tr><td class="dbp-footer" bgcolor="${BRAND.navy}" style="background:${BRAND.navy};padding:30px 32px 26px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
 
           <tr>
@@ -216,7 +228,7 @@ export function renderEmail(opts: EmailShellOptions): string {
           </tr>
 
           <tr><td colspan="2" height="20" style="height:20px;font-size:0;line-height:0;">&nbsp;</td></tr>
-          <tr><td colspan="2" height="1" bgcolor="${BRAND.ruleOnNavy}" style="height:1px;${lock(BRAND.ruleOnNavy)}font-size:0;line-height:0;">&nbsp;</td></tr>
+          <tr><td colspan="2" height="1" bgcolor="${BRAND.ruleOnNavy}" style="height:1px;background:${BRAND.ruleOnNavy};font-size:0;line-height:0;">&nbsp;</td></tr>
           <tr><td colspan="2" height="20" style="height:20px;font-size:0;line-height:0;">&nbsp;</td></tr>
 
           <tr>
