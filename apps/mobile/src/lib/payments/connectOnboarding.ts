@@ -71,5 +71,8 @@ export async function startConnectOnboarding(
   }
 
   const result = await WebBrowser.openAuthSessionAsync(data.url, 'pickleballapp://');
-  return { ok: true, completed: result.type === 'success' };
+  // The return route reports onboarded=0 for an unfinished form or an expired
+  // link (refresh_url), so only a real submission counts as completed.
+  const completed = result.type === 'success' && !/[?&]onboarded=0\b/.test(result.url);
+  return { ok: true, completed };
 }

@@ -19,6 +19,11 @@ import { getStripe } from "@/lib/stripe";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const accountId = searchParams.get("account");
+  // Set by the app's onboarding links (create-connect-onboarding-link). The
+  // app opened Stripe in an in-app browser that only closes on a
+  // pickleballapp:// URL, so an https:// page would leave the person stranded.
+  // Only ever selects between fixed destinations — never a caller-supplied URL.
+  const fromApp = searchParams.get("client") === "app";
 
   if (!accountId) {
     return NextResponse.redirect(`${origin}/director?connect_error=missing_account`);
@@ -70,11 +75,17 @@ export async function GET(request: Request) {
         .update({ stripe_connect_onboarded_at: new Date().toISOString() })
         .eq("stripe_connect_account_id", accountId);
 
-      return NextResponse.redirect(`${origin}/director?onboarded=1`);
+      return NextResponse.redirect(
+        fromApp ? "pickleballapp://payout-settings?onboarded=1" : `${origin}/director?onboarded=1`,
+      );
     }
 
-    return NextResponse.redirect(`${origin}/director?connect_incomplete=1`);
+    return NextResponse.redirect(
+      fromApp ? "pickleballapp://payout-settings?onboarded=0" : `${origin}/director?connect_incomplete=1`,
+    );
   } catch {
-    return NextResponse.redirect(`${origin}/director?connect_error=stripe_error`);
+    return NextResponse.redirect(
+      fromApp ? "pickleballapp://payout-settings?onboarded=0" : `${origin}/director?connect_error=stripe_error`,
+    );
   }
 }

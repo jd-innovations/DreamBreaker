@@ -2,6 +2,20 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getStripe, getServiceClient } from "../_shared/payments.ts";
 
+// Both Stripe links lead back to the web return route marked client=app; it
+// records the account's state and redirects to the pickleballapp:// scheme,
+// which is what closes the in-app browser (openAuthSessionAsync). This function
+// is only called by the app, so every link it makes is an app link.
+//
+// refresh_url fires when a link expires or is reused. It used to point at
+// /api/stripe/connect/start, which is POST-only and needs a web session cookie,
+// so a mobile user saw an error page. Now it returns them to the app, where
+// tapping Connect again mints a fresh link (2026-10-07).
+function appConnectUrls(origin: string, accountId: string) {
+  const back = `${origin}/api/stripe/connect/return?account=${encodeURIComponent(accountId)}&client=app`;
+  return { return_url: back, refresh_url: `${back}&refresh=1` };
+}
+
 // Stripe Connect onboarding for the mobile app.
 //
 // The web route (web/src/app/api/stripe/connect/start/route.ts) does the same
@@ -177,8 +191,7 @@ Deno.serve(async (req: Request) => {
       const origin = Deno.env.get("APP_ORIGIN") ?? "https://pickleballapp.app";
       const accountLink = await stripe.accountLinks.create({
         account: accountId,
-        refresh_url: `${origin}/api/stripe/connect/start?facility=${facilityId}`,
-        return_url: `${origin}/api/stripe/connect/return?account=${accountId}`,
+        ...appConnectUrls(origin, accountId),
         type: "account_onboarding",
       });
 
@@ -250,8 +263,7 @@ Deno.serve(async (req: Request) => {
     const origin = Deno.env.get("APP_ORIGIN") ?? "https://pickleballapp.app";
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${origin}/api/stripe/connect/start`,
-      return_url: `${origin}/api/stripe/connect/return?account=${accountId}`,
+      ...appConnectUrls(origin, accountId),
       type: "account_onboarding",
     });
 
