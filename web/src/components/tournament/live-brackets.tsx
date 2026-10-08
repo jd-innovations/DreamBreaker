@@ -19,7 +19,8 @@ import {
   addThirdPlaceMatch, type LiveBracketMatch, type LiveDivision,
 } from "@/lib/tournament/live-brackets";
 import { useLiveTournament, useLiveTournamentData } from "@/components/tournament/live-tournament-context";
-import { assignCourt, recordScore, roundName, setDivisionPlayStatus } from "@/lib/tournament/day-of";
+import { assignCourt, recordScore, roundName, setDivisionPlayStatus, type DivisionPlayStatus } from "@/lib/tournament/day-of";
+import { DivisionPlayButton, DivisionPlayChip, PLAY_STATUS_LABEL, confirmPlayChange, divisionPlayState } from "@/components/director/division-play-control";
 import { EditScoreDialog, ScoreEditInfo } from "@/components/tournament/score-edit";
 import { ScoreEntryDialog } from "@/components/tournament/score-entry-dialog";
 import { TeamNameLines, vsShort } from "@/components/tournament/team-name";
@@ -120,6 +121,16 @@ export function LiveBrackets({
   const hasBracket = elim.length > 0;
   const shownStage: Stage = hasPools && (!hasBracket || stage === "pools") ? "pools" : "bracket";
 
+  // Directors see the division's real play status (the same one the Day-of
+  // board shows) with Start / Pause / Resume, like mobile's division bracket.
+  const finalScored = elim.some((m) => m.round === "final" && !!m.winner);
+  const playState = division ? divisionPlayState(division.playStatus, finalScored) : null;
+  const divisionOnCourt = division?.matches.filter((m) => m.court && !m.completed).length ?? 0;
+  function changePlay(next: DivisionPlayStatus) {
+    if (!division || !confirmPlayChange(division.name, next)) return;
+    run(() => setDivisionPlayStatus(division.id, next), `${division.name}: ${PLAY_STATUS_LABEL[next].toLowerCase()}.`);
+  }
+
   const canAddThirdPlace = director && !!division
     && elim.filter((m) => m.round === "sf").length === 2
     && !elim.some((m) => m.round === "bronze");
@@ -164,6 +175,20 @@ export function LiveBrackets({
         </div>
       </div>
 
+      {director && division && playState && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2.5">
+          <span className="text-sm font-semibold">{division.name}</span>
+          <DivisionPlayChip state={playState} onCourt={divisionOnCourt} />
+          <span className="text-xs text-muted-foreground flex-1 min-w-[12rem]">
+            {playState === "live" ? "Getting courts as they free up."
+              : playState === "paused" ? "Paused: matches on court finish, no new courts."
+              : playState === "not_started" ? "Not started: no courts until you start it."
+              : "Final scored."}
+          </span>
+          {playState !== "complete" && <DivisionPlayButton playStatus={division.playStatus} busy={busy} onChange={changePlay} />}
+        </div>
+      )}
+
       {division && view === "leaderboard" && <LeaderboardView rows={board} currentUserId={currentUserId} />}
 
       {division && view === "bracket" && (
@@ -188,7 +213,7 @@ export function LiveBrackets({
           )}
 
           {shownStage === "bracket" && hasBracket && <ChampionBanner elim={elim} currentUserId={currentUserId} />}
-          {shownStage === "bracket" && hasBracket && <SummaryStrip elim={elim} />}
+          {shownStage === "bracket" && hasBracket && <SummaryStrip elim={elim} showStatus={!director} />}
 
           {ctx.courts.length > 0 && (
             <CourtsStrip courts={ctx.courts} onCourt={onCourt} autoAssign={ctx.autoAssign} />
@@ -317,7 +342,9 @@ function ChampionBanner({ elim, currentUserId }: { elim: LiveBracketMatch[]; cur
   );
 }
 
-function SummaryStrip({ elim }: { elim: LiveBracketMatch[] }) {
+// showStatus is off for directors: their status bar above carries the real play
+// status, and a second, bracket-derived "IN PROGRESS" contradicted a paused one.
+function SummaryStrip({ elim, showStatus = true }: { elim: LiveBracketMatch[]; showStatus?: boolean }) {
   const first = elim.filter((m) => m.round !== "bronze").sort((a, b) => (DISPLAY_ORDER[a.round] ?? 9) - (DISPLAY_ORDER[b.round] ?? 9))[0]?.round;
   const opening = elim.filter((m) => m.round === first);
   const teams = new Set(opening.flatMap((m) => [m.team1, m.team2]).filter((t) => t.length).map((t) => t.join("|"))).size;
@@ -341,9 +368,11 @@ function SummaryStrip({ elim }: { elim: LiveBracketMatch[] }) {
           <div className="font-mono text-[9px] tracking-widest text-muted-foreground mt-1">{label}</div>
         </div>
       ))}
-      <span className={`ml-auto px-2.5 py-1 rounded-full border font-mono text-[9px] tracking-widest ${status === "COMPLETED" ? "border-green-500/40 bg-green-500/10 text-green-500" : "border-primary/40 bg-primary/10 text-primary"}`}>
-        {status}
-      </span>
+      {showStatus && (
+        <span className={`ml-auto px-2.5 py-1 rounded-full border font-mono text-[9px] tracking-widest ${status === "COMPLETED" ? "border-green-500/40 bg-green-500/10 text-green-500" : "border-primary/40 bg-primary/10 text-primary"}`}>
+          {status}
+        </span>
+      )}
     </div>
   );
 }

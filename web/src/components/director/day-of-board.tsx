@@ -8,7 +8,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CheckFat, DotsSixVertical, Pause, Play, PencilSimple, SoccerBall, X } from "@phosphor-icons/react";
+import { CheckFat, DotsSixVertical, PencilSimple, SoccerBall, X } from "@phosphor-icons/react";
+import { DivisionPlayButton, DivisionPlayChip, PLAY_STATUS_LABEL, confirmPlayChange, divisionPlayState } from "@/components/director/division-play-control";
 import { courtLabel, parseCourts } from "@shared/tournamentCourts";
 import {
   assignCourt, fetchDayOf, recordScore, roundName, saveCourts, setAutoAssignCourts, setDivisionPlayStatus, subscribeDayOf,
@@ -19,15 +20,6 @@ import { ScoreEntryDialog } from "@/components/tournament/score-entry-dialog";
 import { TeamNameLines } from "@/components/tournament/team-name";
 import { makeTeamShortener, teamFull, type TeamPerson } from "@shared/teamNames";
 
-const STATUS_LABEL: Record<DivisionPlayStatus | "complete", string> = {
-  not_started: "NOT STARTED", live: "LIVE", paused: "PAUSED", complete: "COMPLETE",
-};
-const STATUS_CLASS: Record<DivisionPlayStatus | "complete", string> = {
-  not_started: "border-border text-muted-foreground",
-  live: "border-green-500/40 bg-green-500/10 text-green-500",
-  paused: "border-amber-500/40 bg-amber-500/10 text-amber-500",
-  complete: "border-primary/40 bg-primary/10 text-primary",
-};
 
 function isReady(m: LiveMatch) {
   return !m.completedAt && !!m.team1 && !!m.team2 && !m.team1.startsWith("TBD") && !m.team2.startsWith("TBD");
@@ -144,8 +136,8 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
   }
 
   function changeStatus(divisionId: string, name: string, status: DivisionPlayStatus) {
-    if (status === "paused" && !window.confirm(`Pause ${name}? Matches already on a court keep playing; no new ones from this division are called.`)) return;
-    run(() => setDivisionPlayStatus(divisionId, status), `${name}: ${STATUS_LABEL[status].toLowerCase()}.`);
+    if (!confirmPlayChange(name, status)) return;
+    run(() => setDivisionPlayStatus(divisionId, status), `${name}: ${PLAY_STATUS_LABEL[status].toLowerCase()}.`);
   }
 
   async function saveCourtList() {
@@ -234,23 +226,13 @@ export function DayOfBoard({ tournamentId, onGoToBracket }: { tournamentId: stri
           <p className="font-mono text-[10px] tracking-widest text-muted-foreground mb-2">DIVISIONS · ONLY LIVE DIVISIONS GET COURTS</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {state.divisions.map((d) => {
-              const st = finished.has(d.id) ? "complete" : d.playStatus;
-              const held = st !== "live" && st !== "complete" ? onCourtByDivision.get(d.id) ?? 0 : 0;
+              const st = divisionPlayState(d.playStatus, finished.has(d.id));
               return (
                 <div key={d.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2">
                   <span className="text-sm font-semibold flex-1 truncate">{d.name}</span>
-                  <span className={`px-2 py-0.5 rounded-full border font-mono text-[9px] tracking-widest whitespace-nowrap ${held ? STATUS_CLASS.paused : STATUS_CLASS[st]}`}>
-                    {STATUS_LABEL[st]}{held ? ` · ${held} ON COURT` : ""}
-                  </span>
+                  <DivisionPlayChip state={st} onCourt={onCourtByDivision.get(d.id) ?? 0} />
                   {st !== "complete" && (
-                    <button
-                      disabled={busy}
-                      onClick={() => changeStatus(d.id, d.name, d.playStatus === "live" ? "paused" : "live")}
-                      className="flex items-center gap-1 h-7 px-3 rounded-full border border-border hover:bg-secondary font-mono text-[9px] tracking-widest disabled:opacity-40"
-                    >
-                      {d.playStatus === "live" ? <Pause size={10} weight="fill" /> : <Play size={10} weight="fill" />}
-                      {d.playStatus === "live" ? "PAUSE" : d.playStatus === "paused" ? "RESUME" : "START"}
-                    </button>
+                    <DivisionPlayButton playStatus={d.playStatus} busy={busy} onChange={(next) => changeStatus(d.id, d.name, next)} />
                   )}
                 </div>
               );
