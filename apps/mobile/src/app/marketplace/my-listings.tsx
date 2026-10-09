@@ -17,6 +17,7 @@ import { ContextMenu, useContextMenu, type MenuItem } from '@/components/Context
 
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
+import { useThemeRoles } from '@/theme';
 
 const L = {
   navy: '#0A1228', text: '#0A1228', textMuted: '#9AAABF', border: '#E0E8F5',
@@ -28,6 +29,7 @@ const STATUS_COLOR: Record<string, string> = { active: L.green, pending: L.gold,
 
 export default function MyListingsScreen() {
   const insets = useSafeAreaInsets();
+  const t = useThemeRoles();
   const { user } = useSession();
   const [listings, setListings] = useState<MarketplaceListingCard[]>([]);
   const [limit, setLimit] = useState<number | null>(null);
@@ -148,7 +150,19 @@ export default function MyListingsScreen() {
       <View style={[s.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()}><Ionicons name="arrow-back" size={22} color={L.navy} /></TouchableOpacity>
         <Text style={s.headerTitle}>My Listings</Text>
-        <View style={{ width: 22 }} />
+        {/* Same "+ Sell" as the Marketplace header: before this, the only way to
+            list another item from here was the empty state, gone after the
+            first listing (owner, 2026-10-09). The create screen handles the
+            listing limit itself. */}
+        <TouchableOpacity
+          style={[s.headerSellBtn, { backgroundColor: t.primary }]}
+          activeOpacity={0.85}
+          onPress={() => router.push('/marketplace/create' as never)}
+          accessibilityLabel="Sell a paddle"
+        >
+          <Ionicons name="add" size={16} color={t.onPrimary} />
+          <Text style={[s.headerSellText, { color: t.onPrimary }]}>Sell</Text>
+        </TouchableOpacity>
       </View>
 
       {limit != null && (
@@ -256,6 +270,8 @@ const s = StyleSheet.create({
   limitLine: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500', textAlign: 'center', marginBottom: 8 },
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   emptyText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  headerSellBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
+  headerSellText: { fontSize: text.action.size, fontWeight: '800' },
   sellBtn: { marginTop: 8, backgroundColor: L.navy, borderRadius: shape.pill, paddingHorizontal: 20, paddingVertical: 10 },
   sellBtnText: { color: '#FFFFFF', fontSize: text.action.size, fontWeight: '800' },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 14, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: L.border },
