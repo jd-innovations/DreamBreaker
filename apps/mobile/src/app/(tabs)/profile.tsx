@@ -56,7 +56,7 @@ function getMenuItems(directorStatus: string | null, coachStatus: string | null)
     { icon: 'trophy-outline',        label: 'My Tournaments',  sub: 'View registrations & holds',  route: '/my-tournaments',            protected: true  },
     { icon: 'pricetag-outline',      label: 'My Listings',     sub: 'Manage your Marketplace listings', route: '/marketplace/my-listings', protected: true },
     { icon: 'wallet-outline',        label: 'Wallet',          sub: 'Credits, memberships & offers', route: '/wallet',                  protected: true, feature: 'wallet' },
-    { icon: 'school-outline',        label: 'Lesson Marketplace', sub: 'Browse coach offers',        route: '/lessons', feature: 'lessonMarketplace' },
+    { icon: 'school-outline',        label: 'Lessons', sub: 'Browse coach offers',        route: '/lessons', feature: 'lessonMarketplace' },
     directorRow,
     { ...coachRow, feature: 'coachMarketplace' },
     // Routes to manage, not apply: the manage screen offers the application

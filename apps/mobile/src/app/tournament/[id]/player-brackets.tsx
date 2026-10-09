@@ -245,7 +245,7 @@ function MatchCard({ match }: { match: DirectorBracketMatch }) {
       {isAwaiting && (
         <View style={mc.awaiting}>
           <Ionicons name="time-outline" size={11} color={L.textSub} />
-          <Text style={mc.awaitingText}>Awaiting previous round</Text>
+          <Text style={mc.awaitingText}>Awaiting Previous Round</Text>
         </View>
       )}
 

@@ -485,7 +485,7 @@ export default function ChatScreen() {
 
       {/* ── HEADER ── */}
       <View style={s.header}>
-        <Text style={s.title}>Chats</Text>
+        <Text style={s.title}>Messages</Text>
         <View style={s.headerRight}>
           <TouchableOpacity style={s.iconBtn} onPress={() => searchInputRef.current?.focus()} accessibilityRole="button" accessibilityLabel="Search">
             <Ionicons name="search" size={24} color={L.navy} />

@@ -172,17 +172,17 @@ export default function AccountSettingsScreen() {
       ? `Self Rated ${profile.self_rating}`
       : 'Not Rated';
   function confirmLogOut() {
-    Alert.alert('Log out', 'Are you sure you want to log out?', [
+    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Log out',
+        text: 'Sign out',
         style: 'destructive',
         onPress: async () => {
           try {
             await signOut();
             router.replace('/sign-in' as never);
           } catch (e: any) {
-            Alert.alert('Log out failed', e.message ?? 'Please try again.');
+            Alert.alert('Sign out failed', e.message ?? 'Please try again.');
           }
         },
       },
@@ -362,7 +362,7 @@ export default function AccountSettingsScreen() {
 
           <TouchableOpacity style={styles.footerBtn} onPress={confirmLogOut} activeOpacity={0.7}>
             <Ionicons name="log-out-outline" size={16} color={L.danger} />
-            <Text style={[styles.footerText, { color: L.danger }]}>Log out</Text>
+            <Text style={[styles.footerText, { color: L.danger }]}>Sign out</Text>
           </TouchableOpacity>
         </View>
 

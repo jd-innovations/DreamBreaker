@@ -617,7 +617,7 @@ export default function RRScheduleScreen() {
           <View style={s.emptyState}>
             <Ionicons name="calendar-outline" size={36} color={L.border} />
             <Text style={s.emptyText}>No schedule available.</Text>
-            <Text style={s.emptySub}>Return to the command center to generate a schedule.</Text>
+            <Text style={s.emptySub}>Return to the Command Center to generate a schedule.</Text>
           </View>
         ) : (
           <View style={s.scheduleBody}>

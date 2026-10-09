@@ -46,7 +46,7 @@ const PRIMARY_NAV: NavItem[] = [
 const ALL_MORE_NAV: NavItem[] = [
   { label: 'Profile', icon: 'person-outline', href: '/(tabs)/profile' },
   { label: 'Marketplace', icon: 'storefront-outline', href: '/(tabs)/marketplace' },
-  { label: 'Chat', icon: 'chatbubble-outline', href: '/(tabs)/chat' },
+  { label: 'Messages', icon: 'chatbubble-outline', href: '/(tabs)/chat' },
   { label: 'Tournaments', icon: 'trophy-outline', href: '/(tabs)/tournaments' },
   { label: 'Stats', icon: 'stats-chart-outline', href: '/(tabs)/stats', feature: 'myStats' },
 ];

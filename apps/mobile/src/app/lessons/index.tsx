@@ -272,7 +272,7 @@ export default function LessonMarketplaceScreen() {
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={24} color={L.navy} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Lesson Marketplace</Text>
+        <Text style={s.headerTitle}>Lessons</Text>
         <View style={{ width: 40 }} />
       </View>
 
