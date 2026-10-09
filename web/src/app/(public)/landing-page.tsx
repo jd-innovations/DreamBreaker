@@ -175,9 +175,9 @@ export default async function LandingPage() {
           </div>
           <p className="text-sm text-muted-foreground max-w-sm">Partners, games, tournaments, courts and groups in one place. No more spreadsheets, no more &quot;DM for partner&quot; posts, no more missed spots.</p>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
           {reasons.map((r) => (
-            <div key={r.title} className="flex items-start gap-3 border border-border rounded-2xl p-4 bg-card">
+            <div key={r.title} className="flex items-center gap-3 border border-border rounded-2xl p-4 bg-card">
               <div className="h-9 w-9 flex-shrink-0 rounded-full bg-primary/15 text-primary flex items-center justify-center">
                 <r.icon size={18} weight="bold" />
               </div>
