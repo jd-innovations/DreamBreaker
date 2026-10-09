@@ -95,3 +95,30 @@ containing the term.
 
 Each step: typecheck + lint, commit, web via Vercel; mobile via
 `publish-update.js all`.
+
+---
+
+## 7. Progress (2026-10-09)
+
+Decisions taken: D1 Messages, D2 Sign in / Sign out, D3 Pass / Connect /
+Match Requests (Accept, Decline) / My Connections, with Super Connect and the
+match screen kept but reworded ("You're connected"), D4 Command Center,
+D5 Lessons, D6 bottom nav Home / Events / Partner / Messages / Profile.
+
+| Step | Commit | |
+|---|---|---|
+| 1 Mobile inconsistencies | 2e2b623 | Sign out, Messages, Lessons, Command Center, Awaiting Previous Round |
+| 2 Web navigation | 824d00a | bottom nav, header, side menu, Director Hub, Command Center tab |
+| 3 Web Partner Finder | 824d00a | Connect / Super Connect / Match Requests / My Connections |
+| 4 Web feature areas | 39b6535 | tournaments, community play, groups, marketplace |
+| 5 Shared nav names | 05f7038 | `packages/shared/src/navLabels.ts` used by both apps |
+
+Mobile shipped by OTA to preview + production. Web via Vercel.
+
+Dropped: the "!" on web toasts. Mobile uses them too ("Registration
+Complete!", "Preferences Saved!"), so it isn't a divergence.
+
+Left as is, for the owner to decide: web sign-up's "COMPETE / CONNECT /
+CONQUER" and "I AM A PLAYER / DIRECTOR" (no mobile equivalent); the "92%
+MATCH" compatibility ring on Partner Finder cards; "Check In" vs "Check-In"
+(verb vs noun, both correct).
