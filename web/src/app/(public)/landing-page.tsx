@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import { ArrowRight, Plus, Heart, Lightning, Trophy, Users, MapPin, Calendar } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight, Plus, Heart, Lightning, Trophy, Users, UsersThree, Smiley, MapPin, Calendar, CalendarBlank, UserPlus } from "@phosphor-icons/react/dist/ssr";
 import { PageShell } from "@/components/layout/page-shell";
 import { HERO_IMG } from "@/lib/stock-images";
 import { createClient } from "@/lib/supabase/server";
@@ -93,8 +93,20 @@ async function getStatTiles(): Promise<{ label: string; value: string }[]> {
 
 const features = [
   { icon: Lightning, tag: "HOLD MY SPOT", title: "Reserve your slot in seconds", body: "Pay a small non-refundable deposit to lock your tournament entry. It counts toward your entry fee. Confirm later, no scramble." },
-  { icon: Heart, tag: "MATCHMAKING", title: "Tinder-style partner finder", body: "Swipe through verified players by DUPR, distance and play style. Match. Compete." },
-  { icon: Trophy, tag: "BRACKETS", title: "Live brackets & rankings", body: "Auto-generated draws. Real-time scoring. Auto-updated DUPR after every event." },
+  { icon: UserPlus, tag: "PARTNER FINDER", title: "Find playing partners", body: "Swipe left to pass, right to connect. Filter by skill, distance and availability." },
+  { icon: Trophy, tag: "BRACKETS", title: "Live brackets & rankings", body: "Auto-generated draws. Live scores and standings." },
+];
+
+// The six reasons the app's onboarding asks about ("What brings you to
+// PickleballApp?"), with lines from its "All set" screen. Same words on both,
+// so the website promises what the app shows on day one (COPY_ALIGNMENT.md).
+const reasons = [
+  { icon: Users, title: "Find Playing Partners", body: "Compatible players you'll enjoy playing with." },
+  { icon: CalendarBlank, title: "Find Community Play", body: "Games and partners when you're available." },
+  { icon: Trophy, title: "Play Tournaments", body: "Tournaments and events you'll love." },
+  { icon: MapPin, title: "Discover Courts", body: "Courts near you, and a home court to call your own." },
+  { icon: UsersThree, title: "Join Groups", body: "Your local pickleball community." },
+  { icon: Smiley, title: "Meet Local Players", body: "The players around you, one connection at a time." },
 ];
 
 export default async function LandingPage() {
@@ -117,10 +129,10 @@ export default async function LandingPage() {
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 mb-6">
               <span className="h-2 w-2 rounded-full bg-primary animate-pulse-glow" />
-              <span className="font-mono text-[11px] tracking-[0.35em] text-primary">PICKLEBALL TOURNAMENTS</span>
+              <span className="font-mono text-[11px] tracking-[0.35em] text-primary">THE PICKLEBALL OPERATING SYSTEM</span>
             </div>
             <h1 className="font-display text-foreground text-6xl sm:text-7xl lg:text-8xl leading-[0.85] tracking-wide">
-              PLAY.<br />COMPETE.<br /><span className="text-primary">HAVE FUN.</span>
+              PLAY.<br />ENGAGE.<br /><span className="text-primary">BELONG.</span>
             </h1>
             <div className="h-1 w-16 bg-primary my-7" />
             <p className="text-base sm:text-lg text-muted-foreground max-w-md">
@@ -159,9 +171,22 @@ export default async function LandingPage() {
         <div className="flex items-end justify-between flex-wrap gap-4 mb-10">
           <div>
             <div className="font-mono text-[11px] tracking-[0.3em] text-primary mb-3">/ THE PLATFORM</div>
-            <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl tracking-wide max-w-xl">BUILT FOR PLAYERS<br />WHO CAME TO WIN.</h2>
+            <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl tracking-wide max-w-xl">WHAT BRINGS YOU<br />TO PICKLEBALL APP?</h2>
           </div>
-          <p className="text-sm text-muted-foreground max-w-sm">Three tools that change how you compete. No more spreadsheets, no more &quot;DM for partner&quot; posts, no more missed spots.</p>
+          <p className="text-sm text-muted-foreground max-w-sm">Partners, games, tournaments, courts and groups in one place. No more spreadsheets, no more &quot;DM for partner&quot; posts, no more missed spots.</p>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
+          {reasons.map((r) => (
+            <div key={r.title} className="flex items-start gap-3 border border-border rounded-2xl p-4 bg-card">
+              <div className="h-9 w-9 flex-shrink-0 rounded-full bg-primary/15 text-primary flex items-center justify-center">
+                <r.icon size={18} weight="bold" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold text-sm">{r.title}</div>
+                <p className="text-xs text-muted-foreground mt-0.5">{r.body}</p>
+              </div>
+            </div>
+          ))}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {features.map((f, i) => (
@@ -343,8 +368,8 @@ export default async function LandingPage() {
               <h2 className="font-display text-5xl lg:text-6xl tracking-wide leading-[0.95]">YOUR NEXT TROPHY<br />IS ONE SWIPE AWAY.</h2>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 lg:justify-end">
-              <Link href="/matchmaking"><button className="rounded-full h-14 px-8 bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] transition-colors" data-testid="cta-matchmaking-btn">FIND PARTNER</button></Link>
-              <Link href="/auth?mode=signup"><button className="rounded-full h-14 px-8 border border-border hover:bg-secondary/60 font-display tracking-[0.2em] transition-colors" data-testid="cta-signup-btn">CREATE ACCOUNT</button></Link>
+              <Link href="/play"><button className="rounded-full h-14 px-8 bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] transition-colors" data-testid="cta-matchmaking-btn">FIND MY FIRST GAME</button></Link>
+              <Link href="/auth?mode=signup"><button className="rounded-full h-14 px-8 border border-border hover:bg-secondary/60 font-display tracking-[0.2em] transition-colors" data-testid="cta-signup-btn">GET STARTED</button></Link>
             </div>
           </div>
         </div>
