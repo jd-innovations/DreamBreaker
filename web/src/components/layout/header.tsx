@@ -12,15 +12,16 @@ import { createClient } from "@/lib/supabase/client";
 import { resetAnalytics } from "@/lib/analytics";
 import { NotificationBell } from "@/components/notifications/bell";
 import { useHideOnScroll } from "./use-hide-on-scroll";
+import { NAV } from "@shared/navLabels";
 
 const navLinks = [
-  { to: "/tournaments",  label: "Tournaments",   testid: "nav-tournaments" },
-  { to: "/play",         label: "Community Play", testid: "nav-community-play" },
-  { to: "/groups",       label: "Groups",        testid: "nav-groups" },
-  { to: "/marketplace",  label: "Marketplace",   testid: "nav-marketplace" },
-  { to: "/lessons",      label: "Lessons",       testid: "nav-lessons" },
+  { to: "/tournaments",  label: NAV.tournaments,   testid: "nav-tournaments" },
+  { to: "/play",         label: NAV.communityPlay, testid: "nav-community-play" },
+  { to: "/groups",       label: NAV.groups,        testid: "nav-groups" },
+  { to: "/marketplace",  label: NAV.marketplace,   testid: "nav-marketplace" },
+  { to: "/lessons",      label: NAV.lessons,       testid: "nav-lessons" },
   { to: "/players",      label: "Players",       testid: "nav-players" },
-  { to: "/matchmaking",  label: "Partner Finder", testid: "nav-matchmaking" },
+  { to: "/matchmaking",  label: NAV.partnerFinder, testid: "nav-matchmaking" },
 ];
 
 // Desktop groups the three dashboards under one "Dashboards" item (owner,

@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { colors, spacing, quickActionTints } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
+import { NAV } from '@shared/navLabels';
 import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 import { useQuickActionsOrder } from '@/hooks/useQuickActionsOrder';
 import { QUICK_ACTIONS } from '@/constants/quickActions';
@@ -34,21 +35,21 @@ type IconName = keyof typeof Ionicons.glyphMap;
 type NavItem = { label: string; icon: IconName; href: string; feature?: FeatureKey };
 
 const PRIMARY_NAV: NavItem[] = [
-  { label: 'Home', icon: 'home', href: '/(tabs)' },
-  { label: 'Nearby', icon: 'location', href: '/(tabs)/nearby' },
-  { label: 'Events', icon: 'calendar', href: '/(tabs)/games' },
-  { label: 'Groups', icon: 'people', href: '/(tabs)/partner' },
-  { label: 'Partner Finder', icon: 'person-add', href: '/(tabs)/finder' },
+  { label: NAV.home, icon: 'home', href: '/(tabs)' },
+  { label: NAV.nearby, icon: 'location', href: '/(tabs)/nearby' },
+  { label: NAV.events, icon: 'calendar', href: '/(tabs)/games' },
+  { label: NAV.groups, icon: 'people', href: '/(tabs)/partner' },
+  { label: NAV.partnerFinder, icon: 'person-add', href: '/(tabs)/finder' },
 ];
 
 // Entries carrying a `feature` key only render where that feature is in this
 // build's beta scope (see BETA_SCOPE.md).
 const ALL_MORE_NAV: NavItem[] = [
-  { label: 'Profile', icon: 'person-outline', href: '/(tabs)/profile' },
-  { label: 'Marketplace', icon: 'storefront-outline', href: '/(tabs)/marketplace' },
-  { label: 'Messages', icon: 'chatbubble-outline', href: '/(tabs)/chat' },
-  { label: 'Tournaments', icon: 'trophy-outline', href: '/(tabs)/tournaments' },
-  { label: 'Stats', icon: 'stats-chart-outline', href: '/(tabs)/stats', feature: 'myStats' },
+  { label: NAV.profile, icon: 'person-outline', href: '/(tabs)/profile' },
+  { label: NAV.marketplace, icon: 'storefront-outline', href: '/(tabs)/marketplace' },
+  { label: NAV.messages, icon: 'chatbubble-outline', href: '/(tabs)/chat' },
+  { label: NAV.tournaments, icon: 'trophy-outline', href: '/(tabs)/tournaments' },
+  { label: NAV.stats, icon: 'stats-chart-outline', href: '/(tabs)/stats', feature: 'myStats' },
 ];
 
 const MORE_NAV: NavItem[] = ALL_MORE_NAV.filter(
@@ -61,13 +62,13 @@ type AccordionSection = { id: string; label: string; icon: IconName; items: Acco
 const ALL_ACCORDION_SECTIONS: AccordionSection[] = [
   {
     id: 'help',
-    label: 'Help & Support',
+    label: NAV.helpSupport,
     icon: 'help-circle-outline',
     items: [{ label: 'Help Center', href: '/help-support' }],
   },
   {
     id: 'settings',
-    label: 'Settings & Privacy',
+    label: NAV.settingsPrivacy,
     icon: 'settings-outline',
     items: [
       { label: 'Account Settings', href: '/account-settings' },

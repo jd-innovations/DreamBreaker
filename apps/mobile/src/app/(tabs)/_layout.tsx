@@ -9,6 +9,7 @@ import { TAB_BAR_HEIGHT, TAB_BAR_MIN_GAP } from '@/constants/tabBar';
 import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
+import { NAV } from '@shared/navLabels';
 
 const ACTIVE = colors.navy;
 const MUTED  = colors.textSub;
@@ -18,11 +19,11 @@ const MUTED  = colors.textSub;
  * screens below) never render a cell.
  */
 const TABS: { name: string; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { name: 'index',  label: 'Home',    icon: 'home' },
-  { name: 'nearby', label: 'Nearby',  icon: 'location' },
-  { name: 'games',  label: 'Events',  icon: 'calendar' },
-  { name: 'finder', label: 'Partner', icon: 'people' },
-  { name: 'profile', label: 'Profile', icon: 'person' },
+  { name: 'index',  label: NAV.home,    icon: 'home' },
+  { name: 'nearby', label: NAV.nearby,  icon: 'location' },
+  { name: 'games',  label: NAV.events,  icon: 'calendar' },
+  { name: 'finder', label: NAV.partner, icon: 'people' },
+  { name: 'profile', label: NAV.profile, icon: 'person' },
 ];
 
 /**

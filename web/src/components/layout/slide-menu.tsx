@@ -30,31 +30,32 @@ import {
   Shield, ShieldStar, Storefront, Trophy, User, UserPlus, Users, UsersThree, X,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { NAV } from "@shared/navLabels";
 
 type Item = { href: string; label: string; Icon: React.ElementType };
 
 // Mirrors the app's Quick Actions row, minus the two with no web page.
 const QUICK_ACTIONS: Item[] = [
   { href: "/play/create", label: "Create Game",    Icon: PlusCircle },
-  { href: "/matchmaking", label: "Partner Finder", Icon: UserPlus },
+  { href: "/matchmaking", label: NAV.partnerFinder, Icon: UserPlus },
 ];
 
 const PRIMARY: Item[] = [
-  { href: "/dashboard",   label: "Home",           Icon: House },
-  { href: "/play",        label: "Community Play", Icon: CalendarBlank },
-  { href: "/tournaments", label: "Tournaments",    Icon: Trophy },
-  { href: "/groups",      label: "Groups",         Icon: UsersThree },
-  { href: "/matchmaking", label: "Partner Finder", Icon: UserPlus },
+  { href: "/dashboard",   label: NAV.home,           Icon: House },
+  { href: "/play",        label: NAV.communityPlay, Icon: CalendarBlank },
+  { href: "/tournaments", label: NAV.tournaments,    Icon: Trophy },
+  { href: "/groups",      label: NAV.groups,         Icon: UsersThree },
+  { href: "/matchmaking", label: NAV.partnerFinder, Icon: UserPlus },
   { href: "/players",     label: "Players",        Icon: Users },
-  { href: "/marketplace", label: "Marketplace",    Icon: Storefront },
-  { href: "/dashboard?section=messages", label: "Messages", Icon: ChatCircleDots },
-  { href: "/lessons",     label: "Lessons",        Icon: GraduationCap },
-  { href: "/profile",     label: "Profile",        Icon: User },
+  { href: "/marketplace", label: NAV.marketplace,    Icon: Storefront },
+  { href: "/dashboard?section=messages", label: NAV.messages, Icon: ChatCircleDots },
+  { href: "/lessons",     label: NAV.lessons,        Icon: GraduationCap },
+  { href: "/profile",     label: NAV.profile,        Icon: User },
 ];
 
 const SECONDARY: Item[] = [
-  { href: "/help",     label: "Help & Support",     Icon: Question },
-  { href: "/settings", label: "Settings & Privacy", Icon: Gear },
+  { href: "/help",     label: NAV.helpSupport,     Icon: Question },
+  { href: "/settings", label: NAV.settingsPrivacy, Icon: Gear },
 ];
 
 // Module scope so the identity is stable — a new function each render would
@@ -105,7 +106,7 @@ export function SlideMenu({
     };
   }, [open, onClose]);
 
-  const withDirector = isDirector ? [...PRIMARY, { href: "/director", label: "Director Hub", Icon: ShieldStar }] : PRIMARY;
+  const withDirector = isDirector ? [...PRIMARY, { href: "/director", label: NAV.directorHub, Icon: ShieldStar }] : PRIMARY;
   // Admin sits where the desktop nav already puts it. The /admin layout
   // itself 404s a non-admin, so this reveals a route, not any data.
   const primary: Item[] = [...withDirector, { href: "/admin", label: "Admin", Icon: Shield }];
