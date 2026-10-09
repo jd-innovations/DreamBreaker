@@ -103,7 +103,7 @@ export default function CreateGroupPage() {
           <ArrowLeft size={15} weight="bold" /> Back to Groups
         </Link>
 
-        <h1 className="font-display text-4xl tracking-wide mb-6">CREATE A GROUP</h1>
+        <h1 className="font-display text-4xl tracking-wide mb-6">CREATE GROUP</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <Field label="BANNER IMAGE (OPTIONAL)">

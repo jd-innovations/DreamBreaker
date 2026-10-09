@@ -177,7 +177,7 @@ export default async function MarketplaceListingPage({
                 href={appUrl}
                 className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-6 font-display text-sm tracking-[0.18em] text-primary-foreground transition hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
-                {isSold ? "Open in app" : "Make an offer in the app"}
+                {isSold ? "Open in app" : "Make Offer in the app"}
               </a>
             </div>
           </div>

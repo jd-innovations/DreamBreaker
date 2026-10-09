@@ -186,7 +186,7 @@ export default function PlayEventPage({ params }: { params: Promise<{ id: string
           <div className="border border-border rounded-2xl bg-card overflow-hidden">
             <div className="px-5 py-4 border-b border-border flex items-center justify-between">
               <div className="font-display tracking-[0.15em] flex items-center gap-2">
-                <Users size={16} weight="fill" className="text-primary" /> PLAYERS
+                <Users size={16} weight="fill" className="text-primary" /> PLAYERS JOINED
               </div>
               <span className="text-xs font-mono text-muted-foreground">{participants.length} / {event.max_players}</span>
             </div>

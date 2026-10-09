@@ -52,7 +52,7 @@ export default function GroupInviteLinkPage({ params }: { params: Promise<{ toke
             <p className="text-muted-foreground text-sm mb-6">
               This link may have been regenerated or the group may no longer exist.
             </p>
-            <Link href="/groups"><button className="h-11 px-7 rounded-full bg-primary text-primary-foreground font-display tracking-[0.15em] text-sm">BROWSE GROUPS</button></Link>
+            <Link href="/groups"><button className="h-11 px-7 rounded-full bg-primary text-primary-foreground font-display tracking-[0.15em] text-sm">DISCOVER GROUPS</button></Link>
           </>
         ) : (
           <>

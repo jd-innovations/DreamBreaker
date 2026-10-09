@@ -76,7 +76,7 @@ function DiscoverCard({ g, onJoined }: { g: Group; onJoined: (id: string) => voi
       await joinGroup(g.id, userId);
       setJoined(true);
       onJoined(g.id);
-      toast.success(`Joined ${g.name}!`);
+      toast.success("Joined Group", { description: g.name });
     } catch (err) {
       console.error(err);
       toast.error("Could not join this group.");

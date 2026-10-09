@@ -75,7 +75,7 @@ export default async function MarketplacePage({
           <div>
             <h1 className="font-display text-4xl tracking-wide sm:text-5xl">Paddles for sale</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Browse here. Make an offer or message a seller in the Pickleball App.
+              Browse here. Make Offer or Message Seller in the Pickleball App.
             </p>
           </div>
 

@@ -425,7 +425,7 @@ export default function GroupDetailClient({ params }: { params: Promise<{ id: st
     setBusy(true);
     try {
       const status = await joinGroup(id, userId);
-      toast.success(status === "pending" ? "Request sent — waiting on an admin." : "Joined!");
+      toast.success(status === "pending" ? "Request Sent — waiting on an admin." : "Joined Group");
       load();
     } finally { setBusy(false); }
   }
@@ -435,7 +435,7 @@ export default function GroupDetailClient({ params }: { params: Promise<{ id: st
     setBusy(true);
     try {
       await acceptGroupInvite(pendingInvite, userId);
-      toast.success("Joined!");
+      toast.success("Joined Group");
       load();
     } finally { setBusy(false); }
   }
@@ -465,7 +465,7 @@ export default function GroupDetailClient({ params }: { params: Promise<{ id: st
         <div className="max-w-md mx-auto px-4 py-32 text-center">
           <UsersThree size={44} weight="duotone" className="mx-auto mb-4 text-primary" />
           <h1 className="font-display text-2xl tracking-wide mb-2">GROUP NOT FOUND</h1>
-          <Link href="/groups"><button className="h-11 px-7 rounded-full bg-primary text-primary-foreground font-display tracking-[0.15em] text-sm mt-2">BROWSE GROUPS</button></Link>
+          <Link href="/groups"><button className="h-11 px-7 rounded-full bg-primary text-primary-foreground font-display tracking-[0.15em] text-sm mt-2">DISCOVER GROUPS</button></Link>
         </div>
       </PageShell>
     );
@@ -541,7 +541,7 @@ export default function GroupDetailClient({ params }: { params: Promise<{ id: st
               )}
             </>
           ) : isPending ? (
-            <span className="h-10 px-5 rounded-full border border-border flex items-center text-sm text-muted-foreground">Requested</span>
+            <span className="h-10 px-5 rounded-full border border-border flex items-center text-sm text-muted-foreground">Request Sent</span>
           ) : pendingInvite ? (
             <button onClick={handleAcceptInvite} disabled={busy} className="h-10 px-6 rounded-full bg-primary text-primary-foreground font-display tracking-[0.12em] text-sm disabled:opacity-60">ACCEPT INVITE</button>
           ) : (

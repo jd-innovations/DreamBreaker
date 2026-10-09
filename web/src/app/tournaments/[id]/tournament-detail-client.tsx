@@ -450,7 +450,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     setCompleting(key);
     try {
       const userId = await getUserId();
-      if (!userId) { toast.error("Not signed in."); return; }
+      if (!userId) { toast.error("Sign in required", { description: "Please sign in to register." }); return; }
       const supabase = createClient();
       let q = supabase
         .from("registrations")
@@ -468,7 +468,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
         if (existing) next.set(key, { ...existing, status: "registered" });
         return next;
       });
-      toast.success("You're registered!", { description: "Bracket releases 48h before play. See you on the court." });
+      toast.success("Registration Complete!", { description: "You're registered. Bracket releases 48h before play." });
     } finally {
       setCompleting(null);
     }
@@ -702,7 +702,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                 <span className="font-mono font-bold">${entryFee}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Hold My Spot fee</span>
+                <span className="text-muted-foreground">Hold My Spot</span>
                 <span className="font-mono font-bold text-primary">${holdFee}</span>
               </div>
             </div>
@@ -836,7 +836,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
             <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border text-center">
               {/* Was "REFUNDABLE" — a trust badge directly beside the Hold My
                   Spot CTA promising the opposite of the actual policy. */}
-              <div className="text-[10px] font-mono text-muted-foreground"><ShieldCheck size={14} weight="bold" className="mx-auto mb-1 text-primary" /> COUNTS TO ENTRY</div>
+              <div className="text-[10px] font-mono text-muted-foreground"><ShieldCheck size={14} weight="bold" className="mx-auto mb-1 text-primary" /> APPLIED TO ENTRY FEE</div>
               <div className="text-[10px] font-mono text-muted-foreground"><Clock size={14} weight="bold" className="mx-auto mb-1 text-primary" /> {t.hold_duration_hours}H HOLD</div>
               <div className="text-[10px] font-mono text-muted-foreground"><CurrencyDollar size={14} weight="bold" className="mx-auto mb-1 text-primary" /> SECURE</div>
             </div>
@@ -863,7 +863,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
           {attendees.length > 0 && (
             <div className="border border-border rounded-2xl bg-card p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-display text-xl tracking-wide">WHO&apos;S GOING</h3>
+                <h3 className="font-display text-xl tracking-wide">REGISTERED</h3>
                 <div className="text-[10px] font-mono text-muted-foreground">
                   {attendees.filter((a) => a.isFriend).length > 0 && (
                     <span className="text-primary mr-2">
