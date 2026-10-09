@@ -8,7 +8,8 @@
 // gold edge and a small tag. Clicking a card opens the full card (with the
 // director's actions) in the parent.
 
-import { Info } from "@phosphor-icons/react";
+import { useEffect, useRef, useState } from "react";
+import { CaretLeft, CaretRight, Info } from "@phosphor-icons/react";
 import { courtLabel } from "@shared/tournamentCourts";
 import type { LiveBracketMatch } from "@/lib/tournament/live-brackets";
 import { roundName } from "@/lib/tournament/day-of";
@@ -59,7 +60,21 @@ export function treeLayout(elim: LiveBracketMatch[]): TreeLayout | null {
 }
 
 // A first-round slot empty on both sides is a permanent bye: space kept, nothing drawn.
-const isEmptySlot = (m: LiveBracketMatch, r: number) => r === 0 && m.team1.length === 0 && m.team2.length === 0;
+// Only in the REAL first round: a later round's empty match is just TBD.
+const isBye = (m: LiveBracketMatch) => m.team1.length === 0 && m.team2.length === 0;
+
+/**
+ * Where the tree opens: the earliest round that still has a match to play.
+ * A 32-team bracket is ~1,340px wide and ~1,900px tall, wider than its box,
+ * so once the round of 32 was over the later rounds sat off to the right
+ * behind an easy-to-miss scrollbar and looked gone (owner, 2026-10-09).
+ * Finished rounds fold away behind "Show earlier rounds". A finished
+ * bracket shows whole.
+ */
+function openingRound(byRound: LiveBracketMatch[][]): number {
+  const r = byRound.findIndex((list, i) => list.some((m) => !m.completed && !(i === 0 && isBye(m))));
+  return r < 0 ? 0 : r;
+}
 
 export function LiveBracketTree({
   layout, queue, currentUserId, onOpen,
@@ -69,8 +84,30 @@ export function LiveBracketTree({
   currentUserId: string | null;
   onOpen: (m: LiveBracketMatch) => void;
 }) {
-  const { rounds, byRound, bronze } = layout;
+  const [showEarlier, setShowEarlier] = useState(false);
+  const scroller = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+
+  const startAt = openingRound(layout.byRound);
+  const start = showEarlier ? 0 : startAt;
+  const rounds = layout.rounds.slice(start);
+  const byRound = layout.byRound.slice(start);
+  const { bronze } = layout;
+  const isEmptySlot = (m: LiveBracketMatch, r: number) => start === 0 && r === 0 && isBye(m);
   const all = [...byRound.flat(), ...(bronze ? [bronze] : [])];
+
+  // Arrows and fades only while there is more tree to one side.
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const update = () => setEdges({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
+  }, [start, rounds.length]);
+  const nudge = (dir: 1 | -1) => scroller.current?.scrollBy({ left: dir * (CARD_W + COL_GAP), behavior: "smooth" });
   const rowH = maxTeamSize(all.flatMap((m) => [m.team1People, m.team2People])) > 1 ? ROW_H_TWO : ROW_H_ONE;
   const CARD_H = rowH * 2 + 1 + COURT_H;
   const UNIT = CARD_H + ROW_GAP;
@@ -100,7 +137,35 @@ export function LiveBracketTree({
   }
 
   return (
-    <div className="scrollbar-thin overflow-x-auto pb-2">
+    <div className="space-y-2">
+      {(startAt > 0 || edges.left || edges.right) && (
+        <div className="flex items-center gap-2">
+          {startAt > 0 && (
+            <button
+              onClick={() => setShowEarlier((v) => !v)}
+              className="h-8 px-3 rounded-full border border-border text-xs text-muted-foreground hover:text-foreground"
+            >
+              {showEarlier ? "Hide earlier rounds" : `Show earlier rounds (${layout.rounds.slice(0, startAt).map((r) => roundName(r, null)).join(", ")})`}
+            </button>
+          )}
+          {(edges.left || edges.right) && (
+            <div className="ml-auto flex gap-1.5">
+              <button onClick={() => nudge(-1)} disabled={!edges.left} aria-label="Scroll to earlier rounds"
+                className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30">
+                <CaretLeft size={14} weight="bold" />
+              </button>
+              <button onClick={() => nudge(1)} disabled={!edges.right} aria-label="Scroll to later rounds"
+                className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30">
+                <CaretRight size={14} weight="bold" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    <div className="relative">
+      {edges.left && <div className="pointer-events-none absolute inset-y-0 left-0 w-10 z-10 bg-gradient-to-r from-background to-transparent" />}
+      {edges.right && <div className="pointer-events-none absolute inset-y-0 right-0 w-10 z-10 bg-gradient-to-l from-background to-transparent" />}
+    <div ref={scroller} className="scrollbar-thin overflow-x-auto pb-2">
       <div className="relative" style={{ width, height }}>
         <svg className="absolute inset-0 pointer-events-none text-border" width={width} height={height} aria-hidden>
           {paths.map((d, i) => <path key={i} d={d} fill="none" stroke="currentColor" strokeWidth={1.5} />)}
@@ -115,7 +180,7 @@ export function LiveBracketTree({
             key={m.id}
             m={m}
             games={games}
-            opening={r === 0}
+            opening={start === 0 && r === 0}
             queuePos={queue.get(m.id)}
             currentUserId={currentUserId}
             onOpen={onOpen}
@@ -141,6 +206,8 @@ export function LiveBracketTree({
           </>
         )}
       </div>
+    </div>
+    </div>
     </div>
   );
 }
