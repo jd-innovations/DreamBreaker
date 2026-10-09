@@ -365,7 +365,7 @@ export default async function LandingPage() {
           <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div>
               <div className="font-mono text-[11px] tracking-[0.3em] text-primary mb-3">/ READY TO PLAY</div>
-              <h2 className="font-display text-5xl lg:text-6xl tracking-wide leading-[0.95]">YOUR NEXT TROPHY<br />IS ONE SWIPE AWAY.</h2>
+              <h2 className="font-display text-5xl lg:text-6xl tracking-wide leading-[0.95]">YOUR COMMUNITY IS<br />READY TO PLAY.</h2>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 lg:justify-end">
               <Link href="/play"><button className="rounded-full h-14 px-8 bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] transition-colors" data-testid="cta-matchmaking-btn">FIND MY FIRST GAME</button></Link>
