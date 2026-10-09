@@ -360,16 +360,18 @@ export default async function LandingPage() {
 
       {/* CTA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="border border-border rounded-3xl p-10 lg:p-16 bg-card relative overflow-hidden">
+        <div className="border border-border rounded-3xl p-7 sm:p-10 lg:p-16 bg-card relative overflow-hidden">
           <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
           <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div>
-              <div className="font-mono text-[11px] tracking-[0.3em] text-primary mb-3">/ READY TO PLAY</div>
-              <h2 className="font-display text-5xl lg:text-6xl tracking-wide leading-[0.95]">YOUR COMMUNITY IS<br />READY TO PLAY.</h2>
+              <div className="font-mono text-[11px] tracking-[0.3em] text-primary mb-3">/ WELCOME HOME</div>
+              {/* Phones wrap naturally; the forced break only from sm up, where it
+                  lands between the two halves instead of stranding "IS". */}
+              <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl tracking-wide leading-[0.95]">YOUR COMMUNITY IS<br className="hidden sm:block" /> READY TO PLAY.</h2>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 lg:justify-end">
-              <Link href="/play"><button className="rounded-full h-14 px-8 bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] transition-colors" data-testid="cta-matchmaking-btn">FIND MY FIRST GAME</button></Link>
-              <Link href="/auth?mode=signup"><button className="rounded-full h-14 px-8 border border-border hover:bg-secondary/60 font-display tracking-[0.2em] transition-colors" data-testid="cta-signup-btn">GET STARTED</button></Link>
+              <Link href="/play" className="w-full sm:w-auto"><button className="w-full rounded-full h-14 px-8 bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.2em] transition-colors" data-testid="cta-matchmaking-btn">FIND MY FIRST GAME</button></Link>
+              <Link href="/auth?mode=signup" className="w-full sm:w-auto"><button className="w-full rounded-full h-14 px-8 border border-border hover:bg-secondary/60 font-display tracking-[0.2em] transition-colors" data-testid="cta-signup-btn">GET STARTED</button></Link>
             </div>
           </div>
         </div>
