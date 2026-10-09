@@ -20,7 +20,7 @@ const navLinks = [
   { to: "/marketplace",  label: "Marketplace",   testid: "nav-marketplace" },
   { to: "/lessons",      label: "Lessons",       testid: "nav-lessons" },
   { to: "/players",      label: "Players",       testid: "nav-players" },
-  { to: "/matchmaking",  label: "Matchmaking",   testid: "nav-matchmaking" },
+  { to: "/matchmaking",  label: "Partner Finder", testid: "nav-matchmaking" },
 ];
 
 // Desktop groups the three dashboards under one "Dashboards" item (owner,

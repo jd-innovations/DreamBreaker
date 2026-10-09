@@ -26,7 +26,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  CalendarBlank, GraduationCap, Heart, House, PlusCircle, Question, Gear,
+  CalendarBlank, ChatCircleDots, GraduationCap, House, PlusCircle, Question, Gear,
   Shield, ShieldStar, Storefront, Trophy, User, UserPlus, Users, UsersThree, X,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
@@ -44,9 +44,10 @@ const PRIMARY: Item[] = [
   { href: "/play",        label: "Community Play", Icon: CalendarBlank },
   { href: "/tournaments", label: "Tournaments",    Icon: Trophy },
   { href: "/groups",      label: "Groups",         Icon: UsersThree },
-  { href: "/matchmaking", label: "Matchmaking",    Icon: Heart },
+  { href: "/matchmaking", label: "Partner Finder", Icon: UserPlus },
   { href: "/players",     label: "Players",        Icon: Users },
   { href: "/marketplace", label: "Marketplace",    Icon: Storefront },
+  { href: "/dashboard?section=messages", label: "Messages", Icon: ChatCircleDots },
   { href: "/lessons",     label: "Lessons",        Icon: GraduationCap },
   { href: "/profile",     label: "Profile",        Icon: User },
 ];
@@ -104,7 +105,7 @@ export function SlideMenu({
     };
   }, [open, onClose]);
 
-  const withDirector = isDirector ? [...PRIMARY, { href: "/director", label: "Director", Icon: ShieldStar }] : PRIMARY;
+  const withDirector = isDirector ? [...PRIMARY, { href: "/director", label: "Director Hub", Icon: ShieldStar }] : PRIMARY;
   // Admin sits where the desktop nav already puts it. The /admin layout
   // itself 404s a non-admin, so this reveals a route, not any data.
   const primary: Item[] = [...withDirector, { href: "/admin", label: "Admin", Icon: Shield }];

@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, Trophy, Heart, ChatCircleDots, User } from "@phosphor-icons/react";
+import { House, CalendarBlank, Users, ChatCircleDots, User } from "@phosphor-icons/react";
 import { useHideOnScroll } from "./use-hide-on-scroll";
 
+// Mirrors the app's tab bar (Home / Events / Partner / Profile), with
+// Messages in place of Nearby, which has no web page (COPY_ALIGNMENT.md D6).
 const tabs = [
-  { href: "/dashboard",                    label: "Dashboard", Icon: House          },
-  { href: "/tournaments",                  label: "Play",      Icon: Trophy         },
-  { href: "/matchmaking",                  label: "Match",     Icon: Heart          },
-  { href: "/dashboard?section=messages",   label: "Messages",  Icon: ChatCircleDots },
-  { href: "/profile",                      label: "Profile",   Icon: User           },
+  { href: "/dashboard",                    label: "Home",     Icon: House          },
+  { href: "/dashboard?section=events",     label: "Events",   Icon: CalendarBlank  },
+  { href: "/matchmaking",                  label: "Partner",  Icon: Users          },
+  { href: "/dashboard?section=messages",   label: "Messages", Icon: ChatCircleDots },
+  { href: "/profile",                      label: "Profile",  Icon: User           },
 ];
 
 export function MobileBottomNav() {

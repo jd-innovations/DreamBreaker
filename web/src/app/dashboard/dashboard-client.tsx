@@ -609,7 +609,7 @@ export default function DashboardPage() {
         <button onClick={() => { setNavSection("matchmaking"); setMobileSidebarOpen(false); }}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "matchmaking" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
           <SlidersHorizontal size={16} weight={navSection === "matchmaking" ? "fill" : "regular"} />
-          Match Settings
+          Partner Preferences
         </button>
       </nav>
 
@@ -1178,7 +1178,7 @@ export default function DashboardPage() {
           {navSection === "matchmaking" && (
             <div className="space-y-4">
               <div>
-                <h2 className="font-display text-xl tracking-wide">MATCH SETTINGS</h2>
+                <h2 className="font-display text-xl tracking-wide">PARTNER PREFERENCES</h2>
                 <p className="text-sm text-muted-foreground">Control your discoverability and partner preferences</p>
               </div>
               <MatchSettingsPanel
@@ -1211,8 +1211,8 @@ export default function DashboardPage() {
                 <div className="flex flex-wrap gap-3">
                   <Link href="/profile"><button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">PUBLIC PROFILE</button></Link>
                   <Link href="/tournaments"><button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">TOURNAMENTS</button></Link>
-                  <Link href="/matchmaking"><button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">MATCHMAKING</button></Link>
-                  <Link href="/holds"><button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">MY HOLDS</button></Link>
+                  <Link href="/matchmaking"><button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">PARTNER FINDER</button></Link>
+                  <Link href="/holds"><button className="h-10 px-5 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-wider transition-colors">HELD SPOTS</button></Link>
                 </div>
               </div>
             </div>

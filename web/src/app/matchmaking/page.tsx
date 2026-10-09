@@ -491,7 +491,7 @@ function MatchmakingInner() {
     if (theirSwipe) {
       setTimeout(() => setMatchedPartner(partner), 100);
     } else {
-      toast.success(`Liked ${partner.name}!`, { description: "If they like you back, it's a match." });
+      toast.success("Connection request sent", { description: `Your request to ${partner.name} has been sent.` });
     }
     setMatches((m) => (m.find((x) => x.id === partner.id) ? m : [partner, ...m]));
     // remove from tournament context so they don't show twice
@@ -537,10 +537,10 @@ function MatchmakingInner() {
       setSwipeDir(null);
       if (dir === "right") {
         setMatches((m) => [top, ...m]);
-        if (!matchedPartner) toast.success(`Liked ${top.name}!`, { description: "If they like you back, it's a match." });
+        if (!matchedPartner) toast.success("Connection request sent", { description: `Your request to ${top.name} has been sent.` });
       } else if (dir === "up") {
         setMatches((m) => [top, ...m]);
-        if (!matchedPartner) toast.success(`Super-connected with ${top.name}!`, { description: "They'll see you at the top of their queue." });
+        if (!matchedPartner) toast.success("Super Connect sent", { description: `${top.name} will see you at the top of their queue.` });
       }
     }, 300);
   }, [top, myId]);
@@ -658,7 +658,7 @@ function MatchmakingInner() {
           {/* Incoming likes */}
           <section>
             <div className="flex items-center gap-3 mb-5">
-              <h2 className="font-display text-2xl tracking-wide">INCOMING LIKES</h2>
+              <h2 className="font-display text-2xl tracking-wide">MATCH REQUESTS</h2>
               {incoming.length > 0 && (
                 <span className="h-6 min-w-6 px-2 rounded-full bg-primary text-primary-foreground font-mono text-xs flex items-center justify-center">{incoming.length}</span>
               )}
@@ -666,7 +666,7 @@ function MatchmakingInner() {
             {incoming.length === 0 ? (
               <div className="border border-dashed border-border rounded-2xl p-10 text-center text-muted-foreground">
                 <Heart size={28} weight="duotone" className="mx-auto mb-2.5 text-primary" />
-                <p className="text-sm">No pending likes yet. Keep swiping to get noticed!</p>
+                <p className="text-sm">No pending requests. When players send you a connect request, they&apos;ll appear here.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -693,10 +693,10 @@ function MatchmakingInner() {
                           const supabase = createClient();
                           await supabase.from("matchmaking_swipes").insert({ requester_id: myId, target_id: p.id, direction: "pass" as "like" | "pass" });
                           setIncoming((prev) => prev.filter((x) => x.id !== p.id));
-                          toast("Passed", { description: p.name });
+                          toast("Declined", { description: p.name });
                         }}
                         className="flex-1 h-9 rounded-full border border-destructive text-destructive text-xs font-display tracking-[0.15em] hover:bg-destructive/10 transition-colors"
-                      >PASS</button>
+                      >DECLINE</button>
                       <button
                         onClick={async () => {
                           if (!myId) return;
@@ -707,7 +707,7 @@ function MatchmakingInner() {
                           setTimeout(() => setMatchedPartner(p), 100);
                         }}
                         className="flex-1 h-9 rounded-full bg-primary text-primary-foreground text-xs font-display tracking-[0.15em] hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5"
-                      ><Heart size={13} weight="fill" /> LIKE BACK</button>
+                      ><Heart size={13} weight="fill" /> ACCEPT</button>
                     </div>
                   </div>
                 ))}
@@ -718,7 +718,7 @@ function MatchmakingInner() {
           {/* Mutual matches */}
           <section>
             <div className="flex items-center gap-3 mb-5">
-              <h2 className="font-display text-2xl tracking-wide">MUTUAL MATCHES</h2>
+              <h2 className="font-display text-2xl tracking-wide">MY CONNECTIONS</h2>
               {matches.length > 0 && (
                 <span className="h-6 min-w-6 px-2 rounded-full bg-primary text-primary-foreground font-mono text-xs flex items-center justify-center">{matches.length}</span>
               )}
@@ -726,7 +726,7 @@ function MatchmakingInner() {
             {matches.length === 0 ? (
               <div className="border border-dashed border-border rounded-2xl p-10 text-center text-muted-foreground">
                 <Heartbeat size={28} weight="duotone" className="mx-auto mb-2.5 text-primary" />
-                <p className="text-sm">No mutual matches yet. Like someone back to connect!</p>
+                <p className="text-sm">No connections yet. Accept a request or connect with players to see them here.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -872,7 +872,7 @@ function MatchmakingInner() {
                       {liveDir === "right" && (
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                           <div className="rotate-[-20deg] border-4 border-primary rounded-2xl px-6 py-3">
-                            <span className="font-display text-4xl text-primary tracking-widest">LIKE</span>
+                            <span className="font-display text-4xl text-primary tracking-widest">CONNECT</span>
                           </div>
                         </div>
                       )}
@@ -886,7 +886,7 @@ function MatchmakingInner() {
                       {liveDir === "up" && (
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                           <div className="border-4 border-sky-400 rounded-2xl px-6 py-3">
-                            <span className="font-display text-4xl text-sky-400 tracking-widest">CONNECT</span>
+                            <span className="font-display text-4xl text-sky-400 tracking-widest">SUPER CONNECT</span>
                           </div>
                         </div>
                       )}
@@ -1048,7 +1048,7 @@ function MatchmakingInner() {
         {/* Matches sidebar */}
         <aside className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-2xl tracking-wide">MATCHES</h2>
+            <h2 className="font-display text-2xl tracking-wide">CONNECTIONS</h2>
             {matches.length > 0 && (
               <span className="h-6 min-w-6 px-2 rounded-full bg-primary text-primary-foreground font-mono text-xs flex items-center justify-center">{matches.length}</span>
             )}
@@ -1057,7 +1057,7 @@ function MatchmakingInner() {
           {matches.length === 0 ? (
             <div className="border border-dashed border-border rounded-2xl p-8 text-center text-muted-foreground">
               <Heartbeat size={28} weight="duotone" className="mx-auto mb-2.5 text-primary" />
-              <p className="text-sm leading-relaxed">Swipe right or super-connect with players you want to partner with.</p>
+              <p className="text-sm leading-relaxed">Swipe left to pass, right to connect. Super Connect puts you at the top of their queue.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -1121,7 +1121,7 @@ function MatchmakingInner() {
                 </div>
               </div>
 
-              <div className="font-mono text-[10px] tracking-[0.35em] text-primary mb-1">IT&apos;S A MATCH</div>
+              <div className="font-mono text-[10px] tracking-[0.35em] text-primary mb-1">YOU&apos;RE CONNECTED</div>
               <h2 className="font-display text-3xl tracking-wide mb-2">YOU & {matchedPartner.name.split(" ")[0].toUpperCase()}</h2>
               <p className="text-sm text-muted-foreground mb-8">
                 You both liked each other. Start a conversation and set up a game!

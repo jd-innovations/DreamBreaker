@@ -693,7 +693,7 @@ export default function DirectorTournamentPage() {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2.5 font-mono text-xs tracking-widest transition-colors border-b-2 -mb-px whitespace-nowrap ${activeTab === tab ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
             >
-              {tab === "dayof" ? "DAY OF" : tab === "live" ? "LIVE BRACKETS" : tab === "map" ? "REGISTRANT MAP" : tab.toUpperCase()}
+              {tab === "dayof" ? "COMMAND CENTER" : tab === "live" ? "LIVE BRACKETS" : tab === "map" ? "REGISTRANT MAP" : tab.toUpperCase()}
               {tab === "sponsors" && sponsors.length > 0 && <span className="ml-1.5 text-primary">({sponsors.length})</span>}
               {tab === "roster" && registrations.length > 0 && <span className="ml-1.5 text-primary">({registrations.length})</span>}
               {tab === "bracket" && seeds.length > 0 && <span className="ml-1.5 text-primary">({seeds.length})</span>}

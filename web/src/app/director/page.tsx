@@ -880,7 +880,7 @@ export default function DirectorPage() {
           </button>
         ))}
 
-        <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">BRACKET & DAY OF</div>
+        <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">BRACKET & COMMAND CENTER</div>
         {selectedId ? (
           <>
             <Link href={`/director/tournaments/${selectedId}?tab=bracket`} onClick={() => setMobileSidebarOpen(false)}
@@ -1303,7 +1303,7 @@ export default function DirectorPage() {
             <div className="space-y-4">
               <div>
                 <h2 className="font-display text-xl tracking-wide">CHECK-IN</h2>
-                <p className="text-sm text-muted-foreground">{selected.name} · Day-of player check-in</p>
+                <p className="text-sm text-muted-foreground">{selected.name} · Check-In</p>
               </div>
               <div className="relative">
                 <MagnifyingGlass size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />

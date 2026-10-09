@@ -966,7 +966,7 @@ export default function ProfilePage() {
                 <div className="border border-dashed border-border rounded-2xl p-12 text-center text-muted-foreground">
                   <Users size={32} weight="duotone" className="mx-auto mb-3 text-primary" />
                   <div className="font-display text-xl tracking-wide mb-1">NO PARTNERS YET</div>
-                  <p className="text-sm">Use matchmaking to find and connect with partners.</p>
+                  <p className="text-sm">Use Partner Finder to find and connect with partners.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
