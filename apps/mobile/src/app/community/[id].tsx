@@ -1173,9 +1173,18 @@ export default function CommunityEventScreen() {
               <Text style={s.orgMetaText}>{hostedText(isUUID ? hostedCount : event.organizer.events)}</Text>
             </View>
           </View>
-          <TouchableOpacity style={s.followBtn}>
-            <Text style={s.followBtnText}>Follow</Text>
-          </TouchableOpacity>
+          {/* Was "Follow" with no action and no follow feature behind it;
+              owner chose Message (2026-10-10). Hidden on your own event. */}
+          {!!event.organizer.userId && event.organizer.userId !== user?.id && (
+            <TouchableOpacity
+              style={s.followBtn}
+              disabled={msgingId === 'organizer'}
+              onPress={() => openDM(event.organizer.userId as string, 'organizer')}
+              accessibilityLabel={`Message ${event.organizer.name}`}
+            >
+              <Text style={s.followBtnText}>{msgingId === 'organizer' ? 'Opening…' : 'Message'}</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <TouchableOpacity
