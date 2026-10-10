@@ -230,6 +230,21 @@ export type PlayEventWithOrganizer = PlayEvent & {
 
 // ─── fetchPlayEventById ───────────────────────────────────────────────────────
 
+/**
+ * How many community events a person has hosted (open, full, live or
+ * finished; cancelled and drafts don't count). Shown on the organizer card,
+ * which hard-coded 0 for every real event until 2026-10-10.
+ */
+export async function fetchHostedEventCount(userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('play_events')
+    .select('id', { count: 'exact', head: true })
+    .eq('organizer_id', userId)
+    .in('status', ['open', 'full', 'in_progress', 'completed']);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function fetchPlayEventById(id: string): Promise<PlayEvent | null> {
   const { data, error } = await supabase
     .from('play_events')

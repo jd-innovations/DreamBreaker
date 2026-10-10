@@ -35,7 +35,7 @@ import {
   type Message,
 } from '@/lib/conversationService';
 import {
-  fetchPlayEventWithOrganizer, fetchPlayParticipants, fetchMyPlayParticipant, claimGuestParticipants, addPlayParticipant,
+  fetchPlayEventWithOrganizer, fetchHostedEventCount, fetchPlayParticipants, fetchMyPlayParticipant, claimGuestParticipants, addPlayParticipant,
   removePlayParticipant, cancelPlayEvent, isRecordedGamesBlock, RECORDED_GAMES_BLOCK_MESSAGE,
   joinEventErrorMessage, skillLabel,
   type PlayEventWithOrganizer,
@@ -626,6 +626,18 @@ export default function CommunityEventScreen() {
   // Real pending invites for a real event. Re-read on focus so the list is
   // current after inviting from the Invite Players screen.
   const [realPending, setRealPending] = useState<PendingInvite[]>([]);
+  const [hostedCount, setHostedCount] = useState<number | null>(null);
+  // While the count loads, say nothing rather than a placeholder "0".
+  const hostedText = (n: number | null) => n == null ? '' : `${n} event${n === 1 ? '' : 's'} hosted`;
+  const organizerId = liveEvent?.organizer.userId ?? null;
+  useEffect(() => {
+    if (!isUUID || !organizerId) return;
+    let active = true;
+    fetchHostedEventCount(organizerId)
+      .then(n => { if (active) setHostedCount(n); })
+      .catch(reportSilentFailure('community-event:hosted-count'));
+    return () => { active = false; };
+  }, [isUUID, organizerId]);
   useFocusEffect(useCallback(() => {
     if (!isUUID || !user) return;
     let active = true;
@@ -1149,10 +1161,16 @@ export default function CommunityEventScreen() {
           <View style={s.orgInfo}>
             <Text style={s.orgName}>{event.organizer.name}</Text>
             <View style={s.orgMeta}>
+              {/* Rating only when there is one: it was always blank on real
+              events, leaving a lone trophy and dot. */}
+              {!!event.organizer.rating && (
+              <>
               <Ionicons name="trophy-outline" size={12} color={t.textMuted} />
               <Text style={s.orgMetaText}>{event.organizer.rating}</Text>
               <Text style={s.orgDot}>·</Text>
-              <Text style={s.orgMetaText}>{event.organizer.events} events hosted</Text>
+              </>
+              )}
+              <Text style={s.orgMetaText}>{hostedText(isUUID ? hostedCount : event.organizer.events)}</Text>
             </View>
           </View>
           <TouchableOpacity style={s.followBtn}>
@@ -1299,10 +1317,16 @@ export default function CommunityEventScreen() {
               </View>
             </View>
             <View style={s.orgMeta}>
+              {/* Rating only when there is one: it was always blank on real
+              events, leaving a lone trophy and dot. */}
+              {!!event.organizer.rating && (
+              <>
               <Ionicons name="trophy-outline" size={12} color={t.textMuted} />
               <Text style={s.orgMetaText}>{event.organizer.rating}</Text>
               <Text style={s.orgDot}>·</Text>
-              <Text style={s.orgMetaText}>{event.organizer.events} events hosted</Text>
+              </>
+              )}
+              <Text style={s.orgMetaText}>{hostedText(isUUID ? hostedCount : event.organizer.events)}</Text>
             </View>
           </View>
         </View>
