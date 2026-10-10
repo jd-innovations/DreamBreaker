@@ -11,6 +11,7 @@ import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
 import { useSession } from '@/hooks/useSession';
+import { haptics } from '@/lib/haptics';
 import {
   fetchFriends, searchPlayers, fetchInvitedUserIds, sendPlayEventInvite,
   type InvitablePlayer,
@@ -125,10 +126,15 @@ export default function InvitePlayersScreen() {
 
   const handleInvite = useCallback(async (playerId: string) => {
     if (!user?.id) return;
+    // A tap on Invite, then a success buzz once the invite is actually sent
+    // (owner, 2026-10-10); an error buzz as the button flips back on failure.
+    haptics.light();
     setInvitedIds(prev => new Set(prev).add(playerId));
     try {
       await sendPlayEventInvite(id, user.id, playerId);
+      haptics.success();
     } catch {
+      haptics.error();
       setInvitedIds(prev => {
         const next = new Set(prev);
         next.delete(playerId);
