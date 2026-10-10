@@ -59,6 +59,46 @@ export async function fetchInvitedUserIds(playEventId: string): Promise<Set<stri
   return new Set((data ?? []).map(row => row.invitee_id));
 }
 
+export type PendingInvite = {
+  id: string;
+  inviteeId: string;
+  name: string;
+  avatarUrl: string | null;
+  invitedAt: string;
+};
+
+/**
+ * Invites still awaiting an answer, newest first, with the invitee's name.
+ * RLS (participants_read) returns only invites the caller sent or received,
+ * so an organizer sees the ones they sent. Replaced a hard-coded "Brian T. /
+ * Jessica L. / Chris P." list that every real event showed (owner,
+ * 2026-10-10).
+ */
+export async function fetchPendingInvites(playEventId: string): Promise<PendingInvite[]> {
+  const { data, error } = await supabase
+    .from('play_event_invites')
+    .select('id, invitee_id, created_at')
+    .eq('play_event_id', playEventId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+  const { data: people, error: pErr } = await supabase
+    .from('profiles')
+    .select('id, full_name, avatar_url')
+    .in('id', rows.map(r => r.invitee_id));
+  if (pErr) throw pErr;
+  const byId = new Map((people ?? []).map(p => [p.id, p]));
+  return rows.map(r => ({
+    id: r.id,
+    inviteeId: r.invitee_id,
+    name: byId.get(r.invitee_id)?.full_name ?? 'Player',
+    avatarUrl: byId.get(r.invitee_id)?.avatar_url ?? null,
+    invitedAt: r.created_at,
+  }));
+}
+
 export async function sendPlayEventInvite(
   playEventId: string,
   inviterId: string,

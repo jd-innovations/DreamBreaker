@@ -5,7 +5,9 @@ import {
   Modal, Pressable, Alert, Linking, Animated, AccessibilityInfo,
   type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType,
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
+import { fetchPendingInvites, type PendingInvite } from '@/lib/supabase/playEventInvites';
+import { reportSilentFailure } from '@/lib/observability/reportError';
 import { shareEntity } from '@/lib/share';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -621,6 +623,17 @@ export default function CommunityEventScreen() {
   }, [id, isUUID, liveEvent, user]);
 
   const [liveParticipants,    setLiveParticipants]    = useState<ParticipantRow[]>([]);
+  // Real pending invites for a real event. Re-read on focus so the list is
+  // current after inviting from the Invite Players screen.
+  const [realPending, setRealPending] = useState<PendingInvite[]>([]);
+  useFocusEffect(useCallback(() => {
+    if (!isUUID || !user) return;
+    let active = true;
+    fetchPendingInvites(id as string)
+      .then(rows => { if (active) setRealPending(rows); })
+      .catch(reportSilentFailure('community-event:pending-invites'));
+    return () => { active = false; };
+  }, [id, isUUID, user]));
   const [participantsLoading, setParticipantsLoading] = useState(false);
   const [participantsError,   setParticipantsError]   = useState<string | null>(null);
 
@@ -1239,7 +1252,18 @@ export default function CommunityEventScreen() {
   function PlayersContent() {
     const displayParticipants = isUUID ? liveParticipants : accepted;
     const TOTAL_ACCEPTED = isUUID ? event.players : accepted.length + 6;
-    const TOTAL_PENDING  = pending.length;
+    // Someone who already joined is no longer "pending", whatever the invite row says.
+    const joinedIds = new Set(liveParticipants.map(lp => lp.userId).filter(Boolean));
+    const displayPending = isUUID
+      ? realPending.filter(inv => !joinedIds.has(inv.inviteeId)).map(inv => ({
+          id: inv.id,
+          name: inv.name,
+          initials: inv.name.split(/\s+/).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase(),
+          bg: colors.navy,
+          invitedDate: new Date(inv.invitedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        }))
+      : pending;
+    const TOTAL_PENDING  = displayPending.length;
 
     return (
       <>
@@ -1365,11 +1389,11 @@ export default function CommunityEventScreen() {
           <>
             <Text style={s.sectionTitle}>Pending Invites</Text>
             <View style={pl.listCard}>
-              {pending.length === 0 ? (
+              {displayPending.length === 0 ? (
                 <View style={pl.emptyWrap}>
                   <Text style={pl.emptyText}>No pending invites</Text>
                 </View>
-              ) : pending.map((player, idx) => (
+              ) : displayPending.map((player, idx) => (
                 <View key={player.id}>
                   {idx > 0 && <View style={s.divider} />}
                   <View style={pl.playerRow}>
