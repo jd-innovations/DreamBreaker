@@ -53,8 +53,11 @@ export type DirectorBracket = {
   completedAt?: string;
   championId?: string;
   championName?: string;
+  /** Doubles/mixed: the champion's partner. Show the team, not one player. */
+  championPartnerName?: string;
   runnerUpId?: string;
   runnerUpName?: string;
+  runnerUpPartnerName?: string;
   publishedAt?: string;
 };
 
@@ -378,4 +381,9 @@ export function getBracketMatchCounts(tournamentId: string): {
   const remaining = total - completed;
   const completionPct = total > 0 ? Math.round((completed / total) * 100) : 0;
   return { total, completed, remaining, completionPct };
+}
+
+/** "A & B" for a doubles team, "A" for singles. */
+export function teamLabel(name: string | undefined, partner: string | undefined): string | undefined {
+  return name ? (partner ? `${name} & ${partner}` : name) : undefined;
 }

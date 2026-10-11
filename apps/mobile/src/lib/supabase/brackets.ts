@@ -240,6 +240,8 @@ function rowsToDivisionBracket(
   let championName: string | undefined;
   let runnerUpId: string | undefined;
   let runnerUpName: string | undefined;
+  let championPartnerName: string | undefined;
+  let runnerUpPartnerName: string | undefined;
   let completedAt: string | undefined;
 
   if (isCompleted && finalMatch) {
@@ -253,6 +255,9 @@ function rowsToDivisionBracket(
       championName = winnerProfile?.full_name ?? winnerGuest?.display_name ?? undefined;
       runnerUpId   = loserProfile?.id ?? loserGuest?.id;
       runnerUpName = loserProfile?.full_name ?? loserGuest?.display_name ?? undefined;
+      // Partners (doubles/mixed): the champion is the team (owner, 2026-10-11).
+      championPartnerName = (finalRow.winner === 1 ? (finalRow.p1b?.full_name ?? finalRow.g1b?.display_name) : (finalRow.p2b?.full_name ?? finalRow.g2b?.display_name)) ?? undefined;
+      runnerUpPartnerName = (finalRow.winner === 1 ? (finalRow.p2b?.full_name ?? finalRow.g2b?.display_name) : (finalRow.p1b?.full_name ?? finalRow.g1b?.display_name)) ?? undefined;
     }
     const completedDates = rows.map(r => r.completed_at).filter(Boolean) as string[];
     completedAt = completedDates.sort().at(-1) ?? undefined;
@@ -273,8 +278,10 @@ function rowsToDivisionBracket(
     completedAt,
     championId,
     championName,
+    championPartnerName,
     runnerUpId,
     runnerUpName,
+    runnerUpPartnerName,
     // publishedAt: treated as completedAt (publish is implicit on completion)
     publishedAt: isCompleted ? completedAt : undefined,
   };

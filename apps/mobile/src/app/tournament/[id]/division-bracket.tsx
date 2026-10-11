@@ -25,6 +25,7 @@ import {
   type DirectorBracket,
   type DirectorBracketMatch,
 } from '@/lib/supabase/brackets';
+import { teamLabel } from '@/lib/directorBracketStore';
 import {
   addThirdPlaceMatch, assignCourt, correctMatchScore, fetchCourtQueue, fetchCourtsInUse, fetchLatestScoreEdit,
   previewScoreCorrection, saveMatchScore, type CourtInUse,
@@ -1149,7 +1150,7 @@ function DivisionBracketScreen() {
       if (bracket?.status === 'completed') {
         Alert.alert(
           'Division Complete!',
-          `Champion: ${bracket.championName ?? 'TBD'}\nRunner-Up: ${bracket.runnerUpName ?? 'TBD'}`,
+          `Champion: ${teamLabel(bracket.championName, bracket.championPartnerName) ?? 'TBD'}\nRunner-Up: ${teamLabel(bracket.runnerUpName, bracket.runnerUpPartnerName) ?? 'TBD'}`,
           [
             { text: 'View Results', onPress: () => router.push(`/tournament/${tournamentId}/results` as never) },
             { text: 'OK' },
@@ -1323,7 +1324,9 @@ function DivisionBracketScreen() {
             onCourt={divisionOnCourt}
           />
           <Text style={s.playHint} numberOfLines={2}>
-            {division.playStatus === 'live'
+            {bracket?.status === 'completed'
+              ? 'Final scored.'
+              : division.playStatus === 'live'
               ? 'Getting courts automatically.'
               : divisionOnCourt > 0
                 ? `${divisionOnCourt} on court, but no new courts until you ${division.playStatus === 'paused' ? 'resume' : 'start'} it.`
@@ -1373,7 +1376,7 @@ function DivisionBracketScreen() {
           <Ionicons name="trophy" size={18} color={L.gold} />
           <View style={{ flex: 1 }}>
             <Text style={s.championLabel}>Champion</Text>
-            <Text style={s.championName}>{bracket.championName}</Text>
+            <Text style={s.championName}>{teamLabel(bracket.championName, bracket.championPartnerName)}</Text>
           </View>
           <TouchableOpacity
             style={s.resultsLink}
@@ -1390,7 +1393,7 @@ function DivisionBracketScreen() {
       <View style={s.summaryStrip}>
         <View style={s.summaryItem}>
           <Text style={s.summaryNum}>{bracket.participants.length}</Text>
-          <Text style={s.summaryLabel}>PLAYERS</Text>
+          <Text style={s.summaryLabel}>{bracket.participants.some(p => p.partnerName) ? 'TEAMS' : 'PLAYERS'}</Text>
         </View>
         <View style={s.summaryDiv} />
         <View style={s.summaryItem}>

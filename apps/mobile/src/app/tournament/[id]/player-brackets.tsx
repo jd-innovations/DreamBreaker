@@ -18,6 +18,7 @@ import {
   type DirectorBracket,
   type DirectorBracketMatch,
 } from '@/lib/supabase/brackets';
+import { teamLabel } from '@/lib/directorBracketStore';
 import {
   getTournamentStatus,
   getTournamentStatusInfo,
@@ -374,8 +375,8 @@ const ps = StyleSheet.create({
 
 function ChampionBanner({ bracket }: { bracket: DirectorBracket }) {
   if (bracket.status !== 'completed' || !bracket.championName) return null;
-  const iAmChamp   = isCurrentPlayer(bracket.championName);
-  const iAmRunnerUp = isCurrentPlayer(bracket.runnerUpName ?? '');
+  const iAmChamp    = isCurrentPlayer(bracket.championName) || isCurrentPlayer(bracket.championPartnerName);
+  const iAmRunnerUp = isCurrentPlayer(bracket.runnerUpName ?? '') || isCurrentPlayer(bracket.runnerUpPartnerName);
 
   return (
     <View style={cb.banner}>
@@ -384,7 +385,7 @@ function ChampionBanner({ bracket }: { bracket: DirectorBracket }) {
         <View style={{ flex: 1 }}>
           <Text style={cb.title}>Champion</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={cb.name}>{bracket.championName}</Text>
+            <Text style={cb.name}>{teamLabel(bracket.championName, bracket.championPartnerName)}</Text>
             {iAmChamp && <View style={cb.youBadge}><Text style={cb.youText}>YOU</Text></View>}
           </View>
         </View>
@@ -393,7 +394,7 @@ function ChampionBanner({ bracket }: { bracket: DirectorBracket }) {
         <View style={cb.runnerRow}>
           <Ionicons name="medal-outline" size={16} color={L.textSub} />
           <Text style={cb.runnerLabel}>Runner-Up  </Text>
-          <Text style={cb.runnerName}>{bracket.runnerUpName}</Text>
+          <Text style={cb.runnerName}>{teamLabel(bracket.runnerUpName, bracket.runnerUpPartnerName)}</Text>
           {iAmRunnerUp && <View style={cb.youBadge}><Text style={cb.youText}>YOU</Text></View>}
         </View>
       )}
