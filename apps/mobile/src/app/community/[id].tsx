@@ -1287,9 +1287,10 @@ export default function CommunityEventScreen() {
           name: inv.name,
           initials: inv.name.split(/\s+/).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase(),
           bg: colors.navy,
+          avatarUrl: inv.avatarUrl,
           invitedDate: new Date(inv.invitedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         }))
-      : pending;
+      : pending.map(p => ({ ...p, avatarUrl: null as string | null }));
     const TOTAL_PENDING  = displayPending.length;
 
     return (
@@ -1430,9 +1431,8 @@ export default function CommunityEventScreen() {
                 <View key={player.id}>
                   {idx > 0 && <View style={s.divider} />}
                   <View style={pl.playerRow}>
-                    <View style={[pl.avatar, { backgroundColor: player.bg }]}>
-                      <Text style={pl.avatarText}>{player.initials}</Text>
-                    </View>
+                    {/* Photo when the player has one; initials otherwise. */}
+                    <Avatar uri={player.avatarUrl} initials={player.initials} bg={player.bg} size={42} />
                     <View style={pl.playerInfo}>
                       <Text style={pl.playerName}>{player.name}</Text>
                       <Text style={pl.playerMeta}>Invited {player.invitedDate}</Text>
