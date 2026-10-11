@@ -12,6 +12,7 @@ import { radius as shape, text } from '@shared/tokens';
 import { StatusChip } from '@/components';
 import type { Tournament } from '@/lib/tournamentTypes';
 import { fetchTournamentById } from '@/lib/supabase/tournaments';
+import { fetchDivisionsForTournament } from '@/lib/supabase/divisions';
 import {
   fetchAllBrackets,
   getBracketMatchCounts,
@@ -433,8 +434,12 @@ export default function PlayerBracketsScreen() {
   const [loading, setLoading]               = useState(true);
 
   const refresh = useCallback(async () => {
-    const t = await fetchTournamentById(id);
+    // The map was passed empty, so every division pill showed its database
+    // id instead of its name (owner, 2026-10-11). Same lookup as the
+    // director's Brackets and both Results screens.
+    const [t, divs] = await Promise.all([fetchTournamentById(id), fetchDivisionsForTournament(id)]);
     const divNameMap: Record<string, string> = {};
+    for (const d of divs ?? []) divNameMap[d.id] = d.name;
     const [bkts, counts] = await Promise.all([
       fetchAllBrackets(id, divNameMap),
       getBracketMatchCounts(id),
