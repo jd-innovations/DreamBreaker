@@ -7,6 +7,8 @@ import {
   ArrowClockwise, NavigationArrow, SortAscending, FunnelSimple, X, ListBullets,
 } from "@phosphor-icons/react";
 import { PageShell } from "@/components/layout/page-shell";
+import { SafeImage } from "@/components/shared/safe-image";
+import { eventCover } from "@/lib/stock-images";
 import { createClient } from "@/lib/supabase/client";
 import { withTimeout } from "@/lib/with-timeout";
 import {
@@ -77,7 +79,13 @@ function EventCard({ e }: { e: EventWithExtras }) {
   const time = formatEventTime(e.start_time);
   return (
     <Link href={`/play/${e.id}`} className="block group">
-      <div className="border border-border rounded-2xl bg-card p-5 hover:border-primary/40 hover:shadow-lg transition-all duration-200 h-full flex flex-col">
+      <div className="border border-border rounded-2xl bg-card overflow-hidden hover:border-primary/40 hover:shadow-lg transition-all duration-200 h-full flex flex-col">
+        {/* Same cover as the app: the organizer's upload, else the shared default. */}
+        <div className="relative h-32 overflow-hidden">
+          <SafeImage src={eventCover(e.cover_url)} alt="" fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+        </div>
+        <div className="p-5 flex-1 flex flex-col">
         <div className="flex items-start justify-between gap-3 mb-3">
           <span className="px-2.5 py-1 rounded-full bg-secondary border border-border font-mono text-[10px] tracking-[0.12em] text-muted-foreground">
             {eventTypeLabel(e.event_type).toUpperCase()}
@@ -126,6 +134,7 @@ function EventCard({ e }: { e: EventWithExtras }) {
               View <ArrowRight size={12} weight="bold" />
             </span>
           )}
+        </div>
         </div>
       </div>
     </Link>

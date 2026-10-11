@@ -8,6 +8,7 @@ import { ShareButton } from "@/components/shared/share-button";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
 import { SafeImage } from "@/components/shared/safe-image";
+import { eventCover } from "@/lib/stock-images";
 import { fillPercent, tournamentCapacity } from "@shared/capacity";
 
 const formats = ["All", "Doubles", "Singles", "Mixed", "Juniors"];
@@ -171,7 +172,7 @@ export default function TournamentsPage() {
               const lvlDisplay = levelLabel(t.skill_min, t.skill_max);
               const statusDisplay = statusLabel(t.status);
               const isFast = t.status === "filling_fast";
-              const coverImg = t.cover_img_url || "https://images.unsplash.com/photo-1737477004595-e9b659bb44ca?w=800&q=80";
+              const coverImg = eventCover(t.cover_img_url);
 
               return (
                 <div key={t.id} data-testid={`tournament-card-${t.id}`} className="group border border-border rounded-2xl overflow-hidden bg-card hover:border-primary transition-all flex flex-col">

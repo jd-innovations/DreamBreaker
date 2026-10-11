@@ -15,6 +15,8 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { withTimeout } from "@/lib/with-timeout";
 import Image from "next/image";
+import { SafeImage } from "@/components/shared/safe-image";
+import { eventCover } from "@/lib/stock-images";
 import {
   type PlayEvent, type PlayParticipantPublic,
   eventTypeLabel, statusLabel, skillLabel, formatEventDate, formatEventTime, displayName,
@@ -100,9 +102,14 @@ export default function PlayEventPage({ params }: { params: Promise<{ id: string
 
   return (
     <PageShell>
-      {/* Header band */}
-      <section className="border-b border-border bg-gradient-to-b from-primary/5 to-transparent">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+      {/* Header band, over the event's cover: the organizer's upload, else the
+          same default court photo the app shows (2026-10-11). */}
+      <section className="relative border-b border-border overflow-hidden">
+        <div className="absolute inset-0">
+          <SafeImage src={eventCover(event.cover_url)} alt="" fill priority sizes="100vw" className="object-cover opacity-50 dark:opacity-60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />
+        </div>
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-8">
           <div className="flex items-center justify-between mb-4">
             <Link href="/play" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft size={15} weight="bold" /> Community Play

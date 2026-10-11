@@ -8,6 +8,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { SafeImage } from "@/components/shared/safe-image";
+import { DEFAULT_EVENT_COVER as DEFAULT_IMG } from "@/lib/stock-images";
 
 type HoldRow = {
   id: string;
@@ -35,7 +36,6 @@ function expiresIn(expiresAt: string): string {
   return `${h}h ${m}m`;
 }
 
-const DEFAULT_IMG = "https://images.unsplash.com/photo-1737477004595-e9b659bb44ca?w=800&q=80";
 
 export default function HoldsPage() {
   const [holds, setHolds] = useState<HoldRow[]>([]);

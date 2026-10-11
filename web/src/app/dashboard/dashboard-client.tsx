@@ -21,7 +21,7 @@ import { NotificationBell } from "@/components/notifications/bell";
 import { MatchSettingsPanel } from "@/components/shared/match-settings-panel";
 import { normalizeSchedule, isScheduleEmpty } from "@shared/availability";
 import { ProfileSettings } from "@/components/dashboard/profile-settings";
-import { COURT_IMG } from "@/lib/stock-images";
+import { eventCover } from "@/lib/stock-images";
 import Image from "next/image";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -81,6 +81,7 @@ type RecommendedTournament = {
   venue_name: string | null;
   skill_min: number | null;
   skill_max: number | null;
+  cover_img_url: string | null;
   registeredCount: number;
   partnerSeekers: number;
   proximityScore: number;
@@ -159,12 +160,6 @@ function processMatch(
 }
 
 // ── Recommended card ──────────────────────────────────────────────────────────
-const COURT_IMGS = [
-  COURT_IMG,
-  "https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=600&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=600&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=600&h=400&fit=crop",
-];
 
 const GRAD_CLASSES = [
   "from-primary/40 via-primary/10",
@@ -174,7 +169,8 @@ const GRAD_CLASSES = [
 ];
 
 function RecommendedCard({ t, idx }: { t: RecommendedTournament; idx: number }) {
-  const img = COURT_IMGS[idx % COURT_IMGS.length];
+  // The tournament's own cover (rotating stock photos before 2026-10-11).
+  const img = eventCover(t.cover_img_url);
   const grad = GRAD_CLASSES[idx % GRAD_CLASSES.length];
   const spotsLeft = t.capacity ? t.capacity - t.registeredCount : null;
   const spotsLow = spotsLeft !== null && spotsLeft <= 5 && spotsLeft > 0;
@@ -481,7 +477,7 @@ export default function DashboardPage() {
         // the recommended strip rendered empty in production. The mock path
         // below supplies `capacity` directly, which is why it looked fine
         // locally. Aliased rather than renamed so the display code is untouched.
-        .select("id, name, city, state, event_date, format, entry_fee_cents, capacity:draw_size, venue_name, skill_min, skill_max")
+        .select("id, name, city, state, event_date, format, entry_fee_cents, capacity:draw_size, venue_name, skill_min, skill_max, cover_img_url")
         .neq("status", "draft")
         .order("event_date")
         .limit(12);

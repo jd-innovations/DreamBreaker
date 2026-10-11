@@ -24,6 +24,7 @@ import { computeInsight, type InsightResult } from "@/lib/insights";
 import { getUserId } from "@/lib/dev-user";
 import Image from "next/image";
 import { SafeImage } from "@/components/shared/safe-image";
+import { eventCover } from "@/lib/stock-images";
 import { fillPercent, spotsLeft as spotsLeftOf, tournamentCapacity } from "@shared/capacity";
 
 // ── Countdown hook ─────────────────────────────────────────────────────────────
@@ -957,7 +958,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               incident (a live tournament on an unlisted host) this guards
               against. */}
           <SafeImage
-            src={t.cover_img_url ?? "https://images.unsplash.com/photo-1737477004595-e9b659bb44ca?w=1200&q=80"}
+            src={eventCover(t.cover_img_url)}
             alt=""
             fill
             priority

@@ -9,6 +9,8 @@ import type { ImageSourcePropType } from 'react-native';
 // (asset.localUri is sometimes null in dev, leaving an http:// dev-server URL
 // that React Native's multipart upload cannot read, so the upload failed
 // silently and the event ended up with no cover at all).
+// The website shows the SAME photo (web/public/images/default-court-cover.jpg,
+// web/src/lib/stock-images.ts DEFAULT_EVENT_COVER). Replace both together.
 const DEFAULT_EVENT_COVER_ASSET = require('../../assets/images/default-court-cover.jpg');
 
 /** Bundled default as an RN image source (for `<Image source={...} />`). */

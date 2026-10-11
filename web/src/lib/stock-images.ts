@@ -13,3 +13,17 @@ export const HERO_IMG =
 /** Generic court photo, used where a tournament has no `cover_img_url`. */
 export const COURT_IMG =
   "https://images.unsplash.com/photo-1737477004595-e9b659bb44ca?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODd8MHwxfHNlYXJjaHw0fHxwaWNrbGViYWxsJTIwYWN0aW9uJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzgxMjYzMzI0fDA&ixlib=rb-4.1.0&q=85";
+
+/**
+ * The default cover for any event or tournament without one of its own.
+ * The SAME photo as the app (apps/mobile/assets/images/default-court-cover.jpg,
+ * copied to web/public/images/). Before 2026-10-11 web used a different
+ * Unsplash photo for tournaments and no image at all for Community Play, so
+ * one event looked different in each app. Replace both files together.
+ */
+export const DEFAULT_EVENT_COVER = "/images/default-court-cover.jpg";
+
+/** The uploaded cover when there is one, otherwise the shared default. */
+export function eventCover(url: string | null | undefined): string {
+  return url && url.length > 0 ? url : DEFAULT_EVENT_COVER;
+}
