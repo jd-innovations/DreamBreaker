@@ -2,13 +2,12 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { ArrowRight, Plus, Heart, Lightning, Trophy, Users, UsersThree, Smiley, MapPin, Calendar, CalendarBlank, UserPlus } from "@phosphor-icons/react/dist/ssr";
 import { PageShell } from "@/components/layout/page-shell";
-import { HERO_IMG } from "@/lib/stock-images";
+import { HERO_IMG, eventCover } from "@/lib/stock-images";
 import { createClient } from "@/lib/supabase/server";
 import { getPlatformStats } from "@/lib/platform-stats";
 import Image from "next/image";
 import { SafeImage } from "@/components/shared/safe-image";
 
-const FALLBACK_IMG = "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&q=80";
 
 const COMMUNITY_STEPS = [
   { n: 1, icon: Plus, title: "Create in a minute", desc: "Organizers create a round robin in just a few taps." },
@@ -58,7 +57,8 @@ async function getFeaturedTournaments(): Promise<FeaturedCard[]> {
     return rows.map((t) => ({
       id: t.id,
       name: t.name,
-      img: t.cover_img_url ?? FALLBACK_IMG,
+      // Same default as the app and the rest of the site (missed on 2026-10-11).
+      img: eventCover(t.cover_img_url),
       location: [t.city, t.state].filter(Boolean).join(", "),
       date: t.event_date ? new Date(t.event_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "TBD",
       filled: t.spots_filled ?? 0,
