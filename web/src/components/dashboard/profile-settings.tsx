@@ -15,7 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import { BIO_MAX_LENGTH, PLAY_STYLE_KEYS, playStyleLabel } from "@shared/play-profile";
 import { ensureFreshSession } from "@/lib/ensure-session";
 import type { Tables } from "@shared/database.types";
-import Image from "next/image";
+import { PersonPhoto } from "@/components/shared/person-photo";
 
 type Profile = Pick<
   Tables<"profiles">,
@@ -30,7 +30,6 @@ const SKILL_LEVELS = ["2.5-3.0", "3.0-3.5", "3.5-4.0", "4.0-4.5", "4.5+"];
 // Rendered through playStyleLabel().
 const PLAY_STYLES = PLAY_STYLE_KEYS;
 const HAND_OPTIONS = ["right", "left", "ambidextrous"];
-const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop";
 
 const inputCls = "w-full h-11 rounded-xl bg-secondary border border-border px-3.5 text-sm outline-none focus:ring-2 focus:ring-ring focus:border-primary/50 transition-shadow";
 const labelCls = "font-mono text-[10px] tracking-[0.25em] text-muted-foreground block mb-1.5";
@@ -177,7 +176,7 @@ export function ProfileSettings({ userId }: { userId: string }) {
     );
   }
 
-  const avatarUrl = localAvatar ?? profile.avatar_url ?? DEFAULT_AVATAR;
+  const avatarUrl = localAvatar ?? profile.avatar_url ?? null;
 
   return (
     <div className="border border-border rounded-2xl bg-card p-6 space-y-6">
@@ -201,9 +200,9 @@ export function ProfileSettings({ userId }: { userId: string }) {
       <div className="flex items-center gap-5">
         <div className="relative flex-shrink-0">
           <div className="rounded-full p-[3px] bg-gradient-to-tr from-violet-500 via-pink-400 to-cyan-400">
-            <Image
+            <PersonPhoto
               src={avatarUrl}
-              alt="Avatar"
+              name={profile.full_name}
               width={80}
               height={80}
               className={`h-20 w-20 rounded-full border-2 border-background object-cover transition-opacity ${avatarUploading ? "opacity-50" : ""}`}

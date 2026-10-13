@@ -27,6 +27,7 @@ import { MessagingPanel } from "@/components/messaging/panel";
 import type { UserProfile as MessagingUserProfile } from "@/components/messaging/panel";
 import type { Tables } from "@shared/database.types";
 import Image from "next/image";
+import { PersonPhoto } from "@/components/shared/person-photo";
 import { SafeImage } from "@/components/shared/safe-image";
 
 type Profile = Pick<
@@ -88,8 +89,6 @@ type Partner = {
   badges: string[];
 };
 
-const DEFAULT_COVER = "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=1200&h=400&fit=crop";
-const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop";
 
 const COVER_PRESETS = [
   { id: "court-aerial",  url: "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=1200&h=400&fit=crop", label: "Court" },
@@ -668,8 +667,10 @@ export default function ProfilePage() {
     ? [fields.location_city, fields.location_state].filter(Boolean).join(", ")
     : "Location not set";
   const joinedDate = profile?.created_at ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "—";
-  const avatarUrl = localAvatar ?? profile?.avatar_url ?? DEFAULT_AVATAR;
-  const coverUrl = localCover ?? profile?.cover_url ?? DEFAULT_COVER;
+  const avatarUrl = localAvatar ?? profile?.avatar_url ?? null;
+  // No cover set -> a plain navy band, like the app's profile header (which has
+  // no cover photo at all), not a stock photo (2026-10-13).
+  const coverUrl = localCover ?? profile?.cover_url ?? null;
   const winRate = stats.wins + stats.losses > 0 ? Math.round((stats.wins / (stats.wins + stats.losses)) * 100) : 0;
 
   // Hold the full render until profile data is loaded — avoids briefly
@@ -687,15 +688,17 @@ export default function ProfilePage() {
   return (
     <PageShell>
       {/* Cover photo */}
-      <div className="relative h-48 sm:h-64 lg:h-80 overflow-hidden">
-        <Image
-          src={coverUrl}
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className={`object-cover opacity-70 dark:opacity-60 transition-opacity ${coverUploading ? "opacity-30" : ""}`}
-        />
+      <div className="relative h-48 sm:h-64 lg:h-80 overflow-hidden bg-[#0A1228]">
+        {coverUrl && (
+          <Image
+            src={coverUrl}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className={`object-cover opacity-70 dark:opacity-60 transition-opacity ${coverUploading ? "opacity-30" : ""}`}
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
 
         {/* Edit cover button — only in edit mode */}
@@ -763,9 +766,9 @@ export default function ProfilePage() {
             <div className="relative flex-shrink-0 col-start-1 row-start-1">
               {/* Multi-colored gradient ring outline */}
               <div className="rounded-full p-[3px] lg:p-[4px] bg-gradient-to-tr from-violet-500 via-pink-400 to-cyan-400">
-                <Image
+                <PersonPhoto
                   src={avatarUrl}
-                  alt="Avatar"
+                  name={profile?.full_name}
                   width={144}
                   height={144}
                   priority

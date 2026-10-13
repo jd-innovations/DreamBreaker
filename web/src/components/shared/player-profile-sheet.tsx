@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { formatMiles } from "@shared/geo";
 import { playStyleLabel } from "@shared/play-profile";
-import Image from "next/image";
+import { PersonPhoto } from "@/components/shared/person-photo";
 import {
   X, Heart, XCircle, Plug, MapPin, Star, Trophy,
   Users, Calendar, CheckCircle, Medal, ShieldStar,
@@ -21,7 +21,7 @@ interface SheetPartner {
   availability: string | null;
   /** Keys, not labels — rendered through playStyleLabel(). */
   play_style: string[] | null;
-  img: string;
+  img: string | null;
   bio: string | null;
   matchPct: number;
   matchReasons: string[];
@@ -97,7 +97,7 @@ export function PlayerProfileSheet({ partner, onClose, onPass, onLike, onSuperCo
         <div className="overflow-y-auto flex-1 min-h-0">
           {/* Hero photo */}
           <div className="relative h-96 overflow-hidden flex-shrink-0">
-            <Image src={partner.img} alt="" fill sizes="(min-width: 640px) 480px, 100vw" className="object-cover object-top" />
+            <PersonPhoto src={partner.img} name={partner.name} fill sizes="(min-width: 640px) 480px, 100vw" className="object-cover object-top" />
             {/* Always-dark gradient so white text is readable in both light and dark mode */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 

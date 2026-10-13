@@ -27,7 +27,7 @@ import { createClient } from "@/lib/supabase/client";
 import { playStyleLabel } from "@shared/play-profile";
 import { getUserId } from "@/lib/dev-user";
 import { PlayerProfileSheet } from "@/components/shared/player-profile-sheet";
-import Image from "next/image";
+import { PersonPhoto } from "@/components/shared/person-photo";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -46,7 +46,7 @@ interface Partner {
   availability_schedule: unknown;
   play_style: string[] | null;
   badges: string[];
-  img: string;
+  img: string | null;
   bio: string | null;
   matchPct: number;
   matchReasons: string[];
@@ -148,7 +148,8 @@ function profileToPartner(
     // since the play_style migration; the comma-splitting this used to do is
     // now the database's job, not the view's.
     badges: (p.play_style ?? []).map(playStyleLabel),
-    img: p.avatar_url ?? "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=600&h=800&fit=crop",
+    // No photo -> initials (PersonPhoto), never a stranger's stock photo.
+    img: p.avatar_url ?? null,
     bio: p.bio,
     matchPct: pct,
     matchReasons: reasons,
@@ -673,7 +674,7 @@ function MatchmakingInner() {
                 {incoming.map((p) => (
                   <div key={p.id} className="border border-border rounded-2xl bg-card p-4 flex flex-col gap-3">
                     <div className="flex items-center gap-3">
-                      <Image src={p.img} alt="" width={56} height={56} className="h-14 w-14 rounded-xl object-cover flex-shrink-0" />
+                      <PersonPhoto src={p.img} name={p.name} width={56} height={56} className="h-14 w-14 rounded-xl object-cover flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="font-display text-lg tracking-wide truncate">{p.name}</div>
                         <div className="text-xs text-muted-foreground">
@@ -733,7 +734,7 @@ function MatchmakingInner() {
                 {matches.map((m) => (
                   <div key={m.id} className="border border-border rounded-2xl bg-card p-4 flex flex-col gap-3">
                     <div className="flex items-center gap-3">
-                      <Image src={m.img} alt="" width={56} height={56} className="h-14 w-14 rounded-xl object-cover flex-shrink-0" />
+                      <PersonPhoto src={m.img} name={m.name} width={56} height={56} className="h-14 w-14 rounded-xl object-cover flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="font-display text-lg tracking-wide truncate">{m.name}</div>
                         <div className="text-xs text-muted-foreground">
@@ -772,7 +773,7 @@ function MatchmakingInner() {
               {tournamentContext.partners.map((p) => (
                 <div key={p.id} className="flex-shrink-0 w-52 border border-primary/30 bg-card rounded-2xl p-3 flex flex-col gap-2">
                   <div className="flex items-center gap-2.5">
-                    <Image src={p.img} alt="" width={40} height={40} className="h-10 w-10 rounded-xl object-cover flex-shrink-0" />
+                    <PersonPhoto src={p.img} name={p.name} width={40} height={40} className="h-10 w-10 rounded-xl object-cover flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="font-display text-sm tracking-wide truncate">{p.name}</div>
                       <div className="text-[10px] font-mono text-muted-foreground truncate">
@@ -853,7 +854,7 @@ function MatchmakingInner() {
                       onPointerUp={onCardPointerUp}
                       onPointerCancel={onCardPointerUp}
                     >
-                      <Image src={topCard.img} alt="" fill priority draggable={false} sizes="(min-width: 1024px) 55vw, 100vw" className="object-cover object-top pointer-events-none" />
+                      <PersonPhoto src={topCard.img} name={topCard.name} fill priority draggable={false} sizes="(min-width: 1024px) 55vw, 100vw" className="object-cover object-top pointer-events-none" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:via-transparent lg:to-card" />
 
                       {/* Match ring */}
@@ -1063,7 +1064,7 @@ function MatchmakingInner() {
             <div className="space-y-3">
               {matches.map((m) => (
                 <div key={m.id} className="border border-border rounded-2xl bg-card p-4 flex items-center gap-3 hover:border-primary/50 transition-colors" data-testid={`match-card-${m.id}`}>
-                  <Image src={m.img} alt="" width={48} height={48} className="h-12 w-12 rounded-xl object-cover flex-shrink-0" />
+                  <PersonPhoto src={m.img} name={m.name} width={48} height={48} className="h-12 w-12 rounded-xl object-cover flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="font-display text-lg tracking-wide truncate">{m.name}</div>
                     <div className="text-xs text-muted-foreground">
@@ -1112,7 +1113,7 @@ function MatchmakingInner() {
             <div className="px-8 pt-10 pb-8 relative">
               {/* Avatars */}
               <div className="flex items-center justify-center gap-[-12px] mb-6">
-                <Image src={matchedPartner.img} alt="" width={80} height={80} className="h-20 w-20 rounded-2xl object-cover border-4 border-background shadow-lg -mr-3 z-10" />
+                <PersonPhoto src={matchedPartner.img} name={matchedPartner.name} width={80} height={80} className="h-20 w-20 rounded-2xl object-cover border-4 border-background shadow-lg -mr-3 z-10" />
                 <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center shadow-lg z-20 border-2 border-background">
                   <Heart size={18} weight="fill" className="text-primary-foreground" />
                 </div>
