@@ -121,7 +121,7 @@ export default async function LandingPage() {
   const featuredList: FeaturedCard[] = await getFeaturedTournaments();
 
   return (
-    <PageShell>
+    <PageShell overlayHeader>
       {/* HERO */}
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0">
@@ -129,7 +129,7 @@ export default async function LandingPage() {
           <div className="absolute inset-0 bg-black/50" />
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/20 dark:from-background dark:via-background/70 dark:to-transparent" />
         </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:pt-48 lg:pb-32">
           <div className="max-w-3xl">
             <div className="hero-in inline-flex items-center gap-2 mb-6">
               <span className="h-2 w-2 rounded-full bg-primary animate-pulse-glow" />

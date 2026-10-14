@@ -76,8 +76,8 @@ function DashboardsMenu({ pathname }: { pathname: string }) {
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         data-testid="nav-dashboards"
-        className={`flex items-center gap-1 px-3 2xl:px-4 py-2 text-sm font-semibold rounded-full transition-colors ${
-          active ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+        className={`flex items-center gap-1 whitespace-nowrap px-2.5 2xl:px-4 py-2 text-[13px] 2xl:text-sm font-semibold rounded-full transition-colors ${
+          active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
         }`}
       >
         Dashboards <CaretDown size={12} weight="bold" className={`transition-transform ${open ? "rotate-180" : ""}`} />
@@ -109,8 +109,15 @@ function DashboardsMenu({ pathname }: { pathname: string }) {
   );
 }
 
-export function Header() {
+/**
+ * `overlay` (landing page only): from lg up the header starts transparent over
+ * the hero, with a soft top scrim so the right-hand buttons stay legible on the
+ * photo, and turns into the normal frosted bar once the page scrolls ~40px.
+ * Phones are unaffected.
+ */
+export function Header({ overlay = false }: { overlay?: boolean }) {
   const { theme, toggle } = useTheme();
+  const [atTop, setAtTop] = useState(true);
   const [open, setOpen] = useState(false);
   const [initials, setInitials] = useState<string | null>(null);
   const [isDirector, setIsDirector] = useState(false);
@@ -128,6 +135,15 @@ export function Header() {
   useEffect(() => {
     document.documentElement.style.setProperty("--mobile-header-top", hidden ? "0px" : "52px");
   }, [hidden]);
+
+  useEffect(() => {
+    if (!overlay) return;
+    const onScroll = () => setAtTop(window.scrollY < 40);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [overlay]);
+  const transparent = overlay && atTop;
 
   const toInitials = (fullName: string) => {
     const parts = fullName.trim().split(/\s+/);
@@ -226,9 +242,11 @@ export function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border transition-transform duration-200 motion-reduce:transition-none ${
-        hidden ? "max-lg:-translate-y-full" : ""
-      }`}
+      className={`sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b transition-[transform,background-color,border-color] duration-200 motion-reduce:transition-none ${
+        transparent
+          ? "border-border lg:border-transparent lg:bg-transparent lg:bg-gradient-to-b lg:from-background/70 lg:to-transparent lg:backdrop-blur-none"
+          : "border-border"
+      } ${hidden ? "max-lg:-translate-y-full" : ""}`}
       data-testid="site-header"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[52px] lg:h-16 flex items-center justify-between gap-3 lg:gap-4">
@@ -237,16 +255,21 @@ export function Header() {
         </Link>
 
         {/* Inline links from xl (1280px): below that they don't fit, so the ☰
-            slide menu (same as phones) takes over from 1024 to 1279 too. */}
-        <nav className="hidden xl:flex items-center gap-1">
+            slide menu (same as phones) takes over from 1024 to 1279 too.
+            Grouped in one capsule with the current page as a filled chip
+            (owner, 2026-10-14). Labels never wrap (two-line "Community
+            Play" stretched the capsule to the bar's full height); 13px type
+            and tighter padding below 2xl are what make that fit at 1280. */}
+        <nav className="hidden xl:flex items-center gap-0 2xl:gap-0.5 p-1 rounded-full border border-border/70 bg-background/40 backdrop-blur-md">
           {navLinks.map((l) => (
             <Link
               key={l.to}
               href={l.to}
               data-testid={l.testid}
-              className={`px-3 2xl:px-4 py-2 text-sm font-semibold rounded-full transition-colors ${
+              aria-current={pathname === l.to ? "page" : undefined}
+              className={`whitespace-nowrap px-2.5 2xl:px-4 py-2 text-[13px] 2xl:text-sm font-semibold rounded-full transition-colors ${
                 pathname === l.to
-                  ? "bg-secondary text-foreground"
+                  ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
               }`}
             >
