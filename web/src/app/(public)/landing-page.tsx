@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, type CSSProperties } from "react";
 import Link from "next/link";
 import { ArrowRight, Plus, Heart, Lightning, Trophy, Users, UsersThree, Smiley, MapPin, Calendar, CalendarBlank, UserPlus } from "@phosphor-icons/react/dist/ssr";
 import { PageShell } from "@/components/layout/page-shell";
@@ -7,7 +7,12 @@ import { createClient } from "@/lib/supabase/server";
 import { getPlatformStats } from "@/lib/platform-stats";
 import Image from "next/image";
 import { SafeImage } from "@/components/shared/safe-image";
+import { Reveal } from "@/components/shared/reveal";
+import { CountUp } from "@/components/shared/count-up";
 
+
+// Hero entrance stagger, read by .hero-in / .hero-bar in globals.css.
+const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
 
 const COMMUNITY_STEPS = [
   { n: 1, icon: Plus, title: "Create in a minute", desc: "Organizers create a round robin in just a few taps." },
@@ -80,14 +85,13 @@ async function getFeaturedTournaments(): Promise<FeaturedCard[]> {
 // "PRIZE PAID '25" is gone rather than zeroed: no payouts table exists in this
 // schema at all, so a hardcoded "$0" would be just as invented as "$1.2M", and
 // would silently stay $0 after payouts ship.
-async function getStatTiles(): Promise<{ label: string; value: string }[]> {
+async function getStatTiles(): Promise<{ label: string; value: number | undefined }[]> {
   const stats = await getPlatformStats();
-  const fmt = (n: number | undefined) => (n === undefined ? "—" : n.toLocaleString());
 
   return [
-    { label: "ACTIVE PLAYERS", value: fmt(stats?.activePlayers) },
-    { label: "LIVE TOURNAMENTS", value: fmt(stats?.liveTournaments) },
-    { label: "PARTNERS MATCHED", value: fmt(stats?.partnersMatched) },
+    { label: "ACTIVE PLAYERS", value: stats?.activePlayers },
+    { label: "LIVE TOURNAMENTS", value: stats?.liveTournaments },
+    { label: "PARTNERS MATCHED", value: stats?.partnersMatched },
   ];
 }
 
@@ -127,18 +131,20 @@ export default async function LandingPage() {
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 mb-6">
+            <div className="hero-in inline-flex items-center gap-2 mb-6">
               <span className="h-2 w-2 rounded-full bg-primary animate-pulse-glow" />
               <span className="font-mono text-[11px] tracking-[0.35em] text-primary">THE PICKLEBALL OPERATING SYSTEM</span>
             </div>
             <h1 className="font-display text-foreground text-6xl sm:text-7xl lg:text-8xl leading-[0.85] tracking-wide">
-              PLAY.<br />ENGAGE.<br /><span className="text-primary">BELONG.</span>
+              <span className="hero-in inline-block" style={d(100)}>PLAY.</span><br />
+              <span className="hero-in inline-block" style={d(220)}>ENGAGE.</span><br />
+              <span className="hero-in inline-block text-primary" style={d(340)}>BELONG.</span>
             </h1>
-            <div className="h-1 w-16 bg-primary my-7" />
-            <p className="text-base sm:text-lg text-muted-foreground max-w-md">
+            <div className="hero-bar h-1 w-16 bg-primary my-7" style={d(550)} />
+            <p className="hero-in text-base sm:text-lg text-muted-foreground max-w-md" style={d(650)}>
               Compete in elite pickleball tournaments. Find partners. Hold your spot. Earn your rank. Make your mark.
             </p>
-            <div className="mt-9 flex flex-col sm:flex-row gap-3 max-w-xl">
+            <div className="hero-in mt-9 flex flex-col sm:flex-row gap-3 max-w-xl" style={d(800)}>
               <Link href="/tournaments" className="flex-1">
                 <button className="w-full rounded-full h-14 bg-secondary/80 text-foreground hover:bg-secondary border border-border text-sm font-display tracking-[0.2em] flex items-center justify-between px-7 transition-colors" data-testid="hero-explore-btn">
                   EXPLORE TOURNAMENTS <ArrowRight size={18} weight="bold" />
@@ -159,7 +165,7 @@ export default async function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-2 lg:grid-cols-3 gap-y-8">
           {stats.map((s) => (
             <div key={s.label} className="border-l-2 border-primary pl-4">
-              <div className="font-display text-4xl lg:text-5xl tracking-wide">{s.value}</div>
+              <div className="font-display text-4xl lg:text-5xl tracking-wide">{s.value === undefined ? "—" : <CountUp value={s.value} />}</div>
               <div className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground mt-1">{s.label}</div>
             </div>
           ))}
@@ -168,16 +174,17 @@ export default async function LandingPage() {
 
       {/* FEATURES */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="flex items-end justify-between flex-wrap gap-4 mb-10">
+        <Reveal className="flex items-end justify-between flex-wrap gap-4 mb-10">
           <div>
             <div className="font-mono text-[11px] tracking-[0.3em] text-primary mb-3">/ THE PLATFORM</div>
             <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl tracking-wide max-w-xl">WHAT BRINGS YOU<br />TO PICKLEBALL APP?</h2>
           </div>
           <p className="text-sm text-muted-foreground max-w-sm">Partners, games, tournaments, courts and groups in one place. No more spreadsheets, no more &quot;DM for partner&quot; posts, no more missed spots.</p>
-        </div>
+        </Reveal>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
-          {reasons.map((r) => (
-            <div key={r.title} className="flex items-center gap-3 border border-border rounded-2xl p-4 bg-card">
+          {reasons.map((r, i) => (
+            <Reveal key={r.title} delay={(i % 3) * 80}>
+            <div className="h-full flex items-center gap-3 border border-border rounded-2xl p-4 bg-card">
               <div className="h-9 w-9 flex-shrink-0 rounded-full bg-primary/15 text-primary flex items-center justify-center">
                 <r.icon size={18} weight="bold" />
               </div>
@@ -186,11 +193,13 @@ export default async function LandingPage() {
                 <p className="text-xs text-muted-foreground mt-0.5">{r.body}</p>
               </div>
             </div>
+            </Reveal>
           ))}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {features.map((f, i) => (
-            <div key={f.title} data-testid={`feature-card-${i}`} className="border border-border rounded-2xl p-7 bg-card hover:border-primary transition-all duration-300 group">
+            <Reveal key={f.title} delay={i * 80}>
+            <div data-testid={`feature-card-${i}`} className="h-full border border-border rounded-2xl p-7 bg-card hover:border-primary motion-safe:hover:-translate-y-1 transition-all duration-300 group">
               <div className="flex items-center justify-between mb-10">
                 <div className="h-11 w-11 rounded-full bg-primary/15 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                   <f.icon size={22} weight="bold" />
@@ -200,6 +209,7 @@ export default async function LandingPage() {
               <h3 className="font-display text-2xl tracking-wide mb-2">{f.title}</h3>
               <p className="text-sm text-muted-foreground">{f.body}</p>
             </div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -207,7 +217,7 @@ export default async function LandingPage() {
       {/* FEATURED TOURNAMENTS */}
       <section className="border-t border-border bg-card/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="flex items-end justify-between flex-wrap gap-4 mb-10">
+          <Reveal className="flex items-end justify-between flex-wrap gap-4 mb-10">
             <div>
               <div className="font-mono text-[11px] tracking-[0.3em] text-primary mb-3">/ NOW OPEN</div>
               <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl tracking-wide">FEATURED EVENTS</h2>
@@ -215,7 +225,7 @@ export default async function LandingPage() {
             <Link href="/tournaments" className="font-display tracking-[0.2em] text-sm flex items-center gap-2 text-primary hover:gap-3 transition-all" data-testid="featured-viewall-link">
               VIEW ALL <ArrowRight size={16} weight="bold" />
             </Link>
-          </div>
+          </Reveal>
           {featuredList.length === 0 ? (
             <div className="border border-dashed border-border rounded-2xl p-12 text-center text-muted-foreground">
               <Trophy size={32} weight="duotone" className="mx-auto mb-3 text-primary" />
@@ -224,8 +234,9 @@ export default async function LandingPage() {
             </div>
           ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {featuredList.map((t) => (
-              <Link key={t.id} href={`/tournaments/${t.id}`} data-testid={`featured-tournament-${t.id}`} className="group border border-border rounded-2xl overflow-hidden bg-card hover:border-primary transition-all">
+            {featuredList.map((t, i) => (
+              <Reveal key={t.id} delay={i * 80}>
+              <Link href={`/tournaments/${t.id}`} data-testid={`featured-tournament-${t.id}`} className="group block h-full border border-border rounded-2xl overflow-hidden bg-card hover:border-primary motion-safe:hover:-translate-y-1 transition-all duration-300">
                 <div className="relative h-44 overflow-hidden">
                   {/* `t.img` traces back to tournaments.cover_img_url, a
                       free-text field a director can set to anything --
@@ -248,6 +259,7 @@ export default async function LandingPage() {
                   </div>
                 </div>
               </Link>
+              </Reveal>
             ))}
           </div>
           )}
@@ -257,6 +269,7 @@ export default async function LandingPage() {
       {/* COMMUNITY PLAY */}
       <section className="border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <Reveal>
           <div className="rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card to-card p-8 lg:p-12 relative overflow-hidden">
             <div className="absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
 
@@ -355,11 +368,13 @@ export default async function LandingPage() {
               </div>
             </div>
           </div>
+          </Reveal>
         </div>
       </section>
 
       {/* CTA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <Reveal>
         <div className="border border-border rounded-3xl p-7 sm:p-10 lg:p-16 bg-card relative overflow-hidden">
           <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
           <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
@@ -375,6 +390,7 @@ export default async function LandingPage() {
             </div>
           </div>
         </div>
+        </Reveal>
       </section>
     </PageShell>
   );
