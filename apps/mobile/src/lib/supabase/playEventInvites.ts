@@ -215,6 +215,27 @@ export async function acceptPlayEventInvite(
     .eq('id', invite.id);
 }
 
+/** The viewer's own pending invite to this event, if any (RLS: invitee reads own). */
+export async function fetchMyPendingInviteId(playEventId: string, userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('play_event_invites')
+    .select('id')
+    .eq('play_event_id', playEventId)
+    .eq('invitee_id', userId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(1);
+  return data?.[0]?.id ?? null;
+}
+
+/** Marks an invite accepted once its invitee has joined the event. */
+export async function markPlayEventInviteAccepted(inviteId: string): Promise<void> {
+  await supabase
+    .from('play_event_invites')
+    .update({ status: 'accepted', responded_at: new Date().toISOString() })
+    .eq('id', inviteId);
+}
+
 export async function declinePlayEventInvite(inviteId: string): Promise<void> {
   await supabase
     .from('play_event_invites')

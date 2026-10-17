@@ -6,7 +6,7 @@ import {
   type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType,
 } from 'react-native';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
-import { fetchPendingInvites, type PendingInvite } from '@/lib/supabase/playEventInvites';
+import { fetchPendingInvites, fetchMyPendingInviteId, markPlayEventInviteAccepted, declinePlayEventInvite, type PendingInvite } from '@/lib/supabase/playEventInvites';
 import { reportSilentFailure } from '@/lib/observability/reportError';
 import { shareEntity } from '@/lib/share';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -570,6 +570,7 @@ export default function CommunityEventScreen() {
   const [guestEmail,     setGuestEmail]     = useState('');
   const [guestJoining,   setGuestJoining]   = useState(false);
   const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
+  const [myInviteId, setMyInviteId] = useState<string | null>(null);
   const [leaving,          setLeaving]        = useState(false);
   const [showCelebration,  setShowCelebration] = useState(false);
   const [showManageSheet,  setShowManageSheet] = useState(false);
@@ -611,9 +612,14 @@ export default function CommunityEventScreen() {
       try {
         if (user.email) await claimGuestParticipants(user.id, user.email);
         const mine = await fetchMyPlayParticipant(id as string, user.id);
+        // Not joined yet: a pending invite turns on the "You're invited!"
+        // state, which real events never reached before (2026-10-17), so a
+        // player opening the invite notification saw a plain Join Event.
+        const inviteId = mine ? null : await fetchMyPendingInviteId(id as string, user.id);
         if (!cancelled) {
-          setUserStatus(mine ? 'joined' : 'not_joined');
+          setUserStatus(mine ? 'joined' : inviteId ? 'invited' : 'not_joined');
           setMyParticipantId(mine?.id ?? null);
+          setMyInviteId(inviteId);
         }
       } catch {
         if (!cancelled) setUserStatus('not_joined');
@@ -905,8 +911,20 @@ export default function CommunityEventScreen() {
     );
   }
 
+  async function handleDeclineInvite() {
+    if (!myInviteId) return;
+    try {
+      await declinePlayEventInvite(myInviteId);
+      haptics.light();
+      setMyInviteId(null);
+      setUserStatus('not_joined');
+    } catch {
+      platformAlert('Could not decline', 'Please try again.');
+    }
+  }
+
   async function handleCTAPress() {
-    if (isUUID && userStatus === 'not_joined') {
+    if (isUUID && (userStatus === 'not_joined' || userStatus === 'invited')) {
       if (!user) {
         setShowGuestForm(true);
         return;
@@ -938,6 +956,10 @@ export default function CommunityEventScreen() {
           last_initial: lastInitial,
           claimed_by:  user.id,
         });
+        if (myInviteId) {
+          await markPlayEventInviteAccepted(myInviteId).catch(reportSilentFailure('community-event:accept-invite'));
+          setMyInviteId(null);
+        }
         setUserStatus('joined');
         setShowCelebration(true);
         notifyPlayEventsUpdated();   // F3 fix — Home's community list must not stay stale on return
@@ -1613,9 +1635,16 @@ export default function CommunityEventScreen() {
               <Text style={s.bottomPlayers}>{joinedCount}/{event.maxPlayers} players joined</Text>
             </View>
             <TouchableOpacity style={s.joinBtn} onPress={handleCTAPress} activeOpacity={0.88}>
-              <Ionicons name="checkmark-circle-outline" size={18} color={t.textPrimary} />
-              <Text style={s.joinBtnText}>Accept Invite</Text>
+              {joiningEvent
+                ? <ActivityIndicator size="small" color={t.textPrimary} />
+                : <Ionicons name="checkmark-circle-outline" size={18} color={t.textPrimary} />}
+              <Text style={s.joinBtnText}>{joiningEvent ? 'Joining…' : 'Accept Invite'}</Text>
             </TouchableOpacity>
+            {isUUID && myInviteId && (
+              <TouchableOpacity onPress={handleDeclineInvite} disabled={joiningEvent} hitSlop={8} accessibilityLabel="Decline invite">
+                <Text style={[s.bottomPlayers, { textDecorationLine: 'underline' }]}>Decline</Text>
+              </TouchableOpacity>
+            )}
           </>
         );
       case 'joined':

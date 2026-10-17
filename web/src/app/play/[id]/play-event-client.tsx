@@ -2,12 +2,13 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState, use } from "react";
+import { useCallback, useEffect, useState, use } from "react";
+import { toast } from "sonner";
 import Link from "next/link";
 import {
   MapPin, Calendar, Clock, Users, Sparkle, ArrowLeft, Confetti,
   ArrowRight, NotePencil, Gear, Trophy, CheckCircle, UserCircle,
-  ChatCircleDots, ShieldStar,
+  ChatCircleDots, ShieldStar, EnvelopeSimple,
 } from "@phosphor-icons/react";
 import { PageShell } from "@/components/layout/page-shell";
 import { ShareButton } from "@/components/shared/share-button";
@@ -40,6 +41,12 @@ export default function PlayEventPage({ params }: { params: Promise<{ id: string
   const [viewerId, setViewerId] = useState<string | null>(null);
   const [organizer, setOrganizer] = useState<Organizer | null>(null);
   const [shareUrl, setShareUrl] = useState("");
+  // Signed-in viewers (2026-10-17): the page used to show everyone the guest
+  // form ("No account needed") and never looked for an invitation, so an
+  // invited player arriving from the notification saw no invite at all.
+  const [myInvite, setMyInvite] = useState<{ id: string; inviterName: string } | null>(null);
+  const [joined, setJoined] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -66,10 +73,84 @@ export default function PlayEventPage({ params }: { params: Promise<{ id: string
         .eq("event_id", id)
         .order("created_at", { ascending: true });
       setParticipants(parts ?? []);
+
+      if (uid && uid !== ev.organizer_id) {
+        const [{ data: mine }, { data: inv }] = await Promise.all([
+          supabase.from("play_participants").select("id").eq("event_id", id).eq("claimed_by", uid).limit(1),
+          supabase.from("play_event_invites").select("id, inviter_id").eq("play_event_id", id)
+            .eq("invitee_id", uid).eq("status", "pending").order("created_at", { ascending: false }).limit(1),
+        ]);
+        setJoined((mine ?? []).length > 0);
+        const invite = (inv ?? [])[0];
+        if (invite) {
+          let inviterName = org?.id === invite.inviter_id ? (org.full_name ?? "the organizer") : "a player";
+          if (org?.id !== invite.inviter_id) {
+            const { data: who } = await supabase.from("profiles").select("full_name").eq("id", invite.inviter_id).maybeSingle();
+            if (who?.full_name) inviterName = who.full_name;
+          }
+          setMyInvite({ id: invite.id, inviterName });
+        }
+      }
       setLoading(false);
     }
     load().catch(() => setLoading(false));
   }, [id]);
+
+  const reloadParticipants = useCallback(async () => {
+    const { data } = await createClient().from("play_participants_public").select("*").eq("event_id", id).order("created_at", { ascending: true });
+    setParticipants(data ?? []);
+  }, [id]);
+
+  // Joins as the signed-in player (claimed to their account), the same
+  // join_play_event call the app makes; an accepted invite is marked too.
+  async function joinAsMe(inviteId?: string) {
+    if (!viewerId) return;
+    setBusy(true);
+    const supabase = createClient();
+    try {
+      const [{ data: auth }, { data: me }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.from("profiles").select("full_name").eq("id", viewerId).maybeSingle(),
+      ]);
+      const fullName = (me?.full_name ?? "").trim() || "Player";
+      const parts = fullName.split(/\s+/);
+      const { error } = await supabase.rpc("join_play_event", {
+        p_event_id: id,
+        p_first_name: parts[0],
+        p_last_initial: parts.length > 1 ? parts[parts.length - 1][0] : undefined,
+        p_email: auth.user?.email ?? "",
+        p_claimed_by: viewerId,
+      });
+      if (error) {
+        const m = error.message ?? "";
+        toast.error(m.includes("event_full") ? "Sorry, this event just filled up."
+          : m.includes("event_not_open") ? "This event isn't taking players right now."
+          : m.includes("duplicate_email") ? "You've already joined this event."
+          : "Could not join. Please try again.");
+        return;
+      }
+      if (inviteId) {
+        await supabase.from("play_event_invites").update({ status: "accepted", responded_at: new Date().toISOString() }).eq("id", inviteId);
+        setMyInvite(null);
+      }
+      setJoined(true);
+      await reloadParticipants();
+      toast.success("You're in!", { description: event?.name });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function declineInvite() {
+    if (!myInvite) return;
+    setBusy(true);
+    const { error } = await createClient().from("play_event_invites")
+      .update({ status: "declined", responded_at: new Date().toISOString() }).eq("id", myInvite.id);
+    setBusy(false);
+    if (error) { toast.error("Could not decline. Please try again."); return; }
+    setMyInvite(null);
+    toast("Invite declined");
+  }
 
   if (loading) {
     return (
@@ -233,7 +314,42 @@ export default function PlayEventPage({ params }: { params: Promise<{ id: string
         {/* Sidebar — join CTA */}
         <aside className="space-y-4">
           <div className="border border-border rounded-2xl bg-card p-5 lg:sticky lg:top-20">
-            {canJoin ? (
+            {joined && !isOrganizer ? (
+              <>
+                <p className="font-display text-2xl tracking-wide mb-1 flex items-center gap-2">
+                  <CheckCircle size={22} weight="fill" className="text-primary" /> YOU&apos;RE IN
+                </p>
+                <p className="text-sm text-muted-foreground">{participants.length}/{event.max_players} attending.</p>
+              </>
+            ) : myInvite && canJoin ? (
+              <>
+                <p className="font-display text-2xl tracking-wide mb-1 flex items-center gap-2">
+                  <EnvelopeSimple size={22} weight="fill" className="text-primary" /> YOU&apos;RE INVITED
+                </p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {myInvite.inviterName} invited you. <span className="text-primary font-semibold">{spotsLeft} {spotsLeft === 1 ? "spot" : "spots"}</span> left.
+                </p>
+                <button disabled={busy} onClick={() => joinAsMe(myInvite.id)}
+                  className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+                  <CheckCircle size={16} weight="fill" /> {busy ? "JOINING…" : "ACCEPT INVITE"}
+                </button>
+                <button disabled={busy} onClick={declineInvite}
+                  className="mt-2 w-full h-10 rounded-full border border-border hover:bg-secondary text-sm font-display tracking-[0.15em] transition-colors disabled:opacity-60">
+                  DECLINE
+                </button>
+              </>
+            ) : canJoin && viewerId && !isOrganizer ? (
+              <>
+                <p className="font-display text-2xl tracking-wide mb-1">JOIN THIS EVENT</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  <span className="text-primary font-semibold">{spotsLeft} {spotsLeft === 1 ? "spot" : "spots"}</span> left.
+                </p>
+                <button disabled={busy} onClick={() => joinAsMe()}
+                  className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-display tracking-[0.15em] text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+                  <Confetti size={16} weight="fill" /> {busy ? "JOINING…" : "JOIN EVENT"}
+                </button>
+              </>
+            ) : canJoin ? (
               <>
                 <p className="font-display text-2xl tracking-wide mb-1">JOIN THIS EVENT</p>
                 <p className="text-sm text-muted-foreground mb-4">
@@ -323,7 +439,8 @@ export default function PlayEventPage({ params }: { params: Promise<{ id: string
             </div>
           )}
 
-          {/* Growth nudge */}
+          {/* Growth nudge: signed-out visitors only. */}
+          {!viewerId && (
           <div className="border border-primary/30 bg-primary/5 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-2">
               <UserCircle size={18} weight="fill" className="text-primary" />
@@ -338,6 +455,7 @@ export default function PlayEventPage({ params }: { params: Promise<{ id: string
               </button>
             </Link>
           </div>
+          )}
         </aside>
       </div>
     </PageShell>
