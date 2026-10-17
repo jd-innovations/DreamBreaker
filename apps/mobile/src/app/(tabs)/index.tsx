@@ -88,67 +88,7 @@ const L = {
 
 // ─── Mock data ─────────────────────────────────────────────────────────────────
 
-const FEATURED = [
-  {
-    id: 'summer-slam',
-    name: 'SUMMER SLAM',
-    hasTrophy: true,
-    dates: 'JUL 12 – 14, 2025',
-    venue: 'Nathan Benderson Park',
-    city: 'Sarasota, FL',
-    players: 238, holdSpots: 41, pctFilled: 79,
-    photo: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&h=500&fit=crop&q=80',
-  },
-  {
-    id: 'florida-open',
-    name: 'FLORIDA OPEN',
-    hasTrophy: false,
-    dates: 'AUG 8 – 10, 2025',
-    venue: 'East Naples Community Park',
-    city: 'Naples, FL',
-    players: 127, holdSpots: 19, pctFilled: 63,
-    photo: 'https://images.unsplash.com/photo-1477525218966-c4a4c7ee6e56?w=800&h=500&fit=crop&q=80',
-  },
-  {
-    id: 'gulf-coast',
-    name: 'GULF COAST CLASSIC',
-    hasTrophy: false,
-    dates: 'SEP 5 – 7, 2025',
-    venue: 'Tiburon Golf Club',
-    city: 'Naples, FL',
-    players: 96, holdSpots: 12, pctFilled: 51,
-    photo: 'https://images.unsplash.com/photo-1529832393073-e362750f78b3?w=800&h=500&fit=crop&q=80',
-  },
-];
 
-const TRENDING = [
-  {
-    id: 'summer-slam',
-    badge: 'FAST FILLING', badgeGold: true,
-    name: 'Summer Slam', verified: true,
-    players: 238, holdSpots: 41, pctFilled: 79,
-    formats: "Mixed · Men's · Women's",
-    dates: 'Saturday, July 12, 2025', time: '8:00 AM' as string | null, venue: 'Bobby Jones Pickleball Center', city: 'Sarasota, FL',
-    skill: '3.0 – 4.5' as string | null,
-    holdFee: '$20', entryFee: '$80',
-    photo: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=240&fit=crop&q=80',
-    logoLines: ['SUMMER', 'SLAM'],
-    primaryAction: 'hold' as const,
-  },
-  {
-    id: 'florida-open',
-    badge: 'HOLD SPOTS', badgeGold: false,
-    name: 'Florida Open', verified: true,
-    players: 127, holdSpots: 19, pctFilled: 63,
-    formats: "Mixed · Men's · Women's",
-    dates: 'Friday, August 8, 2025', time: null as string | null, venue: 'East Naples Community Park', city: 'Naples, FL',
-    skill: null as string | null,
-    holdFee: '$15', entryFee: '$80',
-    photo: 'https://images.unsplash.com/photo-1477525218966-c4a4c7ee6e56?w=400&h=240&fit=crop&q=80',
-    logoLines: ['FLORIDA', 'OPEN'],
-    primaryAction: 'view' as const,
-  },
-];
 
 // Takes the raw ISO event date (YYYY-MM-DD), not the already-human-formatted
 // display string — re-parsing a formatted string like "Jul 31, 2026" via
@@ -162,7 +102,7 @@ function formatDateRange(isoDateStr: string): string {
     .toUpperCase();
 }
 
-function tournamentToFeatured(t: Tournament): typeof FEATURED[0] {
+function tournamentToFeatured(t: Tournament) {
   const pctFilled = t.drawSize > 0 ? Math.round((t.spotsFilled / t.drawSize) * 100) : 0;
   return {
     id: t.id,
@@ -203,51 +143,7 @@ type CommunityCardData = {
   skillMax: number | null;
   viewerStatus?: 'joined' | 'hosting';
 };
-const COMMUNITY: CommunityCardData[] = [
-  {
-    id: '1', name: 'Wednesday Round Robin', badge: 'OPEN', badgeGold: true,
-    datetime: 'Wed, May 21 • 6:00 PM', venue: 'Lakewood Ranch Courts',
-    players: 12, spots: 4, pctFilled: 75, city: 'Bradenton, FL',
-    photo: { uri: 'https://images.unsplash.com/photo-1543941948-60b9490a4414?w=400&h=240&fit=crop&q=80' },
-    primaryAction: 'join' as const, distance: '2.3 mi',
-    eventType: 'round_robin' as PlayEventType, eventDate: todayPlus(0),
-    skillMin: 3.5 as number | null, skillMax: 4.5 as number | null,
-  },
-  {
-    id: '2', name: 'Friday Morning Play', badge: 'SPOTS LEFT', badgeGold: false,
-    datetime: 'Fri, May 23 • 8:30 AM', venue: 'Nathan Benderson Park',
-    players: 8, spots: 8, pctFilled: 50, city: 'Sarasota, FL',
-    photo: { uri: 'https://images.unsplash.com/photo-1529832393073-e362750f78b3?w=400&h=240&fit=crop&q=80' },
-    primaryAction: 'join' as const, distance: '8.1 mi',
-    eventType: 'open_play' as PlayEventType, eventDate: todayPlus(1),
-    skillMin: null as number | null, skillMax: null as number | null,
-  },
-  {
-    id: '3', name: 'Sunday Social Play', badge: 'OPEN', badgeGold: true,
-    datetime: 'Sun, May 25 • 9:00 AM', venue: 'Premier Sports Campus',
-    players: 16, spots: 2, pctFilled: 89, city: 'Sarasota, FL',
-    photo: { uri: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=240&fit=crop&q=80' },
-    primaryAction: 'view' as const, distance: '12.4 mi',
-    eventType: 'mixer' as PlayEventType, eventDate: todayPlus(4),
-    skillMin: 3.0, skillMax: 3.5,
-  },
-  {
-    id: '4', name: 'Thursday Evening Play', badge: 'SPOTS LEFT', badgeGold: false,
-    datetime: 'Thu, May 22 • 7:00 PM', venue: 'Waterside Sports Ctr',
-    players: 20, spots: 12, pctFilled: 63, city: 'Lakewood Ranch, FL',
-    photo: { uri: 'https://images.unsplash.com/photo-1477525218966-c4a4c7ee6e56?w=400&h=240&fit=crop&q=80' },
-    primaryAction: 'join' as const, distance: '5.7 mi',
-    eventType: 'open_play' as PlayEventType, eventDate: todayPlus(2),
-    skillMin: 4.0, skillMax: null as number | null,
-  },
-];
 
-
-function todayPlus(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
-}
 
 function playEventToCard(e: PlayEventWithCount, viewerStatus?: CommunityCardData['viewerStatus']): CommunityCardData {
   const count = e._participantCount;
@@ -311,7 +207,9 @@ const TYPE_PILLS: { id: 'all' | PlayEventType; label: string }[] = [
 
 // ─── Featured carousel card ───────────────────────────────────────────────────
 
-function FeaturedCard({ item }: { item: typeof FEATURED[0] }) {
+type FeaturedItem = ReturnType<typeof tournamentToFeatured>;
+
+function FeaturedCard({ item }: { item: FeaturedItem }) {
   return (
     <TouchableOpacity
       style={[fc.card, { width: CARD_W }]}
@@ -748,7 +646,10 @@ export default function HomeScreen() {
 
   const featuredTournaments = tournaments.filter(t => t.featured);
   const featuredPool = featuredTournaments.length > 0 ? featuredTournaments : tournaments;
-  const featuredData = tournaments.length > 0 ? featuredPool.slice(0, 3).map(tournamentToFeatured) : FEATURED;
+  // Real tournaments only. This fell back to invented ones ("Summer Slam,
+  // Jul 2025") while loading or when empty, so every cold start flashed fake
+  // hero images before the real ones (owner, 2026-10-17).
+  const featuredData = featuredPool.slice(0, 3).map(tournamentToFeatured);
   // The two soonest tournaments — fetchTournaments() orders by event_date and
   // expired ones are already filtered out. Nothing here is ranked, which is why
   // the section is titled "Upcoming" rather than "Trending": a brand-new
@@ -766,7 +667,7 @@ export default function HomeScreen() {
   // Velocity over totals: 20 registrations this week is trending, 20 over three
   // months is not. True trending would also want impressions, which nothing
   // records today.
-  const trendingData = tournaments.length > 0 ? tournaments.slice(0, 2).map(tournamentToTrending) : TRENDING;
+  const trendingData = tournaments.slice(0, 2).map(tournamentToTrending);
 
   // Max-distance filter from the Customize sheet — items with no distance
   // (live events without a computed distance yet) always pass through.
@@ -1211,9 +1112,15 @@ export default function HomeScreen() {
           {communityLoading ? (
             <ActivityIndicator size="small" color={colors.gold} style={{ marginVertical: 24 }} />
           ) : (() => {
-            const filtered = applyFindGamesFilters(
-              communityError || communityCards.length === 0 ? COMMUNITY : communityCards,
-            );
+            // Real events only: this showed three invented games whenever the
+            // real list was empty or failed to load (owner, 2026-10-17).
+            if (communityError) {
+              return <Text style={s.communityEmptyText}>Couldn&apos;t load games. Pull down to try again.</Text>;
+            }
+            if (communityCards.length === 0) {
+              return <Text style={s.communityEmptyText}>No upcoming games near you yet.</Text>;
+            }
+            const filtered = applyFindGamesFilters(communityCards);
             return filtered.length === 0 ? (
               <Text style={s.communityEmptyText}>No games match these filters yet.</Text>
             ) : (
@@ -1229,7 +1136,8 @@ export default function HomeScreen() {
           })()}
         </View>
 
-        {/* ── FEATURED CAROUSEL ── */}
+        {/* ── FEATURED CAROUSEL (hidden until there are real tournaments) ── */}
+        {featuredData.length > 0 && (<>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -1249,6 +1157,7 @@ export default function HomeScreen() {
             <View key={i} style={[s.dot, i === activeCard && s.dotActive]} />
           ))}
         </View>
+        </>)}
 
         {/* ── UPCOMING TOURNAMENTS ── */}
         <View style={[s.sectionHeader, { marginTop: 8 }]}>
