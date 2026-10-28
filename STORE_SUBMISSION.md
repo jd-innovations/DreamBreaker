@@ -4,9 +4,22 @@ TODO 1.1 item 7.1. Everything App Store Connect and Google Play Console ask for
 that requires an engineering answer, decided here so the forms become a
 copy-paste exercise rather than a research project.
 
-**Status 2026-08-31:** complete except the items under
-[What only you can supply](#what-only-you-can-supply). Those are accounts,
-screenshots and a legal review — not engineering questions.
+**Status 2026-10-28 — App Store v1.0 submission.** Decisions made:
+
+- **Submit TestFlight build 14 (v1.0.0) as-is.** Nothing native has changed
+  since it was built (397de57); JS fixes reach it over the `production` OTA
+  channel. No rebuild.
+- **No membership in v1.0.** `paidMembership` stays `internal-only`. It ships in
+  1.0.1, which IS a second review: the first subscription must be submitted
+  with an app version, and the RevenueCat `appl_` key lives in `eas.json` (a
+  fingerprint input), so it needs build 15 anyway.
+- **DUPR:** no "coming soon" in metadata (Guideline 2.3 — describe only what
+  ships) and no `dupr` keyword (2.3.7, third-party brand). The description may
+  say players can add their DUPR rating to their profile, which is true today.
+- **Push:** one device = one account (migration 20261028120000), so a shared or
+  handed-down phone no longer shows another account's notifications.
+
+Remaining blanks are under [What only you can supply](#8-what-only-you-can-supply).
 
 Companion documents: `PRODUCTION_CONFIG.md` (env inventory),
 `BETA_SCOPE.md` (what is switched on), `docs/DEVICE_QA_CHECKLIST.md`.
@@ -60,17 +73,29 @@ Register for local tournaments, hold your spot, and check in with a QR code
 at the desk.
 
 FIND PARTNERS
-Get matched with players at your level. Message them in the app.
+Get matched with players at your level. Message them in the app, and join
+groups for your club or regular crew.
+
+TAKE LESSONS
+Find coaches near you, or ones who travel to you, and book a lesson.
+
+BUY AND SELL GEAR
+List paddles and gear in the marketplace and connect with local players.
 
 TRACK YOUR GAME
-Log sessions, record scores, and follow your DUPR rating over time.
+Log sessions and scores, see your stats over time, and add your DUPR rating
+to your profile.
 
-FOR ORGANISERS
-Run brackets, manage registrations and check players in from your phone.
+FOR ORGANIZERS
+Run brackets, round robins and mini tournaments, manage registrations, and
+check players in from your phone.
 ```
 
 **Keywords (iOS, 100 char, comma-separated, no spaces):**
-`pickleball,tournament,court,partner,dupr,open play,paddle,league,bracket,rec`
+`pickleball,tournament,court,partner,open play,paddle,league,bracket,lessons,coach,round robin`
+
+No third-party brand names here (Guideline 2.3.7) — that is why `dupr` was
+removed.
 
 **Category:** Sports (primary), Health & Fitness (secondary)
 
@@ -169,6 +194,9 @@ lose their query strings, and sensitive keys are redacted.
 | Expo (EAS) | Push tokens for delivery |
 | Google Maps | Map rendering; coordinates of displayed courts |
 | Resend | Transactional email delivery |
+| Anthropic | Marketplace listing text, only when the seller taps the AI rewrite (`marketplace-improve-listing`) |
+
+RevenueCat joins this list in 1.0.1, with membership — not in v1.0.
 
 ### Deletion
 
@@ -195,29 +223,22 @@ never blanks an existing profile name.
 
 ## 6. Payments — read this before submitting
 
-**Stripe is in TEST MODE.** Decision G1 in `PRODUCTION_CONFIG.md`: it stays
-that way until App Store launch.
+**Stripe is LIVE** (cutover 2026-10-07; build 14 carries `pk_live`). Card
+only, manual payouts. Paid court booking stays hidden (`paidBooking`);
+tournament entry and lessons take real cards.
 
-This has a direct consequence for review. **A reviewer who tries to pay will
-either fail or be charged nothing**, depending on what is live at that moment.
-Before submitting, one of these must be true:
+The demo account must reach a **free** event so the reviewer can finish a
+registration without paying — Futures Classic (free, closes Dec 24). If review
+slips past that date, pick another free event and update the notes.
 
-1. Live mode is switched on — which is **not** a key swap. It needs a live
-   webhook endpoint with its own signing secret, and every tournament director
-   must re-onboard Stripe Connect, because test-mode connected accounts do not
-   exist in live mode. Full sequence in `PRODUCTION_CONFIG.md` G1. It also
-   requires a new mobile build in the same window, because the publishable key
-   is baked into the binary and cannot be hotfixed.
-2. Or paid flows are hidden for the reviewed build, and the review notes say
-   so.
+Everything paid is a real-world service — tournament entry and in-person
+lessons — not digital content, so **StoreKit does not apply** (Guideline
+3.1.3(d)/3.1.5). Marketplace sales happen between players, off-platform; no
+money moves in the app. Say this in the review notes; it is a common rejection
+reason for apps that take cards outside IAP.
 
-Either way, the demo account below must be able to reach a **free** event, so
-the reviewer can complete a registration end to end without paying.
-
-Payments are for real-world services — court time and tournament entry — not
-digital content, so **StoreKit / Play Billing does not apply**. Say this
-explicitly in the review notes; it is a common rejection reason for apps that
-take card payments outside IAP.
+Membership is the one thing that WOULD need IAP, which is exactly why it is
+not in v1.0 — see the status block at the top.
 
 ---
 
@@ -225,16 +246,18 @@ take card payments outside IAP.
 
 ```
 DEMO ACCOUNT
-Email:    <supply>
+Email:    dhjesus122+tyler@gmail.com
 Password: <supply>
 
-The account is pre-loaded with a free tournament and a play event so every
-flow can be exercised without a payment.
+To try a full registration without paying, open Tournaments and register for
+"Futures Classic", which is free.
 
 PAYMENTS
-Payments are for real-world services: court reservations and tournament entry
-fees. They are not digital content or in-app purchases, so StoreKit is not
-used. Stripe processes cards; the app never handles card details.
+Payments are for real-world services: tournament entry fees and in-person
+lessons with coaches. They are not digital content or in-app purchases, so
+StoreKit is not used. Stripe processes cards; the app never handles card
+details. Marketplace listings connect players who arrange sales themselves;
+no payment happens in the app.
 
 ACCOUNT DELETION
 In-app: Account Settings > Delete Account.
@@ -267,11 +290,17 @@ leaving the reviewer to find it.
 
 Not engineering questions — these are the remaining blanks:
 
-- **Demo account** — an email, a password, and a free event it can register
-  for. Everything else in the review notes is written.
-- **Screenshots** — 6.5" and 5.5" iPhone, plus Play Store sizes. Suggested
-  flow: open play list, tournament detail, registration, partner finder, chat,
-  profile.
+- **Demo password** — Tyler's (the Beta App Review login). Confirm it still
+  signs in on build 14 before submitting.
+- **Screenshots** — 6.9" (or 6.5") iPhone. No iPad: `supportsTablet` is false.
+  Suggested flow: open play list, tournament detail, registration, partner
+  finder, chat, profile. Take them on the demo accounts, not real users.
+- **Apply migration 20261028120000** (push: one account per device) before
+  submitting.
+- **Check Sentry** for crashes on build 14 before submitting.
+- **In App Store Connect:** App Store tab → version 1.0 → attach build 14 →
+  paste §2 and §7 → privacy answers from §4 → age rating → release
+  **manually** → Submit for Review.
 - **App icon** — already present, but see 7.3: `icon.png` is 1.4 MB and should
   be roughly a tenth of that.
 - **Legal review.** The Terms and Privacy Policy are written and complete
