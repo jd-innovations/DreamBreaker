@@ -1,0 +1,29 @@
+To try a full registration without paying, open Tournaments and register for
+"Futures Classic", which is free.
+
+PAYMENTS
+Payments are for real-world services: tournament entry fees and in-person
+lessons with coaches. They are not digital content or in-app purchases, so
+StoreKit is not used. Stripe processes cards; the app never handles card
+details. Marketplace listings connect players who arrange sales themselves;
+no payment happens in the app.
+
+ACCOUNT DELETION
+In-app: Account Settings > Delete Account.
+On the web, without signing in: https://pickleballapp.app/legal/delete-account
+
+LOCATION
+Requested "when in use" only, to show nearby courts and games. The app works
+without it; location can be declined and set manually by city.
+
+CAMERA
+Used for two things: sending photos in chat, and scanning a QR code at
+tournament check-in.
+
+SIGN IN WITH APPLE
+Offered alongside Google. Hide My Email is supported.
+
+USER-GENERATED CONTENT
+The app has direct messages, group posts and profiles. Users can report a
+person from a message thread or a profile, and can block them in the same
+step. Blocked users cannot message or invite. Reports reach an admin queue.

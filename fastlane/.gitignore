@@ -1,0 +1,5 @@
+# Never commit the App Store Connect key; CI reads it from a secret.
+*.p8
+report.xml
+Preview.html
+test_output/

@@ -1,0 +1,45 @@
+# App Store listing and submission via fastlane (see fastlane/Fastfile).
+# Manual only: every run writes to App Store Connect, and `submit` sends the
+# app to review. Builds stay on EAS.
+
+name: app-store
+
+on:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: "metadata = listing text, screenshots = replace screenshots, submit = attach build and submit for review"
+        required: true
+        type: choice
+        options: [metadata, screenshots, submit]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-store
+  cancel-in-progress: false
+
+jobs:
+  deliver:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: fastlane ${{ inputs.lane }}
+        run: bundle exec fastlane ios "$LANE"
+        env:
+          LANE: ${{ inputs.lane }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          REVIEW_DEMO_PASSWORD: ${{ secrets.REVIEW_DEMO_PASSWORD }}
+          REVIEW_FIRST_NAME: ${{ secrets.REVIEW_FIRST_NAME }}
+          REVIEW_LAST_NAME: ${{ secrets.REVIEW_LAST_NAME }}
+          REVIEW_PHONE: ${{ secrets.REVIEW_PHONE }}
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+          FASTLANE_HIDE_CHANGELOG: "1"

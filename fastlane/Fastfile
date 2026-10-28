@@ -1,0 +1,64 @@
+# App Store listing and submission only. Builds come from EAS (build 14 for
+# v1.0.0); nothing here uploads a binary. Copy lives in STORE_SUBMISSION.md —
+# change it there and in fastlane/metadata together.
+#
+# Run from GitHub Actions (.github/workflows/app-store.yml), which supplies:
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8      App Store Connect API key
+#   REVIEW_DEMO_PASSWORD                       Tyler's password (demo login)
+#   REVIEW_FIRST_NAME, REVIEW_LAST_NAME,
+#   REVIEW_PHONE                               App Review contact
+
+default_platform(:ios)
+
+APP_VERSION = "1.0.0"
+BUILD_NUMBER = "14"
+
+platform :ios do
+  before_all do
+    app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_content: ENV.fetch("ASC_KEY_P8")
+    )
+  end
+
+  def listing_options
+    {
+      app_version: APP_VERSION,
+      skip_binary_upload: true,
+      force: true, # no HTML preview prompt in CI
+      metadata_path: "./fastlane/metadata",
+      screenshots_path: "./fastlane/screenshots",
+      precheck_include_in_app_purchases: false, # membership is not in v1.0
+      app_review_information: {
+        first_name: ENV.fetch("REVIEW_FIRST_NAME"),
+        last_name: ENV.fetch("REVIEW_LAST_NAME"),
+        phone_number: ENV.fetch("REVIEW_PHONE"),
+        email_address: "support@pickleballapp.app",
+        demo_user: "dhjesus122+tyler@gmail.com",
+        demo_password: ENV.fetch("REVIEW_DEMO_PASSWORD"),
+        notes: File.read(File.join(__dir__, "review_notes.txt"))
+      }
+    }
+  end
+
+  desc "Upload listing text and review information (no screenshots, no submit)"
+  lane :metadata do
+    deliver(listing_options.merge(skip_screenshots: true))
+  end
+
+  desc "Replace the screenshots in App Store Connect with fastlane/screenshots"
+  lane :screenshots do
+    deliver(listing_options.merge(skip_metadata: true, overwrite_screenshots: true))
+  end
+
+  desc "Attach build #{BUILD_NUMBER} and submit for review (manual release)"
+  lane :submit do
+    deliver(listing_options.merge(
+      build_number: BUILD_NUMBER,
+      submit_for_review: true,
+      automatic_release: false,
+      submission_information: { add_id_info_uses_idfa: false }
+    ))
+  end
+end

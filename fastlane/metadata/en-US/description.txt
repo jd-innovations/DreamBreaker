@@ -1,0 +1,26 @@
+Pickleball App is where players find courts, partners and tournaments.
+
+FIND A GAME
+Browse open play near you, see who is coming, and reserve a spot.
+
+PLAY TOURNAMENTS
+Register for local tournaments, hold your spot, and check in with a QR code
+at the desk.
+
+FIND PARTNERS
+Get matched with players at your level. Message them in the app, and join
+groups for your club or regular crew.
+
+TAKE LESSONS
+Find coaches near you, or ones who travel to you, and book a lesson.
+
+BUY AND SELL GEAR
+List paddles and gear in the marketplace and connect with local players.
+
+TRACK YOUR GAME
+Log sessions and scores, see your stats over time, and add your DUPR rating
+to your profile.
+
+FOR ORGANIZERS
+Run brackets, round robins and mini tournaments, manage registrations, and
+check players in from your phone.
