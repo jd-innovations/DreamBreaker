@@ -1,0 +1,12 @@
+# Opens a deep link, accepts iOS's "Open in app?" prompt if it appears, and
+# waits for the screen to settle.
+appId: app.pickleballapp
+---
+- openLink: ${LINK}
+- runFlow:
+    when:
+      visible: "Open"
+    commands:
+      - tapOn: "Open"
+- waitForAnimationToEnd:
+    timeout: 5000

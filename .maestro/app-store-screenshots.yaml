@@ -1,0 +1,44 @@
+# App Store screenshots, run by .github/workflows/app-store.yml
+# (lane: capture-screenshots) on an iPhone 16 Pro Max simulator — 6.9",
+# 1320x2868. Signs in as the demo account; EMAIL and PASSWORD come from CI.
+# Files sort by name, which is the order App Store Connect shows them in.
+appId: app.pickleballapp
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- tapOn: "Sign In"
+- tapOn: "you@email.com"
+- inputText: ${EMAIL}
+- tapOn: "Password"
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn: "Sign In"
+- extendedWaitUntil:
+    notVisible: "you@email.com"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: 00-home
+
+- runFlow: { file: open.yaml, env: { LINK: "pickleballapp://games" } }
+- takeScreenshot: 01-games
+
+- runFlow: { file: open.yaml, env: { LINK: "pickleballapp://tournaments" } }
+- tapOn: "Futures Classic"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: 02-tournament
+
+- runFlow: { file: open.yaml, env: { LINK: "pickleballapp://finder" } }
+- takeScreenshot: 03-finder
+
+- runFlow: { file: open.yaml, env: { LINK: "pickleballapp://chat" } }
+- takeScreenshot: 04-chat
+
+- runFlow: { file: open.yaml, env: { LINK: "pickleballapp://stats" } }
+- takeScreenshot: 05-stats
+
+- runFlow: { file: open.yaml, env: { LINK: "pickleballapp://profile" } }
+- takeScreenshot: 06-profile

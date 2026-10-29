@@ -1,6 +1,11 @@
-# App Store listing and submission via fastlane (see fastlane/Fastfile).
-# Manual only: every run writes to App Store Connect, and `submit` sends the
-# app to review. Builds stay on EAS.
+# App Store listing, screenshots and submission via fastlane (see
+# fastlane/Fastfile). Manual only: every run but capture-screenshots writes to
+# App Store Connect, and `submit` sends the app to review. Builds stay on EAS.
+#
+# capture-screenshots builds a SIMULATOR app here (expo prebuild + xcodebuild)
+# instead of on EAS: adding a simulator profile to eas.json moves the mobile
+# fingerprint (9ad75807 -> 8b90d139, measured 2026-10-29) and would cut build 14
+# off from OTA updates. The prebuilt ios/ folder never leaves the runner.
 
 name: app-store
 
@@ -8,10 +13,14 @@ on:
   workflow_dispatch:
     inputs:
       lane:
-        description: "metadata = listing text, screenshots = replace screenshots, submit = attach build and submit for review"
+        description: "capture-screenshots = take screenshots (artifact only, unless upload is ticked); metadata = listing text; screenshots = upload committed screenshots; submit = attach build and submit for review"
         required: true
         type: choice
-        options: [metadata, screenshots, submit]
+        options: [capture-screenshots, metadata, screenshots, submit]
+      upload:
+        description: "capture-screenshots only: also replace the screenshots in App Store Connect. Leave off until you have checked the artifact."
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -21,7 +30,102 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  capture:
+    if: inputs.lane == 'capture-screenshots'
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      # Same values as the EAS production environment. No PostHog or Sentry
+      # keys, so screenshot sessions do not pollute analytics or crash reports.
+      EXPO_PUBLIC_APP_ENV: production
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+      EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+      EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY: ${{ secrets.EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY }}
+      SENTRY_DISABLE_AUTO_UPLOAD: "true"
+      SIMULATOR: iPhone 16 Pro Max
+    steps:
+      - uses: actions/checkout@v4
+      # Node 24: apps/mobile's lockfile needs npm 10+ (see checks.yml).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install
+        working-directory: apps/mobile
+        run: npm ci
+      - name: Prebuild iOS
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform ios --clean
+      - name: Build for simulator
+        working-directory: apps/mobile/ios
+        run: |
+          WORKSPACE=$(ls -d *.xcworkspace | head -1)
+          SCHEME="${WORKSPACE%.xcworkspace}"
+          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" \
+            -configuration Release -sdk iphonesimulator \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO | tail -50
+          APP=$(find build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -1)
+          echo "APP_PATH=$PWD/$APP" >> "$GITHUB_ENV"
+      - name: Boot simulator
+        run: |
+          xcrun simctl boot "$SIMULATOR"
+          xcrun simctl bootstatus "$SIMULATOR" -b
+          xcrun simctl status_bar booted override --time 9:41 \
+            --batteryState charged --batteryLevel 100 \
+            --cellularBars 4 --wifiBars 3 --dataNetwork wifi
+          xcrun simctl location booted set 27.4989,-82.5748
+          xcrun simctl install booted "$APP_PATH"
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Capture
+        run: |
+          mkdir -p screenshots
+          cd screenshots
+          maestro --version
+          maestro test ../.maestro/app-store-screenshots.yaml \
+            -e EMAIL="dhjesus122+tyler@gmail.com" -e PASSWORD="$REVIEW_DEMO_PASSWORD" \
+            --test-output-dir ../maestro-output
+        env:
+          REVIEW_DEMO_PASSWORD: ${{ secrets.REVIEW_DEMO_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-store-screenshots
+          path: |
+            screenshots/*.png
+            .maestro/*.png
+            maestro-output/**
+      # 00-home is a reference shot, not a store screenshot.
+      - name: Stage for upload
+        if: inputs.upload
+        run: |
+          rm -f fastlane/screenshots/en-US/*.png
+          find screenshots .maestro -maxdepth 1 -name '[0-9][0-9]-*.png' ! -name '00-*' -exec cp {} fastlane/screenshots/en-US/ \;
+          ls -l fastlane/screenshots/en-US
+      - uses: ruby/setup-ruby@v1
+        if: inputs.upload
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: Upload screenshots
+        if: inputs.upload
+        run: bundle exec fastlane ios screenshots
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          REVIEW_DEMO_PASSWORD: ${{ secrets.REVIEW_DEMO_PASSWORD }}
+          REVIEW_FIRST_NAME: ${{ secrets.REVIEW_FIRST_NAME }}
+          REVIEW_LAST_NAME: ${{ secrets.REVIEW_LAST_NAME }}
+          REVIEW_PHONE: ${{ secrets.REVIEW_PHONE }}
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+          FASTLANE_HIDE_CHANGELOG: "1"
+
   deliver:
+    if: inputs.lane != 'capture-screenshots'
     runs-on: macos-15
     timeout-minutes: 30
     steps:
