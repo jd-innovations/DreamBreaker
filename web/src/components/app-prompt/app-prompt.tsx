@@ -30,6 +30,14 @@ const COPY: Record<AppPromptSource, { title: string; body: string }> = {
 
 const ROTATE_MS = 3000;
 
+// Radix focuses the first control on open, which paints a focus ring on the
+// close button before anyone has touched the keyboard. Focus the dialog
+// itself instead: still trapped inside it, Tab still reaches every control.
+function focusDialog(e: Event) {
+  e.preventDefault();
+  (e.currentTarget as HTMLElement | null)?.focus();
+}
+
 function PhonePreview({ className }: { className?: string }) {
   const [index, setIndex] = useState(0);
 
@@ -103,7 +111,7 @@ export function AppPrompt({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/70 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         {variant === "lightbox" ? (
-          <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 grid-cols-1 items-center gap-10 rounded-3xl border border-border bg-card p-8 md:grid-cols-[220px_1fr] md:p-10 shadow-xl data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95">
+          <DialogPrimitive.Content onOpenAutoFocus={focusDialog} className="fixed left-1/2 outline-none top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 grid-cols-1 items-center gap-10 rounded-3xl border border-border bg-card p-8 md:grid-cols-[220px_1fr] md:p-10 shadow-xl data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95">
             <PhonePreview className="hidden w-[220px] md:block" />
             <div className="flex flex-col gap-5">
               <p className="text-xs font-semibold tracking-[0.25em] text-primary">PLAY. ENGAGE. BELONG.</p>
@@ -117,13 +125,13 @@ export function AppPrompt({
               </div>
               <StoreButton onClick={onGet} newTab className="self-start" />
             </div>
-            <DialogPrimitive.Close className="absolute right-5 top-5 rounded-full p-1 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring">
+            <DialogPrimitive.Close className="absolute right-5 top-5 rounded-full p-1 opacity-70 transition-opacity hover:opacity-100 outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <X size={18} weight="bold" />
               <span className="sr-only">Close</span>
             </DialogPrimitive.Close>
           </DialogPrimitive.Content>
         ) : (
-          <DialogPrimitive.Content className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border-t border-border bg-card px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-6 shadow-xl data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom">
+          <DialogPrimitive.Content onOpenAutoFocus={focusDialog} className="fixed inset-x-0 outline-none bottom-0 z-50 rounded-t-3xl border-t border-border bg-card px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-6 shadow-xl data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom">
             <div className="mx-auto flex max-w-md items-center gap-5">
               <PhonePreview className="w-[96px] shrink-0 rounded-[1.25rem] border-[5px]" />
               <div className="flex flex-col gap-2">
@@ -133,7 +141,7 @@ export function AppPrompt({
             </div>
             <div className="mx-auto mt-5 flex max-w-md flex-col gap-2">
               <StoreButton onClick={onGet} className="w-full" />
-              <DialogPrimitive.Close className="h-11 w-full rounded-full text-sm font-medium text-muted-foreground hover:text-foreground">
+              <DialogPrimitive.Close className="h-11 w-full rounded-full text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
                 Not now
               </DialogPrimitive.Close>
             </div>
