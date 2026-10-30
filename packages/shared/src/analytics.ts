@@ -46,6 +46,11 @@ export type AnalyticsEvent =
   | "push_prompt_shown"
   | "push_prompt_accepted"
   | "push_prompt_denied"
+  // Web "get the app" prompt (lightbox on desktop, bottom sheet on iPhone).
+  // `source` says which page, `prompt_variant` which surface.
+  | "app_prompt_shown"
+  | "app_prompt_dismissed"
+  | "app_prompt_clicked"
   // Tournament registration
   | "tournament_registration_started"
   | "tournament_registration_succeeded"
@@ -82,6 +87,9 @@ export const ANALYTICS_EVENTS: readonly AnalyticsEvent[] = [
   "push_prompt_shown",
   "push_prompt_accepted",
   "push_prompt_denied",
+  "app_prompt_shown",
+  "app_prompt_dismissed",
+  "app_prompt_clicked",
   "tournament_registration_started",
   "tournament_registration_succeeded",
   "tournament_registration_failed",
@@ -131,6 +139,7 @@ export const ALLOWED_PROPERTY_KEYS: readonly string[] = [
   "error_code", // a code, never a message — messages carry user text
   "duration_ms",
   "source", // which screen or CTA started the flow
+  "prompt_variant", // "lightbox" | "sheet" — fixed vocabulary, web app prompt
 
   // Domain identifiers. Opaque ids, never names or titles: a tournament title
   // is authored text and can contain anything, including a person's name.

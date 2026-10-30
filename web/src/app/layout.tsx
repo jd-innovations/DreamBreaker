@@ -5,6 +5,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { OnboardingNudgeHost } from "@/components/onboarding/onboarding-nudge-host";
 import { AnalyticsProvider } from "@/components/layout/analytics-provider";
+import { AppPromptHost } from "@/components/app-prompt/app-prompt-host";
+import { APP_STORE_ID } from "@/lib/app-store";
 import { Toaster } from "sonner";
 
 // Self-hosted (2026-09-30), not next/font/google: Google Fonts sometimes
@@ -40,6 +42,9 @@ export const metadata: Metadata = {
   title: "Pickleball App — Pickleball Tournaments",
   description:
     "Compete in elite pickleball tournaments. Find partners. Hold your spot. Earn your rank.",
+  // Apple's native Smart App Banner (iOS Safari): "Get" without the app,
+  // "Open" with it. Only once the App Store switch is on — see lib/app-store.ts.
+  ...(APP_STORE_ID ? { itunes: { appId: APP_STORE_ID } } : {}),
 };
 
 export default function RootLayout({
@@ -75,6 +80,10 @@ export default function RootLayout({
               own layouts and would miss it. It renders nothing unless it has
               something to do. */}
           <OnboardingNudgeHost />
+          {/* "Get the app" lightbox (desktop) / sheet (iPhone). Renders nothing
+              until NEXT_PUBLIC_APP_STORE_ID is set. Shares one overlay slot
+              with the nudge above — see lib/overlay-lock.ts. */}
+          <AppPromptHost appStoreId={APP_STORE_ID} />
           <Toaster position="top-right" richColors closeButton />
         </ThemeProvider>
       </body>

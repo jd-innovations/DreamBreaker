@@ -169,3 +169,26 @@ When approved, it waits for you: press **Release This Version** when ready.
 
 - Membership → 1.0.1 (needs build 15 and a second review). See
   `MEMBERSHIP_PHASE5_STOREKIT.md`.
+
+---
+
+## Launch day — turn on the web "get the app" prompt
+
+Only after Apple approves AND you press Release (the App Store link 404s
+before that).
+
+1. App Store Connect → your app → **App Information** → copy the **Apple ID**
+   (a number like `6740000000`).
+2. Optional, for install attribution: App Store Connect → **Analytics** →
+   **Acquisition** → **Campaigns** → copy the **provider token** (`pt=` value).
+3. Vercel → project **web** → **Settings** → **Environment Variables**
+   (Production):
+   - `NEXT_PUBLIC_APP_STORE_ID` = the Apple ID
+   - `APP_STORE_PROVIDER_TOKEN` = the provider token (optional)
+4. Redeploy / promote production (NEXT_PUBLIC_* is baked in at build time).
+5. **Check:**
+   - iPhone Safari on pickleballapp.app shows Apple's banner at the top and,
+     after ~2 seconds, the "Get the Pickleball App" sheet.
+   - Desktop shows the lightbox with the QR code; scanning it opens the App
+     Store.
+   - https://pickleballapp.app/get-app opens the App Store on an iPhone.

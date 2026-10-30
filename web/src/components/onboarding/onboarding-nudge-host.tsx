@@ -22,6 +22,7 @@ import { loadDraft, clearDraft, draftBelongsTo } from "@/lib/onboarding/persiste
 import { writeProfileFields } from "@/lib/onboarding/finalize";
 import { needsProfileEnrichment, type CompletenessFields } from "@/lib/onboarding/completion";
 import { OnboardingNudge } from "./onboarding-nudge";
+import { claimOverlay } from "@/lib/overlay-lock";
 
 const SNOOZE_KEY = "dbpb.onboarding.nudge.snoozedUntil";
 const SHOWN_KEY = "dbpb.onboarding.nudge.shownCount";
@@ -145,7 +146,9 @@ export function OnboardingNudgeHost() {
         if (!needsProfileEnrichment(profile)) return;
 
         setPercent(completionPercent(profile));
-        timer = setTimeout(() => { if (!cancelled) setVisible(true); }, APPEAR_DELAY_MS);
+        timer = setTimeout(() => {
+          if (!cancelled && claimOverlay("onboarding-nudge")) setVisible(true);
+        }, APPEAR_DELAY_MS);
       } catch {
         // Never let this break the page it is mounted on.
       }
