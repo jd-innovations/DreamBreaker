@@ -8,7 +8,15 @@ appId: app.pickleballapp
     clearState: true
     permissions:
       all: allow
+# A cold Release launch on a CI simulator spends well over Maestro's default
+# few seconds on the splash spinner (expo-updates checks for an OTA first).
+- extendedWaitUntil:
+    visible: "Sign In"
+    timeout: 120000
 - tapOn: "Sign In"
+- extendedWaitUntil:
+    visible: "you@email.com"
+    timeout: 30000
 - tapOn: "you@email.com"
 - inputText: ${EMAIL}
 - tapOn: "Password"
@@ -26,6 +34,9 @@ appId: app.pickleballapp
 - takeScreenshot: 01-games
 
 - runFlow: { file: open.yaml, env: { LINK: "pickleballapp://tournaments" } }
+- extendedWaitUntil:
+    visible: "Futures Classic"
+    timeout: 30000
 - tapOn: "Futures Classic"
 - waitForAnimationToEnd:
     timeout: 5000
