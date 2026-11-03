@@ -21,14 +21,17 @@ appId: app.pickleballapp
 - inputText: ${EMAIL}
 # "Password" is both the field's label and its placeholder, and a text tap
 # lands on the label, so the password went nowhere (run #9). Tap the input
-# box itself: on this simulator (6.9", fixed in the workflow) it sits at 44%.
+# box itself: on this simulator (6.9", fixed in the workflow) it sits at 44%
+# — but only with the keyboard down; with it up the form slides and 44% is
+# the Sign In button (run #10). Return on the password field signs in.
+- hideKeyboard
 - tapOn:
     point: "50%,44%"
 - inputText: ${PASSWORD}
-- hideKeyboard
-- tapOn: "Sign In"
+- pressKey: Enter
+# Not the email placeholder: it is already hidden once the email is typed.
 - extendedWaitUntil:
-    notVisible: "you@email.com"
+    notVisible: "Welcome back"
     timeout: 30000
 - waitForAnimationToEnd:
     timeout: 5000
