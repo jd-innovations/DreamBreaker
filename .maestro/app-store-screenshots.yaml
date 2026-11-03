@@ -43,27 +43,36 @@ appId: app.pickleballapp
     timeout: 5000
 - takeScreenshot: 00-home
 
-- runFlow: { file: open.yaml, env: { LINK: "pickleballapp://games" } }
-- takeScreenshot: 01-games
+# Tabs are tapped, not deep-linked: pickleballapp://games landed on Home
+# (run #12). Bar order on this 6.9" simulator, y = 94%: Home 13%, Nearby 31%,
+# Events 50%, Partner 68%, Profile 87%. Points, because the labels also appear
+# as text on other screens. Tabs first, while the bar is on screen.
+- tapOn: { point: "50%,94%" }
+- waitForAnimationToEnd: { timeout: 5000 }
+- takeScreenshot: 01-events
 
+- tapOn: { point: "68%,94%" }
+- waitForAnimationToEnd: { timeout: 5000 }
+- takeScreenshot: 03-finder
+
+- tapOn: { point: "87%,94%" }
+- waitForAnimationToEnd: { timeout: 5000 }
+- takeScreenshot: 06-profile
+
+# Not tabs, so deep links.
 - runFlow: { file: open.yaml, env: { LINK: "pickleballapp://tournaments" } }
-# The card shows the name upper-cased.
+# The card is one accessible element ("Open, FUTURES CLASSIC, Tennis…"),
+# upper-cased, and Maestro matches the whole string.
 - extendedWaitUntil:
-    visible: "(?i)futures classic"
+    visible: "(?i).*futures classic.*"
     timeout: 30000
-- tapOn: "(?i)futures classic"
+- tapOn: "(?i).*futures classic.*"
 - waitForAnimationToEnd:
     timeout: 5000
 - takeScreenshot: 02-tournament
-
-- runFlow: { file: open.yaml, env: { LINK: "pickleballapp://finder" } }
-- takeScreenshot: 03-finder
 
 - runFlow: { file: open.yaml, env: { LINK: "pickleballapp://chat" } }
 - takeScreenshot: 04-chat
 
 - runFlow: { file: open.yaml, env: { LINK: "pickleballapp://stats" } }
 - takeScreenshot: 05-stats
-
-- runFlow: { file: open.yaml, env: { LINK: "pickleballapp://profile" } }
-- takeScreenshot: 06-profile
