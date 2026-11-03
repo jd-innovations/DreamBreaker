@@ -61,21 +61,36 @@ jobs:
         run: |
           WORKSPACE=$(ls -d *.xcworkspace | head -1)
           SCHEME="${WORKSPACE%.xcworkspace}"
+          # The keychain needs application-identifier/keychain-access-groups.
+          # Unsigned (CODE_SIGNING_ALLOWED=NO) the app has neither and
+          # SecureStore fails with -34018, so the Supabase session never loads.
+          # An ad-hoc codesign carrying them is refused by the host's AMFI
+          # (spawn error 162), and Sign to Run Locally without a team adds
+          # nothing. The simulator reads entitlements from the binary's
+          # __TEXT,__entitlements section, which is how Xcode does it, so link
+          # them in directly.
+          cat > "$PWD/sim.entitlements" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>application-identifier</key><string>ZSH27U747N.app.pickleballapp</string>
+            <key>keychain-access-groups</key><array><string>ZSH27U747N.app.pickleballapp</string></array>
+          </dict></plist>
+          PLIST
+          # App target only (its Pods xcconfig), so Pods' own link flags stay.
+          XC="Pods/Target Support Files/Pods-$SCHEME/Pods-$SCHEME.release.xcconfig"
+          sed -i '' "s|^OTHER_LDFLAGS = |OTHER_LDFLAGS = -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __entitlements -Xlinker $PWD/sim.entitlements |" "$XC"
+          grep -q sim.entitlements "$XC" || { echo "::error::could not patch $XC"; exit 1; }
           xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" \
             -configuration Release -sdk iphonesimulator \
             -destination "generic/platform=iOS Simulator" \
-            -derivedDataPath build \
-            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=ZSH27U747N \
-            PROVISIONING_PROFILE_SPECIFIER= PROVISIONING_PROFILE= | tail -50
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO | tail -50
           APP=$(find build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -1)
-          # The keychain needs application-identifier/keychain-access-groups.
-          # Unsigned (CODE_SIGNING_ALLOWED=NO) the app has neither and
-          # SecureStore fails with -34018, so the Supabase session never loads;
-          # an ad-hoc codesign carrying them is refused by the host's AMFI
-          # (spawn error 162). Xcode's own "Sign to Run Locally" puts them in
-          # the binary's __entitlements section instead, which the simulator
-          # honours. Fail here, not 10 minutes later in Maestro.
-          grep -q keychain-access-groups "$APP/$(basename "$APP" .app)" \
+          BIN="$APP/$(basename "$APP" .app)"
+          echo "--- __entitlements in $BIN"
+          otool -X -s __TEXT __entitlements "$BIN" | head -5 || true
+          # Fail here, not 10 minutes later in Maestro.
+          grep -q keychain-access-groups "$BIN" \
             || { echo "::error::simulator build has no keychain entitlement"; exit 1; }
           echo "APP_PATH=$PWD/$APP" >> "$GITHUB_ENV"
       - name: Boot simulator
