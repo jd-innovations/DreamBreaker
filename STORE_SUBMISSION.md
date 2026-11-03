@@ -30,7 +30,7 @@ Companion documents: `PRODUCTION_CONFIG.md` (env inventory),
 
 | Field | Value |
 | --- | --- |
-| App name | Pickleball App |
+| App name | Pickleball App: Courts & Games ("Pickleball App" alone is taken on another account; home-screen name is still Pickleball App) |
 | Bundle ID / package | `app.pickleballapp` |
 | Expo slug | `dreambreaker` |
 | EAS project | `04fcdd30-fb9e-47e2-9371-8e4e8b521c17` |
