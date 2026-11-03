@@ -66,6 +66,20 @@ jobs:
             -destination "generic/platform=iOS Simulator" \
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO | tail -50
           APP=$(find build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -1)
+          # Unsigned, the app has no keychain entitlement, so SecureStore
+          # (where the Supabase session lives) fails with -34018 and the app
+          # never leaves its loading spinner. An ad-hoc signature carrying
+          # just the keychain entitlements is enough on the simulator.
+          cat > keychain.entitlements <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>application-identifier</key><string>ZSH27U747N.app.pickleballapp</string>
+            <key>keychain-access-groups</key><array><string>ZSH27U747N.app.pickleballapp</string></array>
+          </dict></plist>
+          PLIST
+          codesign --force --sign - --entitlements keychain.entitlements --timestamp=none "$APP"
+          codesign -d --entitlements - "$APP"
           echo "APP_PATH=$PWD/$APP" >> "$GITHUB_ENV"
       - name: Boot simulator
         run: |
