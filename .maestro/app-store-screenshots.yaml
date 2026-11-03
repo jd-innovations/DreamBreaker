@@ -19,7 +19,11 @@ appId: app.pickleballapp
     timeout: 30000
 - tapOn: "you@email.com"
 - inputText: ${EMAIL}
-- tapOn: "Password"
+# "Password" is both the field's label and its placeholder, and a text tap
+# lands on the label, so the password went nowhere (run #9). Tap the input
+# box itself: on this simulator (6.9", fixed in the workflow) it sits at 44%.
+- tapOn:
+    point: "50%,44%"
 - inputText: ${PASSWORD}
 - hideKeyboard
 - tapOn: "Sign In"
