@@ -13,10 +13,10 @@ on:
   workflow_dispatch:
     inputs:
       lane:
-        description: "capture-screenshots = take screenshots (artifact only, unless upload is ticked); metadata = listing text; screenshots = upload committed screenshots; submit = attach build and submit for review"
+        description: "capture-screenshots = take screenshots (artifact only, unless upload is ticked); metadata = listing text; submit = attach build and submit for review"
         required: true
         type: choice
-        options: [capture-screenshots, metadata, screenshots, submit]
+        options: [capture-screenshots, metadata, submit]
       upload:
         description: "capture-screenshots only: also replace the screenshots in App Store Connect. Leave off until you have checked the artifact."
         type: boolean
