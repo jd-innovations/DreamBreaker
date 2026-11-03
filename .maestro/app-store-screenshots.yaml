@@ -33,6 +33,12 @@ appId: app.pickleballapp
 - extendedWaitUntil:
     notVisible: "Welcome back"
     timeout: 30000
+# iOS offers to save the password and the sheet covers every screenshot.
+- runFlow:
+    when:
+      visible: "Not Now"
+    commands:
+      - tapOn: "Not Now"
 - waitForAnimationToEnd:
     timeout: 5000
 - takeScreenshot: 00-home
@@ -41,10 +47,11 @@ appId: app.pickleballapp
 - takeScreenshot: 01-games
 
 - runFlow: { file: open.yaml, env: { LINK: "pickleballapp://tournaments" } }
+# The card shows the name upper-cased.
 - extendedWaitUntil:
-    visible: "Futures Classic"
+    visible: "(?i)futures classic"
     timeout: 30000
-- tapOn: "Futures Classic"
+- tapOn: "(?i)futures classic"
 - waitForAnimationToEnd:
     timeout: 5000
 - takeScreenshot: 02-tournament

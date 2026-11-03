@@ -3,9 +3,11 @@
 appId: app.pickleballapp
 ---
 - openLink: ${LINK}
+# Match the system prompt by its Cancel button too: the tournaments screen has
+# its own "Open" filter chip and status badge.
 - runFlow:
     when:
-      visible: "Open"
+      visible: "Cancel"
     commands:
       - tapOn: "Open"
 - waitForAnimationToEnd:
