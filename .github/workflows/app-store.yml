@@ -152,7 +152,9 @@ jobs:
 
   deliver:
     if: inputs.lane != 'capture-screenshots'
-    runs-on: macos-15
+    # deliver only talks to the App Store Connect API, so it needs no Mac.
+    # macos-15 jobs sat unassigned until GitHub cancelled them (2026-11-04).
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
