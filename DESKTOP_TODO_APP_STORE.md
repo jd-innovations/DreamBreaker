@@ -169,6 +169,11 @@ When approved, it waits for you: press **Release This Version** when ready.
 
 - Membership → 1.0.1 (needs build 15 and a second review). See
   `MEMBERSHIP_PHASE5_STOREKIT.md`.
+- 1.1: free tournament registration shows only "Failed to complete
+  registration" — `createRegistration` (apps/mobile/src/lib/supabase/registrations.ts)
+  returns null on any DB error, so the real reason is lost. Surface it
+  (already registered, registration closed, division full). JS only, ships
+  over OTA. Found 2026-11-04 while fixing re-registration after withdrawal.
 
 ---
 
