@@ -54,7 +54,10 @@ platform :ios do
 
   desc "Attach build #{BUILD_NUMBER} and submit for review (manual release)"
   lane :submit do
+    # Screenshots go up through the screenshots lane, which replaces them.
+    # Here they would be uploaded again on top of the ones already there.
     deliver(listing_options.merge(
+      skip_screenshots: true,
       build_number: BUILD_NUMBER,
       submit_for_review: true,
       automatic_release: false,
