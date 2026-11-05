@@ -15,8 +15,15 @@ const RAW_ID = process.env.NEXT_PUBLIC_APP_STORE_ID ?? "";
 
 export const APP_STORE_ID: string | null = /^\d{6,12}$/.test(RAW_ID) ? RAW_ID : null;
 
-/** Campaign tokens App Store Connect attributes installs to. Fixed vocabulary. */
-export type AppStoreCampaign = "web_prompt" | "web_qr" | "web_banner";
+/**
+ * Campaign tokens App Store Connect attributes installs to. Fixed vocabulary.
+ * The _d/_e pairs are the get-the-app prompt's A/B arms (app-prompt-host.tsx),
+ * so installs, not just clicks, can be compared per design. The QR codes
+ * printed in public/app-preview/qr-get-app-{d,e}.svg encode web_qr_{d,e}.
+ */
+export type AppStoreCampaign =
+  | "web_prompt" | "web_qr" | "web_banner"
+  | "web_prompt_d" | "web_prompt_e" | "web_qr_d" | "web_qr_e";
 
 /**
  * Every App Store link goes through /get-app, never straight to Apple: the

@@ -13,16 +13,27 @@
 //   - a signed-in visitor has no push token. A token means the app is
 //     installed, and a failed read counts as "don't know", so we stay quiet;
 //   - nothing else has claimed the overlay (lib/overlay-lock.ts).
+//
+// A/B test (2026-11-05): each browser is assigned design "d" (court sketch) or
+// "e" (tournament ticket) once and keeps it. Every event carries
+// `prompt_design`, and each design has its own App Store campaign tokens
+// (web_prompt_d/e, web_qr_d/e), so App Store Connect reports installs per arm.
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/analytics";
 import { claimOverlay } from "@/lib/overlay-lock";
-import { AppPrompt, type AppPromptSource, type AppPromptVariant } from "./app-prompt";
+import {
+  AppPrompt,
+  type AppPromptDesign,
+  type AppPromptSource,
+  type AppPromptVariant,
+} from "./app-prompt";
 
 const DISMISS_KEY = "dbpb.appPrompt.dismissedUntil";
 const SHOWN_THIS_VISIT_KEY = "dbpb.appPrompt.shownThisVisit";
+const DESIGN_KEY = "dbpb.appPrompt.design";
 const DISMISS_MS = 30 * 24 * 60 * 60 * 1000;
 const APPEAR_DELAY_MS = 2000;
 const APPEAR_SCROLL_PX = 400;
@@ -64,6 +75,21 @@ function remember(storage: "local" | "session", key: string, value: string) {
   }
 }
 
+// Sticky 50/50 assignment. isQuiet() has already proved storage works, so the
+// arm survives reloads; if the write fails anyway the visitor just gets a
+// fresh draw next visit.
+function designForBrowser(): AppPromptDesign {
+  try {
+    const saved = window.localStorage.getItem(DESIGN_KEY);
+    if (saved === "d" || saved === "e") return saved;
+  } catch {
+    /* fall through to a draw */
+  }
+  const drawn: AppPromptDesign = Math.random() < 0.5 ? "d" : "e";
+  remember("local", DESIGN_KEY, drawn);
+  return drawn;
+}
+
 async function appLikelyInstalled(): Promise<boolean> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -79,7 +105,7 @@ async function appLikelyInstalled(): Promise<boolean> {
 
 export function AppPromptHost({ appStoreId }: { appStoreId: string | null }) {
   const pathname = usePathname();
-  const [shown, setShown] = useState<{ source: AppPromptSource; variant: AppPromptVariant } | null>(null);
+  const [shown, setShown] = useState<{ source: AppPromptSource; variant: AppPromptVariant; design: AppPromptDesign } | null>(null);
 
   useEffect(() => {
     if (!appStoreId) return;
@@ -96,8 +122,9 @@ export function AppPromptHost({ appStoreId }: { appStoreId: string | null }) {
       done = true;
       if (!claimOverlay("app-prompt")) return;
       remember("session", SHOWN_THIS_VISIT_KEY, "1");
-      setShown({ source, variant });
-      track("app_prompt_shown", { source, prompt_variant: variant });
+      const design = designForBrowser();
+      setShown({ source, variant, design });
+      track("app_prompt_shown", { source, prompt_variant: variant, prompt_design: design });
     };
     const onScroll = () => {
       if (window.scrollY >= APPEAR_SCROLL_PX) appear();
@@ -125,7 +152,7 @@ export function AppPromptHost({ appStoreId }: { appStoreId: string | null }) {
     (event: "app_prompt_dismissed" | "app_prompt_clicked") => {
       if (!shown) return;
       remember("local", DISMISS_KEY, String(Date.now() + DISMISS_MS));
-      track(event, { source: shown.source, prompt_variant: shown.variant });
+      track(event, { source: shown.source, prompt_variant: shown.variant, prompt_design: shown.design });
       setShown(null);
     },
     [shown],
@@ -136,6 +163,7 @@ export function AppPromptHost({ appStoreId }: { appStoreId: string | null }) {
     <AppPrompt
       source={shown.source}
       variant={shown.variant}
+      design={shown.design}
       onDismiss={() => close("app_prompt_dismissed")}
       onGet={() => close("app_prompt_clicked")}
     />

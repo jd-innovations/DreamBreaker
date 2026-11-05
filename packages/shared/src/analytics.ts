@@ -47,7 +47,8 @@ export type AnalyticsEvent =
   | "push_prompt_accepted"
   | "push_prompt_denied"
   // Web "get the app" prompt (lightbox on desktop, bottom sheet on iPhone).
-  // `source` says which page, `prompt_variant` which surface.
+  // `source` says which page, `prompt_variant` which surface, `prompt_design`
+  // which A/B arm.
   | "app_prompt_shown"
   | "app_prompt_dismissed"
   | "app_prompt_clicked"
@@ -140,6 +141,7 @@ export const ALLOWED_PROPERTY_KEYS: readonly string[] = [
   "duration_ms",
   "source", // which screen or CTA started the flow
   "prompt_variant", // "lightbox" | "sheet" — fixed vocabulary, web app prompt
+  "prompt_design", // "d" | "e" — web app prompt A/B arm, fixed vocabulary
 
   // Domain identifiers. Opaque ids, never names or titles: a tournament title
   // is authored text and can contain anything, including a person's name.
