@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import TournamentDetailPage from "./tournament-detail-client";
 import { buildEntityMetadata } from "@/lib/og/metadata";
 import { fetchTournamentOg } from "@/lib/og/fetchers";
+import { tournamentStructuredData } from "@/lib/seo/event-structured-data";
+import { jsonLdHtml } from "@/lib/seo/site";
 
 // Server wrapper around the (fully client-rendered) tournament detail page.
 // generateMetadata cannot live in a "use client" file, and the interactive
@@ -18,6 +20,13 @@ export async function generateMetadata({
   return buildEntityMetadata("tournament", id, payload);
 }
 
-export default function Page({ params }: { params: Promise<{ id: string }> }) {
-  return <TournamentDetailPage params={params} />;
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const structuredData = await tournamentStructuredData(id);
+  return (
+    <>
+      {structuredData && <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdHtml(structuredData)} />}
+      <TournamentDetailPage params={params} />
+    </>
+  );
 }

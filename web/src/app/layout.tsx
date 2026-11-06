@@ -7,6 +7,8 @@ import { OnboardingNudgeHost } from "@/components/onboarding/onboarding-nudge-ho
 import { AnalyticsProvider } from "@/components/layout/analytics-provider";
 import { AppPromptHost } from "@/components/app-prompt/app-prompt-host";
 import { APP_STORE_ID } from "@/lib/app-store";
+import { APP_ORIGIN } from "@/lib/og/types";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_OPEN_GRAPH, SITE_TWITTER } from "@/lib/seo/site";
 import { Toaster } from "sonner";
 
 // Self-hosted (2026-09-30), not next/font/google: Google Fonts sometimes
@@ -32,16 +34,23 @@ const jetbrainsMono = localFont({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Pinch-zoom stays on: blocking it fails WCAG 1.4.4 and costs Lighthouse
+  // accessibility points. globals.css keeps iOS from auto-zooming on focus.
   viewportFit: "cover",
   interactiveWidget: "overlays-content",
+  themeColor: "#0A1228",
 };
 
 export const metadata: Metadata = {
-  title: "Pickleball App — Pickleball Tournaments",
-  description:
-    "Compete in elite pickleball tournaments. Find partners. Hold your spot. Earn your rank.",
+  // Resolves relative share-image and canonical URLs to the real domain.
+  metadataBase: new URL(APP_ORIGIN),
+  title: "Pickleball App — Tournaments, Open Play, Courts & Lessons",
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  // No canonical or og:url here: both are inherited by every page that does
+  // not set its own, and would tell Google each of them is the homepage.
+  openGraph: SITE_OPEN_GRAPH,
+  twitter: SITE_TWITTER,
   // Apple's native Smart App Banner (iOS Safari): "Get" without the app,
   // "Open" with it. Only once the App Store switch is on — see lib/app-store.ts.
   ...(APP_STORE_ID ? { itunes: { appId: APP_STORE_ID } } : {}),

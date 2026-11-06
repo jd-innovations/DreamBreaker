@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo/site";
 import Link from "next/link";
 import { Callout, LegalShell, OL, P, Section, Strong, UL } from "@/components/legal/legal-shell";
 import { LEGAL_ROUTES, PRIVACY_EMAIL, SUPPORT_EMAIL } from "@/lib/legal";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Delete Your Account — Pickleball App",
   description:
     "How to permanently delete your Pickleball App account and personal data, what is removed, and what is retained.",
-};
+  path: "/legal/delete-account",
+});
 
 export default function DeleteAccountPage() {
   return (

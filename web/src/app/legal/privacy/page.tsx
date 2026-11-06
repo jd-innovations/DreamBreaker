@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo/site";
 import Link from "next/link";
 import {
   Callout,
@@ -17,11 +18,12 @@ import {
   SUPPORT_EMAIL,
 } from "@/lib/legal";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy — Pickleball App",
   description:
     "What Pickleball App collects, why, who we share it with, how long we keep it, and how to delete your account and data.",
-};
+  path: "/legal/privacy",
+});
 
 export default function PrivacyPage() {
   return (

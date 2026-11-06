@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo/site";
 import Link from "next/link";
 import {
   Callout,
@@ -17,11 +18,12 @@ import {
   SUPPORT_EMAIL,
 } from "@/lib/legal";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Terms of Service — Pickleball App",
   description:
     "The agreement between you and Pickleball App covering accounts, tournaments, payments, marketplace listings, coaching, and acceptable use.",
-};
+  path: "/legal/terms",
+});
 
 export default function TermsPage() {
   return (

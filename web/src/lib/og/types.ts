@@ -35,6 +35,15 @@ export const OG_CANONICAL_PATH: Record<OgEntityType, (id: string) => string> = {
   facility: (id) => `/facility/${id}`,
 };
 
+// Where each entity's web page actually renders. Two share paths only redirect
+// (tournament/[id] and community/[id] call redirect()), so search engines get
+// the destination as the canonical URL and in the sitemap.
+export const WEB_PAGE_PATH: Record<OgEntityType, (id: string) => string> = {
+  ...OG_CANONICAL_PATH,
+  tournament: (id) => `/tournaments/${id}`,
+  community: (id) => `/play/${id}`,
+};
+
 // What a found, public, shareable row renders as. `imageUrl` is the entity's
 // own cover photo when it has one; null means "no cover photo", not "hide the
 // image" — callers fall back to the dynamic /api/og image in that case.

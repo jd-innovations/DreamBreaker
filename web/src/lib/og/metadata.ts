@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { APP_ORIGIN, OG_CANONICAL_PATH, type OgEntityType, type OgPayload } from "./types";
+import { APP_ORIGIN, OG_CANONICAL_PATH, WEB_PAGE_PATH, type OgEntityType, type OgPayload } from "./types";
 
 const GENERIC_TITLE = "Pickleball App";
 const GENERIC_DESCRIPTION =
@@ -32,8 +32,11 @@ export function buildEntityMetadata(
   id: string,
   payload: OgPayload | null,
 ): Metadata {
-  const canonicalPath = OG_CANONICAL_PATH[entityType](id);
-  const canonicalUrl = `${APP_ORIGIN}${canonicalPath}`;
+  // og:url is the share link (it opens the app where installed); the
+  // canonical is the page that actually renders, because Google treats a
+  // canonical that redirects as a conflicting signal.
+  const shareUrl = `${APP_ORIGIN}${OG_CANONICAL_PATH[entityType](id)}`;
+  const canonicalUrl = `${APP_ORIGIN}${WEB_PAGE_PATH[entityType](id)}`;
 
   if (!payload) {
     const image = fallbackImage(entityType, id);
@@ -41,10 +44,14 @@ export function buildEntityMetadata(
       title: `${GENERIC_TITLE} — ${ENTITY_SUFFIX[entityType]}`,
       description: GENERIC_DESCRIPTION,
       alternates: { canonical: canonicalUrl },
+      // Not found, private, draft or cancelled: a generic page that should
+      // never be a search result. Identical for every reason, so it still
+      // reveals nothing about whether the id exists.
+      robots: { index: false, follow: true },
       openGraph: {
         title: GENERIC_TITLE,
         description: GENERIC_DESCRIPTION,
-        url: canonicalUrl,
+        url: shareUrl,
         type: "website",
         images: [{ url: image, width: 1200, height: 630 }],
       },
@@ -67,7 +74,7 @@ export function buildEntityMetadata(
     openGraph: {
       title: payload.title,
       description: payload.description,
-      url: canonicalUrl,
+      url: shareUrl,
       type: payload.ogType,
       images: [{ url: image, width: 1200, height: 630 }],
     },

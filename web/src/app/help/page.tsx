@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo/site";
 import Link from "next/link";
 import { Callout, LegalShell, P, Section, Strong, UL } from "@/components/legal/legal-shell";
 import { LEGAL_ROUTES, PRIVACY_EMAIL, SUPPORT_EMAIL } from "@/lib/legal";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Support — Pickleball App",
   description:
     "Get help with your Pickleball App account, tournament registrations, payments, and safety reports.",
-};
+  path: "/help",
+});
 
 export default function HelpPage() {
   return (

@@ -17,6 +17,7 @@
  */
 
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo/site";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, List, MapTrifold } from "@phosphor-icons/react/dist/ssr";
 import { marketplaceConditionLabel, marketplaceFulfillmentLabel } from "@shared/marketplace";
@@ -32,10 +33,12 @@ import {
   parseBrowseParams, SORT_LABEL, SORTS,
 } from "@/lib/marketplace/browse";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Marketplace — Pickleball App",
-  description: "Used and new pickleball paddles for sale from players near you.",
-};
+  description:
+    "Used and new pickleball paddles for sale from players near you.",
+  path: "/marketplace",
+});
 
 const MAP_KEY_PRESENT = (process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "").length > 0;
 

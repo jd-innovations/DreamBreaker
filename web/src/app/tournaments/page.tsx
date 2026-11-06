@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import TournamentsPage from "./tournaments-client";
+import { pageMetadata } from "@/lib/seo/site";
 
 // Server wrapper around the fully client-rendered tournaments browse page.
 //
@@ -12,6 +13,13 @@ import TournamentsPage from "./tournaments-client";
 // string hint the framework can choose to ignore — awaiting it forces this
 // route to render fresh on every request, the same guarantee `force-dynamic`
 // is supposed to provide but, empirically, did not in this deployment.
+export const metadata = pageMetadata({
+  title: "Pickleball Tournaments Near You — Pickleball App",
+  description:
+    "Browse upcoming pickleball tournaments by date, location and skill level. Hold your spot, register and pay online, and follow brackets live.",
+  path: "/tournaments",
+});
+
 export default async function Page() {
   await connection();
   return <TournamentsPage />;

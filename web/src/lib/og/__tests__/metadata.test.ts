@@ -27,15 +27,16 @@ describe('buildEntityMetadata — found entity', () => {
     expect((meta.twitter as { card?: string } | undefined)?.card).toBe('summary_large_image');
   });
 
-  it('canonical URL uses the singular /tournament/{id} path', () => {
+  it('og:url is the singular /tournament/{id} share link; canonical is the page that renders', () => {
     const meta = buildEntityMetadata('tournament', 'abc-123', payload);
-    expect(meta.alternates?.canonical).toBe(`${APP_ORIGIN}/tournament/abc-123`);
     expect(meta.openGraph?.url).toBe(`${APP_ORIGIN}/tournament/abc-123`);
+    expect(meta.alternates?.canonical).toBe(`${APP_ORIGIN}/tournaments/abc-123`);
   });
 
-  it('community uses /community/{id}, group uses /groups/{id} (plural)', () => {
+  it('community shares /community/{id} but canonicalises to /play/{id}; group uses /groups/{id}', () => {
     const community = buildEntityMetadata('community', 'evt-1', { ...payload, entityType: 'community' });
-    expect(community.alternates?.canonical).toBe(`${APP_ORIGIN}/community/evt-1`);
+    expect(community.openGraph?.url).toBe(`${APP_ORIGIN}/community/evt-1`);
+    expect(community.alternates?.canonical).toBe(`${APP_ORIGIN}/play/evt-1`);
 
     const group = buildEntityMetadata('group', 'grp-1', { ...payload, entityType: 'group' });
     expect(group.alternates?.canonical).toBe(`${APP_ORIGIN}/groups/grp-1`);
@@ -49,6 +50,14 @@ describe('buildEntityMetadata — found entity', () => {
 });
 
 describe('buildEntityMetadata — missing/private/cancelled (payload is null)', () => {
+  it('is noindex, and a found entity is not', () => {
+    expect(buildEntityMetadata('tournament', 'x', null).robots).toEqual({ index: false, follow: true });
+    expect(buildEntityMetadata('tournament', 'abc-123', {
+      entityType: 'tournament', id: 'abc-123', title: 'T', description: 'D',
+      imageUrl: null, detailLine: null, ogType: 'website',
+    }).robots).toBeUndefined();
+  });
+
   it('never reveals whether the id exists — same generic metadata for every entity type', () => {
     const tournament = buildEntityMetadata('tournament', 'x', null);
     const coach = buildEntityMetadata('coach', 'y', null);
