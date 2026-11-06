@@ -4,10 +4,33 @@
 // an Animated.Value + PanResponder; this generalizes that same primitive to
 // three drag-snappable heights for Marketplace Listing Detail, which is the
 // first screen that needs progressive disclosure rather than open/closed.
+//
+// Reworked 2026-11-06 after "hard to close and expand":
+// - The PanResponder is created once, so it read the snap and heights from the
+//   first render forever. A drag on the half sheet started from the collapsed
+//   height and could not step down. Live values now come from refs.
+// - The whole sheet drags, not just a 20pt handle. Vertical moves are claimed
+//   in the capture phase, so taps on buttons inside still work, and a drag that
+//   starts on a button becomes a sheet drag.
+// - In `full`, the content scrolls; a pull down only moves the sheet once that
+//   scroll is at the top (renderFull gets the scroll props that make this work).
+// - The handle is a button: tap steps collapsed → half, half/full → one down.
+// Built on PanResponder + Animated on purpose: no new native dependency, so it
+// ships over the air.
 import React, { useRef, useState, useCallback } from 'react';
-import { Animated, PanResponder, StyleSheet, View, Dimensions } from 'react-native';
+import {
+  Animated, PanResponder, StyleSheet, View, Dimensions, Pressable,
+  type NativeScrollEvent, type NativeSyntheticEvent,
+} from 'react-native';
 
 export type SheetSnap = 'collapsed' | 'half' | 'full';
+
+/** Spread onto the ScrollView inside renderFull so a pull-down at the top moves the sheet. */
+export type SheetScrollProps = {
+  onScroll: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  scrollEventThrottle: number;
+  bounces: boolean;
+};
 
 type Props = {
   snap: SheetSnap;
@@ -23,18 +46,24 @@ type Props = {
   collapsedBackgroundColor?: string;
   renderCollapsed: () => React.ReactNode;
   renderHalf?: () => React.ReactNode;
-  renderFull?: () => React.ReactNode;
+  renderFull?: (scrollProps: SheetScrollProps) => React.ReactNode;
 };
 
 const { height: SCREEN_H } = Dimensions.get('window');
 const VELOCITY_THRESH = 0.5;
+const ORDER: SheetSnap[] = ['collapsed', 'half', 'full'];
+
+/** A move counts as a sheet drag once it is clearly vertical. */
+function isVerticalDrag(dx: number, dy: number): boolean {
+  return Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx) * 1.2;
+}
 
 export function DraggableSheet({
   snap, onSnapChange, collapsedHeight, halfHeight, fullHeight = SCREEN_H * 0.92,
   bottomInset = 0, collapsedBackgroundColor = '#FFFFFF', renderCollapsed, renderHalf, renderFull,
 }: Props) {
   const heights: Record<SheetSnap, number> = { collapsed: collapsedHeight, half: halfHeight, full: fullHeight };
-  const order: SheetSnap[] = ['collapsed', 'half', 'full'];
+  const order = ORDER.filter((s) => s === 'collapsed' || (s === 'half' ? !!renderHalf : !!renderFull));
 
   // Current animated height of the sheet (drives the container's actual size,
   // not a translateY — simpler to reason about with content that changes
@@ -43,38 +72,58 @@ export function DraggableSheet({
   const dragStartHeight = useRef(heights[snap]);
   const [renderedSnap, setRenderedSnap] = useState<SheetSnap>(snap);
 
+  // Everything the once-created PanResponder reads, refreshed every render.
+  const live = useRef({ snap: renderedSnap, heights, order, scrollY: 0, onSnapChange });
+  live.current.snap = renderedSnap;
+  live.current.heights = heights;
+  live.current.order = order;
+  live.current.onSnapChange = onSnapChange;
+
   const animateTo = useCallback((target: SheetSnap) => {
+    live.current.snap = target;
     setRenderedSnap(target);
-    Animated.spring(height, { toValue: heights[target], bounciness: 4, speed: 14, useNativeDriver: false }).start();
-    onSnapChange(target);
-  }, [height, onSnapChange, heights]);
+    Animated.spring(height, {
+      toValue: live.current.heights[target], bounciness: 4, speed: 14, useNativeDriver: false,
+    }).start();
+    live.current.onSnapChange(target);
+  }, [height]);
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 6,
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponderCapture: (_, gs) => {
+        if (!isVerticalDrag(gs.dx, gs.dy)) return false;
+        const { snap: current, scrollY } = live.current;
+        // In full the content scrolls; only a pull down from its top is ours.
+        if (current === 'full') return gs.dy > 0 && scrollY <= 0;
+        return true;
+      },
+      onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: () => {
-        dragStartHeight.current = heights[renderedSnap];
+        height.stopAnimation();
+        dragStartHeight.current = live.current.heights[live.current.snap];
       },
       onPanResponderMove: (_, gs) => {
+        const { heights: h } = live.current;
         const next = dragStartHeight.current - gs.dy;
-        height.setValue(Math.max(heights.collapsed * 0.6, Math.min(heights.full, next)));
+        height.setValue(Math.max(h.collapsed * 0.6, Math.min(h.full, next)));
       },
       onPanResponderRelease: (_, gs) => {
-        const current = dragStartHeight.current - gs.dy;
-        const idx = order.indexOf(renderedSnap);
+        const { heights: h, order: o, snap: current } = live.current;
+        const resting = dragStartHeight.current - gs.dy;
+        const idx = o.indexOf(current);
 
         let target: SheetSnap;
-        if (gs.vy < -VELOCITY_THRESH && idx < order.length - 1) target = order[idx + 1];
-        else if (gs.vy > VELOCITY_THRESH && idx > 0) target = order[idx - 1];
+        if (gs.vy < -VELOCITY_THRESH && idx < o.length - 1) target = o[idx + 1];
+        else if (gs.vy > VELOCITY_THRESH && idx > 0) target = o[idx - 1];
         else {
           // Snap to whichever defined height is nearest the drag's resting point.
-          target = order.reduce((closest, s) =>
-            Math.abs(heights[s] - current) < Math.abs(heights[closest] - current) ? s : closest,
-            order[0]);
+          target = o.reduce((closest, s) =>
+            Math.abs(h[s] - resting) < Math.abs(h[closest] - resting) ? s : closest, o[0]);
         }
         animateTo(target);
       },
+      onPanResponderTerminate: () => animateTo(live.current.snap),
     }),
   ).current;
 
@@ -85,17 +134,38 @@ export function DraggableSheet({
     animateTo(snap);
   }, [snap, collapsedHeight, halfHeight, fullHeight]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const content = renderedSnap === 'full' && renderFull ? renderFull()
+  const onHandlePress = () => {
+    const idx = order.indexOf(renderedSnap);
+    animateTo(renderedSnap === 'collapsed' ? order[Math.min(1, order.length - 1)] : order[Math.max(0, idx - 1)]);
+  };
+
+  const scrollProps: SheetScrollProps = {
+    onScroll: (e) => { live.current.scrollY = e.nativeEvent.contentOffset.y; },
+    scrollEventThrottle: 16,
+    // A bounce at the top would eat the pull-down that should move the sheet.
+    bounces: false,
+  };
+
+  const content = renderedSnap === 'full' && renderFull ? renderFull(scrollProps)
     : renderedSnap === 'half' && renderHalf ? renderHalf()
     : renderCollapsed();
 
   const backgroundColor = renderedSnap === 'collapsed' ? collapsedBackgroundColor : '#FFFFFF';
 
   return (
-    <Animated.View style={[styles.sheet, { height, paddingBottom: bottomInset, backgroundColor }]}>
-      <View {...panResponder.panHandlers} style={styles.handleZone}>
+    <Animated.View
+      {...panResponder.panHandlers}
+      style={[styles.sheet, { height, paddingBottom: bottomInset, backgroundColor }]}
+    >
+      <Pressable
+        onPress={onHandlePress}
+        style={styles.handleZone}
+        hitSlop={{ left: 40, right: 40 }}
+        accessibilityRole="button"
+        accessibilityLabel={renderedSnap === 'collapsed' ? 'Show more details' : 'Show less'}
+      >
         <View style={styles.handle} />
-      </View>
+      </Pressable>
       <View style={styles.body}>{content}</View>
     </Animated.View>
   );
@@ -108,7 +178,9 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.12, shadowRadius: 16,
     elevation: 20, overflow: 'hidden',
   },
-  handleZone: { alignItems: 'center', paddingTop: 10, paddingBottom: 6 },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E0E8F5' },
+  // 32pt tall (plus the side hitSlop) instead of 20: the handle is now a tap
+  // target as well as the obvious place to grab.
+  handleZone: { alignItems: 'center', justifyContent: 'center', height: 32, alignSelf: 'center', width: 120 },
+  handle: { width: 44, height: 5, borderRadius: 3, backgroundColor: '#B8C4D9' },
   body: { flex: 1, paddingHorizontal: 20 },
 });

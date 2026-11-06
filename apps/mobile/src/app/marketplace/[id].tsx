@@ -3,14 +3,14 @@
 // DraggableSheet (collapsed → half → full) carrying progressively more detail.
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, TextInput, Image,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, TextInput, Image, Dimensions,
   KeyboardAvoidingView, Platform, Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ProgressiveImageViewer } from '@/components/media/ProgressiveImageViewer';
-import { DraggableSheet, type SheetSnap } from '@/components/sheets/DraggableSheet';
+import { DraggableSheet, type SheetSnap, type SheetScrollProps } from '@/components/sheets/DraggableSheet';
 import { useSession } from '@/hooks/useSession';
 import {
   fetchListingDetail, reportListing, type MarketplaceListingWithPhotos, type ListingReportReason,
@@ -37,6 +37,8 @@ const L = {
   navy: '#0A1228', gold: '#C9A84C', text: '#0A1228', textMuted: '#9AAABF',
   border: '#E0E8F5', green: '#16A34A', danger: '#EF4444', dangerBg: '#FEE2E2',
 };
+
+const { height: SCREEN_H } = Dimensions.get('window');
 
 const REPORT_REASONS: { id: ListingReportReason; label: string; icon: string }[] = [
   { id: 'mislabeled', label: 'Mislabeled or inaccurate', icon: 'alert-circle-outline' },
@@ -70,6 +72,8 @@ export default function ListingDetailScreen() {
   // than guessed — the guess here is only a first-paint fallback before that
   // measurement lands.
   const [collapsedContentHeight, setCollapsedContentHeight] = useState(150);
+  // + the sheet's 32pt handle row.
+  const collapsedHeight = collapsedContentHeight + 32 + insets.bottom;
   // Two menus, both through the shared ContextMenu: on iOS each presents the
   // real system action sheet, on Android an anchored popover. Replaces the two
   // hand-drawn modals this screen used to carry, and matches my-listings, which
@@ -428,8 +432,11 @@ export default function ListingDetailScreen() {
       <DraggableSheet
         snap={snap}
         onSnapChange={setSnap}
-        collapsedHeight={collapsedContentHeight + 20 + insets.bottom}
-        halfHeight={420}
+        collapsedHeight={collapsedHeight}
+        // Collapsed plus the description's three lines and the seller row, so
+        // the step up is visibly bigger. Was a fixed 420, which on a listing
+        // with a tall collapsed card was barely taller than collapsed.
+        halfHeight={Math.min(SCREEN_H * 0.6, collapsedHeight + 140)}
         bottomInset={insets.bottom}
         collapsedBackgroundColor="rgba(255,255,255,0.5)"
         renderCollapsed={() => (
@@ -450,8 +457,8 @@ export default function ListingDetailScreen() {
             onMessageSeller={handleMessageSeller}
           />
         )}
-        renderFull={() => (
-          <FullContent listing={listing} seller={seller}
+        renderFull={(scrollProps) => (
+          <FullContent listing={listing} seller={seller} scrollProps={scrollProps}
             onReport={presentReportMenu}
           />
         )}
@@ -630,8 +637,10 @@ function HalfContent(props: {
   onRenew: () => void;
 }) {
   const { listing, seller } = props;
+  // Not scrollable: the sheet owns vertical drags at this height, and the
+  // content (three description lines, the seller) is sized to fit it.
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
+    <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={false}>
       <CollapsedContent {...props} />
       {listing.description && (
         <Text style={s.description} numberOfLines={3}>{listing.description}</Text>
@@ -646,11 +655,12 @@ function HalfContent(props: {
   );
 }
 
-function FullContent({ listing, seller, onReport }: {
+function FullContent({ listing, seller, onReport, scrollProps }: {
   listing: MarketplaceListingWithPhotos; seller: UserProfile | null; onReport: () => void;
+  scrollProps: SheetScrollProps;
 }) {
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView {...scrollProps} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
       <Text style={s.title}>{listing.title}</Text>
       <View style={s.priceRow}>
         <Text style={s.price}>{formatPriceCents(listing.asking_price_cents)}</Text>
