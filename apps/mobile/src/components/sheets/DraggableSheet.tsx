@@ -15,6 +15,8 @@
 // - In `full`, the content scrolls; a pull down only moves the sheet once that
 //   scroll is at the top (renderFull gets the scroll props that make this work).
 // - The handle is a button: tap steps collapsed → half, half/full → one down.
+// - Half and full show an X in the handle row's right corner that drops straight
+//   back to collapsed, matching the X on the app's other sheets.
 // Built on PanResponder + Animated on purpose: no new native dependency, so it
 // ships over the air.
 import React, { useRef, useState, useCallback } from 'react';
@@ -22,6 +24,7 @@ import {
   Animated, PanResponder, StyleSheet, View, Dimensions, Pressable,
   type NativeScrollEvent, type NativeSyntheticEvent,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 export type SheetSnap = 'collapsed' | 'half' | 'full';
 
@@ -166,6 +169,17 @@ export function DraggableSheet({
       >
         <View style={styles.handle} />
       </Pressable>
+      {renderedSnap !== 'collapsed' && (
+        <Pressable
+          onPress={() => animateTo('collapsed')}
+          style={styles.closeBtn}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Close details"
+        >
+          <Ionicons name="close" size={22} color="#0A1228" />
+        </Pressable>
+      )}
       <View style={styles.body}>{content}</View>
     </Animated.View>
   );
@@ -182,5 +196,7 @@ const styles = StyleSheet.create({
   // target as well as the obvious place to grab.
   handleZone: { alignItems: 'center', justifyContent: 'center', height: 32, alignSelf: 'center', width: 120 },
   handle: { width: 44, height: 5, borderRadius: 3, backgroundColor: '#B8C4D9' },
+  // Sits in the handle row, so it never covers the content below.
+  closeBtn: { position: 'absolute', top: 0, right: 8, width: 40, height: 32, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, paddingHorizontal: 20 },
 });
