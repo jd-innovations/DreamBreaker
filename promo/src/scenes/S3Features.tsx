@@ -14,11 +14,11 @@ const PHONE = { cx: W / 2, top: 450, width: 600 };
 const Court: React.FC<{ color: string }> = ({ color }) => (
   <svg width={W} height={H} style={{ position: "absolute", inset: 0 }}>
     <g stroke={color} fill="none" strokeLinecap="round">
-      <rect x={90} y={380} width={W - 180} height={H - 500} strokeWidth={10} strokeOpacity={0.22} />
+      <rect x={90} y={410} width={W - 180} height={H - 530} strokeWidth={10} strokeOpacity={0.22} />
       <line x1={90} y1={1150} x2={W - 90} y2={1150} strokeWidth={14} strokeOpacity={0.3} />
       <line x1={90} y1={900} x2={W - 90} y2={900} strokeWidth={10} strokeOpacity={0.22} />
       <line x1={90} y1={1400} x2={W - 90} y2={1400} strokeWidth={10} strokeOpacity={0.22} />
-      <line x1={W / 2} y1={380} x2={W / 2} y2={900} strokeWidth={10} strokeOpacity={0.22} />
+      <line x1={W / 2} y1={410} x2={W / 2} y2={900} strokeWidth={10} strokeOpacity={0.22} />
       <line x1={W / 2} y1={1400} x2={W / 2} y2={H - 120} strokeWidth={10} strokeOpacity={0.22} />
     </g>
   </svg>
@@ -26,7 +26,7 @@ const Court: React.FC<{ color: string }> = ({ color }) => (
 
 const Headline: React.FC<{ text: string; t: number; icon: IconComp }> = ({ text, t, icon }) => (
   <>
-    <Line words={words(text, { font: "sans", size: 68 })} y={360} t={t} t0={0.05} stagger={0.05} dur={0.4} />
+    <Line words={words(text, { font: "sans", size: 68 })} y={330} t={t} t0={0.05} stagger={0.05} dur={0.4} />
     <Bubble x={W - 140} y={560} r={84} s={back(prog(t, 0.4, 0.5))}>
       <Icon as={icon} x={84} y={80} s={0.9} />
     </Bubble>
