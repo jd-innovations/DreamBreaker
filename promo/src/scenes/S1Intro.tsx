@@ -5,7 +5,7 @@ import { ICONS, Icon } from "../icons";
 import { C, H, W, back, eio, eo, lerp, prog, seeded } from "../theme";
 
 // Scene 1 (5.0s): a field of icons pops in, parts from the centre, and the
-// logo + "finds your next game." rise into the gap.
+// logo + "The operating system for pickleball." rise into the gap.
 
 const rng = seeded(7);
 const uni = (a: number, b: number) => a + (b - a) * rng();
@@ -49,7 +49,7 @@ export const S1Intro: React.FC<{ t: number }> = ({ t }) => {
           left: W / 2 - 500,
           top: 740,
           width: 1000,
-          height: 440,
+          height: 520,
           borderRadius: "50%",
           background: C.bg,
           opacity: glow,
@@ -57,7 +57,8 @@ export const S1Intro: React.FC<{ t: number }> = ({ t }) => {
         }}
       />
       <Line words={[{ logo: true, height: 130 }]} y={895} t={t} t0={2.1} dur={0.5} />
-      <Line words={words("finds your next game.", { font: "serif", size: 88, color: C.green })} y={1040} t={t} t0={2.45} />
+      <Line words={words("The operating system", { font: "soft", size: 84, color: C.green })} y={1035} t={t} t0={2.45} stagger={0.06} />
+      <Line words={words("for pickleball.", { font: "soft", size: 84, color: C.green })} y={1130} t={t} t0={2.7} stagger={0.06} />
     </AbsoluteFill>
   );
 };

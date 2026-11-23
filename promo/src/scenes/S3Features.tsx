@@ -2,7 +2,7 @@ import React from "react";
 import { AbsoluteFill } from "remotion";
 import { Bubble, Line, Phone, words } from "../components";
 import { Icon, IconComp, People, Pin, Trophy } from "../icons";
-import { C, H, W, back, eio, eo, lerp, manrope, prog } from "../theme";
+import { C, H, W, back, eio, eo, lerp, font, prog } from "../theme";
 
 // Scene 3 (6.0s): three 2s panels, each a real app screen, joined by a
 // circular wipe. Overlays (pulses, taps, toasts) sit on top of the
@@ -26,7 +26,7 @@ const Court: React.FC<{ color: string }> = ({ color }) => (
 
 const Headline: React.FC<{ text: string; t: number; icon: IconComp }> = ({ text, t, icon }) => (
   <>
-    <Line words={words(text, { font: "sans", size: 68 })} y={330} t={t} t0={0.05} stagger={0.05} dur={0.4} />
+    <Line words={words(text, { font: "bold", size: 68 })} y={330} t={t} t0={0.05} stagger={0.05} dur={0.4} />
     <Bubble x={W - 140} y={560} r={84} s={back(prog(t, 0.4, 0.5))}>
       <Icon as={icon} x={84} y={80} s={0.9} />
     </Bubble>
@@ -109,7 +109,7 @@ const Toast: React.FC<{ text: string; x: number; y: number; s: number }> = ({ te
         transform: `translate(-50%, -50%) scale(${s})`,
         background: C.green,
         color: C.white,
-        fontFamily: manrope,
+        fontFamily: font,
         fontWeight: 800,
         fontSize: 40,
         padding: "20px 34px",

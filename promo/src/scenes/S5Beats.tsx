@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill } from "remotion";
 import { BallFace } from "../icons";
-import { C, W, back, eo, lerp, manrope, prog } from "../theme";
+import { C, W, back, eo, lerp, font, prog } from "../theme";
 
 // Scene 5 (2.6s): three beats; each dims as the next lands.
 
@@ -30,7 +30,7 @@ export const S5Beats: React.FC<{ t: number }> = ({ t }) => {
               width: W,
               top: 700 + i * 180,
               textAlign: "center",
-              fontFamily: manrope,
+              fontFamily: font,
               fontWeight: 800,
               fontSize: last ? 140 : 118,
               letterSpacing: "-0.03em",

@@ -1,5 +1,4 @@
-import { loadFont as loadManrope } from "@remotion/google-fonts/Manrope";
-import { loadFont as loadNewsreader } from "@remotion/google-fonts/Newsreader";
+import { loadFont as loadShantell } from "@remotion/google-fonts/ShantellSans";
 
 export const W = 1080;
 export const H = 1920;
@@ -27,8 +26,8 @@ export const C = {
   white: "#FFFFFF",
 };
 
-export const manrope = loadManrope("normal", { weights: ["600", "800"], subsets: ["latin"] }).fontFamily;
-export const newsreader = loadNewsreader("normal", { weights: ["400", "500"], subsets: ["latin"] }).fontFamily;
+/** One typeface for the whole ad: Shantell Sans (owner's pick, 2026-11-23). */
+export const font = loadShantell("normal", { weights: ["500", "600", "800"], subsets: ["latin"] }).fontFamily;
 
 // ---------- easing (ported from the reference script) ----------
 export const clamp = (x: number, a = 0, b = 1) => Math.max(a, Math.min(b, x));

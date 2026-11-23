@@ -2,7 +2,7 @@ import React from "react";
 import { AbsoluteFill } from "remotion";
 import { AppIcon, Bubble, Line, words } from "../components";
 import { Calendar, Icon, IconComp, People, Pin, Trophy } from "../icons";
-import { C, W, back, eio, eo, manrope, prog } from "../theme";
+import { C, W, back, eio, eo, font, prog } from "../theme";
 
 // Scene 2 (3.5s): the app icon at the centre, connected to four bubbles.
 
@@ -19,8 +19,8 @@ export const S2Hub: React.FC<{ t: number }> = ({ t }) => {
   return (
     <AbsoluteFill style={{ background: C.bg }}>
       <Line words={[{ logo: true, height: 105 }]} y={410} t={t} t0={0.05} />
-      <Line words={words("connects you to", { font: "serif", size: 74 })} y={530} t={t} t0={0.2} stagger={0.06} />
-      <Line words={words("everything you need:", { font: "serif", size: 74 })} y={622} t={t} t0={0.35} stagger={0.06} />
+      <Line words={words("connects you to", { font: "soft", size: 74 })} y={530} t={t} t0={0.2} stagger={0.06} />
+      <Line words={words("everything you need:", { font: "soft", size: 74 })} y={622} t={t} t0={0.35} stagger={0.06} />
 
       <svg width={W} height={1920} style={{ position: "absolute", inset: 0 }}>
         {BUBS.map(([, , dx, dy], i) => {
@@ -82,7 +82,7 @@ export const S2Hub: React.FC<{ t: number }> = ({ t }) => {
                 width: 400,
                 top: by + 132,
                 textAlign: "center",
-                fontFamily: manrope,
+                fontFamily: font,
                 fontWeight: 600,
                 fontSize: 42,
                 color: C.ink,

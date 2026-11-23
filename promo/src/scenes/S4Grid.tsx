@@ -27,8 +27,8 @@ export const S4Grid: React.FC<{ t: number }> = ({ t }) => {
   return (
     <AbsoluteFill style={{ background: C.bg }}>
       {cells}
-      <Line words={words("Everything for your game.", { font: "serif", size: 84 })} y={1430} t={t} t0={1.25} stagger={0.06} />
-      <Line words={words("One app.", { font: "sans", size: 84, color: C.green })} y={1540} t={t} t0={1.55} stagger={0.06} />
+      <Line words={words("Everything for your game.", { font: "soft", size: 74 })} y={1430} t={t} t0={1.25} stagger={0.06} />
+      <Line words={words("One app.", { font: "bold", size: 80, color: C.green })} y={1540} t={t} t0={1.55} stagger={0.06} />
     </AbsoluteFill>
   );
 };

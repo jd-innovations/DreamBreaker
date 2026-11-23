@@ -1,10 +1,11 @@
 import React from "react";
 import { AbsoluteFill, Img, staticFile } from "remotion";
-import { C, SAFE, W, eo, manrope, newsreader, prog } from "./theme";
+import { C, SAFE, W, eo, font, prog } from "./theme";
 
 // ---------- text ----------
 
-export type Font = "serif" | "sans";
+/** "soft" = the calmer lines (weight 500), "bold" = the punchy ones (800). */
+export type Font = "soft" | "bold";
 
 export type Word =
   | { text: string; font: Font; size: number; weight?: number; color?: string; italic?: boolean }
@@ -49,13 +50,13 @@ export const Line: React.FC<{
             key={i}
             style={{
               ...style,
-              fontFamily: w.font === "serif" ? newsreader : manrope,
+              fontFamily: font,
               fontSize: w.size,
-              fontWeight: w.weight ?? (w.font === "serif" ? 400 : 800),
+              fontWeight: w.weight ?? (w.font === "soft" ? 500 : 800),
               fontStyle: w.italic ? "italic" : "normal",
               color: w.color ?? C.ink,
               lineHeight: 1.1,
-              letterSpacing: w.font === "sans" ? "-0.02em" : "-0.01em",
+              letterSpacing: "-0.01em",
               whiteSpace: "nowrap",
             }}
           >

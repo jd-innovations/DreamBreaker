@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Img, staticFile } from "remotion";
 import { AppIcon, Line, Logo, words } from "../components";
-import { C, W, back, eio, eo, lerp, manrope, prog } from "../theme";
+import { C, W, back, eio, eo, lerp, font, prog } from "../theme";
 
 // Scene 6 (4.4s): "Stay in the game with [logo]" → app icon + logo lockup
 // → Apple's official "Download on the App Store" badge (public/app-store-badge.svg,
@@ -22,8 +22,8 @@ export const S6Outro: React.FC<{ t: number }> = ({ t }) => {
     <AbsoluteFill style={{ background: C.bg }}>
       {out < 1 && (
         <AbsoluteFill style={{ opacity: 1 - out }}>
-          <Line words={words("Stay in the game", { font: "serif", size: 88 })} y={900} t={t} t0={0.05} stagger={0.07} />
-          <Line words={[{ text: "with", font: "serif", size: 88 }, { logo: true, height: 98 }]} y={1030} t={t} t0={0.3} stagger={0.08} />
+          <Line words={words("Stay in the game", { font: "soft", size: 88 })} y={900} t={t} t0={0.05} stagger={0.07} />
+          <Line words={[{ text: "with", font: "soft", size: 88 }, { logo: true, height: 98 }]} y={1030} t={t} t0={0.3} stagger={0.08} />
         </AbsoluteFill>
       )}
 
@@ -55,7 +55,7 @@ export const S6Outro: React.FC<{ t: number }> = ({ t }) => {
           }}
         >
           <Logo height={125} />
-          <div style={{ fontFamily: manrope, fontWeight: 600, fontSize: 46, color: C.inkSoft }}>Courts &amp; Games</div>
+          <div style={{ fontFamily: font, fontWeight: 600, fontSize: 46, color: C.inkSoft }}>Courts &amp; Games</div>
         </div>
       )}
 
