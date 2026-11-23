@@ -1,0 +1,25 @@
+{
+  "name": "pickleball-app-promo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "App promo video (Remotion). Standalone: not part of mobile or web builds.",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render PromoAd out/pickleball-app-ad.mp4",
+    "stills": "node scripts/stills.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.546",
+    "@remotion/cli": "4.0.546",
+    "@remotion/google-fonts": "4.0.546",
+    "@remotion/renderer": "^4.0.546",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "remotion": "4.0.546"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "typescript": "^5.9.0"
+  }
+}
