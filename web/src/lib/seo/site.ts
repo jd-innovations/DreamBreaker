@@ -51,6 +51,31 @@ export function pageMetadata({ title, description, path }: { title: string; desc
   };
 }
 
+/** The App Store listing's name, which differs from SITE_NAME ("Pickleball App" was taken). */
+export const APP_STORE_NAME = "Pickleball App: Courts & Games";
+
+/**
+ * The iOS app as a schema.org MobileApplication, linked to the Organization
+ * node on the homepage. Deliberately has no aggregateRating: Google only shows
+ * an app rich result with real ratings, and inventing one breaks its policy.
+ */
+export function mobileAppStructuredData(appStoreId: string, organizationId: string): Record<string, unknown> {
+  const listing = `https://apps.apple.com/app/id${appStoreId}`;
+  return {
+    "@type": "MobileApplication",
+    "@id": `${APP_ORIGIN}/#ios-app`,
+    name: APP_STORE_NAME,
+    description: SITE_DESCRIPTION,
+    operatingSystem: "iOS",
+    applicationCategory: "SportsApplication",
+    url: listing,
+    installUrl: listing,
+    image: `${APP_ORIGIN}/icons/icon-512.png`,
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    publisher: { "@id": organizationId },
+  };
+}
+
 /**
  * Serialises schema.org data for a <script type="application/ld+json">.
  * Names and descriptions are user-authored, so `<` is escaped: a title
