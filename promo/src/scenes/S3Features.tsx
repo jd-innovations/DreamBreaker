@@ -130,20 +130,31 @@ const Toast: React.FC<{ text: string; x: number; y: number; s: number }> = ({ te
 
 // ---------- panels ----------
 
-// Real pin heads on the Explore map, as fractions of explore.webp (660×1431).
+// Screens are cropped from the framed App Store screenshots
+// (fastlane/screenshots/en-US, 939×2048). Overlay points were measured on the
+// 660px web copies, so map them across: same x, y scaled plus a measured
+// vertical offset (explore 4px, tournament 2px).
+const SCREEN = { w: 939, h: 2048 };
+const at = (x660: number, y660: number, dy: number): [number, number] => [x660 / 660, (y660 * (939 / 660) + dy) / SCREEN.h];
+const box = (x: number, y: number, w: number, h: number, dy: number) => {
+  const [fx, fy] = at(x, y, dy);
+  return { x: fx, y: fy, w: w / 660, h: (h * (939 / 660)) / SCREEN.h };
+};
+
+// Real pin heads on the Explore map.
 const MAP_PINS: [number, number][] = [
-  [172 / 660, 734 / 1431],
-  [554 / 660, 734 / 1431],
-  [328 / 660, 932 / 1431],
-  [604 / 660, 916 / 1431],
-  [430 / 660, 1214 / 1431],
+  at(172, 734, 4),
+  at(554, 734, 4),
+  at(328, 932, 4),
+  at(604, 916, 4),
+  at(430, 1214, 4),
 ];
-const YOU_ARE_HERE: [number, number] = [328 / 660, 986 / 1431];
+const YOU_ARE_HERE = at(328, 986, 4);
 
 const PanelMap: React.FC<{ t: number }> = ({ t }) => (
   <AbsoluteFill style={{ background: C.bg }}>
     <Court color={C.green} />
-    <Phone src="screens/explore.webp" aspect={1431 / 660} {...PHONE} style={phoneRise(t)}>
+    <Phone src="screens/explore.png" aspect={SCREEN.h / SCREEN.w} {...PHONE} style={phoneRise(t)}>
       {({ toPx }) => {
         const [yx, yy] = toPx(...YOU_ARE_HERE);
         const yp = (t * 0.9) % 1;
@@ -182,13 +193,13 @@ const PanelMap: React.FC<{ t: number }> = ({ t }) => (
   </AbsoluteFill>
 );
 
-// Pompano Open Play card on events.png (939×2048).
-const OPEN_PLAY_CARD = { x: 32 / 939, y: 392 / 2048, w: 875 / 939, h: 519 / 2048 };
+// Pompano Open Play card on events.png.
+const OPEN_PLAY_CARD = { x: 32 / SCREEN.w, y: 392 / SCREEN.h, w: 875 / SCREEN.w, h: 519 / SCREEN.h };
 
 const PanelOpenPlay: React.FC<{ t: number }> = ({ t }) => (
   <AbsoluteFill style={{ background: C.bg }}>
     <Court color={C.blue} />
-    <Phone src="screens/events.png" aspect={2048 / 939} {...PHONE} style={phoneRise(t)}>
+    <Phone src="screens/events.png" aspect={SCREEN.h / SCREEN.w} {...PHONE} style={phoneRise(t)}>
       {({ w, h, toPx }) => {
         const [x, y] = toPx(OPEN_PLAY_CARD.x, OPEN_PLAY_CARD.y);
         const cw = OPEN_PLAY_CARD.w * w;
@@ -207,15 +218,15 @@ const PanelOpenPlay: React.FC<{ t: number }> = ({ t }) => (
   </AbsoluteFill>
 );
 
-// Futures Classic on tournament.webp (660×1431).
-const DIVISION = { x: 30 / 660, y: 770 / 1431, w: 600 / 660, h: 200 / 1431 };
-const REGISTER = { x: 28 / 660, y: 1250 / 1431, w: 604 / 660, h: 104 / 1431 };
+// Futures Classic: the Mixed Doubles division and the Register Now button.
+const DIVISION = box(30, 770, 600, 200, 2);
+const REGISTER = box(28, 1250, 604, 104, 2);
 const TOURNAMENT_SHIFT = 0.04;
 
 const PanelTournament: React.FC<{ t: number }> = ({ t }) => (
   <AbsoluteFill style={{ background: C.bg }}>
     <Court color={C.gold} />
-    <Phone src="screens/tournament.webp" aspect={1431 / 660} {...PHONE} shift={TOURNAMENT_SHIFT} style={phoneRise(t)}>
+    <Phone src="screens/tournament.png" aspect={SCREEN.h / SCREEN.w} {...PHONE} shift={TOURNAMENT_SHIFT} style={phoneRise(t)}>
       {({ w, h, toPx }) => {
         const [dx, dy] = toPx(DIVISION.x, DIVISION.y);
         const [rx, ry] = toPx(REGISTER.x, REGISTER.y);
