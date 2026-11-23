@@ -57,8 +57,8 @@ export const S1Intro: React.FC<{ t: number }> = ({ t }) => {
         }}
       />
       <Line words={[{ logo: true, height: 130 }]} y={895} t={t} t0={2.1} dur={0.5} />
-      <Line words={words("The operating system", { font: "soft", size: 84, color: C.green })} y={1035} t={t} t0={2.45} stagger={0.06} />
-      <Line words={words("for pickleball.", { font: "soft", size: 84, color: C.green })} y={1130} t={t} t0={2.7} stagger={0.06} />
+      <Line words={words("The operating system", { font: "soft", size: 84, color: C.ink })} y={1035} t={t} t0={2.45} stagger={0.06} />
+      <Line words={words("for pickleball.", { font: "soft", size: 84, color: C.ink })} y={1130} t={t} t0={2.7} stagger={0.06} />
     </AbsoluteFill>
   );
 };
