@@ -18,7 +18,7 @@ export const S2Hub: React.FC<{ t: number }> = ({ t }) => {
   const hs = back(prog(t, 0.45, 0.6));
   return (
     <AbsoluteFill style={{ background: C.bg }}>
-      <Line words={[{ logo: true, height: 84 }]} y={410} t={t} t0={0.05} />
+      <Line words={[{ logo: true, height: 105 }]} y={410} t={t} t0={0.05} />
       <Line words={words("connects you to", { font: "serif", size: 74 })} y={530} t={t} t0={0.2} stagger={0.06} />
       <Line words={words("everything you need:", { font: "serif", size: 74 })} y={622} t={t} t0={0.35} stagger={0.06} />
 

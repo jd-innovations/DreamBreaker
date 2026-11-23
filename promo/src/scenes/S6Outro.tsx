@@ -23,7 +23,7 @@ export const S6Outro: React.FC<{ t: number }> = ({ t }) => {
       {out < 1 && (
         <AbsoluteFill style={{ opacity: 1 - out }}>
           <Line words={words("Stay in the game", { font: "serif", size: 88 })} y={900} t={t} t0={0.05} stagger={0.07} />
-          <Line words={[{ text: "with", font: "serif", size: 88 }, { logo: true, height: 78 }]} y={1030} t={t} t0={0.3} stagger={0.08} />
+          <Line words={[{ text: "with", font: "serif", size: 88 }, { logo: true, height: 98 }]} y={1030} t={t} t0={0.3} stagger={0.08} />
         </AbsoluteFill>
       )}
 
@@ -54,7 +54,7 @@ export const S6Outro: React.FC<{ t: number }> = ({ t }) => {
             transform: `translateY(${(1 - a) * 30}px)`,
           }}
         >
-          <Logo height={100} />
+          <Logo height={125} />
           <div style={{ fontFamily: manrope, fontWeight: 600, fontSize: 46, color: C.inkSoft }}>Courts &amp; Games</div>
         </div>
       )}

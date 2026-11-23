@@ -56,7 +56,7 @@ export const S1Intro: React.FC<{ t: number }> = ({ t }) => {
           filter: "blur(50px)",
         }}
       />
-      <Line words={[{ logo: true, height: 104 }]} y={895} t={t} t0={2.1} dur={0.5} />
+      <Line words={[{ logo: true, height: 130 }]} y={895} t={t} t0={2.1} dur={0.5} />
       <Line words={words("finds your next game.", { font: "serif", size: 88, color: C.green })} y={1040} t={t} t0={2.45} />
     </AbsoluteFill>
   );

@@ -74,7 +74,7 @@ export const words = (phrase: string, style: Omit<Extract<Word, { text: string }
 // ---------- brand ----------
 
 // web/public/brand/logo-pickleball-app.png: navy + gold, for light grounds.
-// 780×134 source, so keep it at or under ~700px wide to stay crisp.
+// 780×134 source: up to ~780px wide (height 134) stays crisp.
 const LOGO_RATIO = 780 / 134;
 
 export const Logo: React.FC<{ height: number; style?: React.CSSProperties }> = ({ height, style }) => (
