@@ -9,18 +9,19 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = path.resolve(process.argv[2] ?? path.join(root, "out", "stills"));
 
-// [name, frame] — scene starts: s1 0, s2 150, s3 255, s4 435, s5 525, s6 603.
+// [name, frame] — scene starts: s1 0, s2 150, s3 255 (panels every 60), s4 495, s5 585, s6 663.
 const FRAMES = [
   ["a-intro-headline", 120],
   ["b-hub", 240],
   ["c-map", 312],
   ["c2-wipe", 320],
   ["d-open-play", 363],
-  ["e-tournament", 429],
-  ["f-grid", 519],
-  ["g-beats", 597],
-  ["h-outro-lockup", 729],
-  ["i-outro-line", 630],
+  ["d2-partner", 423],
+  ["e-tournament", 489],
+  ["f-grid", 579],
+  ["g-beats", 657],
+  ["h-outro-lockup", 789],
+  ["i-outro-line", 690],
   ["j-intro-icons", 30],
 ];
 

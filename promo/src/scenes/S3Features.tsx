@@ -1,10 +1,10 @@
 import React from "react";
 import { AbsoluteFill } from "remotion";
 import { Bubble, Line, Phone, words } from "../components";
-import { Icon, IconComp, People, Pin, Trophy } from "../icons";
+import { Chat, Icon, IconComp, People, Pin, Trophy } from "../icons";
 import { C, H, W, back, eio, eo, lerp, font, prog } from "../theme";
 
-// Scene 3 (6.0s): three 2s panels, each a real app screen, joined by a
+// Scene 3 (8.0s): four 2s panels, each a real app screen, joined by a
 // circular wipe. Overlays (pulses, taps, toasts) sit on top of the
 // screenshots; the screenshots themselves are untouched.
 
@@ -218,6 +218,30 @@ const PanelOpenPlay: React.FC<{ t: number }> = ({ t }) => (
   </AbsoluteFill>
 );
 
+// Partner Finder (Mia Carter, a demo profile with an AI-generated photo): the
+// green "connect" button.
+const CONNECT_BTN: [number, number] = [615 / SCREEN.w, 1243 / SCREEN.h];
+
+const PanelPartner: React.FC<{ t: number }> = ({ t }) => (
+  <AbsoluteFill style={{ background: C.bg }}>
+    <Court color={C.coral} />
+    <Phone src="screens/partner.png" aspect={SCREEN.h / SCREEN.w} {...PHONE} style={phoneRise(t)}>
+      {({ w, h, toPx }) => {
+        const [bx, by] = toPx(...CONNECT_BTN);
+        const pulse = prog(t, 0.95, 0.5);
+        return (
+          <>
+            {pulse > 0 && <Ring x={bx} y={by} p={pulse} r0={30} r1={110} color={C.green} alpha={0.6} />}
+            <Finger t={t} from={[w * 0.92, h * 0.78]} to={[bx, by]} t0={0.5} />
+            <Toast text="It's a Match!" x={w / 2} y={h * 0.505} s={back(prog(t, 1.15, 0.45))} />
+          </>
+        );
+      }}
+    </Phone>
+    <Headline text="Find your partner." t={t} icon={Chat} />
+  </AbsoluteFill>
+);
+
 // Futures Classic: the Mixed Doubles division and the Register Now button.
 const DIVISION = box(30, 770, 600, 200, 2);
 const REGISTER = box(28, 1250, 604, 104, 2);
@@ -250,7 +274,8 @@ const PanelTournament: React.FC<{ t: number }> = ({ t }) => (
 const PANELS: [React.FC<{ t: number }>, number][] = [
   [PanelMap, 0],
   [PanelOpenPlay, 2],
-  [PanelTournament, 4],
+  [PanelPartner, 4],
+  [PanelTournament, 6],
 ];
 const WIPE = 0.35;
 

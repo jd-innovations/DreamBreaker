@@ -13,7 +13,7 @@ import { FPS, H, W } from "./theme";
 export const SCENES: [React.FC<{ t: number }>, number][] = [
   [S1Intro, 5.0],
   [S2Hub, 3.5],
-  [S3Features, 6.0],
+  [S3Features, 8.0], // reference: 6.0 — a fourth panel (Partner Finder) was added
   [S4Grid, 3.0],
   [S5Beats, 2.6],
   [S6Outro, 4.4],
