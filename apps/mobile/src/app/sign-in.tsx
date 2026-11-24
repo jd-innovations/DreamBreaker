@@ -85,6 +85,23 @@ export default function SignInScreen() {
         );
         return;
       }
+      // An account made with Apple or Google has no password, so the email form
+      // always answers invalid_credentials. GoTrue won't say which method an
+      // account uses (same code for "no such user"), so the hint is general,
+      // with a one-tap way into each provider (2026-11-24: a new Apple signup
+      // got stuck here after onboarding).
+      if (e?.code === 'invalid_credentials') {
+        Alert.alert(
+          'Sign in failed',
+          "That email and password don't match.\n\nSigned up with Apple or Google? Those accounts have no password. Use that button instead.",
+          [
+            { text: 'OK', style: 'cancel' },
+            ...(appleAvailable ? [{ text: 'Continue with Apple', onPress: () => { void handleAppleSignIn(); } }] : []),
+            { text: 'Continue with Google', onPress: () => { void handleGoogleSignIn(); } },
+          ],
+        );
+        return;
+      }
       Alert.alert('Sign in failed', e.message ?? 'Please check your credentials and try again.');
     } finally {
       setLoading(false);
