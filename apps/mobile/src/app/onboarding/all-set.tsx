@@ -16,7 +16,10 @@ const L = colors;
 const PAGE_BG = '#F8F5EF';
 const NEON_PICKLE = '#B9FF00';
 
-const CHECKLIST = ['Profile created', 'Preferences saved', 'Home court set'];
+// Nothing on this list is saved until "Let's Go!" runs finalizeOnboarding(), so
+// it says what is ready, not what is done (2026-11-24: a new user left here
+// believing "Profile created" and had no account).
+const CHECKLIST = ['Account ready', 'Preferences chosen', 'Home court picked'];
 
 const INFO_ROWS: { icon: AppIconName; label: string }[] = [
   { icon: 'people-outline', label: 'Show you compatible players you will enjoy playing with' },
@@ -169,8 +172,8 @@ export default function AllSetScreen() {
         </View>
 
         <View style={s.titleBlock}>
-          <Text style={s.title}>{`You're all set!`}</Text>
-          <Text style={s.subtitle}>We have saved your preferences and personalized your experience.</Text>
+          <Text style={s.title}>{`Almost there!`}</Text>
+          <Text style={s.subtitle}>{`Tap Let's Go! to save your profile and start playing.`}</Text>
         </View>
 
         <View style={s.checklist}>

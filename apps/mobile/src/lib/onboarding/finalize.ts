@@ -81,7 +81,7 @@ function availabilityLabel(key: string): string {
 // both the OAuth path (authenticated UPDATE) and the email path (values
 // ride into raw_user_meta_data at signUp() — see fn_handle_new_user() in
 // migration 20260805000000).
-function draftToProfileFields(draft: OnboardingDraft) {
+export function draftToProfileFields(draft: OnboardingDraft) {
   return {
     avatar_url: draft.avatarUrl ?? undefined,
     gender: draft.gender ?? undefined,

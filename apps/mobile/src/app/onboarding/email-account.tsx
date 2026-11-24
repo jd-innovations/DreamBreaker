@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -18,6 +19,8 @@ import { radius as shape, text } from '@shared/tokens';
 import { OnboardingCTA } from '@/lib/onboarding/components';
 import { useOnboarding, validators } from '@/lib/onboarding/state';
 import { PASSWORD_PLACEHOLDER } from '@/lib/authPolicy';
+import { probeExistingAccount, resendConfirmation, signUp } from '@/lib/auth';
+import { draftToProfileFields } from '@/lib/onboarding/finalize';
 
 const L = colors;
 const PAGE_BG = '#F8F5EF';
@@ -26,11 +29,42 @@ export default function EmailAccountScreen() {
   const insets = useSafeAreaInsets();
   const { draft, update } = useOnboarding();
   const [showPassword, setShowPassword] = useState(false);
-  const canContinue = validators.emailAccount(draft);
+  const [busy, setBusy] = useState(false);
+  const canContinue = validators.emailAccount(draft) && !busy;
 
-  function next() {
-    update('profileEmail', draft.profileEmail.trim().toLowerCase());
-    router.push('/onboarding/your-name');
+  // The account is created HERE, not at the end of onboarding (2026-11-24).
+  // It used to be created by all-set's "Let's Go!", after a screen that
+  // already said "Profile created": a new user left on that screen and had no
+  // account at all. Now the account exists from this step, the code is
+  // verified on the next screen, and the remaining answers are saved to a
+  // signed-in account by finalizeOnboarding()'s session path.
+  async function next() {
+    if (!canContinue) return;
+    const email = draft.profileEmail.trim().toLowerCase();
+    update('profileEmail', email);
+    setBusy(true);
+    try {
+      // Never sign up blindly: a repeat signUp() for an unconfirmed account
+      // REPLACES its password (see finalizeOnboarding / probeExistingAccount).
+      const existing = await probeExistingAccount(email, draft.emailPassword);
+      if (existing === 'signed_in') {
+        router.push('/onboarding/your-name');
+        return;
+      }
+      if (existing === 'unconfirmed') {
+        await resendConfirmation(email);
+        router.push({ pathname: '/onboarding/verify-email', params: { email } } as never);
+        return;
+      }
+      // The answers so far (rating, gender, area, court, radius) ride into the
+      // account's metadata, so they are kept even if the user stops here.
+      await signUp(email, draft.emailPassword, '', draftToProfileFields({ ...draft, profileEmail: email }));
+      router.push({ pathname: '/onboarding/verify-email', params: { email } } as never);
+    } catch (e: unknown) {
+      Alert.alert('Could not create your account', e instanceof Error ? e.message : 'Please check your connection and try again.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -53,7 +87,7 @@ export default function EmailAccountScreen() {
         >
           <View style={s.titleBlock}>
             <Text style={s.title}>Create with email</Text>
-            <Text style={s.subtitle}>Add your email and password. We will use your next answers to finish your profile.</Text>
+            <Text style={s.subtitle}>Add your email and password. We will email you a code to confirm it.</Text>
           </View>
 
           <View style={s.formCard}>
@@ -88,7 +122,7 @@ export default function EmailAccountScreen() {
                   secureTextEntry={!showPassword}
                   autoComplete="new-password"
                   returnKeyType="done"
-                  onSubmitEditing={canContinue ? next : undefined}
+                  onSubmitEditing={canContinue ? () => { void next(); } : undefined}
                 />
                 <TouchableOpacity style={s.eyeBtn} activeOpacity={0.7} onPress={() => setShowPassword(value => !value)}>
                   <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={L.textSub} />
@@ -101,7 +135,7 @@ export default function EmailAccountScreen() {
         </ScrollView>
 
         <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}> 
-          <OnboardingCTA label="Continue" disabled={!canContinue} onPress={next} />
+          <OnboardingCTA label={busy ? 'Creating account…' : 'Continue'} disabled={!canContinue} onPress={() => { void next(); }} />
         </View>
       </View>
     </KeyboardAvoidingView>
