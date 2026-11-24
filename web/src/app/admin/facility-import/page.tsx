@@ -29,6 +29,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { getSupabaseUrl } from "@/lib/supabase/env";
 import { parseFacilityCsv, type StageRowInput } from "@/lib/facilityImport";
+import { toCsv } from "@/lib/facilityDiscovery/engine";
 import { DiscoverPanel } from "./DiscoverPanel";
 
 type MatchType = "confident" | "possible" | "new" | "invalid";
@@ -201,6 +202,27 @@ export default function FacilityImportPage() {
     } finally {
       setStaging(false);
     }
+  }
+
+  /**
+   * Batch History: re-run a waiting dry run from its saved rows. Never reopens the
+   * old batch as-is: its matches were computed when it was staged, and committing
+   * it after the directory changed could create duplicates. Re-staging re-matches
+   * every row against today's directory and starts a fresh batch.
+   */
+  async function rerunBatch(b: ImportBatch) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from("facility_import_rows")
+      .select("raw,row_number")
+      .eq("batch_id", b.id)
+      .order("row_number", { ascending: true });
+    if (error || !data?.length) { toast.error("Could not load that batch's rows."); return; }
+    const raws = (data as { raw: Record<string, string> }[]).map((r) => r.raw ?? {});
+    const cols = [...new Set(raws.flatMap((r) => Object.keys(r)))];
+    const csv = toCsv(raws, cols);
+    const ok = await stageCsv(csv, b.filename.replace(/^(rerun-)?/, "rerun-"), new Blob([csv], { type: "text/csv" }));
+    if (ok) setTab("upload");
   }
 
   function setDecision(rowId: string, decision: Decision) {
@@ -429,9 +451,21 @@ export default function FacilityImportPage() {
                   {fmt(b.created_at)} · {b.row_count} rows · {b.confident_count} confident · {b.possible_count} possible · {b.new_count} new · {b.invalid_count} invalid
                 </div>
               </div>
-              <span className={`text-xs font-mono px-2 py-1 rounded-full ${b.status === "committed" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                {b.status === "committed" ? `Committed (${b.committed_row_count})` : "Dry run"}
-              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                {b.status === "dry_run" && (
+                  <button
+                    onClick={() => void rerunBatch(b)}
+                    disabled={staging || (!!batch && batch.status === "dry_run")}
+                    title={batch && batch.status === "dry_run" ? "Commit or start over on the current dry run first" : "Re-match these rows against today's directory"}
+                    className="text-xs px-3 py-1 rounded-full border border-border hover:bg-secondary disabled:opacity-40"
+                  >
+                    Run again
+                  </button>
+                )}
+                <span className={`text-xs font-mono px-2 py-1 rounded-full ${b.status === "committed" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                  {b.status === "committed" ? `Committed (${b.committed_row_count})` : "Dry run"}
+                </span>
+              </div>
             </div>
           ))}
         </div>
