@@ -25,6 +25,11 @@ export type DirectoryPlayer = {
   isConnected: boolean;
   /** Players connected to both the viewer and this person. */
   mutualCount: number;
+  /** Nearby list only: where they play, in public terms ("Payne Park" or "Sarasota, FL"). */
+  place?: string | null;
+  placeKind?: 'court' | 'city' | null;
+  /** Nearby list only: rounded miles from their court or city to the viewer. */
+  distanceMiles?: number | null;
 };
 
 /** Below this, a query matches most of the directory and is not worth a trip. */
@@ -66,6 +71,47 @@ export async function searchDirectory(query: string, limit = 25): Promise<Direct
     isConnected: r.is_connected === true,
     mutualCount: r.mutual_count ?? 0,
   }));
+}
+
+type NearbyRow = Row & { place_label: string | null; place_kind: 'court' | 'city' | null; distance_miles: number | null };
+
+export const NEARBY_PAGE = 30;
+
+/**
+ * "Players near you" (directory_nearby_players, 20261124120000). Players are
+ * placed at their home court or city centre, never their own coordinates.
+ * `coords` is the viewer's position when location is allowed; without it the
+ * server falls back to the viewer's own home court, then city. An empty first
+ * page with no coords usually means the viewer has neither.
+ */
+export async function nearbyDirectory(coords: { lat: number; lng: number } | null, offset = 0): Promise<DirectoryPlayer[]> {
+  // Cast until database.types.ts is regenerated after migration 20261124120000.
+  const { data, error } = await supabase.rpc('directory_nearby_players' as never, {
+    p_lat: coords?.lat ?? null,
+    p_lng: coords?.lng ?? null,
+    p_limit: NEARBY_PAGE,
+    p_offset: offset,
+  } as never);
+  if (error) throw error;
+  return ((data ?? []) as NearbyRow[]).map((r) => ({
+    id: r.id,
+    name: r.full_name?.trim() || 'Unnamed player',
+    handle: r.handle,
+    avatarUrl: r.avatar_url,
+    rating: resolvePlayerRating(r.dupr, r.self_rating),
+    location: [r.location_city, r.location_state].filter(Boolean).join(', ') || null,
+    isConnected: r.is_connected === true,
+    mutualCount: r.mutual_count ?? 0,
+    place: r.place_label,
+    placeKind: r.place_kind,
+    distanceMiles: r.distance_miles,
+  }));
+}
+
+/** "~3 mi", "Under 1 mi", or null. */
+export function distanceLabel(miles: number | null | undefined): string | null {
+  if (miles == null) return null;
+  return miles < 1 ? 'Under 1 mi' : `~${miles} mi`;
 }
 
 /** "3 mutual connections" / "1 mutual connection" / null when there are none. */

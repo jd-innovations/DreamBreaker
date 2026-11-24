@@ -15,8 +15,9 @@ import { colors } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import { formatPlayerRating } from '@/lib/playerRating';
 import {
-  searchDirectory, mutualLabel, MIN_DIRECTORY_QUERY, type DirectoryPlayer,
+  searchDirectory, nearbyDirectory, distanceLabel, mutualLabel, MIN_DIRECTORY_QUERY, NEARBY_PAGE, type DirectoryPlayer,
 } from '@/lib/supabase/playerDirectory';
+import { useCurrentLocation } from '@/lib/location';
 
 const L = {
   bg: colors.bg, page: colors.page, navy: colors.navy,
@@ -74,13 +75,25 @@ function PlayerRow({ player, onMessage, messaging }: {
         <View style={r.metaRow}>
           <Ionicons name="speedometer-outline" size={12} color={L.gold} />
           <Text style={r.meta}>{formatPlayerRating(player.rating)}</Text>
-          {!!player.location && (
+          {!player.place && !!player.location && (
             <>
               <View style={r.dot} />
               <Text style={r.meta} numberOfLines={1}>{player.location}</Text>
             </>
           )}
         </View>
+
+        {/* Nearby list: where they play, in public terms only (home court or
+            city), and roughly how far that is. Never the player's own location. */}
+        {!!player.place && (
+          <View style={r.metaRow}>
+            <Ionicons name={player.placeKind === 'court' ? 'tennisball-outline' : 'location-outline'} size={12} color={L.textSub} />
+            <Text style={r.meta} numberOfLines={1}>
+              {player.placeKind === 'court' ? `Plays at ${player.place}` : player.place}
+              {distanceLabel(player.distanceMiles) ? ` · ${distanceLabel(player.distanceMiles)}` : ''}
+            </Text>
+          </View>
+        )}
 
         {/* The trust signal. A rating tells you whether a stranger is worth
             playing; a shared connection tells you whether they are worth
@@ -124,6 +137,38 @@ export default function PlayerDirectoryScreen() {
   // shorter queries match more rows and take longer.
   const requestId = useRef(0);
   const { user } = useSession();
+
+  // "Players near you": the empty state before typing. The phone's position is
+  // used only to sort (never stored); the Lakewood Ranch fallback is not the
+  // viewer, so without permission the server uses their home court or city.
+  const location = useCurrentLocation();
+  const [nearby, setNearby] = useState<DirectoryPlayer[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(true);
+  const [nearbyError, setNearbyError] = useState(false);
+  const [nearbyMore, setNearbyMore] = useState(false);
+  const coords = location.isFallback ? null : { lat: location.lat, lng: location.lng };
+  const coordsKey = coords ? `${coords.lat.toFixed(3)},${coords.lng.toFixed(3)}` : 'none';
+
+  const loadNearby = useCallback(async (offset: number) => {
+    setNearbyLoading(true);
+    setNearbyError(false);
+    try {
+      const rows = await nearbyDirectory(coords, offset);
+      setNearby((prev) => (offset === 0 ? rows : [...prev, ...rows.filter((x) => !prev.some((p) => p.id === x.id))]));
+      setNearbyMore(rows.length === NEARBY_PAGE);
+    } catch {
+      setNearbyError(true);
+    } finally {
+      setNearbyLoading(false);
+    }
+    // coordsKey stands in for coords (a new object every render).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coordsKey]);
+
+  useEffect(() => {
+    if (location.loading) return;
+    void loadNearby(0);
+  }, [location.loading, loadNearby]);
   const [messagingId, setMessagingId] = useState<string | null>(null);
 
   async function handleMessage(playerId: string) {
@@ -249,10 +294,47 @@ export default function PlayerDirectoryScreen() {
             </Text>
           </View>
         ) : (
-          <View style={s.state}>
-            <Ionicons name="people-outline" size={40} color={L.textSub} />
-            <Text style={s.stateTitle}>Find players</Text>
-            <Text style={s.stateSub}>Search by name or @handle to see their profile and connect.</Text>
+          <View>
+            <Text style={s.sectionTitle}>PLAYERS NEAR YOU</Text>
+            {nearby.map((p) => (
+              <PlayerRow
+                key={p.id}
+                player={p}
+                onMessage={() => { void handleMessage(p.id); }}
+                messaging={messagingId === p.id}
+              />
+            ))}
+            {nearbyLoading ? (
+              <View style={[s.state, nearby.length ? { paddingTop: 16 } : null]}><ActivityIndicator color={L.gold} /></View>
+            ) : nearbyError ? (
+              <View style={s.state}>
+                <Text style={s.stateSub}>Couldn&apos;t load nearby players.</Text>
+                <TouchableOpacity style={s.retryBtn} onPress={() => { void loadNearby(nearby.length); }} activeOpacity={0.8}>
+                  <Text style={s.retryLabel}>RETRY</Text>
+                </TouchableOpacity>
+              </View>
+            ) : nearby.length === 0 ? (
+              <View style={s.state}>
+                <Ionicons name="people-outline" size={40} color={L.textSub} />
+                <Text style={s.stateTitle}>No players nearby yet</Text>
+                {/* Without location permission the list is anchored on the
+                    viewer's home court or city; with neither there is no "near". */}
+                <Text style={s.stateSub}>
+                  {coords
+                    ? 'Nobody within 25 miles has a home court or city set yet. Search by name or @handle above.'
+                    : 'Set your home court so we can show players near you, or search by name or @handle above.'}
+                </Text>
+                {!coords && (
+                  <TouchableOpacity style={s.retryBtn} onPress={() => router.push('/edit-profile' as never)} activeOpacity={0.8}>
+                    <Text style={s.retryLabel}>SET HOME COURT</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : nearbyMore ? (
+              <TouchableOpacity style={[s.retryBtn, s.moreBtn]} onPress={() => { void loadNearby(nearby.length); }} activeOpacity={0.8}>
+                <Text style={s.retryLabel}>SHOW MORE</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         )}
       </ScrollView>
@@ -290,6 +372,8 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: L.gold, alignItems: 'center', justifyContent: 'center',
   },
   retryLabel: { color: L.gold, fontSize: text.caption.size, fontWeight: '800', letterSpacing: 1 },
+  sectionTitle: { color: L.textSub, fontSize: text.caption.size, fontWeight: '800', letterSpacing: 1, marginBottom: 10, marginLeft: 2 },
+  moreBtn: { alignSelf: 'center', marginTop: 4, marginBottom: 8 },
 });
 
 const r = StyleSheet.create({
