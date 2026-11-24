@@ -141,3 +141,20 @@ describe("snapshots", () => {
     expect(snapshotFor([snap], [29, -82.6, 29.5, -82.4])).toBeNull();
   });
 });
+
+describe("importer compatibility", () => {
+  it("the importer reads the photo the engine writes", async () => {
+    const { parseFacilityCsv } = await import("@/lib/facilityImport");
+    const row = rowFromPlace(
+      place({ displayName: { text: "Bradenton Yacht Club" }, photos: [{ name: "places/ChIJabc/photos/ref_1", widthPx: 800, heightPx: 600 }] }),
+      site(27.4, -82.5),
+    );
+    const { rows } = parseFacilityCsv(toCsv([row]), "https://example.supabase.co/functions/v1");
+    expect(rows).toHaveLength(1);
+    const mapped = rows[0] as unknown as { mapped?: Record<string, unknown> } & Record<string, unknown>;
+    const m = (mapped.mapped ?? mapped) as Record<string, unknown>;
+    expect(m.photo_google_name).toBe("places/ChIJabc/photos/ref_1");
+    expect(m.name).toBe("Bradenton Yacht Club");
+    expect(m.court_count).toBe(1);
+  });
+});

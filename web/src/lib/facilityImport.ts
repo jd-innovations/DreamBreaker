@@ -151,6 +151,8 @@ const GOOGLE_PHOTO_NAME_RE = /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/;
 
 interface RawPhotoEntry {
   url?: string;
+  /** Google resource name, as written by the Discover tab / facilities-osm tool. */
+  name?: string;
   is_primary?: boolean;
 }
 
@@ -169,15 +171,19 @@ function extractPrimaryPhoto(
   }
   const list = Array.isArray(photos) ? (photos as RawPhotoEntry[]) : [];
   const primary = list.find((p) => p?.is_primary) ?? list[0] ?? null;
-  if (!primary?.url) return none;
+  if (!primary) return none;
 
   let name: string | null = null;
-  try {
-    const parsed = new URL(primary.url);
-    const n = parsed.searchParams.get("name");
-    name = n && GOOGLE_PHOTO_NAME_RE.test(n) ? n : null;
-  } catch {
-    name = null;
+  if (typeof primary.name === "string" && GOOGLE_PHOTO_NAME_RE.test(primary.name)) {
+    name = primary.name;
+  } else if (primary.url) {
+    try {
+      const parsed = new URL(primary.url);
+      const n = parsed.searchParams.get("name");
+      name = n && GOOGLE_PHOTO_NAME_RE.test(n) ? n : null;
+    } catch {
+      name = null;
+    }
   }
   if (!name) return none;
 
