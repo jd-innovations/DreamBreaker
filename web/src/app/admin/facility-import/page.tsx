@@ -29,6 +29,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { getSupabaseUrl } from "@/lib/supabase/env";
 import { parseFacilityCsv, type StageRowInput } from "@/lib/facilityImport";
+import { DiscoverPanel } from "./DiscoverPanel";
 
 type MatchType = "confident" | "possible" | "new" | "invalid";
 type Decision = "approve_update" | "create_new" | "skip";
@@ -85,7 +86,7 @@ export default function FacilityImportPage() {
   const supabase = createClient();
 
   const [checking, setChecking] = useState(true);
-  const [tab, setTab] = useState<"upload" | "history">("upload");
+  const [tab, setTab] = useState<"upload" | "discover" | "history">("upload");
 
   const [file, setFile] = useState<File | null>(null);
   const [staging, setStaging] = useState(false);
@@ -125,7 +126,7 @@ export default function FacilityImportPage() {
     setHistory((data ?? []) as ImportBatch[]);
   }, [supabase]);
 
-  function switchTab(t: "upload" | "history") {
+  function switchTab(t: "upload" | "discover" | "history") {
     setTab(t);
     if (t === "history") void loadHistory();
   }
@@ -143,37 +144,46 @@ export default function FacilityImportPage() {
 
   async function handleUploadAndStage() {
     if (!file) { toast.error("Choose a CSV file first."); return; }
+    await stageCsv(await file.text(), file.name, file);
+  }
+
+  /** Discover tab: its generated CSV goes through exactly the same dry run as an upload. */
+  async function stageDiscovered(csv: string, filename: string) {
+    const ok = await stageCsv(csv, filename, new Blob([csv], { type: "text/csv" }));
+    if (ok) setTab("upload");
+  }
+
+  async function stageCsv(text: string, filename: string, original: Blob): Promise<boolean> {
     setStaging(true);
     setCommitResult(null);
     setDecisions({});
     try {
-      const text = await file.text();
       const functionsBaseUrl = `${getSupabaseUrl()}/functions/v1`;
       const { rows: parsedRows, skipped } = parseFacilityCsv(text, functionsBaseUrl);
       setParseSkipped(skipped);
       if (parsedRows.length === 0) {
         toast.error("No usable rows found in this CSV.");
-        return;
+        return false;
       }
 
-      const storagePath = `${new Date().toISOString().replace(/[-:.TZ]/g, "")}-${file.name}`;
+      const storagePath = `${new Date().toISOString().replace(/[-:.TZ]/g, "")}-${filename}`;
       const { error: uploadError } = await supabase.storage
         .from("facility-import-uploads")
-        .upload(storagePath, file, { contentType: "text/csv" });
+        .upload(storagePath, original, { contentType: "text/csv" });
       if (uploadError) {
         toast.error(`Could not store the original CSV: ${uploadError.message}`);
-        return;
+        return false;
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: batchId, error: stageError } = await (supabase as any).rpc("admin_stage_facility_import", {
-        p_filename: file.name,
+        p_filename: filename,
         p_storage_path: storagePath,
         p_rows: parsedRows as unknown as StageRowInput[],
       });
       if (stageError) {
         toast.error(stageError.message.includes("admin_only") ? "Admins only." : `Dry run failed: ${stageError.message}`);
-        return;
+        return false;
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -182,11 +192,12 @@ export default function FacilityImportPage() {
         .select("id,filename,status,row_count,confident_count,possible_count,new_count,invalid_count,created_at,committed_at,committed_row_count")
         .eq("id", batchId)
         .single();
-      if (batchError || !batchRow) { toast.error("Dry run finished but could not load its summary."); return; }
+      if (batchError || !batchRow) { toast.error("Dry run finished but could not load its summary."); return false; }
 
       setBatch(batchRow as ImportBatch);
       await loadRows(batchId as string);
       toast.success(`Dry run complete — ${parsedRows.length} row${parsedRows.length === 1 ? "" : "s"} matched.`);
+      return true;
     } finally {
       setStaging(false);
     }
@@ -269,7 +280,7 @@ export default function FacilityImportPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-display text-2xl tracking-wide">Facility Directory Import</h1>
-          <p className="text-sm text-muted-foreground mt-1">Upload a CSV, review the matches, then commit.</p>
+          <p className="text-sm text-muted-foreground mt-1">Upload a CSV or discover venues, review the matches, then commit.</p>
         </div>
         <button onClick={() => router.push("/admin")} className="text-sm text-muted-foreground hover:text-foreground">
           ← Back to Admin
@@ -277,7 +288,7 @@ export default function FacilityImportPage() {
       </div>
 
       <div className="flex gap-2 mb-6 border-b border-border">
-        {(["upload", "history"] as const).map((t) => (
+        {(["upload", "discover", "history"] as const).map((t) => (
           <button
             key={t}
             onClick={() => switchTab(t)}
@@ -285,10 +296,20 @@ export default function FacilityImportPage() {
               tab === t ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t === "upload" ? "Upload & Review" : "Batch History"}
+            {t === "upload" ? "Upload & Review" : t === "discover" ? "Discover" : "Batch History"}
           </button>
         ))}
       </div>
+
+      {tab === "discover" && (
+        batch && batch.status === "dry_run" ? (
+          <div className="border border-border rounded-2xl p-6 bg-card text-sm">
+            A dry run is waiting for review on the Upload &amp; Review tab. Commit it or choose Start over there before discovering more.
+          </div>
+        ) : (
+          <DiscoverPanel onStage={stageDiscovered} />
+        )
+      )}
 
       {tab === "upload" && (
         <div className="space-y-6">

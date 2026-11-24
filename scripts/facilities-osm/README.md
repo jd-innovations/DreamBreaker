@@ -4,6 +4,13 @@ Finds pickleball venues from **OpenStreetMap courts** (the truth of where courts
 exist), fills in details from **Google Places**, and writes CSVs for the existing
 admin importer at `/admin/facility-import`. It never writes to Supabase.
 
+The logic lives in `web/src/lib/facilityDiscovery/engine.ts`, shared with the
+admin **Discover** tab (`/admin/facility-import` → Discover, backed by
+`/api/admin/facility-discover`). Use the tab for a city; use this CLI for whole
+states (on-disk cache, resumable). Needs Node 22.18+ (loads the engine with
+built-in TypeScript stripping; the "MODULE_TYPELESS_PACKAGE_JSON" warning it
+prints is harmless).
+
 ## Run
 
 From the repo root:
