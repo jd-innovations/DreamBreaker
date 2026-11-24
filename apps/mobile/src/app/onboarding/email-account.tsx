@@ -18,12 +18,29 @@ import { colors, spacing } from '@/theme';
 import { radius as shape, text } from '@shared/tokens';
 import { OnboardingCTA } from '@/lib/onboarding/components';
 import { useOnboarding, validators } from '@/lib/onboarding/state';
-import { PASSWORD_PLACEHOLDER } from '@/lib/authPolicy';
+import { MIN_PASSWORD_LENGTH, PASSWORD_PLACEHOLDER, isPasswordLongEnough } from '@/lib/authPolicy';
 import { probeExistingAccount, resendConfirmation, signUp } from '@/lib/auth';
 import { draftToProfileFields } from '@/lib/onboarding/finalize';
 
 const L = colors;
 const PAGE_BG = '#F8F5EF';
+
+/**
+ * GoTrue's weak_password carries `reasons` ('length' | 'characters' | 'pwned');
+ * say each in plain words instead of the raw server message.
+ */
+function signUpErrorMessage(e: unknown): string {
+  const err = e as { code?: string; message?: string; reasons?: string[] } | null;
+  if (err?.code === 'weak_password') {
+    const reasons = err.reasons ?? [];
+    if (reasons.includes('pwned')) return 'This password has appeared in a data breach. Please choose a different one.';
+    if (reasons.includes('characters')) return 'Please make your password stronger: mix letters, numbers and a symbol.';
+    return `Your password needs at least ${MIN_PASSWORD_LENGTH} characters.`;
+  }
+  if (err?.code === 'over_email_send_rate_limit') return 'Too many attempts. Please wait a minute and try again.';
+  if (err?.code === 'email_address_invalid') return 'That email address does not look right. Please check it.';
+  return err?.message || 'Please check your connection and try again.';
+}
 
 export default function EmailAccountScreen() {
   const insets = useSafeAreaInsets();
@@ -31,6 +48,7 @@ export default function EmailAccountScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const canContinue = validators.emailAccount(draft) && !busy;
+  const passwordOk = isPasswordLongEnough(draft.emailPassword);
 
   // The account is created HERE, not at the end of onboarding (2026-11-24).
   // It used to be created by all-set's "Let's Go!", after a screen that
@@ -61,7 +79,7 @@ export default function EmailAccountScreen() {
       await signUp(email, draft.emailPassword, '', draftToProfileFields({ ...draft, profileEmail: email }));
       router.push({ pathname: '/onboarding/verify-email', params: { email } } as never);
     } catch (e: unknown) {
-      Alert.alert('Could not create your account', e instanceof Error ? e.message : 'Please check your connection and try again.');
+      Alert.alert('Could not create your account', signUpErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -127,6 +145,18 @@ export default function EmailAccountScreen() {
                 <TouchableOpacity style={s.eyeBtn} activeOpacity={0.7} onPress={() => setShowPassword(value => !value)}>
                   <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={L.textSub} />
                 </TouchableOpacity>
+              </View>
+              {/* Say the rule as they type, so a greyed-out Continue is never a
+                  mystery (a new user's suggestion, 2026-11-24). */}
+              <View style={s.ruleRow} accessibilityLiveRegion="polite">
+                <Ionicons
+                  name={passwordOk ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={15}
+                  color={passwordOk ? L.success : L.textSub}
+                />
+                <Text style={[s.ruleText, passwordOk && { color: L.success }]}>
+                  At least {MIN_PASSWORD_LENGTH} characters
+                </Text>
               </View>
             </View>
           </View>
@@ -205,6 +235,8 @@ const s = StyleSheet.create({
   fieldLast: {
     marginBottom: 0,
   },
+  ruleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, marginLeft: 2 },
+  ruleText: { color: L.textSub, fontSize: text.caption.size, fontWeight: '600' },
   label: {
     color: L.navy,
     fontSize: text.fieldLabel.size,
