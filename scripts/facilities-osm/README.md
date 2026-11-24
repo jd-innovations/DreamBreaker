@@ -32,6 +32,18 @@ is read with the public anon key from `apps/mobile/.env`.
 Re-running is cheap: Overpass and Google responses are cached in `cache/`
 (gitignored), so an interrupted run resumes without paying twice.
 
+## Snapshots (what the Discover tab reads)
+
+The public Overpass servers are often overloaded, so the Discover tab reads a
+committed snapshot per state from `web/src/lib/facilityDiscovery/snapshots/`
+and only goes live outside those states. Refresh a state monthly or so:
+
+```bash
+node scripts/facilities-osm/discover.mjs --state FL --tile-deg 2 --refresh-osm --write-snapshot
+```
+
+Then add a new state's JSON to `snapshots/index.ts`, commit, and deploy.
+
 ## Output (`out/<label>-<date>/`)
 
 | File | What it is |

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import * as E from "@/lib/facilityDiscovery/engine";
+import { SNAPSHOTS } from "@/lib/facilityDiscovery/snapshots";
 
 /**
  * Admin-only backend for the "Discover" tab on /admin/facility-import.
@@ -11,7 +12,8 @@ import * as E from "@/lib/facilityDiscovery/engine";
  *
  * Work is split into small calls so none outlives a serverless function:
  *   resolve  -> area name/state -> bounding box + 1° tiles      (1 Google geocode for a city)
- *   osm      -> one tile -> new court sites + already-listed count (free)
+ *   osm      -> one tile -> new court sites + already-listed count (free; reads the
+ *               committed state snapshot, live Overpass only outside it)
  *   details  -> <= MAX_SITES sites -> importer rows              (<= 2 Google requests per site)
  *
  * GOOGLE_PLACES_API_KEY is a server-only env var: it is never returned, logged,
@@ -110,11 +112,16 @@ async function osm(supabase: NonNullable<Awaited<ReturnType<typeof requireAdmin>
   if (!E.isValidBBox(t) || t[2] - t[0] > MAX_TILE_DEG || t[3] - t[1] > MAX_TILE_DEG) return bad("tile_too_large");
   let courts: E.OsmElement[];
   let areas: E.OsmElement[] = [];
-  try {
-    courts = await overpass(E.courtsQuery(t));
-    if (courts.length) areas = await overpass(E.areasQuery(t));
-  } catch {
-    return bad("osm_busy", 503);
+  const snap = E.snapshotFor(SNAPSHOTS, t);
+  if (snap) {
+    ({ courts, areas } = E.fromSnapshot(snap, t));
+  } else {
+    try {
+      courts = await overpass(E.courtsQuery(t));
+      if (courts.length) areas = await overpass(E.areasQuery(t));
+    } catch {
+      return bad("osm_busy", 503);
+    }
   }
   const sites = E.clusterSites(courts);
   E.nameSites(sites, areas);
@@ -130,7 +137,7 @@ async function osm(supabase: NonNullable<Awaited<ReturnType<typeof requireAdmin>
   if (error) return bad("facilities_read_failed", 500);
   const known = (existing ?? []).filter((f) => f.latitude != null && f.longitude != null) as E.ExistingFacility[];
   const { fresh, backfill } = E.splitExisting(sites, known);
-  return NextResponse.json({ courts: courts.length, sites: fresh, alreadyListed: sites.length - fresh.length, backfill });
+  return NextResponse.json({ courts: courts.length, sites: fresh, alreadyListed: sites.length - fresh.length, backfill, snapshotDate: snap?.generatedAt ?? null });
 }
 
 async function details(supabase: NonNullable<Awaited<ReturnType<typeof requireAdmin>>>, body: Json) {

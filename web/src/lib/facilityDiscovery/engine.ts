@@ -245,7 +245,7 @@ const AREA_RANK: Record<string, number> = { park: 0, sports_centre: 0, recreatio
 
 export function nameSites(sites: Site[], areas: OsmElement[]): void {
   const withBounds = areas.filter((a) => a.bounds && a.tags?.name);
-  const kind = (a: OsmElement) => a.tags?.leisure ?? a.tags?.amenity ?? a.tags?.tourism ?? (a.tags?.club ? "club" : a.tags?.landuse ?? "");
+  const kind = (a: OsmElement) => a.tags?._kind ?? a.tags?.leisure ?? a.tags?.amenity ?? a.tags?.tourism ?? (a.tags?.club ? "club" : a.tags?.landuse ?? "");
   const size = (a: OsmElement) => (a.bounds!.maxlat - a.bounds!.minlat) * (a.bounds!.maxlon - a.bounds!.minlon);
   for (const s of sites) {
     const [lat, lon] = s.center;
@@ -253,6 +253,72 @@ export function nameSites(sites: Site[], areas: OsmElement[]): void {
     inside.sort((a, b) => (AREA_RANK[kind(a)] ?? 5) - (AREA_RANK[kind(b)] ?? 5) || size(a) - size(b));
     s.osmName = inside[0] ? clean(inside[0].tags!.name, 120) : "";
   }
+}
+
+// ---------- snapshots ----------
+// The public Overpass servers are often overloaded, so the Discover tab reads a
+// committed snapshot per state (web/src/lib/facilityDiscovery/snapshots) and
+// only falls back to live Overpass outside it. Refresh with:
+//   node scripts/facilities-osm/discover.mjs --state FL --tile-deg 2 --refresh-osm --write-snapshot
+
+/** courts: [osmId, lat, lon, lit, surface, access]; areas: [name, kind, minlat, minlon, maxlat, maxlon] */
+export interface OsmSnapshot {
+  state: string;
+  bbox: BBox;
+  generatedAt: string;
+  courts: [string, number, number, number, string, string][];
+  areas: [string, string, number, number, number, number][];
+}
+
+const AREA_KIND = (t: Record<string, string>) => t.leisure ?? t.amenity ?? t.tourism ?? (t.club ? "club" : t.landuse ?? "");
+
+export function buildSnapshot(state: string, bbox: BBox, courts: OsmElement[], areas: OsmElement[], generatedAt: string): OsmSnapshot {
+  const seen = new Set<string>();
+  const outCourts: OsmSnapshot["courts"] = [];
+  for (const el of courts) {
+    const id = `${el.type[0]}${el.id}`;
+    const c = el.center ?? (el.lat != null && el.lon != null ? { lat: el.lat, lon: el.lon } : null);
+    if (seen.has(id) || !c) continue;
+    seen.add(id);
+    const t = el.tags ?? {};
+    outCourts.push([id, +c.lat.toFixed(6), +c.lon.toFixed(6), t.lit === "yes" ? 1 : 0, clean(t.surface, 40), clean(t.access, 40)]);
+  }
+  // Keep only named areas that contain at least one court: all nameSites() needs.
+  const seenArea = new Set<string>();
+  const outAreas: OsmSnapshot["areas"] = [];
+  for (const a of areas) {
+    const key = `${a.type[0]}${a.id}`;
+    if (seenArea.has(key) || !a.bounds || !a.tags?.name) continue;
+    const b = a.bounds;
+    if (!outCourts.some((c) => b.minlat <= c[1] && c[1] <= b.maxlat && b.minlon <= c[2] && c[2] <= b.maxlon)) continue;
+    seenArea.add(key);
+    outAreas.push([clean(a.tags.name, 120), AREA_KIND(a.tags), +b.minlat.toFixed(6), +b.minlon.toFixed(6), +b.maxlat.toFixed(6), +b.maxlon.toFixed(6)]);
+  }
+  return { state, bbox, generatedAt, courts: outCourts, areas: outAreas };
+}
+
+const TYPE_BY_PREFIX: Record<string, string> = { n: "node", w: "way", r: "relation" };
+
+/** Courts and areas from a snapshot for one tile, shaped like Overpass elements. */
+export function fromSnapshot(snap: OsmSnapshot, [s, w, n, e]: BBox): { courts: OsmElement[]; areas: OsmElement[] } {
+  const courts: OsmElement[] = snap.courts
+    .filter((c) => s <= c[1] && c[1] <= n && w <= c[2] && c[2] <= e)
+    .map(([id, lat, lon, lit, surface, access]) => {
+      const tags: Record<string, string> = { sport: "pickleball" };
+      if (lit) tags.lit = "yes";
+      if (surface) tags.surface = surface;
+      if (access) tags.access = access;
+      return { type: TYPE_BY_PREFIX[id[0]] ?? "way", id: Number(id.slice(1)), center: { lat, lon }, tags };
+    });
+  const areas: OsmElement[] = snap.areas
+    .filter((a) => a[2] <= n && a[4] >= s && a[3] <= e && a[5] >= w)
+    .map(([name, kind, minlat, minlon, maxlat, maxlon], i) => ({ type: "way", id: i, bounds: { minlat, minlon, maxlat, maxlon }, tags: { name, _kind: kind } }));
+  return { courts, areas };
+}
+
+/** Snapshot that fully covers a tile, if any. */
+export function snapshotFor(snaps: OsmSnapshot[], [s, w, n, e]: BBox): OsmSnapshot | null {
+  return snaps.find((x) => x.bbox[0] <= s && x.bbox[1] <= w && x.bbox[2] >= n && x.bbox[3] >= e) ?? null;
 }
 
 /** Split sites into new ones and ones already listed (with court-count suggestions). */

@@ -23,6 +23,8 @@
     --max-google N        hard cap on Google requests this run (default 400)
     --refresh-osm         ignore cached Overpass responses
     --tile-deg D          Overpass tile size in degrees (default 0.5; 2 is fine for one state)
+    --write-snapshot      with --state: save the courts as the Discover tab's snapshot
+                          (web/src/lib/facilityDiscovery/snapshots/<STATE>.json), then commit it
 
   Secrets: GOOGLE_PLACES_API_KEY from the environment or the repo-root
   .env.local (gitignored). It is sent only to Google hosts, never logged or
@@ -173,6 +175,14 @@ async function main() {
   fs.mkdirSync(outDir, { recursive: true });
 
   const { courts, areas } = await loadOsm(bbox, Number(arg('--tile-deg') ?? 0.5));
+  if (has('--write-snapshot')) {
+    if (!state || arg('--bbox')) { console.error('--write-snapshot needs --state (and no --bbox)'); process.exit(1); }
+    const snap = E.buildSnapshot(state, bbox, courts, areas, new Date().toISOString().slice(0, 10));
+    const file = path.join(ROOT, 'web', 'src', 'lib', 'facilityDiscovery', 'snapshots', `${state}.json`);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(snap));
+    console.log(`Snapshot: ${snap.courts.length} courts, ${snap.areas.length} named areas -> ${path.relative(ROOT, file)} (${Math.round(fs.statSync(file).size / 1024)} KB)`);
+  }
   const sites = E.clusterSites(courts);
   E.nameSites(sites, areas);
   console.log(`OSM: ${courts.length} courts -> ${sites.length} sites`);

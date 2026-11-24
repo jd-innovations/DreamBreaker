@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  clean, cleanUrl, clusterSites, isGeneric, isValidBBox, mergeByPlace, pickPlace, rowFromGeocode,
+  buildSnapshot, clean, cleanUrl, clusterSites, fromSnapshot, nameSites, snapshotFor, isGeneric, isValidBBox, mergeByPlace, pickPlace, rowFromGeocode,
   rowFromPlace, splitExisting, tiles, toCsv, type GooglePlace, type OsmElement, type Site,
 } from "../engine";
 
@@ -123,5 +123,21 @@ describe("helpers", () => {
     expect(tiles([27, -83, 28, -82], 0.5)).toHaveLength(4);
     expect(isGeneric("Pickleball ct")).toBe(true);
     expect(isGeneric("Southwinds Tennis Courts")).toBe(false);
+  });
+});
+
+describe("snapshots", () => {
+  it("round-trips courts and the park around them", () => {
+    const snap = buildSnapshot("FL", [27, -83, 28, -82], [court(5, 27.4, -82.5, { lit: "yes", access: "private" })], [
+      { type: "way", id: 9, bounds: { minlat: 27.39, minlon: -82.51, maxlat: 27.41, maxlon: -82.49 }, tags: { name: "Lamb Park", leisure: "park" } },
+      { type: "way", id: 10, bounds: { minlat: 27.7, minlon: -82.2, maxlat: 27.71, maxlon: -82.19 }, tags: { name: "Far Away Park", leisure: "park" } },
+    ], "2026-11-24");
+    expect(snap.areas).toHaveLength(1);
+    const { courts, areas } = fromSnapshot(snap, [27.3, -82.6, 27.5, -82.4]);
+    const sites = clusterSites(courts);
+    nameSites(sites, areas);
+    expect(sites[0]).toMatchObject({ lit: true, ids: ["w5"], osmName: "Lamb Park", access: ["private"] });
+    expect(snapshotFor([snap], [27.3, -82.6, 27.5, -82.4])).toBe(snap);
+    expect(snapshotFor([snap], [29, -82.6, 29.5, -82.4])).toBeNull();
   });
 });
