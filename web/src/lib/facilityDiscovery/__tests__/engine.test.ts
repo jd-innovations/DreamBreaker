@@ -188,3 +188,10 @@ describe("venue choice", () => {
     expect(pickPlace([place({ displayName: { text: "Haulover Pickleball - 8 Courts" }, primaryType: "athletic_field", types: ["athletic_field"] })], s)).not.toBeNull();
   });
 });
+
+describe("addresses", () => {
+  it("never uses a Google plus code as the street address", () => {
+    const r = rowFromPlace(place({ displayName: { text: "Crescent Lake Park" }, formattedAddress: "Q9P4+4R9, St. Petersburg, FL" }), site(27.4, -82.5));
+    expect(r.address_line_1).toBe("");
+  });
+});

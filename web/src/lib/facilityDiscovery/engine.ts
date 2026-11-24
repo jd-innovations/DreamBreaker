@@ -416,6 +416,9 @@ export function pickPlace(places: GooglePlace[] | undefined, site: Site): Google
   return cands[0]?.p ?? null;
 }
 
+/** Google falls back to a plus code ("Q9P4+4R9") when a place has no street address; that is not an address. */
+const notPlusCode = (v: string | undefined): string => (v && !/^[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3}$/i.test(v.trim()) ? v : "");
+
 const comp = (components: GoogleComponent[] | undefined, type: string, short = false): string => {
   const c = (components ?? []).find((x) => x.types?.includes(type));
   return c ? String((short ? c.shortText ?? c.short_name : c.longText ?? c.long_name) ?? "") : "";
@@ -456,7 +459,7 @@ export function rowFromPlace(place: GooglePlace, site: Site): DiscoveryRow {
   const street = generic ? route : [comp(place.addressComponents, "street_number"), route].filter(Boolean).join(" ");
   return {
     facility_name: clean(generic ? courtsName(site.osmName, route, city) : place.displayName?.text, 120),
-    address_line_1: clean(street || (generic ? "" : place.formattedAddress?.split(",")[0]), 160),
+    address_line_1: clean(street || (generic ? "" : notPlusCode(place.formattedAddress?.split(",")[0])), 160),
     city: clean(city, 80),
     state: clean(comp(place.addressComponents, "administrative_area_level_1", true), 10),
     zip: clean(comp(place.addressComponents, "postal_code"), 12),
