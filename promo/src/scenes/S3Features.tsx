@@ -130,26 +130,23 @@ const Toast: React.FC<{ text: string; x: number; y: number; s: number }> = ({ te
 
 // ---------- panels ----------
 
-// Screens are cropped from the framed App Store screenshots
-// (fastlane/screenshots/en-US, 939×2048). Overlay points were measured on the
-// 660px web copies, so map them across: same x, y scaled plus a measured
-// vertical offset (explore 4px, tournament 2px).
-const SCREEN = { w: 939, h: 2048 };
-const at = (x660: number, y660: number, dy: number): [number, number] => [x660 / 660, (y660 * (939 / 660) + dy) / SCREEN.h];
-const box = (x: number, y: number, w: number, h: number, dy: number) => {
-  const [fx, fy] = at(x, y, dy);
-  return { x: fx, y: fy, w: w / 660, h: (h * (939 / 660)) / SCREEN.h };
-};
+// Screens are the owner's unframed iPhone captures (1179×2556). Overlay
+// points are fractions of the screen, measured on a 923×2000 preview.
+const SCREEN = { w: 1179, h: 2556 };
+const PW = 923;
+const PH = 2000;
+const at = (x: number, y: number): [number, number] => [x / PW, y / PH];
+const box = (x: number, y: number, w: number, h: number) => ({ x: x / PW, y: y / PH, w: w / PW, h: h / PH });
 
 // Real pin heads on the Explore map.
 const MAP_PINS: [number, number][] = [
-  at(172, 734, 4),
-  at(554, 734, 4),
-  at(328, 932, 4),
-  at(604, 916, 4),
-  at(430, 1214, 4),
+  at(315, 880),
+  at(673, 1030),
+  at(225, 1163),
+  at(598, 1260),
+  at(348, 1428),
 ];
-const YOU_ARE_HERE = at(328, 986, 4);
+const YOU_ARE_HERE = at(461, 1100);
 
 const PanelMap: React.FC<{ t: number }> = ({ t }) => (
   <AbsoluteFill style={{ background: C.bg }}>
@@ -194,7 +191,7 @@ const PanelMap: React.FC<{ t: number }> = ({ t }) => (
 );
 
 // Pompano Open Play card on events.png.
-const OPEN_PLAY_CARD = { x: 32 / SCREEN.w, y: 392 / SCREEN.h, w: 875 / SCREEN.w, h: 519 / SCREEN.h };
+const OPEN_PLAY_CARD = box(40, 404, 844, 586);
 
 const PanelOpenPlay: React.FC<{ t: number }> = ({ t }) => (
   <AbsoluteFill style={{ background: C.bg }}>
@@ -220,7 +217,7 @@ const PanelOpenPlay: React.FC<{ t: number }> = ({ t }) => (
 
 // Partner Finder (Mia Carter, a demo profile with an AI-generated photo): the
 // green "connect" button.
-const CONNECT_BTN: [number, number] = [615 / SCREEN.w, 1243 / SCREEN.h];
+const CONNECT_BTN = at(603, 1213);
 
 const PanelPartner: React.FC<{ t: number }> = ({ t }) => (
   <AbsoluteFill style={{ background: C.bg }}>
@@ -243,9 +240,9 @@ const PanelPartner: React.FC<{ t: number }> = ({ t }) => (
 );
 
 // Futures Classic: the Mixed Doubles division and the Register Now button.
-const DIVISION = box(30, 770, 600, 200, 2);
-const REGISTER = box(28, 1250, 604, 104, 2);
-const TOURNAMENT_SHIFT = 0.04;
+const DIVISION = box(40, 1468, 844, 250);
+const REGISTER = box(38, 1745, 847, 146);
+const TOURNAMENT_SHIFT = 0;
 
 const PanelTournament: React.FC<{ t: number }> = ({ t }) => (
   <AbsoluteFill style={{ background: C.bg }}>
