@@ -39,6 +39,8 @@ export interface Site {
   surfaces: string[];
   access: string[];
   osmName: string;
+  /** Courts OSM marks as indoor/covered/in a building; the rest are outdoor (OSM's default for a pitch). */
+  indoor: number;
 }
 
 export interface ExistingFacility {
@@ -135,9 +137,15 @@ export const PLACE_FIELDS = [
 export const COLUMNS = [
   "facility_name", "address_line_1", "city", "state", "zip", "country", "latitude", "longitude", "phone",
   "website_url", "google_place_id", "google_maps_url", "google_types", "primary_type", "primary_type_label",
-  "photos", "photos_count", "hours_summary", "total_courts", "lighting", "court_surface", "membership_required",
+  "photos", "photos_count", "hours_summary", "total_courts", "indoor_courts", "outdoor_courts", "lighting", "court_surface", "membership_required",
   "source", "notes", "osm_ids", "osm_court_count", "osm_area_name",
 ];
+
+/** OSM's default for leisure=pitch is outdoor; these tags say otherwise. location=roof stays outdoor. */
+export function isIndoorCourt(t: Record<string, string>): boolean {
+  return t.indoor === "yes" || t.indoor === "room" || t.covered === "yes" || t.location === "indoor" ||
+    (!!t.building && t.building !== "no") || t.leisure === "sports_centre" || t.leisure === "sports_hall";
+}
 
 export const OSM_CREDIT = "Pickleball courts confirmed via OpenStreetMap (© OpenStreetMap contributors)";
 
@@ -226,7 +234,7 @@ export function clusterSites(courts: OsmElement[]): Site[] {
     }
     const t = el.tags ?? {};
     if (!site) {
-      site = { center: p, pts: [], ids: [], lit: false, surfaces: [], access: [], osmName: "" };
+      site = { center: p, pts: [], ids: [], lit: false, surfaces: [], access: [], osmName: "", indoor: 0 };
       sites.push(site);
       const k = cellKey(p);
       grid.set(k, [...(grid.get(k) ?? []), site]);
@@ -236,6 +244,7 @@ export function clusterSites(courts: OsmElement[]): Site[] {
     site.lit = site.lit || t.lit === "yes";
     if (t.surface) site.surfaces.push(t.surface);
     site.access.push(t.access ?? "");
+    if (isIndoorCourt(t)) site.indoor += 1;
     site.center = [site.pts.reduce((a, q) => a + q[0], 0) / site.pts.length, site.pts.reduce((a, q) => a + q[1], 0) / site.pts.length];
   }
   return sites;
@@ -261,12 +270,12 @@ export function nameSites(sites: Site[], areas: OsmElement[]): void {
 // only falls back to live Overpass outside it. Refresh with:
 //   node scripts/facilities-osm/discover.mjs --state FL --tile-deg 2 --refresh-osm --write-snapshot
 
-/** courts: [osmId, lat, lon, lit, surface, access]; areas: [name, kind, minlat, minlon, maxlat, maxlon] */
+/** courts: [osmId, lat, lon, lit, surface, access, indoor]; areas: [name, kind, minlat, minlon, maxlat, maxlon] */
 export interface OsmSnapshot {
   state: string;
   bbox: BBox;
   generatedAt: string;
-  courts: [string, number, number, number, string, string][];
+  courts: [string, number, number, number, string, string, number?][];
   areas: [string, string, number, number, number, number][];
 }
 
@@ -281,7 +290,7 @@ export function buildSnapshot(state: string, bbox: BBox, courts: OsmElement[], a
     if (seen.has(id) || !c) continue;
     seen.add(id);
     const t = el.tags ?? {};
-    outCourts.push([id, +c.lat.toFixed(6), +c.lon.toFixed(6), t.lit === "yes" ? 1 : 0, clean(t.surface, 40), clean(t.access, 40)]);
+    outCourts.push([id, +c.lat.toFixed(6), +c.lon.toFixed(6), t.lit === "yes" ? 1 : 0, clean(t.surface, 40), clean(t.access, 40), isIndoorCourt(t) ? 1 : 0]);
   }
   // Keep only named areas that contain at least one court: all nameSites() needs.
   const seenArea = new Set<string>();
@@ -303,8 +312,9 @@ const TYPE_BY_PREFIX: Record<string, string> = { n: "node", w: "way", r: "relati
 export function fromSnapshot(snap: OsmSnapshot, [s, w, n, e]: BBox): { courts: OsmElement[]; areas: OsmElement[] } {
   const courts: OsmElement[] = snap.courts
     .filter((c) => s <= c[1] && c[1] <= n && w <= c[2] && c[2] <= e)
-    .map(([id, lat, lon, lit, surface, access]) => {
+    .map(([id, lat, lon, lit, surface, access, indoor]) => {
       const tags: Record<string, string> = { sport: "pickleball" };
+      if (indoor) tags.indoor = "yes";
       if (lit) tags.lit = "yes";
       if (surface) tags.surface = surface;
       if (access) tags.access = access;
@@ -401,8 +411,11 @@ function siteFacts(site: Site): DiscoveryRow {
   for (const x of site.surfaces) counts.set(x, (counts.get(x) ?? 0) + 1);
   const surface = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
   const priv = site.access.filter((a) => a === "private" || a === "customers" || a === "members").length * 2 > site.access.length;
+  const indoor = Math.min(site.indoor ?? 0, site.pts.length);
   return {
     total_courts: site.pts.length,
+    indoor_courts: indoor,
+    outdoor_courts: site.pts.length - indoor,
     lighting: site.lit ? "true" : "",
     court_surface: clean(surface, 40),
     membership_required: priv ? "true" : "",
@@ -445,6 +458,8 @@ export function rowFromPlace(place: GooglePlace, site: Site): DiscoveryRow {
     hours_summary: clean((place.regularOpeningHours?.weekdayDescriptions ?? []).join("; "), 400),
     source: "osm+google_places",
     ...siteFacts(site),
+    // A venue named "Indoor ..." is indoor even when OSM only mapped the courts.
+    ...(/\bindoor\b/i.test(place.displayName?.text ?? "") ? { indoor_courts: site.pts.length, outdoor_courts: 0 } : {}),
   };
 }
 

@@ -83,6 +83,7 @@ function parseSite(v: unknown): E.Site | null {
     surfaces: s.surfaces as string[],
     access: s.access as string[],
     osmName: E.clean(s.osmName, 120),
+    indoor: typeof s.indoor === "number" && Number.isInteger(s.indoor) && s.indoor >= 0 ? Math.min(s.indoor, (s.pts as unknown[]).length) : 0,
   };
 }
 

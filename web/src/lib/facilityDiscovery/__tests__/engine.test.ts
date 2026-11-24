@@ -6,7 +6,7 @@ import {
 
 const court = (id: number, lat: number, lon: number, tags: Record<string, string> = {}): OsmElement => ({ type: "way", id, center: { lat, lon }, tags });
 const site = (lat: number, lon: number, extra: Partial<Site> = {}): Site => ({
-  center: [lat, lon], pts: [[lat, lon]], ids: ["w1"], lit: false, surfaces: [], access: [], osmName: "", ...extra,
+  center: [lat, lon], pts: [[lat, lon]], ids: ["w1"], lit: false, surfaces: [], access: [], osmName: "", indoor: 0, ...extra,
 });
 const place = (p: Partial<GooglePlace>): GooglePlace => ({ id: "ChIJtest", location: { latitude: 27.4, longitude: -82.5 }, ...p });
 
@@ -156,5 +156,22 @@ describe("importer compatibility", () => {
     expect(m.photo_google_name).toBe("places/ChIJabc/photos/ref_1");
     expect(m.name).toBe("Bradenton Yacht Club");
     expect(m.court_count).toBe(1);
+  });
+});
+
+describe("indoor / outdoor", () => {
+  it("counts courts OSM marks indoor; the rest are outdoor", () => {
+    const [s1] = clusterSites([court(1, 27.4, -82.5, { covered: "yes" }), court(2, 27.4003, -82.5), court(3, 27.4004, -82.5, { location: "roof" })]);
+    const r = rowFromPlace(place({ displayName: { text: "Sunset Park" } }), s1);
+    expect(r).toMatchObject({ total_courts: 3, indoor_courts: 1, outdoor_courts: 2 });
+  });
+  it("treats a venue named Indoor as all indoor", () => {
+    const r = rowFromPlace(place({ displayName: { text: "Naples Pro Pickleball - Indoor Facility" } }), site(27.4, -82.5, { pts: [[27.4, -82.5], [27.4, -82.5]], indoor: 0 }));
+    expect(r).toMatchObject({ indoor_courts: 2, outdoor_courts: 0 });
+  });
+  it("keeps the indoor flag through a snapshot", () => {
+    const snap = buildSnapshot("FL", [27, -83, 28, -82], [court(7, 27.4, -82.5, { indoor: "yes" })], [], "2026-11-24");
+    const [s1] = clusterSites(fromSnapshot(snap, [27.3, -82.6, 27.5, -82.4]).courts);
+    expect(s1.indoor).toBe(1);
   });
 });
