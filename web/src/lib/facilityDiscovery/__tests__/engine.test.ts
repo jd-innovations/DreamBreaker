@@ -175,3 +175,16 @@ describe("indoor / outdoor", () => {
     expect(s1.indoor).toBe(1);
   });
 });
+
+describe("venue choice", () => {
+  const s = site(27.4, -82.5);
+  it("skips the dance school, playground and pool next to the courts", () => {
+    expect(pickPlace([place({ displayName: { text: "The Dance Barre" }, primaryType: "sports_school", types: ["sports_school"] })], s)).toBeNull();
+    expect(pickPlace([place({ displayName: { text: "Bella Terra Playground" }, primaryType: "playground", types: ["playground", "park"] })], s)).toBeNull();
+    expect(pickPlace([place({ displayName: { text: "Island Vista Pool" }, primaryType: "swimming_pool", types: ["swimming_pool"] })], s)).toBeNull();
+  });
+  it("keeps parks, clubs and anything named for the sport", () => {
+    expect(pickPlace([place({ displayName: { text: "Coquina Key Park" }, primaryType: "park", types: ["park"] })], s)).not.toBeNull();
+    expect(pickPlace([place({ displayName: { text: "Haulover Pickleball - 8 Courts" }, primaryType: "athletic_field", types: ["athletic_field"] })], s)).not.toBeNull();
+  });
+});

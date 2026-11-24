@@ -123,7 +123,6 @@ export const EXISTING_M = 300; // site within this of a DreamBreaker facility = 
 
 const BAD_TYPES = /lodging|hotel|motel|\binn\b|store|restaurant|cafe|bar\b|night_club|office|real_estate|insurance|car_|apartment|condominium|church|place_of_worship|museum|library|performing_arts|school_district/i;
 const BAD_NAMES = /residence hall|dormitory|student housing|apartments?\b|entire (place|home)|vacation|retreat|airbnb|bedroom|\bBR\b|heated pool|getaway|suites?\b|ballet|performing arts|museum|theat(er|re)|church|library/i;
-const VENUE_TYPES = /park|sports|athletic|tennis|golf|country_club|community_center|recreation|fitness|gym|club|school|university|stadium|playground|campground|rv_park|mobile_home_park/i;
 export const PHOTO_NAME = /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/;
 
 const GENERIC_WORDS = new Set(["the", "public", "pickleball", "pickle", "ball", "tennis", "basketball", "ten", "and", "court", "courts", "ct", "cts", "sport", "sports"]);
@@ -380,13 +379,28 @@ export function viewportBBox(geo: GeocodeResponse, padDeg = 0.03): BBox | null {
   return [v.southwest.lat - padDeg, v.southwest.lng - padDeg, v.northeast.lat + padDeg, v.northeast.lng + padDeg].map((x) => +x.toFixed(4)) as BBox;
 }
 
+// A place with a racquet-sport name is the venue almost whatever its type.
+const STRONG_NAME = /pickle|tennis|racquet|paddle|\bcourts?\b/i;
+// Otherwise it must be a place people go to play: a park, club, community or rec
+// centre, golf/country club, or a court/field-type place with a real name.
+const VENUE_PRIMARY = new Set([
+  "park", "city_park", "state_park", "national_park", "community_center", "recreation_center", "sports_complex",
+  "sports_club", "country_club", "golf_course", "tennis_court", "sports_activity_location", "athletic_field",
+  "stadium", "arena", "rv_park", "mobile_home_park", "campground", "resort_hotel",
+]);
+// Never the venue on their own (playground next to the courts, the pool, a lot,
+// a preschool, a gym or a company that happens to be nearest).
+const WEAK_NAME = /playground|\bpool\b|swimming|parking|valet|beach access|\btrail(head)?\b|dog beach|fishing|gazebo|\bfield\b|soccer|baseball|softball|\bllc\b|\binc\b|\bcorp\b|services|fitness|gym|barbell|learning|preschool|head start|daycare|dance|gymnastics|sailing|motorcycle|volleyball|\bfc\b|ayso/i;
+
 function acceptable(place: GooglePlace): boolean {
   const name = place.displayName?.text ?? "";
   const types = [...(place.types ?? []), place.primaryType ?? ""].join(" ");
   if (place.businessStatus === "CLOSED_PERMANENTLY") return false;
   if (typeof place.location?.latitude !== "number" || typeof place.location?.longitude !== "number") return false;
   if (BAD_NAMES.test(name) || BAD_TYPES.test(types)) return false;
-  return /pickle/i.test(name) || VENUE_TYPES.test(types);
+  if (STRONG_NAME.test(name)) return true;
+  if (WEAK_NAME.test(name)) return false;
+  return VENUE_PRIMARY.has(place.primaryType ?? "");
 }
 
 /** Best acceptable Google place for a site, or null. */
@@ -395,7 +409,10 @@ export function pickPlace(places: GooglePlace[] | undefined, site: Site): Google
     .filter(acceptable)
     .map((p) => ({ p, d: haversine(site.center, [p.location!.latitude!, p.location!.longitude!]) }))
     .filter((x) => x.d <= GOOGLE_RADIUS_M + 50)
-    .sort((a, b) => Number(/pickle/i.test(b.p.displayName?.text ?? "")) - Number(/pickle/i.test(a.p.displayName?.text ?? "")) || a.d - b.d);
+    .sort((a, b) =>
+      Number(/pickle/i.test(b.p.displayName?.text ?? "")) - Number(/pickle/i.test(a.p.displayName?.text ?? "")) ||
+      Number(STRONG_NAME.test(b.p.displayName?.text ?? "")) - Number(STRONG_NAME.test(a.p.displayName?.text ?? "")) ||
+      a.d - b.d);
   return cands[0]?.p ?? null;
 }
 
