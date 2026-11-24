@@ -392,12 +392,18 @@ const VENUE_PRIMARY = new Set([
 // a preschool, a gym or a company that happens to be nearest).
 const WEAK_NAME = /playground|\bpool\b|swimming|parking|valet|beach access|\btrail(head)?\b|dog beach|fishing|gazebo|\bfield\b|soccer|baseball|softball|\bllc\b|\binc\b|\bcorp\b|services|fitness|gym|barbell|learning|preschool|head start|daycare|dance|gymnastics|sailing|motorcycle|volleyball|\bfc\b|ayso/i;
 
+const NOT_A_VENUE = /\bllc\b|\binc\b|\bcorp\b|wellness|physio|fitness|\bgym\b|splash|patio|hockey|\brink\b|polo|\bplaza\b/i;
+
 function acceptable(place: GooglePlace): boolean {
   const name = place.displayName?.text ?? "";
   const types = [...(place.types ?? []), place.primaryType ?? ""].join(" ");
   if (place.businessStatus === "CLOSED_PERMANENTLY") return false;
   if (typeof place.location?.latitude !== "number" || typeof place.location?.longitude !== "number") return false;
   if (BAD_NAMES.test(name) || BAD_TYPES.test(types)) return false;
+  // A business or non-court place whose name merely contains "court"
+  // ("Off The Court Fitness & Wellness, LLC") is never the venue unless the
+  // name actually says pickleball or tennis.
+  if (NOT_A_VENUE.test(name) && !/pickle|tennis/i.test(name)) return false;
   if (STRONG_NAME.test(name)) return true;
   if (WEAK_NAME.test(name)) return false;
   return VENUE_PRIMARY.has(place.primaryType ?? "");

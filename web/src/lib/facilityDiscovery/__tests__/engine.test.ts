@@ -195,3 +195,12 @@ describe("addresses", () => {
     expect(r.address_line_1).toBe("");
   });
 });
+
+describe("businesses named like courts", () => {
+  it("skips a fitness business whose name contains 'Court'", () => {
+    const s = site(27.4, -82.5);
+    expect(pickPlace([place({ displayName: { text: "Off The Court Fitness & Wellness, LLC" }, primaryType: "physiotherapist", types: ["physiotherapist"] })], s)).toBeNull();
+    expect(pickPlace([place({ displayName: { text: "Sugar Mill Splash Pad" }, primaryType: "park", types: ["park"] })], s)).toBeNull();
+    expect(pickPlace([place({ displayName: { text: "FIT Tennis Academy (& Pickleball Center)" }, primaryType: "sports_club", types: ["sports_club"] })], s)).not.toBeNull();
+  });
+});

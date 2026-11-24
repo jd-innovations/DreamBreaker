@@ -23,6 +23,8 @@
     --max-google N        hard cap on Google requests this run (default 400)
     --refresh-osm         ignore cached Overpass responses
     --tile-deg D          Overpass tile size in degrees (default 0.5; 2 is fine for one state)
+    --skip-failed         keep going when a tile can't be downloaded (listed in summary.json;
+                          re-run later without it to fill them in)
     --write-snapshot      with --state: save the courts as the Discover tab's snapshot
                           (web/src/lib/facilityDiscovery/snapshots/<STATE>.json), then commit it
 
@@ -90,7 +92,7 @@ async function overpass(query, cacheKey) {
   const file = path.join(CACHE_DIR, 'osm', `${cacheKey}.json`);
   if (has('--refresh-osm') && fs.existsSync(file)) fs.rmSync(file);
   return cached(file, async () => {
-    for (let attempt = 0; attempt < 6; attempt += 1) {
+    for (let attempt = 0; attempt < (has('--skip-failed') ? 2 : 6); attempt += 1) {
       for (const base of E.OVERPASS_ENDPOINTS) {
         try {
           const { status, text } = await fetchChecked(`${base}?data=${encodeURIComponent(query)}`, { headers: { 'User-Agent': 'facility-osm-tool/1.0' } });
@@ -105,17 +107,30 @@ async function overpass(query, cacheKey) {
   });
 }
 
+const skippedTiles = [];
+
 async function loadOsm(bbox, tileDeg) {
   const courts = [];
   const areas = [];
   const ts = E.tiles(bbox, tileDeg);
   for (const [i, t] of ts.entries()) {
     const key = `t_${t.join('_')}`;
-    const c = await overpass(E.courtsQuery(t), `${key}_courts`);
+    let c;
+    try {
+      c = await overpass(E.courtsQuery(t), `${key}_courts`);
+    } catch (err) {
+      if (!has('--skip-failed')) throw err;
+      skippedTiles.push(t);
+      continue;
+    }
     courts.push(...(c.elements ?? []));
     if ((c.elements ?? []).length) {
-      const a = await overpass(E.areasQuery(t), `${key}_areas`);
-      areas.push(...(a.elements ?? []));
+      try {
+        const a = await overpass(E.areasQuery(t), `${key}_areas`);
+        areas.push(...(a.elements ?? []));
+      } catch (err) {
+        if (!has('--skip-failed')) throw err; // names only: courts still count
+      }
     }
     process.stdout.write(`\rOSM tiles ${i + 1}/${ts.length}  courts ${courts.length}`);
   }
@@ -253,6 +268,7 @@ async function main() {
     unmatched_rows: unmatched.length, pending_sites: pending.length,
     estimated_google_requests_for_pending: pending.length * 2,
     stopped_early: stopped ? redact(stopped) : null,
+    skipped_osm_tiles: skippedTiles,
   };
   fs.writeFileSync(path.join(outDir, 'summary.json'), JSON.stringify(summary, null, 2));
   console.log(JSON.stringify(summary, null, 2));
