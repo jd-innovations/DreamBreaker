@@ -489,7 +489,8 @@ export function rowFromGeocode(geo: GeocodeResponse | null, site: Site): Discove
   const street = r ? comp(r.address_components, "route") : "";
   const city = r ? comp(r.address_components, "locality") || comp(r.address_components, "postal_town") || comp(r.address_components, "administrative_area_level_3") : "";
   return {
-    facility_name: clean(site.osmName ? site.osmName : courtsName("", street, city), 120),
+    // "Pine Ridge Estates" alone reads like a neighborhood listing; say what it is.
+    facility_name: clean(site.osmName ? (STRONG_NAME.test(site.osmName) ? site.osmName : `${site.osmName} Pickleball Courts`) : courtsName("", street, city), 120),
     address_line_1: clean(street, 160),
     city: clean(city, 80),
     state: r ? clean(comp(r.address_components, "administrative_area_level_1", true), 10) : "",
