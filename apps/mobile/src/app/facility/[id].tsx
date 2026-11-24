@@ -981,6 +981,18 @@ export default function FacilityDetailScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* ODbL credit: venues found via OpenStreetMap courts carry data_source
+              'osm' or 'osm+google_places' (scripts/facilities-osm, admin Discover). */}
+          {facility.data_source?.startsWith('osm') && (
+            <Text
+              style={s.osmCredit}
+              accessibilityRole="link"
+              onPress={() => Linking.openURL('https://www.openstreetmap.org/copyright').catch(() => {})}
+            >
+              Court data © OpenStreetMap contributors
+            </Text>
+          )}
+
         </View>
       </ScrollView>
 
@@ -1147,6 +1159,7 @@ const s = StyleSheet.create({
   hourChipJoinableText: { color: L.navy, fontSize: text.chipValue.size, fontWeight: '800' },
 
   ctaStack:        { marginTop: 28, gap: 10 },
+  osmCredit:       { marginTop: 18, textAlign: 'center', color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
   ctaPrimary:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: L.navy, borderRadius: shape.cta, paddingVertical: 14 },
   ctaPrimaryText:  { color: L.white, fontSize: text.actionLarge.size, fontWeight: '800' },
   ctaSecondary:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: L.gold + '22', borderWidth: 1.5, borderColor: L.gold, borderRadius: shape.cta, paddingVertical: 13 },

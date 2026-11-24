@@ -221,6 +221,14 @@ export default function TermsPage() {
           </Link>
           .
         </P>
+        <P>
+          Some venue locations and court counts come from OpenStreetMap, © OpenStreetMap contributors,
+          available under the{" "}
+          <a className="text-primary hover:underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+            Open Database License
+          </a>
+          .
+        </P>
       </Section>
 
       <Section id="availability" heading="10. Availability and changes">
