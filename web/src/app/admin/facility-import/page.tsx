@@ -365,7 +365,7 @@ export default function FacilityImportPage() {
           {batch && (
             <>
               <div className="border border-border rounded-2xl p-6 bg-card">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <div>
                     <div className="font-display text-lg">{batch.filename}</div>
                     <div className="text-xs text-muted-foreground">
@@ -375,6 +375,14 @@ export default function FacilityImportPage() {
                   {batch.status === "dry_run" && (
                     <button onClick={resetUpload} className="text-sm text-muted-foreground hover:text-foreground">
                       Start over
+                    </button>
+                  )}
+                  {batch.status === "committed" && (
+                    <button
+                      onClick={() => { resetUpload(); setRowFilter("all"); window.scrollTo({ top: 0 }); }}
+                      className="h-10 px-5 rounded-full bg-primary text-primary-foreground text-sm font-display tracking-wider flex-shrink-0"
+                    >
+                      Import another CSV
                     </button>
                   )}
                 </div>
