@@ -25,6 +25,9 @@
     --tile-deg D          Overpass tile size in degrees (default 0.5; 2 is fine for one state)
     --skip-failed         keep going when a tile can't be downloaded (listed in summary.json;
                           re-run later without it to fill them in)
+    --elements FILE       read courts from pbf-extract.py output instead of Overpass
+                          (see README "No Overpass"); trimmed to the state/bbox
+    --from-snapshot       with --state: read the committed Discover snapshot instead of Overpass
     --write-snapshot      with --state: save the courts as the Discover tab's snapshot
                           (web/src/lib/facilityDiscovery/snapshots/<STATE>.json), then commit it
 
@@ -177,6 +180,29 @@ function google(kind, site, makeRequest) {
 }
 
 // ---------- main ----------
+// No Overpass: --elements <file> reads pbf-extract.py output (a Geofabrik state
+// download), --from-snapshot reads the committed Discover snapshot for --state.
+// Both are trimmed to the run's bbox so a --bbox run still means that area.
+function loadLocalOsm(state, [s, w, n, e]) {
+  const inBox = (p) => p && s <= p.lat && p.lat <= n && w <= p.lon && p.lon <= e;
+  const overlaps = (b) => b && b.minlat <= n && b.maxlat >= s && b.minlon <= e && b.maxlon >= w;
+  if (arg('--elements')) {
+    const data = JSON.parse(fs.readFileSync(arg('--elements'), 'utf8'));
+    if (!Array.isArray(data.courts) || !Array.isArray(data.areas)) throw new Error('--elements file must hold { courts: [], areas: [] }');
+    const courts = data.courts.filter((c) => inBox(c.center ?? { lat: c.lat, lon: c.lon }));
+    const areas = data.areas.filter((a) => overlaps(a.bounds));
+    console.log(`OSM from ${path.basename(arg('--elements'))}: ${courts.length} courts, ${areas.length} named areas`);
+    return { courts, areas };
+  }
+  if (has('--from-snapshot')) {
+    const file = path.join(ROOT, 'web', 'src', 'lib', 'facilityDiscovery', 'snapshots', `${state}.json`);
+    if (!state || !fs.existsSync(file)) throw new Error(`--from-snapshot: no snapshot for ${state ?? '(no --state)'}`);
+    const out = E.fromSnapshot(JSON.parse(fs.readFileSync(file, 'utf8')), [s, w, n, e]);
+    console.log(`OSM from snapshot ${state}.json: ${out.courts.length} courts`);
+    return out;
+  }
+  return null;
+}
 
 async function main() {
   const state = arg('--state')?.toUpperCase();
@@ -189,7 +215,7 @@ async function main() {
   const outDir = path.join(TOOL_DIR, 'out', `${label}-${new Date().toISOString().slice(0, 10)}`);
   fs.mkdirSync(outDir, { recursive: true });
 
-  const { courts, areas } = await loadOsm(bbox, Number(arg('--tile-deg') ?? 0.5));
+  const { courts, areas } = loadLocalOsm(state, bbox) ?? await loadOsm(bbox, Number(arg('--tile-deg') ?? 0.5));
   if (has('--write-snapshot')) {
     if (!state || arg('--bbox')) { console.error('--write-snapshot needs --state (and no --bbox)'); process.exit(1); }
     const snap = E.buildSnapshot(state, bbox, courts, areas, new Date().toISOString().slice(0, 10));

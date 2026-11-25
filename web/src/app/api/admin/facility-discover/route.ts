@@ -51,10 +51,17 @@ async function fetchJson(url: string, init: RequestInit, timeoutMs: number, maxB
   return { status: res.status, json };
 }
 
-async function overpass(query: string): Promise<E.OsmElement[]> {
+// Overpass calls share one budget per request, kept under maxDuration (60 s):
+// 3 mirrors x 25 s used to run past it, so Vercel killed the function (504)
+// and the tab showed a generic error instead of retrying on "osm_busy".
+const OVERPASS_BUDGET_MS = 45000;
+
+async function overpass(query: string, deadline: number): Promise<E.OsmElement[]> {
   for (const base of E.OVERPASS_ENDPOINTS) {
+    const left = deadline - Date.now();
+    if (left < 3000) break;
     try {
-      const { status, json } = await fetchJson(`${base}?data=${encodeURIComponent(query)}`, { headers: { "User-Agent": "facility-discover/1.0" } }, 25000, 50 * 1024 * 1024);
+      const { status, json } = await fetchJson(`${base}?data=${encodeURIComponent(query)}`, { headers: { "User-Agent": "facility-discover/1.0" } }, Math.min(25000, left), 50 * 1024 * 1024);
       if (status === 200 && json && Array.isArray((json as Json).elements)) return (json as { elements: E.OsmElement[] }).elements;
     } catch { /* next mirror */ }
   }
@@ -117,9 +124,10 @@ async function osm(supabase: NonNullable<Awaited<ReturnType<typeof requireAdmin>
   if (snap) {
     ({ courts, areas } = E.fromSnapshot(snap, t));
   } else {
+    const deadline = Date.now() + OVERPASS_BUDGET_MS;
     try {
-      courts = await overpass(E.courtsQuery(t));
-      if (courts.length) areas = await overpass(E.areasQuery(t));
+      courts = await overpass(E.courtsQuery(t), deadline);
+      if (courts.length) areas = await overpass(E.areasQuery(t), deadline);
     } catch {
       return bad("osm_busy", 503);
     }

@@ -97,7 +97,9 @@ export function DiscoverPanel({ onStage }: { onStage: (csv: string, filename: st
             courtCount += r.courts; listed += r.alreadyListed; found.push(...r.sites);
             break;
           } catch (err) {
-            if ((err as { status?: number }).status === 503 && attempt < 4) { attempt += 1; await sleep(8000 * attempt); continue; }
+            // 503 = osm_busy; 504 = the platform timed the request out. Both are worth a retry.
+            const status = (err as { status?: number }).status;
+            if ((status === 503 || status === 504) && attempt < 4) { attempt += 1; await sleep(8000 * attempt); continue; }
             throw err;
           }
         }

@@ -44,6 +44,30 @@ node scripts/facilities-osm/discover.mjs --state FL --tile-deg 2 --refresh-osm -
 
 Then add a new state's JSON to `snapshots/index.ts`, commit, and deploy.
 
+## No Overpass (Geofabrik download) — preferred for whole states
+
+Overpass went down for everyone on 2026-11-25 (PC, Vercel and a third network
+all timed out). A state's full OSM extract from Geofabrik gives the same courts
+without it (verified: FL matched the Overpass snapshot court-for-court).
+
+```bash
+# 1. Download into the gitignored cache and check the published md5
+curl -L -o scripts/facilities-osm/cache/pbf/north-carolina.osm.pbf \
+  https://download.geofabrik.de/north-america/us/north-carolina-latest.osm.pbf
+curl -L https://download.geofabrik.de/north-america/us/north-carolina-latest.osm.pbf.md5
+
+# 2. Extract courts + naming areas (pyosmium in a venv outside the repo; NC ~30 s)
+<venv python> -I scripts/facilities-osm/pbf-extract.py scripts/facilities-osm/cache/pbf/north-carolina.osm.pbf scripts/facilities-osm/cache/pbf/NC-elements.json
+
+# 3. Snapshot for the Discover tab, and/or a normal CLI run (dry or --google)
+node scripts/facilities-osm/discover.mjs --state NC --elements scripts/facilities-osm/cache/pbf/NC-elements.json --write-snapshot
+node scripts/facilities-osm/discover.mjs --state NC --elements scripts/facilities-osm/cache/pbf/NC-elements.json --google
+```
+
+A state download holds only that state, so courts just over the border (inside
+the state's bbox) are left out; Overpass runs included them. `--from-snapshot`
+reruns the CLI from a committed snapshot without any download.
+
 ## Output (`out/<label>-<date>/`)
 
 | File | What it is |
