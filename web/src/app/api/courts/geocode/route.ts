@@ -42,7 +42,12 @@ export async function GET(req: Request) {
   if (!key) return NextResponse.json({ error: "unavailable" }, { status: 503 });
 
   try {
-    const res = await fetch(forwardGeocodeUrl(key, q), {
+    // The host is fixed; the visitor's text is only ever an encoded query
+    // value. Asserted anyway so a future change to the URL builder can't
+    // quietly turn this into a fetch of a user-chosen host.
+    const url = new URL(forwardGeocodeUrl(key, q));
+    if (url.protocol !== "https:" || url.hostname !== "maps.googleapis.com") throw new Error("host_not_allowed");
+    const res = await fetch(url, {
       redirect: "error",
       signal: AbortSignal.timeout(8000),
       cache: "no-store",
