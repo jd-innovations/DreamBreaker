@@ -888,6 +888,12 @@ export default function AdminPage() {
             <Buildings size={16} /> Facility Import
           </button>
         </Link>
+        <Link href="/admin/court-check">
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Buildings size={16} /> Court Check
+          </button>
+        </Link>
         <Link href="/admin/reviews">
           <button
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
