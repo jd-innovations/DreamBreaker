@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MapPin } from "@phosphor-icons/react/dist/ssr";
-import { courtSummary, facilityHref, type CourtListing } from "@/lib/courts/directory";
+import { courtSummary, facilityHref } from "@/lib/courts/places";
+import type { CourtListing } from "@/lib/courts/directory";
 
 /** One facility in a /courts list. Server component; the photo is lazy-loaded. */
 export function CourtCard({ court, distance }: { court: CourtListing; distance?: string | null }) {

@@ -80,3 +80,18 @@ describe("isIndexable", () => {
     expect(isIndexable({ address: null, court_count: 8, photos: ["p"] })).toBe(false);
   });
 });
+
+describe("submissionErrorMessage", async () => {
+  const { submissionErrorMessage } = await import("@/lib/courts/submissions");
+  it("names the field", () => {
+    expect(submissionErrorMessage('too_long:name')).toBe("Name is too long.");
+    expect(submissionErrorMessage('ERROR: invalid_value:website')).toMatch(/http/);
+  });
+  it("explains limits", () => {
+    expect(submissionErrorMessage("too_many_pending")).toMatch(/10 submissions/);
+    expect(submissionErrorMessage("invalid_value:court_count")).toMatch(/total/);
+  });
+  it("falls back for anything unknown", () => {
+    expect(submissionErrorMessage("boom")).toMatch(/try again/);
+  });
+});

@@ -876,6 +876,12 @@ export default function AdminPage() {
             <Buildings size={16} /> Facility Applications
           </button>
         </Link>
+        <Link href="/admin/facility-submissions">
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Buildings size={16} /> Court Submissions
+          </button>
+        </Link>
         <Link href="/admin/facility-import">
           <button
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">

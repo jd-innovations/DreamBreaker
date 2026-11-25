@@ -7,7 +7,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { ArrowLeft, Clock, Globe, MapPin, NavigationArrow, Phone } from "@phosphor-icons/react/dist/ssr";
+import { ArrowLeft, Clock, Globe, MapPin, NavigationArrow, PencilSimple, Phone } from "@phosphor-icons/react/dist/ssr";
 import { APP_ORIGIN } from "@/lib/og/types";
 import { DEFAULT_OG_IMAGE, SITE_NAME, jsonLdHtml } from "@/lib/seo/site";
 import {
@@ -203,7 +203,18 @@ export default async function CourtPage({ params }: Props) {
         </section>
       )}
 
-      <footer className="mt-10 space-y-1 border-t border-border pt-4 text-xs text-muted-foreground">
+      <section className="mt-10 rounded-2xl border border-border p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+        <div>
+          <h2 className="font-semibold">Something wrong or missing?</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">Players keep this directory accurate. Updates are reviewed before they go live.</p>
+        </div>
+        <Link href={`/courts/suggest?facility=${c.id}`}
+          className="mt-3 inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-border px-4 text-sm font-semibold hover:bg-secondary sm:mt-0">
+          <PencilSimple size={16} /> Suggest an edit
+        </Link>
+      </section>
+
+      <footer className="mt-6 space-y-1 border-t border-border pt-4 text-xs text-muted-foreground">
         <p>Details can change. Check with the venue before you go.</p>
         {fromOsm && (
           <p>

@@ -64,6 +64,17 @@ export default async function CourtsPage({ searchParams }: Props) {
         </section>
       )}
 
+      <section className="mt-10 rounded-2xl border border-border p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+        <div>
+          <h2 className="font-semibold">Know a court that isn&apos;t listed?</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">Add it for other players. Every submission is reviewed before it goes live.</p>
+        </div>
+        <Link href="/courts/suggest"
+          className="mt-3 inline-flex h-10 shrink-0 items-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 sm:mt-0">
+          Add a court
+        </Link>
+      </section>
+
       <section className="mt-10" aria-label="Browse by state">
         <h2 className="text-lg font-semibold">Browse by state</h2>
         <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
