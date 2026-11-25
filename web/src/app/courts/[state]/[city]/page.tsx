@@ -8,6 +8,7 @@ import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import { pageMetadata } from "@/lib/seo/site";
 import { STATE_NAMES, cityHref, getDirectoryIndex, listCity, stateFromParam, stateHref } from "@/lib/courts/directory";
 import { CourtCard } from "@/components/courts/court-card";
+import { CourtSearchForm } from "@/components/courts/court-search-form";
 
 export const revalidate = 3600;
 export async function generateStaticParams() {
@@ -55,6 +56,9 @@ export default async function CityPage({ params }: Props) {
           {courts.length} place{courts.length === 1 ? "" : "s"} to play.
         </p>
       </header>
+      <div className="mt-6">
+        <CourtSearchForm state={r.code} stateName={STATE_NAMES[r.code]} />
+      </div>
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {courts.map((c) => <CourtCard key={c.id} court={c} />)}
       </div>
