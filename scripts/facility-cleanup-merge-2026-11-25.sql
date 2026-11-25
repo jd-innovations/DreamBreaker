@@ -96,6 +96,14 @@ delete from public.facilities where id in (select loser from merge_map);
 
 -- 4. Delete the three non-venues and the rental home's three copies.
 --    None has a home court, game, session or listing pointing at it (checked 2026-11-25).
+--    The import history still points at the rows it created; keep that history
+--    but drop the link (first run failed on facility_import_rows_applied_facility_id_fkey).
+update public.facility_import_rows set applied_facility_id = null where applied_facility_id in (
+  '08825f61-2ba7-4d45-b906-ae17509ad497', '2edf4cb9-6216-4379-bf6e-981bd5a3f437', '3d89ca81-8d80-4594-bf08-289345e59bb0',
+  'b9ba0056-863a-4710-932b-8975e5443b3d', '955044d6-07dd-4030-8dd6-fe35420a5e68');
+update public.facility_import_rows set matched_facility_id = null where matched_facility_id in (
+  '08825f61-2ba7-4d45-b906-ae17509ad497', '2edf4cb9-6216-4379-bf6e-981bd5a3f437', '3d89ca81-8d80-4594-bf08-289345e59bb0',
+  'b9ba0056-863a-4710-932b-8975e5443b3d', '955044d6-07dd-4030-8dd6-fe35420a5e68');
 delete from public.facilities where id in (
   '08825f61-2ba7-4d45-b906-ae17509ad497',  -- El Gremio (bar)
   '2edf4cb9-6216-4379-bf6e-981bd5a3f437',  -- BBB Sporting Goods
