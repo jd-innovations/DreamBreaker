@@ -1,26 +1,13 @@
-import type { Metadata } from 'next';
-import { MobileLinkFallback } from '@/components/mobile-link-fallback';
-import { buildEntityMetadata } from '@/lib/og/metadata';
-import { fetchFacilityOg } from '@/lib/og/fetchers';
+import { notFound, permanentRedirect } from "next/navigation";
+import { facilityHref, getCourtById } from "@/lib/courts/directory";
 
-// New route — there was previously no web page for a facility share link at
-// all (mobile builds and shares https://pickleballapp.app/facility/{id};
-// it 404'd for every recipient, app-installed or not). Mirrors the shape of
-// marketplace/[id] and groups/[id].
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+// The app shares https://pickleballapp.app/facility/{id}. On a phone with the
+// app installed the universal link opens the app before this runs; everyone
+// else used to get an "open in the app" stub. Since the public court directory
+// (2026-11-25) there is a real page, so send them to it: /courts/<state>/<city>/<slug>.
+export default async function FacilityRedirect({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const payload = await fetchFacilityOg(id);
-  return buildEntityMetadata('facility', id, payload);
-}
-
-export default async function FacilityFallbackPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const payload = await fetchFacilityOg(id);
-  return (
-    <MobileLinkFallback
-      title={payload?.title ?? 'Open Facility'}
-      description={payload?.description ?? 'Facility details are available in the Pickleball App mobile app.'}
-      path={`/facility/${encodeURIComponent(id)}`}
-    />
-  );
+  const court = await getCourtById(id);
+  if (!court) notFound();
+  permanentRedirect(facilityHref(court));
 }
