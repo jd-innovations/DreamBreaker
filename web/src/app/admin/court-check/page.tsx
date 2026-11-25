@@ -11,8 +11,10 @@
  *
  * Writes go straight to facilities under the existing RLS policy
  * "facilities: admin full access" (is_admin()), so the database, not this
- * page, decides who may save. Only the six fields below plus
- * last_verified_date are ever sent. An update that matches no row (not an
+ * page, decides who may save. Only the fields in the form (name, address,
+ * city, court counts, access, four amenities) plus last_verified_date are
+ * ever sent. After a save the court's cached public pages are refreshed via
+ * /api/admin/revalidate-court, so the change shows at once. An update that matches no row (not an
  * admin) is reported as an error rather than silently "saved".
  */
 
@@ -23,6 +25,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { facilityHref } from "@/lib/courts/places";
+import { refreshCourtPages } from "@/lib/courts/refresh";
 
 type Venue = {
   id: string;
@@ -37,9 +40,18 @@ type Venue = {
   indoor_courts: number;
   outdoor_courts: number;
   last_verified_date: string | null;
+  public_access: boolean;
+  membership_required: boolean;
+  lighting: boolean;
+  restrooms: boolean;
+  water: boolean;
+  parking: boolean;
 };
 
-const COLS = "id,name,slug,address,city,state,latitude,longitude,court_count,indoor_courts,outdoor_courts,last_verified_date";
+const AMENITY_KEYS = [["lighting", "Lights"], ["restrooms", "Restrooms"], ["water", "Water"], ["parking", "Parking"]] as const;
+
+const COLS = "id,name,slug,address,city,state,latitude,longitude,court_count,indoor_courts,outdoor_courts,last_verified_date," +
+  "public_access,membership_required,lighting,restrooms,water,parking";
 const PAGE = 1000; // PostgREST returns at most 1,000 rows per request
 const FILTERS = [["unchecked", "Not checked"], ["checked", "Checked"], ["all", "All"]] as const;
 type Filter = (typeof FILTERS)[number][0];
@@ -86,7 +98,7 @@ export default function CourtCheckPage() {
       const { data, error } = await supabase.from("facilities").select(COLS).eq("state", s)
         .order("city").order("name").range(from, from + PAGE - 1);
       if (error) { setLoading(false); toast.error(error.message); return; }
-      out.push(...((data ?? []) as Venue[]));
+      out.push(...((data ?? []) as unknown as Venue[]));
       if (!data || data.length < PAGE) break;
     }
     setVenues(out);
@@ -185,7 +197,9 @@ function VenueRow({ venue, onSaved }: { venue: Venue; onSaved: (v: Venue) => voi
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(() => toForm(venue));
-  const set = (k: keyof ReturnType<typeof toForm>) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  type Form = ReturnType<typeof toForm>;
+  type TextKey = "name" | "address" | "city" | "court_count" | "indoor_courts" | "outdoor_courts";
+  const set = (k: TextKey) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f: Form) => ({ ...f, [k]: e.target.value }));
 
   function validate(): string | null {
     for (const k of ["name", "address", "city"] as const) {
@@ -211,14 +225,22 @@ function VenueRow({ venue, onSaved }: { venue: Venue; onSaved: (v: Venue) => voi
       court_count: +form.court_count,
       indoor_courts: +form.indoor_courts,
       outdoor_courts: +form.outdoor_courts,
+      public_access: form.access === "public",
+      membership_required: form.access === "members",
+      lighting: form.lighting,
+      restrooms: form.restrooms,
+      water: form.water,
+      parking: form.parking,
       last_verified_date: new Date().toISOString(),
     };
     const { data, error } = await supabase.from("facilities").update(patch).eq("id", venue.id).select(COLS);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     if (!data || data.length === 0) { toast.error("Not saved: no permission to edit this venue."); return; }
-    const next = data[0] as Venue;
+    const next = data[0] as unknown as Venue;
     onSaved(next);
+    void refreshCourtPages(next.id, next.city !== venue.city || next.state !== venue.state ? { state: venue.state, city: venue.city } : undefined)
+      .then((ok) => { if (!ok) toast.message("Saved. The public page may take up to an hour to show it."); });
     setForm(toForm(next));
     setOpen(false);
     toast.success(`${next.name} checked.`);
@@ -241,6 +263,9 @@ function VenueRow({ venue, onSaved }: { venue: Venue; onSaved: (v: Venue) => voi
           <div className="text-xs text-muted-foreground">{venue.address} · {venue.city}</div>
           <div className="mt-1 text-xs">
             {summary}
+            <span className="text-muted-foreground"> · {venue.membership_required ? "Members only" : "Public"}
+              {AMENITY_KEYS.filter(([k]) => venue[k]).length > 0 && ` · ${AMENITY_KEYS.filter(([k]) => venue[k]).map(([, l]) => l).join(", ")}`}
+            </span>
             {venue.last_verified_date && (
               <span className="ml-2 text-primary">Checked {new Date(venue.last_verified_date).toLocaleDateString()}</span>
             )}
@@ -266,6 +291,28 @@ function VenueRow({ venue, onSaved }: { venue: Venue; onSaved: (v: Venue) => voi
             <Field label="Total courts"><input value={form.court_count} onChange={set("court_count")} inputMode="numeric" className={INPUT} /></Field>
             <Field label="Outdoor"><input value={form.outdoor_courts} onChange={set("outdoor_courts")} inputMode="numeric" className={INPUT} /></Field>
             <Field label="Indoor"><input value={form.indoor_courts} onChange={set("indoor_courts")} inputMode="numeric" className={INPUT} /></Field>
+          </div>
+          <div>
+            <span className="mb-1 block text-xs text-muted-foreground">Access</span>
+            <div className="flex gap-2">
+              {([["public", "Public"], ["members", "Members only"]] as const).map(([v, label]) => (
+                <button key={v} type="button" onClick={() => setForm((f) => ({ ...f, access: v }))}
+                  className={`rounded-full border px-4 py-1.5 text-xs font-semibold ${form.access === v ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <span className="mb-1 block text-xs text-muted-foreground">Amenities</span>
+            <div className="flex flex-wrap gap-2">
+              {AMENITY_KEYS.map(([k, label]) => (
+                <label key={k} className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold ${form[k] ? "border-primary bg-primary/10" : "border-border"}`}>
+                  <input type="checkbox" checked={form[k]} onChange={(e) => setForm((f) => ({ ...f, [k]: e.target.checked }))} className="accent-primary" />
+                  {label}
+                </label>
+              ))}
+            </div>
           </div>
           <button type="button" onClick={save} disabled={saving}
             className="h-10 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-40">
@@ -295,6 +342,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function toForm(v: Venue) {
   return {
+    access: (v.membership_required ? "members" : "public") as "public" | "members",
+    lighting: !!v.lighting,
+    restrooms: !!v.restrooms,
+    water: !!v.water,
+    parking: !!v.parking,
     name: v.name ?? "",
     address: v.address ?? "",
     city: v.city ?? "",

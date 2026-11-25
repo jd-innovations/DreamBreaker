@@ -10,6 +10,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { ArrowLeft, Clock, Globe, MapPin, NavigationArrow, PencilSimple, Phone } from "@phosphor-icons/react/dist/ssr";
 import { APP_ORIGIN } from "@/lib/og/types";
 import { CourtPhoto } from "@/components/courts/court-photo";
+import { OpenMapButton } from "@/components/courts/open-map-button";
 import { DEFAULT_OG_IMAGE, SITE_NAME, jsonLdHtml } from "@/lib/seo/site";
 import {
   STATE_NAMES, cityHref, courtSummary, facilityHref, getCourtBySlug, isIndexable, type CourtDetail,
@@ -39,7 +40,10 @@ function telHref(phone: string | null): string | null {
 }
 
 function fullAddress(c: CourtDetail): string {
-  return [c.address, c.address_line_2, c.city, [c.state, c.postal_code].filter(Boolean).join(" ")]
+  // Some imports stored the city as the street when no street was known
+  // ("Cleveland, Cleveland, TN"): drop a street that just repeats the city.
+  const street = c.address && c.address.trim().toLowerCase() !== c.city.trim().toLowerCase() ? c.address : null;
+  return [street, c.address_line_2, c.city, [c.state, c.postal_code].filter(Boolean).join(" ")]
     .filter(Boolean)
     .join(", ");
 }
@@ -69,11 +73,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-const AMENITIES: Array<[keyof CourtDetail, string]> = [
+// Always shown with Yes / "Not listed yet", so players see what is unknown.
+// (These columns default to false, so false means "not recorded", not "no".)
+const BASICS: Array<[keyof CourtDetail, string]> = [
   ["lighting", "Lights"],
   ["restrooms", "Restrooms"],
   ["water", "Water"],
   ["parking", "Parking"],
+];
+
+// Extras: shown only when recorded.
+const AMENITIES: Array<[keyof CourtDetail, string]> = [
+  ...BASICS,
   ["open_play_available", "Open play"],
   ["lessons_available", "Lessons"],
   ["pro_shop", "Pro shop"],
@@ -99,6 +110,8 @@ export default async function CourtPage({ params }: Props) {
     ? `https://www.google.com/maps/dir/?api=1&destination=${c.latitude},${c.longitude}`
     : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
   const amenities = AMENITIES.filter(([k]) => c[k] === true).map(([, label]) => label);
+  const basics = new Set(BASICS.map(([, label]) => label));
+  const extras = amenities.filter((a) => !basics.has(a));
   const access = c.public_access === true ? "Public" : c.public_access === false ? "Private / members" : null;
   const fromOsm = (c.data_source ?? "").includes("osm");
   const closed = c.business_status === "CLOSED_PERMANENTLY";
@@ -114,7 +127,7 @@ export default async function CourtPage({ params }: Props) {
     ...(website ? { sameAs: [website] } : {}),
     address: {
       "@type": "PostalAddress",
-      ...(c.address ? { streetAddress: c.address } : {}),
+      ...(c.address && c.address.trim().toLowerCase() !== c.city.trim().toLowerCase() ? { streetAddress: c.address } : {}),
       addressLocality: c.city,
       addressRegion: c.state,
       ...(c.postal_code ? { postalCode: c.postal_code } : {}),
@@ -154,6 +167,7 @@ export default async function CourtPage({ params }: Props) {
           className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
           <NavigationArrow size={16} /> Directions
         </a>
+        {hasPoint && <OpenMapButton lat={c.latitude!} lng={c.longitude!} placeId={c.google_place_id} label={c.name} />}
         {tel && (
           <a href={tel} className="inline-flex h-10 items-center gap-2 rounded-xl border border-border px-4 text-sm font-semibold hover:bg-secondary">
             <Phone size={16} /> Call
@@ -182,16 +196,24 @@ export default async function CourtPage({ params }: Props) {
         )}
       </dl>
 
-      {amenities.length > 0 && (
-        <section className="mt-8">
-          <h2 className="text-lg font-semibold">Amenities</h2>
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold">Amenities</h2>
+        <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {BASICS.map(([k, label]) => (
+            <div key={k} className="rounded-xl border border-border px-3 py-2">
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd className={`text-sm font-medium ${c[k] === true ? "" : "text-muted-foreground"}`}>{c[k] === true ? "Yes" : "Not listed yet"}</dd>
+            </div>
+          ))}
+        </dl>
+        {extras.length > 0 && (
           <ul className="mt-3 flex flex-wrap gap-2">
-            {amenities.map((a) => (
+            {extras.map((a) => (
               <li key={a} className="rounded-full border border-border px-3 py-1 text-sm">{a}</li>
             ))}
           </ul>
-        </section>
-      )}
+        )}
+      </section>
 
       {c.description && (
         <section className="mt-8">

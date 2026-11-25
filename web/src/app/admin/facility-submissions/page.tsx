@@ -20,6 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
 import { facilityHref } from "@/lib/courts/places";
 import { FIELD_LABELS, callRpc } from "@/lib/courts/submissions";
+import { refreshCourtPages } from "@/lib/courts/refresh";
 
 type Submission = {
   id: string;
@@ -152,7 +153,7 @@ function SubmissionCard({ row, onDone }: { row: Submission; onDone: () => void }
   async function approve() {
     const note = text;
     setWorking(true);
-    const { error } = await callRpc<string>(supabase, "approve_facility_submission", {
+    const { data: facilityId, error } = await callRpc<string>(supabase, "approve_facility_submission", {
       p_id: row.id,
       p_fields: picked.size === keys.length ? null : [...picked],
       p_review_note: note.trim() || null,
@@ -165,6 +166,10 @@ function SubmissionCard({ row, onDone }: { row: Submission; onDone: () => void }
       return;
     }
     toast.success("Approved and published.");
+    // Refresh the cached public page now (it would otherwise lag up to an hour).
+    const fid = facilityId ?? row.facility_id;
+    const prev = row.kind === "edit" && row.facility_state && row.facility_city ? { state: row.facility_state, city: row.facility_city } : undefined;
+    if (fid) void refreshCourtPages(fid, prev);
     onDone();
   }
 

@@ -205,6 +205,7 @@ export type CourtDetail = {
   verified: boolean | null;
   business_status: string | null;
   updated_at: string | null;
+  google_place_id: string | null;
   photos: string[];
 };
 
@@ -212,7 +213,7 @@ const DETAIL_COLUMNS =
   "id, name, slug, address, address_line_2, city, state, postal_code, latitude, longitude, phone, website, " +
   "description, court_count, indoor_courts, outdoor_courts, surface_type, lighting, restrooms, water, parking, " +
   "public_access, membership_required, reservation_required, open_play_available, lessons_available, pro_shop, " +
-  "wheelchair_accessible, hours_summary, booking_url, data_source, verified, business_status, updated_at, " +
+  "wheelchair_accessible, hours_summary, booking_url, data_source, verified, business_status, updated_at, google_place_id, " +
   "facility_photos!facility_photos_facility_id_fkey(url, is_primary)";
 
 type DetailRow = Omit<CourtDetail, "photos"> & { facility_photos: { url: string; is_primary: boolean }[] | null };
