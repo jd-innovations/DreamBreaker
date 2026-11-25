@@ -4,6 +4,7 @@ import NC from "./NC.json";
 import AZ from "./AZ.json";
 import CA from "./CA.json";
 import NJ from "./NJ.json";
+import TX from "./TX.json";
 
 /**
  * Committed OpenStreetMap court snapshots, one per state, read by the Discover
@@ -13,4 +14,4 @@ import NJ from "./NJ.json";
  * or, without Overpass, from a Geofabrik download (NC was built this way;
  * see scripts/facilities-osm/README.md "No Overpass").
  */
-export const SNAPSHOTS: OsmSnapshot[] = [FL as unknown as OsmSnapshot, NC as unknown as OsmSnapshot, AZ as unknown as OsmSnapshot, CA as unknown as OsmSnapshot, NJ as unknown as OsmSnapshot];
+export const SNAPSHOTS: OsmSnapshot[] = [FL as unknown as OsmSnapshot, NC as unknown as OsmSnapshot, AZ as unknown as OsmSnapshot, CA as unknown as OsmSnapshot, NJ as unknown as OsmSnapshot, TX as unknown as OsmSnapshot];
