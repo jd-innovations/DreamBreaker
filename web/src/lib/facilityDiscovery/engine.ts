@@ -117,6 +117,7 @@ export const STATES: Record<string, BBox> = {
   CA: [32.5, -124.5, 42.1, -114.1],
   NJ: [38.9, -75.6, 41.4, -73.9],
   TN: [34.9, -90.4, 36.7, -81.6],
+  VA: [36.5, -83.7, 39.5, -75.2],
 };
 
 export const CLUSTER_M = 120; // courts closer than this form one site
