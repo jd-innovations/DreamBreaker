@@ -198,8 +198,12 @@ function VenueRow({ venue, onSaved }: { venue: Venue; onSaved: (v: Venue) => voi
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(() => toForm(venue));
   type Form = ReturnType<typeof toForm>;
-  type TextKey = "name" | "address" | "city" | "court_count" | "indoor_courts" | "outdoor_courts";
+  type TextKey = "name" | "address" | "city" | "indoor_courts" | "outdoor_courts";
   const set = (k: TextKey) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f: Form) => ({ ...f, [k]: e.target.value }));
+
+  // Total = outdoor + indoor, recalculated as you type (null while a box isn't a whole number).
+  const isCount = (v: string) => /^\d{1,3}$/.test(v.trim());
+  const total = isCount(form.outdoor_courts) && isCount(form.indoor_courts) ? +form.outdoor_courts + +form.indoor_courts : null;
 
   function validate(): string | null {
     for (const k of ["name", "address", "city"] as const) {
@@ -207,9 +211,8 @@ function VenueRow({ venue, onSaved }: { venue: Venue; onSaved: (v: Venue) => voi
       if (!t) return `${k[0].toUpperCase() + k.slice(1)} can't be empty.`;
       if (t.length > LIMITS[k]) return `${k[0].toUpperCase() + k.slice(1)} is too long (max ${LIMITS[k]}).`;
     }
-    const nums = [form.court_count, form.indoor_courts, form.outdoor_courts];
-    if (nums.some((n) => !/^\d{1,3}$/.test(n.trim()) || +n > 200)) return "Court counts must be whole numbers from 0 to 200.";
-    if (+form.indoor_courts + +form.outdoor_courts !== +form.court_count) return "Indoor + outdoor must equal the total.";
+    if (total === null) return "Outdoor and indoor must be whole numbers.";
+    if (total > 200) return "Total courts can't be more than 200.";
     return null;
   }
 
@@ -222,7 +225,8 @@ function VenueRow({ venue, onSaved }: { venue: Venue; onSaved: (v: Venue) => voi
       name: form.name.trim(),
       address: form.address.trim(),
       city: form.city.trim(),
-      court_count: +form.court_count,
+      // Always outdoor + indoor.
+      court_count: total!,
       indoor_courts: +form.indoor_courts,
       outdoor_courts: +form.outdoor_courts,
       public_access: form.access === "public",
@@ -288,9 +292,11 @@ function VenueRow({ venue, onSaved }: { venue: Venue; onSaved: (v: Venue) => voi
             <Field label="City"><input value={form.city} onChange={set("city")} maxLength={LIMITS.city} className={INPUT} /></Field>
           </div>
           <div className="grid grid-cols-3 gap-3">
-            <Field label="Total courts"><input value={form.court_count} onChange={set("court_count")} inputMode="numeric" className={INPUT} /></Field>
             <Field label="Outdoor"><input value={form.outdoor_courts} onChange={set("outdoor_courts")} inputMode="numeric" className={INPUT} /></Field>
             <Field label="Indoor"><input value={form.indoor_courts} onChange={set("indoor_courts")} inputMode="numeric" className={INPUT} /></Field>
+            <Field label="Total courts">
+              <div className={`${INPUT} flex items-center bg-secondary font-semibold`} aria-live="polite">{total ?? "—"}</div>
+            </Field>
           </div>
           <div>
             <span className="mb-1 block text-xs text-muted-foreground">Access</span>
@@ -350,7 +356,6 @@ function toForm(v: Venue) {
     name: v.name ?? "",
     address: v.address ?? "",
     city: v.city ?? "",
-    court_count: String(v.court_count ?? 0),
     indoor_courts: String(v.indoor_courts ?? 0),
     outdoor_courts: String(v.outdoor_courts ?? 0),
   };
