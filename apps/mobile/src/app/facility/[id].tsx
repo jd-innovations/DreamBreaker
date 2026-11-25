@@ -239,20 +239,23 @@ function HeroPhoto({ uri, height }: { uri: string | null; height: number }) {
 function AmenityChip({ icon, label, active }: { icon: keyof typeof Ionicons.glyphMap; label: string; active: boolean }) {
   return (
     <View style={[a.chip, !active && a.chipInactive]}>
-      <Ionicons name={icon} size={15} color={active ? L.navy : L.border} />
+      <Ionicons name={icon} size={15} color={active ? L.navy : L.textSub} />
       <Text style={[a.label, !active && a.labelInactive]}>{label}</Text>
     </View>
   );
 }
 const a = StyleSheet.create({
+  // Same fix as the Nearby card (2026-11-25): inactive used a border-colour
+  // icon AND 40% opacity, which stacked into near-invisible. Available reads
+  // navy on a gold tint; not listed reads as a quiet grey outline.
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderWidth: 1, borderColor: L.border, borderRadius: shape.pill,
+    borderWidth: 1, borderColor: colors.goldBorder, backgroundColor: L.goldBg, borderRadius: shape.pill,
     paddingHorizontal: 10, paddingVertical: 7,
   },
-  chipInactive: { opacity: 0.4 },
-  label:        { color: L.text, fontSize: text.caption.size, fontWeight: '500' },
-  labelInactive:{ color: L.textMuted },
+  chipInactive: { borderColor: L.border, backgroundColor: 'transparent' },
+  label:        { color: L.navy, fontSize: text.caption.size, fontWeight: '700' },
+  labelInactive:{ color: L.textMuted, fontWeight: '600' },
 });
 
 // ─── Map bottom sheet ───────────────────────────────────────────────────────────
