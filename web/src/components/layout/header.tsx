@@ -17,6 +17,7 @@ import { NAV } from "@shared/navLabels";
 const navLinks = [
   { to: "/tournaments",  label: NAV.tournaments,   testid: "nav-tournaments" },
   { to: "/play",         label: NAV.communityPlay, testid: "nav-community-play" },
+  { to: "/courts",       label: NAV.courts,        testid: "nav-courts" },
   { to: "/groups",       label: NAV.groups,        testid: "nav-groups" },
   { to: "/marketplace",  label: NAV.marketplace,   testid: "nav-marketplace" },
   { to: "/lessons",      label: NAV.lessons,       testid: "nav-lessons" },

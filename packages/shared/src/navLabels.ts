@@ -17,6 +17,8 @@ export const NAV = {
   marketplace: "Marketplace",
   tournaments: "Tournaments",
   communityPlay: "Community Play",
+  /** Public court directory (/courts on web), 2026-11-25. */
+  courts: "Courts",
   lessons: "Lessons",
   stats: "Stats",
   directorHub: "Director Hub",

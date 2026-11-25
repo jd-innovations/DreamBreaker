@@ -26,7 +26,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  CalendarBlank, ChatCircleDots, GraduationCap, House, PlusCircle, Question, Gear,
+  CalendarBlank, ChatCircleDots, GraduationCap, House, MapPin, PlusCircle, Question, Gear,
   Shield, ShieldStar, Storefront, Trophy, User, UserPlus, Users, UsersThree, X,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
@@ -43,6 +43,7 @@ const QUICK_ACTIONS: Item[] = [
 const PRIMARY: Item[] = [
   { href: "/dashboard",   label: NAV.home,           Icon: House },
   { href: "/play",        label: NAV.communityPlay, Icon: CalendarBlank },
+  { href: "/courts",      label: NAV.courts,         Icon: MapPin },
   { href: "/tournaments", label: NAV.tournaments,    Icon: Trophy },
   { href: "/groups",      label: NAV.groups,         Icon: UsersThree },
   { href: "/matchmaking", label: NAV.partnerFinder, Icon: UserPlus },
