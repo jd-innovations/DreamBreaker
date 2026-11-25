@@ -680,6 +680,21 @@ const lc = StyleSheet.create({
 
 // ─── Screen ─────────────────────────────────────────────────────────────────────
 
+// "Can't find a court?" -> the Add a court screen (Phase 4b, 2026-11-25).
+// What the player searched for becomes the suggested name.
+function AddCourtLink({ search }: { search: string }) {
+  return (
+    <TouchableOpacity
+      style={s.addCourt}
+      onPress={() => router.push({ pathname: '/facility/add', params: search.trim() ? { name: search.trim() } : {} } as never)}
+      accessibilityRole="button"
+    >
+      <Ionicons name="add-circle-outline" size={18} color={L.navy} />
+      <Text style={s.addCourtText}>Can’t find a court? Add it</Text>
+    </TouchableOpacity>
+  );
+}
+
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const location = useCurrentLocation();
@@ -1134,6 +1149,7 @@ export default function ExploreScreen() {
               <View style={s.empty}>
                 <Ionicons name="search-outline" size={36} color={L.border} />
                 <Text style={s.emptyText}>No results found</Text>
+                {category === 'court' && <AddCourtLink search={search} />}
               </View>
             ) : (
               <>
@@ -1150,6 +1166,7 @@ export default function ExploreScreen() {
                     ))}
                   </>
                 )}
+                {category === 'court' && <AddCourtLink search={search} />}
               </>
             )}
           </ScrollView>
@@ -1461,6 +1478,12 @@ const s = StyleSheet.create({
     paddingVertical: 60, gap: 12,
   },
   emptyText: { color: L.textMuted, fontSize: text.caption.size, fontWeight: '500' },
+  addCourt: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    alignSelf: 'center', marginTop: 16, paddingVertical: 10, paddingHorizontal: 16,
+    borderRadius: 999, borderWidth: 1, borderColor: L.border,
+  },
+  addCourtText: { color: L.navy, fontSize: text.caption.size, fontWeight: '800' },
 
   // Access filter (courts tab)
   accessFilterWrap: {

@@ -375,6 +375,8 @@ const NOTIFICATION_ICON: Record<string, string> = {
   director_suspended:       'alert-circle-outline',
   facility_manager_approved: 'business-outline',
   facility_manager_rejected: 'close-circle-outline',
+  facility_submission_approved: 'checkmark-circle-outline',
+  facility_submission_rejected: 'information-circle-outline',
   registration_confirmed:   'checkmark-done-circle-outline',
   group_invite:             'people-outline',
   play_event_invite:        'mail-outline',
@@ -431,7 +433,11 @@ function NotificationRow({ notification, last, onPress }: { notification: AppNot
 // for, pass through from a short known list. Anything else has no screen in the
 // app: return null and stay put rather than open a dead page.
 
-const APP_NATIVE_PREFIXES = ['/(tabs)', '/director'];
+// '/facility' (2026-11-25): court-submission notices link /facility/<id>, and
+// facility-manager approvals /facility/manage. Every /facility/* path is a
+// real app route (facility/[id], manage, apply, check-in, deals, add), but the
+// shared resolver had no root for it, so those notices opened nothing.
+const APP_NATIVE_PREFIXES = ['/(tabs)', '/director', '/facility'];
 
 function mobileNotificationLink(link: string): string | null {
   if (link === '/dashboard') return '/(tabs)';

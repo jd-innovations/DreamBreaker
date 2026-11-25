@@ -4,6 +4,7 @@ import {
   Modal, FlatList, ActivityIndicator, SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { colors } from '@/theme';
 // Design standard, from the shared token source. See DESIGN_STANDARD.md.
 import { radius as shape, text } from '@shared/tokens';
@@ -265,6 +266,16 @@ export function FacilityPickerModal({
             <TouchableOpacity style={m.manualBtn} onPress={() => { onSelectManual(); onClose(); }} activeOpacity={0.8}>
               <Ionicons name="create-outline" size={16} color={L.textSub} />
               <Text style={m.manualText}>Facility not listed? Enter manually</Text>
+            </TouchableOpacity>
+            {/* Typing a venue only fixes this one event; this puts the court in
+                the directory for everyone, after review (Phase 4b, 2026-11-25). */}
+            <TouchableOpacity
+              style={m.manualBtn}
+              onPress={() => { onClose(); router.push({ pathname: '/facility/add', params: query.trim() ? { name: query.trim() } : {} } as never); }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add-circle-outline" size={16} color={L.textSub} />
+              <Text style={m.manualText}>Add it to the court directory</Text>
             </TouchableOpacity>
           </View>
         )}
