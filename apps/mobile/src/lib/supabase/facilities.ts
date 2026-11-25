@@ -40,31 +40,6 @@ type NearbyFacilityRow = Omit<Facility, 'coords'> & {
   distance_meters: number;
 };
 
-export type SuggestFacilityInput = {
-  // Required
-  name:        string;
-  address:     string;
-  city:        string;
-  state:       string;
-  latitude:    number;
-  longitude:   number;
-  // Optional
-  postal_code?:         string;
-  phone?:               string;
-  website?:             string;
-  description?:         string;
-  court_count?:         number;
-  indoor_courts?:       number;
-  outdoor_courts?:      number;
-  surface_type?:        string;
-  lighting?:            boolean;
-  restrooms?:           boolean;
-  water?:               boolean;
-  parking?:             boolean;
-  public_access?:       boolean;
-  membership_required?: boolean;
-  bookable_by_public?:  boolean;
-};
 
 
 const MILES_TO_METERS = 1609.344;
@@ -325,78 +300,14 @@ export async function fetchFacilityTournaments(facilityId: string): Promise<Faci
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUGGEST FACILITY (authenticated insert)
+// SUGGEST / CLAIM FACILITY — removed 2026-11-25
 // ─────────────────────────────────────────────────────────────────────────────
-// verified and claim_status are never accepted from input — always forced here.
-
-export async function suggestFacility(input: SuggestFacilityInput): Promise<Facility> {
-  const { data, error } = await supabase
-    .from('facilities')
-    .insert({
-      name:                input.name,
-      address:             input.address,
-      city:                input.city,
-      state:               input.state.toUpperCase(),
-      latitude:            input.latitude,
-      longitude:           input.longitude,
-      postal_code:         input.postal_code         ?? null,
-      phone:               input.phone               ?? null,
-      website:             input.website             ?? null,
-      description:         input.description         ?? null,
-      court_count:         input.court_count         ?? 0,
-      indoor_courts:       input.indoor_courts       ?? 0,
-      outdoor_courts:      input.outdoor_courts      ?? 0,
-      surface_type:        input.surface_type        ?? null,
-      lighting:            input.lighting            ?? false,
-      restrooms:           input.restrooms           ?? false,
-      water:               input.water               ?? false,
-      parking:             input.parking             ?? false,
-      public_access:       input.public_access       ?? true,
-      membership_required: input.membership_required ?? false,
-      bookable_by_public:  input.bookable_by_public  ?? false,
-      // Always forced — user input cannot override these:
-      verified:            false,
-      claim_status:        'unclaimed',
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CLAIM FACILITY (submit claim for admin review)
-// ─────────────────────────────────────────────────────────────────────────────
-// Sets claim_status = 'pending'. Does not set owner_user_id — that is done by
-// admin on approval. RLS: only authenticated users; owner update policy applies
-// only when owner_user_id = auth.uid(), which means unclaimed facilities cannot
-// be updated by the owner policy. The authenticated insert policy covers
-// suggestFacility, but the claim update needs a separate check.
-//
-// RLS ISSUE: The current "owner update" policy requires owner_user_id = auth.uid().
-// An unclaimed facility has owner_user_id = null, so the policy blocks this update.
-// The admin policy allows it, but a regular user cannot claim without admin.
-//
-// WORKAROUND until a dedicated RLS policy is added:
-//   This function will throw a permission error for non-admin users on unclaimed
-//   facilities. A future migration should add:
-//     create policy "facilities: authenticated claim"
-//       on public.facilities for update
-//       using (auth.uid() is not null and claim_status = 'unclaimed')
-//       with check (claim_status = 'pending' and owner_user_id is null);
-//   Track this gap — do not silently swallow the error here.
-
-export async function claimFacility(facilityId: string): Promise<void> {
-  const { error } = await supabase
-    .from('facilities')
-    .update({ claim_status: 'pending' })
-    .eq('id', facilityId)
-    .eq('claim_status', 'unclaimed'); // safety: never overwrite pending/claimed
-
-  if (error) throw error;
-}
+// suggestFacility() and claimFacility() wrote to facilities directly through two
+// RLS policies that let any signed-in user add a live venue or rewrite most
+// columns of any unclaimed one. Neither had a caller; both policies were dropped
+// in 20261125090000_facilities_close_direct_writes.sql. Claiming is the
+// facility_manager_applications flow; new locations and edits will go through a
+// review table that only an admin applies.
 
 
 // ─────────────────────────────────────────────────────────────────────────────
