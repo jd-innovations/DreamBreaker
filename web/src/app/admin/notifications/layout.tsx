@@ -12,7 +12,7 @@
 
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { PageShell } from "@/components/layout/page-shell";
+import { AdminFrame } from "@/components/admin/admin-frame";
 
 export default async function NotificationsAdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -22,7 +22,7 @@ export default async function NotificationsAdminLayout({ children }: { children:
   const { data: isAdmin } = await supabase.rpc("is_admin");
   if (isAdmin !== true) notFound();
 
-  // Inside the site shell (no footer) so the header gives navigation from any
-  // admin tool page; PageShell supplies <main>.
-  return <PageShell hideFooter>{children}</PageShell>;
+  // Inside the admin frame so the shared sidebar gives navigation from any
+  // admin tool page; AdminFrame supplies <main>.
+  return <AdminFrame>{children}</AdminFrame>;
 }

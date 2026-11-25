@@ -304,9 +304,6 @@ export default function FacilityImportPage() {
           <h1 className="font-display text-2xl tracking-wide">Facility Directory Import</h1>
           <p className="text-sm text-muted-foreground mt-1">Upload a CSV or discover venues, review the matches, then commit.</p>
         </div>
-        <button onClick={() => router.push("/admin")} className="text-sm text-muted-foreground hover:text-foreground">
-          ← Back to Admin
-        </button>
       </div>
 
       <div className="flex gap-2 mb-6 border-b border-border">

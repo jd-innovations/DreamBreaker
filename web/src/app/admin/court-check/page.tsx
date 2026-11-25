@@ -129,9 +129,6 @@ export default function CourtCheckPage() {
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h1 className="font-display text-3xl tracking-wide">Court check</h1>
-        <button onClick={() => router.push("/admin")} className="text-sm text-muted-foreground hover:text-foreground">
-          ← Back to Admin
-        </button>
       </div>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
         Open each venue in satellite view, count the courts, fix anything wrong, then mark it checked. Checking does not

@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, MagnifyingGlass, Plus } from "@phosphor-icons/react";
+import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { CampaignStatusBadge } from "@/components/admin/campaign-status-badge";
 import { NotificationsTabs } from "@/components/admin/notifications-tabs";
@@ -67,9 +67,6 @@ export default function CampaignListPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft size={14} /> Admin
-      </Link>
 
       <NotificationsTabs />
 

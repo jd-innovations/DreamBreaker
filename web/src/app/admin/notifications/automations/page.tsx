@@ -13,9 +13,8 @@
 // enabled (a database constraint enforces that, not just this screen).
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, BellRinging, DeviceMobile, PaperPlaneTilt, PencilSimple, Warning } from "@phosphor-icons/react";
+import { BellRinging, DeviceMobile, PaperPlaneTilt, PencilSimple, Warning } from "@phosphor-icons/react";
 import { NotificationsTabs } from "@/components/admin/notifications-tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,11 +81,8 @@ export default function AutomationsPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft size={14} /> Admin
-      </Link>
 
-      <h1 className="mt-4 font-display text-3xl tracking-wide">Notifications</h1>
+      <h1 className="font-display text-3xl tracking-wide">Notifications</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Notifications the app sends by itself. Copy, timing and channels are editable here; critical ones ignore
         quiet hours and the frequency caps, which live in Platform settings.

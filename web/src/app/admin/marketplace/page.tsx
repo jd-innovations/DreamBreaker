@@ -16,7 +16,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowCounterClockwise, ArrowLeft, Flag, Prohibit, Tag } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, Flag, Prohibit, Tag } from "@phosphor-icons/react";
 import { formatCents } from "@shared/money";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -129,10 +129,7 @@ function Moderation() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft size={14} /> Admin
-      </Link>
-      <h1 className="mt-4 font-display text-3xl tracking-wide">Marketplace</h1>
+      <h1 className="font-display text-3xl tracking-wide">Marketplace</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Every listing in every status, most-reported first. Removing takes a listing down everywhere and tells the
         seller why; they cannot undo it. Everything here is recorded against your account.

@@ -16,7 +16,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowCounterClockwise, ArrowLeft, Prohibit, Tag } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, Prohibit, Tag } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -129,10 +129,7 @@ function Moderation() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft size={14} /> Admin
-      </Link>
-      <h1 className="mt-4 font-display text-3xl tracking-wide">Coaching</h1>
+      <h1 className="font-display text-3xl tracking-wide">Coaching</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Every lesson in every status, removed ones first. Removing takes it out of discovery
         everywhere and tells the coach why; they cannot undo it. Everything here is recorded

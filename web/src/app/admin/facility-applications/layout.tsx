@@ -1,9 +1,8 @@
-// Inside the site shell (footer hidden), like every admin tool page, so the
-// header gives navigation from here. PageShell supplies <main>; the page
-// renders a <div>. Access is still checked by the page and by each RPC.
+// Inside the admin frame: the shared admin sidebar gives navigation from here,
+// and AdminFrame supplies <main>. Access is checked by the page and by RLS.
 
-import { PageShell } from "@/components/layout/page-shell";
+import { AdminFrame } from "@/components/admin/admin-frame";
 
 export default function AdminToolLayout({ children }: { children: React.ReactNode }) {
-  return <PageShell hideFooter>{children}</PageShell>;
+  return <AdminFrame>{children}</AdminFrame>;
 }

@@ -6,13 +6,12 @@ import Link from "next/link";
 import {
   Lightning, X, Users, CurrencyDollar, Trophy,
   Gauge, CheckCircle, Clock, Warning,
-  Gear, SignOut, ShieldCheck, MagnifyingGlass,
+  ShieldCheck, MagnifyingGlass,
   ArrowSquareOut, Envelope, Megaphone,
   CheckFat, WarningCircle, Broadcast, ChatCircleDots,
-  Star, PencilSimple, Trash, Prohibit, DotsThree, Buildings,
-  Flag, Ticket, Wallet, Storefront, GraduationCap,
+  Star, PencilSimple, Trash, Prohibit, DotsThree,
+  Flag,
 } from "@phosphor-icons/react";
-import { Logo } from "@/components/layout/logo";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/dev-user";
@@ -21,6 +20,7 @@ import type { UserProfile as MessagingUserProfile } from "@/components/messaging
 import { NotificationBell } from "@/components/notifications/bell";
 import { TicketPanel } from "@/components/support/ticket-panel";
 import { PaymentReconciliation, type ReconciliationItem } from "@/components/admin/payment-reconciliation";
+import { AdminSidebar, isAdminSection, type AdminSection } from "@/components/admin/admin-nav";
 import { tournamentOpsStatus } from "@shared/status";
 import { STATUS_DOT_CLASS } from "@/lib/status";
 import { SafeImage } from "@/components/shared/safe-image";
@@ -173,7 +173,7 @@ function RejectModal({ tournamentName, onConfirm, onClose }: { tournamentName: s
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type NavSection = "dashboard" | "approvals" | "directors" | "users" | "tournaments" | "finance" | "reconciliation" | "comms" | "messages" | "email_templates" | "settings" | "reports" | "support_tickets";
+type NavSection = AdminSection;
 
 interface UserReport {
   id: string;
@@ -200,6 +200,25 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [adminName, setAdminName] = useState("Admin");
   const [navSection, setNavSection] = useState<NavSection>("dashboard");
+
+  // The open section lives in the address (/admin?section=users) so refresh,
+  // the browser back button, bookmarks, and links from the standalone admin
+  // pages all land on the right view.
+  useEffect(() => {
+    const read = () => {
+      const q = new URLSearchParams(window.location.search).get("section");
+      setNavSection(isAdminSection(q) ? q : "dashboard");
+    };
+    read();
+    window.addEventListener("popstate", read);
+    return () => window.removeEventListener("popstate", read);
+  }, []);
+
+  const goSection = useCallback((id: NavSection) => {
+    setNavSection(id);
+    const url = id === "dashboard" ? "/admin" : `/admin?section=${id}`;
+    if (window.location.pathname + window.location.search !== url) window.history.pushState(null, "", url);
+  }, []);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Data
@@ -762,208 +781,29 @@ export default function AdminPage() {
   // Simulated weekly signup data (computed once, not on every render)
   const [weeklySignups] = useState(() => Array.from({ length: 12 }, (_, i) => Math.round(5 + i * 3 + Math.random() * 8)));
 
-  const firstName = adminName.split(" ")[0];
-
   // ── Sidebar ───────────────────────────────────────────────────────────────────
 
   const renderSidebar = () => (
-    <>
-      <div className="px-5 py-5 border-b border-border flex-shrink-0">
-        <Link href="/">
-          <Logo />
-        </Link>
-        <div className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mt-1">ADMIN PORTAL</div>
-      </div>
-
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mb-2">PLATFORM</div>
-        {([
-          { id: "dashboard", icon: Gauge, label: "Dashboard" },
-          { id: "finance", icon: CurrencyDollar, label: "Finance" },
-        ] as const).map(({ id, icon: Icon, label }) => (
-          <button key={id} onClick={() => { setNavSection(id); setMobileSidebarOpen(false); }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
-            <Icon size={16} weight={navSection === id ? "fill" : "regular"} />{label}
-          </button>
-        ))}
-
-        <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">QUEUE</div>
-        {([
-          { id: "approvals", icon: CheckFat, label: "Approvals", badge: pendingTournaments.length },
-          { id: "directors", icon: ShieldCheck, label: "Directors", badge: pendingDirectors.length },
-        ] as const).map(({ id, icon: Icon, label, badge }) => (
-          <button key={id} onClick={() => { setNavSection(id); setMobileSidebarOpen(false); }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
-            <Icon size={16} weight={navSection === id ? "fill" : "regular"} />
-            {label}
-            {badge > 0 && <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === id ? "bg-white/20 text-white" : "bg-amber-400/20 text-amber-400"}`}>{badge}</span>}
-          </button>
-        ))}
-
-        <button onClick={() => { setNavSection("reconciliation"); setMobileSidebarOpen(false); }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "reconciliation" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
-          <CurrencyDollar size={16} weight={navSection === "reconciliation" ? "fill" : "regular"} />
-          Reconciliation
-          {/* Criticals only. Abandoned checkouts are the bulk of the queue and
-              never resolve, so counting everything would leave a permanent
-              double-digit badge that nobody reads. */}
-          {reconciliationCritical > 0 && (
-            <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === "reconciliation" ? "bg-white/20 text-white" : "bg-destructive/20 text-destructive"}`}>
-              {reconciliationCritical}
-            </span>
-          )}
-        </button>
-
-        <button onClick={() => { setNavSection("reports"); setMobileSidebarOpen(false); }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "reports" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
-          <Flag size={16} weight={navSection === "reports" ? "fill" : "regular"} />
-          Reports
-          {reports.filter((r) => r.status === "pending").length > 0 && (
-            <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === "reports" ? "bg-white/20 text-white" : "bg-destructive/20 text-destructive"}`}>
-              {reports.filter((r) => r.status === "pending").length}
-            </span>
-          )}
-        </button>
-
-        <button onClick={() => { setNavSection("support_tickets"); setMobileSidebarOpen(false); }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "support_tickets" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
-          <Ticket size={16} weight={navSection === "support_tickets" ? "fill" : "regular"} />
-          Support Tickets
-          {openTicketCount > 0 && (
-            <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === "support_tickets" ? "bg-white/20 text-white" : "bg-amber-400/20 text-amber-400"}`}>
-              {openTicketCount}
-            </span>
-          )}
-        </button>
-
-        <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">MANAGEMENT</div>
-        {([
-          { id: "users", icon: Users, label: "Users", badge: profiles.length },
-          { id: "tournaments", icon: Trophy, label: "Tournaments", badge: tournaments.length },
-        ] as const).map(({ id, icon: Icon, label, badge }) => (
-          <button key={id} onClick={() => { setNavSection(id); setMobileSidebarOpen(false); }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
-            <Icon size={16} weight={navSection === id ? "fill" : "regular"} />
-            {label}
-            <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === id ? "bg-white/20 text-white" : "bg-primary/10 text-primary"}`}>{badge}</span>
-          </button>
-        ))}
-
-        <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">COURTS</div>
-        <Link href="/admin/facility-submissions">
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Buildings size={16} /> Court Submissions
-          </button>
-        </Link>
-        <Link href="/admin/court-check">
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Buildings size={16} /> Court Check
-          </button>
-        </Link>
-        <Link href="/admin/facility-import">
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Buildings size={16} /> Facility Import
-          </button>
-        </Link>
-        <Link href="/admin/facility-applications">
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Buildings size={16} /> Facility Applications
-          </button>
-        </Link>
-
-        <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">COMMUNICATIONS</div>
-        <button onClick={() => { setNavSection("messages"); setMobileSidebarOpen(false); }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "messages" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
-          <ChatCircleDots size={16} weight={navSection === "messages" ? "fill" : "regular"} />
-          Messages
-          {messagingUnread > 0 && <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === "messages" ? "bg-white/20 text-white" : "bg-primary/10 text-primary"}`}>{messagingUnread}</span>}
-        </button>
-        <button onClick={() => { setNavSection("comms"); setMobileSidebarOpen(false); }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "comms" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
-          <Envelope size={16} weight={navSection === "comms" ? "fill" : "regular"} />
-          Email Comms
-          {messages.length > 0 && <span className={`ml-auto text-[10px] font-mono px-1.5 rounded-full ${navSection === "comms" ? "bg-white/20 text-white" : "bg-primary/10 text-primary"}`}>{messages.length}</span>}
-        </button>
-        <button onClick={() => { setNavSection("email_templates"); setMobileSidebarOpen(false); }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "email_templates" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
-          <PencilSimple size={16} weight={navSection === "email_templates" ? "fill" : "regular"} />
-          Email Templates
-        </button>
-
-        {/* Standalone admin pages, reachable only from here. */}
-        <Link href="/admin/reviews">
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Star size={16} /> Review Invitations
-          </button>
-        </Link>
-        <Link href="/admin/notifications">
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Megaphone size={16} /> Push Campaigns
-          </button>
-        </Link>
-        <Link href="/admin/wallet">
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Wallet size={16} /> Wallet Grants
-          </button>
-        </Link>
-        <Link href="/admin/marketplace">
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Storefront size={16} /> Marketplace
-          </button>
-        </Link>
-        <Link href="/admin/coaching">
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <GraduationCap size={16} /> Coaching
-          </button>
-        </Link>
-        <Link href="/admin/email-preview">
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Envelope size={16} /> Email Preview
-          </button>
-        </Link>
-      </nav>
-
-      <div className="border-t border-border px-3 py-3 space-y-0.5 flex-shrink-0">
-        <button onClick={() => { setNavSection("settings"); setMobileSidebarOpen(false); }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${navSection === "settings" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
-          <Gear size={16} /> Settings
-        </button>
-        <Link href="/dashboard">
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Users size={16} /> Player View
-          </button>
-        </Link>
-        <Link href="/director">
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Trophy size={16} /> Director View
-          </button>
-        </Link>
-        <Link href="/auth">
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <SignOut size={16} /> Log out
-          </button>
-        </Link>
-        <div className="flex items-center gap-3 px-3 py-2.5 mt-1 border-t border-border">
-          <div className="h-8 w-8 rounded-full bg-yellow-400/20 flex items-center justify-center flex-shrink-0">
-            <span className="font-display text-sm text-yellow-400">{firstName[0]}</span>
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-medium truncate">{adminName}</div>
-            <div className="text-[10px] text-yellow-400 font-mono">ADMINISTRATOR</div>
-          </div>
-        </div>
-      </div>
-    </>
+    <AdminSidebar
+      currentSection={navSection}
+      pathname="/admin"
+      onSection={goSection}
+      onNavigate={() => setMobileSidebarOpen(false)}
+      adminName={adminName}
+      badges={{
+        approvals: pendingTournaments.length,
+        directors: pendingDirectors.length,
+        // Criticals only: abandoned checkouts never resolve, so counting
+        // everything would leave a permanent badge nobody reads.
+        reconciliation: reconciliationCritical,
+        reports: reports.filter((r) => r.status === "pending").length,
+        support_tickets: openTicketCount,
+        users: profiles.length,
+        tournaments: tournaments.length,
+        messages: messagingUnread,
+        comms: messages.length,
+      }}
+    />
   );
 
   if (loading) {
@@ -1028,7 +868,7 @@ export default function AdminPage() {
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {(pendingTournaments.length > 0 || pendingDirectors.length > 0) && (
-              <button onClick={() => setNavSection("approvals")} className="h-9 px-3 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-400 text-xs font-mono flex items-center gap-1.5">
+              <button onClick={() => goSection("approvals")} className="h-9 px-3 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-400 text-xs font-mono flex items-center gap-1.5">
                 <Warning size={13} weight="fill" /> {pendingTournaments.length + pendingDirectors.length} PENDING
               </button>
             )}
@@ -1116,7 +956,7 @@ export default function AdminPage() {
                           </div>
                         ))}
                         {pendingTournaments.length > 3 && (
-                          <button onClick={() => setNavSection("approvals")} className="text-xs text-primary font-mono hover:underline">
+                          <button onClick={() => goSection("approvals")} className="text-xs text-primary font-mono hover:underline">
                             +{pendingTournaments.length - 3} more →
                           </button>
                         )}
@@ -1305,7 +1145,7 @@ export default function AdminPage() {
                       </div>
                     </div>
                     <div className="flex gap-2 flex-shrink-0 flex-wrap">
-                      <button onClick={() => { setNavSection("comms"); setComposeRecipientType("individual"); setComposeRecipientId(p.id); }}
+                      <button onClick={() => { goSection("comms"); setComposeRecipientType("individual"); setComposeRecipientId(p.id); }}
                         className="h-8 px-3 rounded-full border border-border hover:bg-secondary text-xs font-mono flex items-center gap-1.5 transition-colors">
                         <Envelope size={12} /> Message
                       </button>
@@ -1367,7 +1207,7 @@ export default function AdminPage() {
                       <div className="text-xs text-muted-foreground">Joined {fmtDate(p.created_at)}{p.location_city ? ` · ${p.location_city}, ${p.location_state}` : ""}</div>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
-                      <button onClick={() => { setNavSection("comms"); setComposeRecipientType("individual"); setComposeRecipientId(p.id); }}
+                      <button onClick={() => { goSection("comms"); setComposeRecipientType("individual"); setComposeRecipientId(p.id); }}
                         className="h-8 px-3 rounded-full border border-border hover:bg-secondary text-xs font-mono flex items-center gap-1.5 transition-colors">
                         <Envelope size={12} /> Message
                       </button>
@@ -1464,11 +1304,11 @@ export default function AdminPage() {
                             <>
                               <div className="fixed inset-0 z-40" onClick={() => setRowMenuId(null)} />
                               <div className="absolute right-0 top-10 z-50 w-52 bg-card border border-border rounded-xl shadow-xl py-1.5">
-                                <button onClick={() => { setDmRecipientId(t.director_id); setNavSection("messages"); setRowMenuId(null); }}
+                                <button onClick={() => { setDmRecipientId(t.director_id); goSection("messages"); setRowMenuId(null); }}
                                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-secondary transition-colors text-left">
                                   <ChatCircleDots size={14} /> Message director
                                 </button>
-                                <button onClick={() => { setComposeRecipientType("individual"); setComposeRecipientId(t.director_id); setNavSection("comms"); setRowMenuId(null); }}
+                                <button onClick={() => { setComposeRecipientType("individual"); setComposeRecipientId(t.director_id); goSection("comms"); setRowMenuId(null); }}
                                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-secondary transition-colors text-left">
                                   <Envelope size={14} /> Email director
                                 </button>
@@ -2061,7 +1901,7 @@ export default function AdminPage() {
           { id: "messages" as NavSection, icon: ChatCircleDots, label: "Msgs", badge: messagingUnread },
           { id: "comms" as NavSection, icon: Envelope, label: "Email", badge: 0 },
         ]).map(({ id, icon: Icon, label, badge }) => (
-          <button key={id} onClick={() => setNavSection(id)}
+          <button key={id} onClick={() => goSection(id)}
             className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-colors min-w-0 flex-1 relative ${navSection === id ? "text-primary" : "text-muted-foreground"}`}>
             <div className="relative">
               <Icon size={20} weight={navSection === id ? "fill" : "regular"} />

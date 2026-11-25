@@ -18,7 +18,7 @@
 
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { PageShell } from "@/components/layout/page-shell";
+import { AdminFrame } from "@/components/admin/admin-frame";
 
 export default async function EmailPreviewLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -28,7 +28,7 @@ export default async function EmailPreviewLayout({ children }: { children: React
   const { data: isAdmin } = await supabase.rpc("is_admin");
   if (isAdmin !== true) notFound();
 
-  // Inside the site shell (footer hidden) like every admin tool page. The page's
+  // Inside the admin frame like every admin tool page. The page's
   // full-height split view is sized to the space below the 4rem header.
-  return <PageShell hideFooter>{children}</PageShell>;
+  return <AdminFrame>{children}</AdminFrame>;
 }

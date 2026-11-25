@@ -7,7 +7,7 @@
 
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { PageShell } from "@/components/layout/page-shell";
+import { AdminFrame } from "@/components/admin/admin-frame";
 
 export default async function CoachingAdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -17,5 +17,5 @@ export default async function CoachingAdminLayout({ children }: { children: Reac
   const { data: isAdmin } = await supabase.rpc("is_admin");
   if (isAdmin !== true) notFound();
 
-  return <PageShell hideFooter>{children}</PageShell>;
+  return <AdminFrame>{children}</AdminFrame>;
 }
