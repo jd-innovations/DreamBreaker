@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin } from "@phosphor-icons/react/dist/ssr";
+import { CourtPhoto } from "@/components/courts/court-photo";
 import { courtSummary, facilityHref } from "@/lib/courts/places";
 import type { CourtListing } from "@/lib/courts/directory";
 
@@ -12,16 +12,7 @@ export function CourtCard({ court, distance }: { court: CourtListing; distance?:
       className="group flex gap-3 rounded-2xl border border-border bg-card p-3 transition hover:border-primary/50 hover:bg-secondary/40"
     >
       <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-secondary">
-        {court.photo_url ? (
-          // Photos come through our facility-photo edge function (no key in the
-          // URL), on a host next/image is not configured for; a plain lazy img.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={court.photo_url} alt="" loading="lazy" className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-            <MapPin size={22} />
-          </div>
-        )}
+        <CourtPhoto src={court.photo_url} alt="" className="h-full w-full object-cover" />
       </div>
       <div className="min-w-0 flex-1">
         <h3 className="truncate font-semibold text-foreground group-hover:text-primary">{court.name}</h3>

@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { ogClient } from "@/lib/og/client";
 import { APP_ORIGIN, WEB_PAGE_PATH } from "@/lib/og/types";
+import { cityHref, facilityHref, getDirectoryIndex, listIndexableCourts, stateHref } from "@/lib/courts/directory";
 
 // Rebuilt at most hourly. New events reach Google through this file, so a
 // stale hour is fine; a request per crawl would not be.
@@ -13,15 +14,17 @@ export const revalidate = 3600;
 // Deliberately left out:
 // - Marketplace listings: short-lived and user-written; they sell or expire
 //   faster than a crawler revisits.
-// - Facilities: the web page is still an "open in the app" stub, and hundreds
-//   of near-empty pages would count against the site. Add them once the page
-//   shows the courts, address and hours.
+// - Thin facility pages (no address, or neither a court count nor a photo):
+//   they carry noindex, so they are not listed either. Real facility pages
+//   (/courts/<state>/<city>/<slug>), every state and city hub, and /courts
+//   itself are listed since the public court directory (2026-11-25).
 // - Player profiles: private by design (robots.ts blocks /profile).
 
 const STATIC_PAGES: Array<{ path: string; priority: number; changeFrequency: "daily" | "weekly" | "monthly" }> = [
   { path: "/", priority: 1, changeFrequency: "daily" },
   { path: "/tournaments", priority: 0.9, changeFrequency: "daily" },
   { path: "/play", priority: 0.9, changeFrequency: "daily" },
+  { path: "/courts", priority: 0.9, changeFrequency: "weekly" },
   { path: "/lessons", priority: 0.8, changeFrequency: "weekly" },
   { path: "/marketplace", priority: 0.6, changeFrequency: "daily" },
   { path: "/groups", priority: 0.5, changeFrequency: "weekly" },
@@ -46,13 +49,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Each section fails on its own: a broken query drops that section rather
   // than serving an error page where the whole sitemap should be.
-  const [tournaments, games, lessons, groups] = await Promise.all([
+  const [tournaments, games, lessons, groups, courtIndex, courts] = await Promise.all([
     db.from("tournaments").select("id, updated_at").neq("status", "cancelled").limit(5000),
     db.from("play_events").select("id, updated_at")
       .in("status", [...LIVE_GAME_STATUSES]).gte("event_date", yesterday()).limit(5000),
     // The same search /lessons runs, so test coaches stay out as they do there.
     db.rpc("browse_coach_offers", { p_limit: 1000 }),
     db.from("groups").select("id, updated_at").eq("privacy", "public").limit(5000),
+    getDirectoryIndex().catch(() => null),
+    listIndexableCourts().catch(() => []),
   ]);
 
   const entries: MetadataRoute.Sitemap = STATIC_PAGES.map((p) => ({
@@ -77,6 +82,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
   for (const g of groups.data ?? []) {
     entries.push({ url: url(WEB_PAGE_PATH.group(g.id)), lastModified: g.updated_at, priority: 0.4 });
+  }
+
+  if (courtIndex) {
+    for (const s of courtIndex.states) {
+      entries.push({ url: url(stateHref(s.state)), changeFrequency: "weekly", priority: 0.7 });
+      for (const c of courtIndex.cities[s.state] ?? []) {
+        entries.push({ url: url(cityHref(s.state, c.city)), changeFrequency: "weekly", priority: 0.6 });
+      }
+    }
+  }
+  for (const c of courts) {
+    entries.push({ url: url(facilityHref(c)), lastModified: c.updated_at ?? undefined, priority: 0.5 });
   }
 
   return entries;

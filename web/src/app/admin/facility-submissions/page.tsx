@@ -112,6 +112,10 @@ function SubmissionCard({ row, onDone }: { row: Submission; onDone: () => void }
   const [picked, setPicked] = useState<Set<string>>(() => new Set(keys));
   const [dupes, setDupes] = useState<Dupe[] | null>(null);
   const [working, setWorking] = useState(false);
+  // In-page confirm panel instead of window.prompt (clumsy on phones, and
+  // Safari's "Suppress dialogs" silently turned Reject into a no-op).
+  const [mode, setMode] = useState<null | "approve" | "reject">(null);
+  const [text, setText] = useState("");
   const pending = row.status === "pending";
   const lat = row.proposed.latitude as number | undefined;
   const lng = row.proposed.longitude as number | undefined;
@@ -136,14 +140,17 @@ function SubmissionCard({ row, onDone }: { row: Submission; onDone: () => void }
     });
   }
 
-  async function approve() {
+  function startApprove() {
     if (row.kind === "new" && !["name", "city", "state", "latitude"].every((k) => picked.has(k))) {
       toast.error("A new court needs its name, city, state and map pin.");
       return;
     }
     if (keys.length > 0 && picked.size === 0) { toast.error("Tick at least one field, or reject instead."); return; }
-    const note = window.prompt("Note for the record (optional):", "");
-    if (note === null) return;
+    setText(""); setMode("approve");
+  }
+
+  async function approve() {
+    const note = text;
     setWorking(true);
     const { error } = await callRpc<string>(supabase, "approve_facility_submission", {
       p_id: row.id,
@@ -162,8 +169,7 @@ function SubmissionCard({ row, onDone }: { row: Submission; onDone: () => void }
   }
 
   async function reject() {
-    const reason = window.prompt("Reason (the player is sent this):", "");
-    if (reason === null) return;
+    const reason = text;
     if (!reason.trim()) { toast.error("A reason is required."); return; }
     setWorking(true);
     const { error } = await callRpc<null>(supabase, "reject_facility_submission", { p_id: row.id, p_review_note: reason.trim() });
@@ -251,13 +257,32 @@ function SubmissionCard({ row, onDone }: { row: Submission; onDone: () => void }
         </p>
       )}
 
-      {pending && (
+      {pending && mode && (
+        <div className="mt-4 space-y-2 rounded-xl border border-border p-3">
+          <label className="block text-sm font-medium" htmlFor={`review-${row.id}`}>
+            {mode === "approve" ? "Note for the record (optional, the player doesn't see it)" : "Reason (sent to the player)"}
+          </label>
+          <textarea id={`review-${row.id}`} value={text} onChange={(e) => setText(e.target.value)} rows={2} maxLength={500} autoFocus
+            placeholder={mode === "reject" ? "For example: we couldn't find a pickleball court at this address." : ""}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-base sm:text-sm" />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={mode === "approve" ? approve : reject} disabled={working || (mode === "reject" && !text.trim())}
+              className={`h-10 rounded-xl px-4 text-sm font-semibold disabled:opacity-60 ${mode === "approve" ? "bg-primary text-primary-foreground" : "bg-destructive text-destructive-foreground"}`}>
+              {working ? "Saving…" : mode === "approve" ? "Confirm approval" : "Confirm rejection"}
+            </button>
+            <button type="button" onClick={() => setMode(null)} disabled={working}
+              className="h-10 rounded-xl border border-border px-4 text-sm font-semibold">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {pending && !mode && (
         <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={approve} disabled={working}
+          <button type="button" onClick={startApprove} disabled={working}
             className="h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60">
             {picked.size === keys.length ? "Approve" : `Approve ${picked.size} of ${keys.length}`}
           </button>
-          <button type="button" onClick={reject} disabled={working}
+          <button type="button" onClick={() => { setText(""); setMode("reject"); }} disabled={working}
             className="h-10 rounded-xl border border-border px-4 text-sm font-semibold disabled:opacity-60">
             Reject
           </button>

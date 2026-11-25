@@ -256,3 +256,38 @@ export function isIndexable(f: Pick<CourtDetail, "address" | "court_count" | "ph
   return !!f.address && ((f.court_count ?? 0) > 0 || f.photos.length > 0);
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sitemap
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type SitemapCourt = { state: string; city: string; slug: string; updated_at: string | null };
+
+/**
+ * Every facility page worth indexing (isIndexable), for sitemap.xml. Thin
+ * pages are left out here for the same reason they carry noindex.
+ */
+export async function listIndexableCourts(): Promise<SitemapCourt[]> {
+  const db = ogClient();
+  const out: SitemapCourt[] = [];
+  for (let from = 0; from < 50_000; from += 1000) {
+    const { data, error } = await db
+      .from("facilities")
+      .select("slug, city, state, address, court_count, updated_at, facility_photos!facility_photos_facility_id_fkey(id)")
+      .order("id")
+      .range(from, from + 999);
+    if (error) throw error;
+    const rows = (data ?? []) as unknown as Array<{
+      slug: string | null; city: string | null; state: string | null; address: string | null;
+      court_count: number | null; updated_at: string | null; facility_photos: { id: string }[] | null;
+    }>;
+    for (const r of rows) {
+      if (!hasUrl(r) || !STATE_NAMES[r.state!.toUpperCase()]) continue;
+      const photos = (r.facility_photos ?? []).map((p) => p.id);
+      if (!isIndexable({ address: r.address, court_count: r.court_count, photos })) continue;
+      out.push({ state: r.state!.toUpperCase(), city: r.city!.trim(), slug: r.slug!, updated_at: r.updated_at });
+    }
+    if (rows.length < 1000) break;
+  }
+  return out;
+}

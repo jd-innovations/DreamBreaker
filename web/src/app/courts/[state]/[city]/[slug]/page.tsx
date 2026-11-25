@@ -9,6 +9,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ArrowLeft, Clock, Globe, MapPin, NavigationArrow, PencilSimple, Phone } from "@phosphor-icons/react/dist/ssr";
 import { APP_ORIGIN } from "@/lib/og/types";
+import { CourtPhoto } from "@/components/courts/court-photo";
 import { DEFAULT_OG_IMAGE, SITE_NAME, jsonLdHtml } from "@/lib/seo/site";
 import {
   STATE_NAMES, cityHref, courtSummary, facilityHref, getCourtBySlug, isIndexable, type CourtDetail,
@@ -136,13 +137,9 @@ export default async function CourtPage({ params }: Props) {
         </Link>
       </nav>
 
-      {c.photos[0] && (
-        <div className="mt-4 overflow-hidden rounded-2xl bg-secondary">
-          {/* Served by our facility-photo edge function; plain img (see court-card). */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={c.photos[0]} alt={c.name} className="aspect-[16/9] w-full object-cover" />
-        </div>
-      )}
+      {/* A dead photo (expired Google reference) disappears instead of showing broken. */}
+      <CourtPhoto src={c.photos[0] ?? null} alt={c.name} placeholder="hide" loading="eager"
+        className="mt-4 aspect-[16/9] w-full rounded-2xl bg-secondary object-cover" />
 
       <header className="mt-5 space-y-2">
         <h1 className="font-display text-3xl tracking-wide sm:text-4xl">{c.name}</h1>
