@@ -166,6 +166,31 @@ export async function searchCourts(q: string): Promise<CourtListing[]> {
   return ((data ?? []) as unknown as ListingRow[]).filter(hasUrl).map(toListing);
 }
 
+export type CourtSuggestion = { name: string; slug: string; city: string; state: string; court_count: number | null };
+
+/**
+ * Type-ahead courts for the search box (/api/courts/suggest): same matching as
+ * searchCourts, but no photos, at most `limit` rows, and optionally one state
+ * first. Words go through searchWords(), so they are safe inside or().
+ */
+export async function suggestCourts(q: string, state: string | null, limit = 8): Promise<CourtSuggestion[]> {
+  const words = searchWords(q);
+  if (words.length === 0) return [];
+  let query = ogClient().from("facilities").select("name, slug, city, state, court_count");
+  for (const w of words) {
+    const like = `%${w}%`;
+    query = query.or([`name.ilike.${like}`, `city.ilike.${like}`, `postal_code.ilike.${like}`, `address.ilike.${like}`].join(","));
+  }
+  if (state && STATE_NAMES[state]) query = query.eq("state", state);
+  const { data, error } = await query
+    .not("slug", "is", null)
+    .order("court_count", { ascending: false, nullsFirst: false })
+    .order("name")
+    .limit(Math.min(Math.max(limit, 1), 20));
+  if (error) throw error;
+  return ((data ?? []) as CourtSuggestion[]).filter(hasUrl);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // One facility
 // ─────────────────────────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import { pageMetadata } from "@/lib/seo/site";
 import { STATE_NAMES, cityHref, getDirectoryIndex, stateFromParam, stateHref } from "@/lib/courts/directory";
-import { CourtSearchForm } from "@/components/courts/court-search-form";
+import { StateCityBrowser } from "@/components/courts/state-city-browser";
 
 export const revalidate = 3600;
 export async function generateStaticParams() {
@@ -49,22 +49,11 @@ export default async function StatePage({ params }: Props) {
           {total.toLocaleString()} places to play in {cities.length.toLocaleString()} {cities.length === 1 ? "city" : "cities"}.
         </p>
       </header>
-      <div className="mt-6">
-        <CourtSearchForm />
-      </div>
-      <ul className="mt-8 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {cities.map((c) => (
-          <li key={c.slug}>
-            <Link
-              href={cityHref(code, c.city)}
-              className="flex items-center justify-between rounded-xl border border-border px-3 py-2.5 text-sm transition hover:border-primary/50 hover:bg-secondary/40"
-            >
-              <span className="truncate font-medium">{c.city}</span>
-              <span className="ml-3 shrink-0 text-muted-foreground">{c.count}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <StateCityBrowser
+        state={code}
+        stateName={name}
+        cities={cities.map((c) => ({ city: c.city, slug: c.slug, count: c.count, href: cityHref(code, c.city) }))}
+      />
     </div>
   );
 }
