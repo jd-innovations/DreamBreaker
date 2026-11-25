@@ -411,8 +411,8 @@ function FacilityBottomSheet({
           <View style={fbs.amenitiesRow}>
             {amenities.map(a => (
               <View key={a.label} style={[fbs.amenityChip, !a.active && fbs.amenityInactive]}>
-                <Ionicons name={a.icon} size={13} color={a.active ? L.navy : L.border} />
-                <Text style={[fbs.amenityLabel, !a.active && { color: L.border }]}>{a.label}</Text>
+                <Ionicons name={a.icon} size={13} color={a.active ? L.navy : L.textSub} />
+                <Text style={[fbs.amenityLabel, !a.active && fbs.amenityLabelInactive]}>{a.label}</Text>
               </View>
             ))}
           </View>
@@ -444,9 +444,13 @@ const fbs = StyleSheet.create({
   verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#DBEAFE', borderRadius: shape.pill, paddingHorizontal: 8, paddingVertical: 3 },
   verifiedText: { fontSize: 9, fontWeight: '800', color: '#2563EB', letterSpacing: 0.4 },
   amenitiesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
-  amenityChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: L.border, borderRadius: shape.pill, paddingHorizontal: 8, paddingVertical: 4 },
-  amenityInactive: { opacity: 0.35 },
-  amenityLabel: { fontSize: 10, fontWeight: '600', color: L.navy },
+  // Was border-colour icon + text at 35% opacity: two fades stacked, so the
+  // chips were nearly invisible (owner, 2026-11-25). "Inactive" usually means
+  // "not listed yet", not "no" — so it reads as quieter, not as gone.
+  amenityChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: colors.goldBorder, backgroundColor: L.goldBg, borderRadius: shape.pill, paddingHorizontal: 8, paddingVertical: 4 },
+  amenityInactive: { borderColor: L.border, backgroundColor: 'transparent' },
+  amenityLabel: { fontSize: 11, fontWeight: '700', color: L.navy },
+  amenityLabelInactive: { color: L.textSub, fontWeight: '600' },
 });
 
 
