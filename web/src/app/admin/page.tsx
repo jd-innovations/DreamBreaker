@@ -849,6 +849,32 @@ export default function AdminPage() {
           </button>
         ))}
 
+        <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">COURTS</div>
+        <Link href="/admin/facility-submissions">
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Buildings size={16} /> Court Submissions
+          </button>
+        </Link>
+        <Link href="/admin/court-check">
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Buildings size={16} /> Court Check
+          </button>
+        </Link>
+        <Link href="/admin/facility-import">
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Buildings size={16} /> Facility Import
+          </button>
+        </Link>
+        <Link href="/admin/facility-applications">
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Buildings size={16} /> Facility Applications
+          </button>
+        </Link>
+
         <div className="font-mono text-[9px] tracking-widest text-muted-foreground px-3 mt-4 mb-2">COMMUNICATIONS</div>
         <button onClick={() => { setNavSection("messages"); setMobileSidebarOpen(false); }}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${navSection === "messages" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}>
@@ -868,32 +894,7 @@ export default function AdminPage() {
           Email Templates
         </button>
 
-        {/* Standalone admin pages. Both existed with no way to reach them from
-            here, so the only route was typing the URL. */}
-        <Link href="/admin/facility-applications">
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Buildings size={16} /> Facility Applications
-          </button>
-        </Link>
-        <Link href="/admin/facility-submissions">
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Buildings size={16} /> Court Submissions
-          </button>
-        </Link>
-        <Link href="/admin/facility-import">
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Buildings size={16} /> Facility Import
-          </button>
-        </Link>
-        <Link href="/admin/court-check">
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Buildings size={16} /> Court Check
-          </button>
-        </Link>
+        {/* Standalone admin pages, reachable only from here. */}
         <Link href="/admin/reviews">
           <button
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
