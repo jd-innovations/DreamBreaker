@@ -16,6 +16,7 @@ import UT from "./UT.json";
 import PA from "./PA.json";
 import MI from "./MI.json";
 import NV from "./NV.json";
+import IL from "./IL.json";
 
 /**
  * Committed OpenStreetMap court snapshots, one per state, read by the Discover
@@ -25,4 +26,4 @@ import NV from "./NV.json";
  * or, without Overpass, from a Geofabrik download (NC was built this way;
  * see scripts/facilities-osm/README.md "No Overpass").
  */
-export const SNAPSHOTS: OsmSnapshot[] = [FL as unknown as OsmSnapshot, NC as unknown as OsmSnapshot, AZ as unknown as OsmSnapshot, CA as unknown as OsmSnapshot, NJ as unknown as OsmSnapshot, TX as unknown as OsmSnapshot, GA as unknown as OsmSnapshot, SC as unknown as OsmSnapshot, TN as unknown as OsmSnapshot, VA as unknown as OsmSnapshot, CO as unknown as OsmSnapshot, OH as unknown as OsmSnapshot, WA as unknown as OsmSnapshot, UT as unknown as OsmSnapshot, PA as unknown as OsmSnapshot, MI as unknown as OsmSnapshot, NV as unknown as OsmSnapshot];
+export const SNAPSHOTS: OsmSnapshot[] = [FL as unknown as OsmSnapshot, NC as unknown as OsmSnapshot, AZ as unknown as OsmSnapshot, CA as unknown as OsmSnapshot, NJ as unknown as OsmSnapshot, TX as unknown as OsmSnapshot, GA as unknown as OsmSnapshot, SC as unknown as OsmSnapshot, TN as unknown as OsmSnapshot, VA as unknown as OsmSnapshot, CO as unknown as OsmSnapshot, OH as unknown as OsmSnapshot, WA as unknown as OsmSnapshot, UT as unknown as OsmSnapshot, PA as unknown as OsmSnapshot, MI as unknown as OsmSnapshot, NV as unknown as OsmSnapshot, IL as unknown as OsmSnapshot];

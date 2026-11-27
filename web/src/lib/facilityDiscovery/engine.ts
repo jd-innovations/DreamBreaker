@@ -125,6 +125,7 @@ export const STATES: Record<string, BBox> = {
   PA: [39.7, -80.6, 42.3, -74.6],
   MI: [41.6, -90.5, 48.3, -82.1],
   NV: [35.0, -120.1, 42.1, -114.0],
+  IL: [36.9, -91.6, 42.6, -87.0],
 };
 
 export const CLUSTER_M = 120; // courts closer than this form one site
