@@ -1429,7 +1429,13 @@ export default function GroupDetail() {
   const pending = membership?.status === 'pending';
   const currentUserRole: GroupRole = membership?.role ?? 'member';
   const isAdmin = currentUserRole === 'owner' || currentUserRole === 'admin';
-  const groupMenuItems = isAdmin ? GROUP_MENU_ADMIN : GROUP_MENU_MEMBER;
+  // Only the owner can delete (RLS "groups: organizer delete"); co-admins get the
+  // admin menu without it, matching web.
+  const groupMenuItems = !isAdmin
+    ? GROUP_MENU_MEMBER
+    : currentUserRole === 'owner'
+      ? GROUP_MENU_ADMIN
+      : GROUP_MENU_ADMIN.filter((m) => m.label !== 'Delete Group');
   const canInviteMembers = joined && (isAdmin || Boolean(group?.allow_invites));
 
   async function handleJoinToggle() {
@@ -1542,7 +1548,7 @@ export default function GroupDetail() {
           handleJoinToggle();
           break;
         case 'Delete Group':
-          Alert.alert('Delete Group?', 'This cannot be undone. All events, posts, and photos will remain but the group will be removed.', [
+          Alert.alert('Delete Group?', 'This cannot be undone. The group\'s posts, photos and member list will be deleted. Events created in the group stay up.', [
             { text: 'Cancel', style: 'cancel' },
             {
               text: 'Delete', style: 'destructive',
